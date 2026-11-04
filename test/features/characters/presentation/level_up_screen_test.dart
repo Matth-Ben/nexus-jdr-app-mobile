@@ -1202,6 +1202,22 @@ void main() {
     });
 
     testWidgets(
+      'pluriel du remainingLevelsLabel : au moins 2 niveaux supplementaires '
+      'deja deverrouilles affiche "Encore N niveaux..." (pas "niveau"), '
+      'visible sur l\'annonce du niveau en cours',
+      (tester) async {
+        // Seuil du niveau 7 (23000 XP) déjà franchi depuis le niveau cible
+        // 5 : 2 niveaux (6 et 7) restent à valider ensuite, voir
+        // `LevelUpChainResolver.remainingLevelsAfter`.
+        fakeRepository.detailToReturn = _baseDetail.copyWith(xp: 23000);
+
+        await pushLevelUp(tester, 5);
+
+        expect(find.text('Encore 2 niveaux à valider ensuite'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'chaînage : si le niveau suivant déjà déverrouillé reste bloqué (ex. '
       'choice_type non résolu), le flux s\'arrête proprement dessus SANS '
       'perdre le niveau déjà validé juste avant',
@@ -4560,6 +4576,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Décharge foudroyante, Tir perçant'), findsOneWidget);
+        expect(find.text('Nouveaux tirs arcaniques'), findsOneWidget);
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
@@ -4570,6 +4587,62 @@ void main() {
           'Décharge foudroyante',
           'Tir perçant',
         });
+      },
+    );
+    testWidgets(
+      'niveau 7 (sous-classe deja connue, pas de choix simultane) mais '
+      'catalogue epuise a 1 tir arcanique restant : quota effectif 1, '
+      'singulier au recapitulatif',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 6,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+              subclassId: 50,
+              subclassName: 'Archer arcanique',
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          7: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.arcaneShotsToReturn = const [
+          LevelUpArcaneShotOption(
+            id: 2,
+            name: 'Décharge foudroyante',
+            description: '',
+          ),
+        ];
+
+        await pushPastAnnouncement(tester, 7);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 4 · Tirs arcaniques'), findsOneWidget);
+        expect(find.text('0 / 1'), findsOneWidget);
+        await tester.tap(find.text('Décharge foudroyante'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nouveau tir arcanique'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.arcaneShotNames, [
+          'Décharge foudroyante',
+        ]);
       },
     );
     testWidgets(
@@ -4742,6 +4815,7 @@ void main() {
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
+        expect(find.text('Nouvelles runes'), findsOneWidget);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
@@ -4869,6 +4943,55 @@ void main() {
         expect(find.text('1 / 1'), findsOneWidget);
       },
     );
+    testWidgets('niveau 18 ("Maître des runes") mais catalogue epuise a 1 rune '
+        'restante : quota effectif 1, singulier au recapitulatif', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [
+          const CharacterDetailClassRow(
+            classId: 1,
+            hitDie: 10,
+            className: 'Guerrier',
+            level: 17,
+            isPrimary: true,
+            savingThrowProficiencies: [],
+            subclassId: 52,
+            subclassName: 'Chevalier runique',
+          ),
+        ],
+        xp: 0,
+      );
+      fakeRepository.levelDataByLevel = {
+        18: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
+      fakeRepository.runesToReturn = const [
+        LevelUpRuneOption(id: 3, name: 'Rune de Géant', description: ''),
+      ];
+
+      await pushPastAnnouncement(tester, 18);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('0 / 1'), findsOneWidget);
+      await tester.tap(find.text('Rune de Géant'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 1'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nouvelle rune'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyLevelUpCalls.single.runeNames, [
+        'Rune de Géant',
+      ]);
+    });
   });
 
   group('etape "Runes" — regression : un Guerrier d\'un AUTRE archetype '
@@ -4986,6 +5109,7 @@ void main() {
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
+        expect(find.text('Nouvelles infusions'), findsOneWidget);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
@@ -5138,6 +5262,59 @@ void main() {
         expect(find.text('1 / 1'), findsOneWidget);
       },
     );
+    testWidgets('niveau 2 (premier palier) mais catalogue epuise a 1 infusion '
+        'restante : quota effectif 1, singulier au recapitulatif', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [
+          const CharacterDetailClassRow(
+            classId: 13,
+            hitDie: 8,
+            className: 'Artificier',
+            level: 1,
+            isPrimary: true,
+            savingThrowProficiencies: [],
+          ),
+        ],
+        xp: 0,
+      );
+      fakeRepository.levelDataByLevel = {
+        2: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
+      fakeRepository.knownInfusionNamesToReturn = const [];
+      fakeRepository.infusionsToReturn = const [
+        LevelUpInfusionOption(id: 1, name: 'Armure renforcée', description: ''),
+      ];
+
+      await pushPastAnnouncement(tester, 2);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      // Étape "Sorts" intercalée (même rationale que les autres tests de
+      // ce groupe).
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Étape 4 sur 5 · Infusions'), findsOneWidget);
+      expect(find.text('0 / 1'), findsOneWidget);
+      await tester.tap(find.text('Armure renforcée'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 1'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nouvelle infusion'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyLevelUpCalls.single.infusionNames, [
+        'Armure renforcée',
+      ]);
+    });
   });
 
   group('etape "Metamagie" (Ensorceleur)', () {
@@ -5205,6 +5382,7 @@ void main() {
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
+        expect(find.text('Nouvelles options de Métamagie'), findsOneWidget);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
@@ -5439,6 +5617,76 @@ void main() {
         expect(find.textContaining('NOUVELLES OPTIONS'), findsNothing);
       },
     );
+    testWidgets(
+      'niveau 3 (premier palier) mais catalogue epuise a 1 option restante : '
+      'quota effectif 1, singulier au recapitulatif',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 12,
+              hitDie: 6,
+              className: 'Ensorceleur',
+              level: 2,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          3: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.knownMetamagicNamesToReturn = const [];
+        fakeRepository.metamagicOptionsToReturn = const [
+          LevelUpMetamagicOption(id: 1, name: 'Sort discret', description: ''),
+        ];
+        fakeCreationRepository.spellCatalogByClassId = {
+          12: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 500,
+                name: 'Projectile magique',
+                level: 1,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        // Étape "Sorts" intercalée (même rationale que les autres tests de
+        // ce groupe).
+        await tester.tap(find.text('Projectile magique'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 4 sur 5 · Métamagie'), findsOneWidget);
+        expect(find.text('0 / 1'), findsOneWidget);
+        await tester.tap(find.text('Sort discret'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nouvelle option de Métamagie'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.metamagicNames, [
+          'Sort discret',
+        ]);
+      },
+    );
   });
 
   group('etape "Expertise" (Barde/Roublard)', () {
@@ -5521,6 +5769,7 @@ void main() {
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
+        expect(find.text('Expertises'), findsOneWidget);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
@@ -5613,6 +5862,7 @@ void main() {
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
+        expect(find.text('Expertise'), findsOneWidget);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
@@ -7023,6 +7273,65 @@ void main() {
       expect(find.text('Step 1 of 3 · Hit points'), findsOneWidget);
       expect(find.text('Maximum hit points'), findsNWidgets(2));
       expect(find.text('Hit die of the class: d10'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUE'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Step 2 of 3 · Class features'), findsOneWidget);
+      expect(find.text('You automatically gain:'), findsOneWidget);
+      expect(find.text('Attaque supplémentaire'), findsOneWidget);
     });
+
+    testWidgets(
+      'étape "Tirs arcaniques" et son récapitulatif en anglais (renfort '
+      'traduction au-delà de l\'annonce et de l\'étape "Points de vie")',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 6,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+              subclassId: 50,
+              subclassName: 'Archer arcanique',
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          7: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.arcaneShotsToReturn = const [
+          LevelUpArcaneShotOption(
+            id: 2,
+            name: 'Décharge foudroyante',
+            description: '',
+          ),
+        ];
+
+        await pushLevelUp(tester, 7, locale: const Locale('en'));
+        await tester.tap(find.text('CONTINUE'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUE'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Step 2 of 4 · Class features'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUE'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Step 3 of 4 · Arcane shots'), findsOneWidget);
+        await tester.tap(find.text('Décharge foudroyante'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('CONTINUE'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('New arcane shot'), findsOneWidget);
+      },
+    );
   });
 }
