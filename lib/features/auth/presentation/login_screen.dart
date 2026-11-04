@@ -42,6 +42,8 @@ String _resolveAuthFailureMessage(AppLocalizations l10n, AuthFailure failure) {
       return l10n.authErrorTooManyRequests;
     case AuthErrorCode.network:
       return l10n.authErrorNetwork;
+    case AuthErrorCode.browserLaunchFailed:
+      return l10n.authErrorBrowserLaunchFailed;
     case AuthErrorCode.generic:
       return failure.message;
   }

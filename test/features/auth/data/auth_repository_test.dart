@@ -384,24 +384,35 @@ void main() {
       );
     });
 
-    test("le navigateur système ne peut pas être lancé (le plugin "
-        "url_launcher lève, ex. aucune implémentation native disponible) : "
-        'traduit en AuthFailure générique, même repli que toutes les autres '
-        'méthodes de ce dépôt (mapUnknownError)', () async {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(urlLauncherChannel, (call) async {
-            throw PlatformException(code: 'launch_error');
-          });
+    test(
+      "le navigateur système ne peut pas être lancé (le plugin "
+      "url_launcher lève, ex. aucune implémentation native disponible) : "
+      'traduit en AuthFailure générique, même repli que toutes les autres '
+      'méthodes de ce dépôt (mapUnknownError), avec le code '
+      '`AuthErrorCode.network` (pas `browserLaunchFailed`, réservé au cas '
+      "où launchUrl renvoie `false` sans lever, voir le test suivant)",
+      () async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(urlLauncherChannel, (call) async {
+              throw PlatformException(code: 'launch_error');
+            });
 
-      final client = _buildFakeSupabaseClient((request) async {
-        return http.Response('{}', 200, request: request);
-      });
+        final client = _buildFakeSupabaseClient((request) async {
+          return http.Response('{}', 200, request: request);
+        });
 
-      await expectLater(
-        SupabaseAuthRepository(client).signInWithGoogle(),
-        throwsA(isA<AuthFailure>()),
-      );
-    });
+        await expectLater(
+          SupabaseAuthRepository(client).signInWithGoogle(),
+          throwsA(
+            isA<AuthFailure>().having(
+              (failure) => failure.code,
+              'code',
+              AuthErrorCode.network,
+            ),
+          ),
+        );
+      },
+    );
 
     test('launchUrl ne lève aucune exception mais renvoie simplement false '
         "(navigateur non ouvert, ex. aucune application capable de gérer "
@@ -409,7 +420,11 @@ void main() {
         "terminer silencieusement (login_screen.dart ne pourrait alors "
         "afficher aucun message d'erreur, même symptôme que le bug "
         "historique de confirmation d'inscription silencieuse documenté "
-        'plus haut dans ce fichier)', () async {
+        'plus haut dans ce fichier), avec le code dédié '
+        '`AuthErrorCode.browserLaunchFailed` (distinct de `network` : ce cas '
+        "précède tout appel HTTP, pour que `login_screen.dart` puisse "
+        "afficher un message localisé spécifique plutôt que de rester "
+        "coincé en français via `AuthErrorCode.generic`)", () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(urlLauncherChannel, (call) async {
             if (call.method == 'launch') return false;
@@ -422,7 +437,13 @@ void main() {
 
       await expectLater(
         SupabaseAuthRepository(client).signInWithGoogle(),
-        throwsA(isA<AuthFailure>()),
+        throwsA(
+          isA<AuthFailure>().having(
+            (failure) => failure.code,
+            'code',
+            AuthErrorCode.browserLaunchFailed,
+          ),
+        ),
       );
     });
   });

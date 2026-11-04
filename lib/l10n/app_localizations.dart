@@ -380,6 +380,12 @@ abstract class AppLocalizations {
   /// **'Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.'**
   String get authErrorNetwork;
 
+  /// Message résolu depuis `AuthErrorCode.browserLaunchFailed` (`url_launcher` n'a pas pu ouvrir le navigateur système pour le flux OAuth Google, voir `SupabaseAuthRepository.signInWithGoogle`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ouvrir le navigateur pour continuer avec Google. Réessayez.'**
+  String get authErrorBrowserLaunchFailed;
+
   /// Repli défensif affiché par `login_screen.dart` pour toute exception qui n'est pas une `AuthFailure`.
   ///
   /// In fr, this message translates to:

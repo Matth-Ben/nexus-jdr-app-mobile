@@ -203,6 +203,10 @@
   "@authErrorNetwork": {
     "description": "Message résolu depuis `AuthErrorCode.network` (absence de réseau, voir `mapUnknownError`)."
   },
+  "authErrorBrowserLaunchFailed": "Impossible d'ouvrir le navigateur pour continuer avec Google. Réessayez.",
+  "@authErrorBrowserLaunchFailed": {
+    "description": "Message résolu depuis `AuthErrorCode.browserLaunchFailed` (`url_launcher` n'a pas pu ouvrir le navigateur système pour le flux OAuth Google, voir `SupabaseAuthRepository.signInWithGoogle`)."
+  },
   "authErrorUnexpected": "Une erreur inattendue est survenue. Réessayez.",
   "@authErrorUnexpected": {
     "description": "Repli défensif affiché par `login_screen.dart` pour toute exception qui n'est pas une `AuthFailure`."

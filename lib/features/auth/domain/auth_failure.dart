@@ -57,6 +57,12 @@ enum AuthErrorCode {
   /// `mapUnknownError`.
   network,
 
+  /// `url_launcher` n'a pas pu ouvrir le navigateur système pour le flux
+  /// OAuth web (`launchUrl` renvoie `false`, ou lève) — voir
+  /// `SupabaseAuthRepository.signInWithGoogle`. Distinct de [network] : ce
+  /// cas précède tout appel HTTP, aucune réponse serveur n'est en cause.
+  browserLaunchFailed,
+
   /// Tout le reste : code Supabase non mappé explicitement, ou erreur sans
   /// code exploitable. [AuthFailure.message] reste dans ce cas la seule
   /// source de texte utilisable (repli sur le message brut de Supabase ou

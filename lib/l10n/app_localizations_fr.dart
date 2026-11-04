@@ -165,6 +165,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.';
 
   @override
+  String get authErrorBrowserLaunchFailed =>
+      'Impossible d\'ouvrir le navigateur pour continuer avec Google. Réessayez.';
+
+  @override
   String get authErrorUnexpected =>
       'Une erreur inattendue est survenue. Réessayez.';
 

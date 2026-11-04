@@ -165,6 +165,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t reach the server. Check your internet connection and try again.';
 
   @override
+  String get authErrorBrowserLaunchFailed =>
+      'Couldn\'t open the browser to continue with Google. Please try again.';
+
+  @override
   String get authErrorUnexpected =>
       'An unexpected error occurred. Please try again.';
 

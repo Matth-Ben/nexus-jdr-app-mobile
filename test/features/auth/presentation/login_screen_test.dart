@@ -153,7 +153,10 @@ void main() {
   // `true`/`false` pose explicitement l'`override` pour simuler
   // respectivement iOS/macOS et Android sans dépendre de la plateforme réelle
   // d'exécution des tests.
-  Widget buildTestWidget({bool? appleSignInSupported = true}) {
+  Widget buildTestWidget({
+    bool? appleSignInSupported = true,
+    Locale locale = const Locale('fr'),
+  }) {
     return ProviderScope(
       overrides: [
         authRepositoryProvider.overrideWithValue(fakeRepository),
@@ -161,13 +164,15 @@ void main() {
           appleSignInSupportedProvider.overrideWithValue(appleSignInSupported),
       ],
       child: MaterialApp(
-        // Locale forcée à `fr` (déterministe, indépendante de l'hôte qui
-        // exécute `flutter test`) : les assertions de ces tests comparent
-        // du texte français en dur, même principe que
-        // `profile_language_screen_test.dart`.
+        // Locale forcée (déterministe, indépendante de l'hôte qui exécute
+        // `flutter test`) : les assertions de ces tests comparent du texte
+        // en dur dans [locale], même principe que
+        // `profile_language_screen_test.dart`. `fr` par défaut (la quasi-
+        // totalité des tests de ce fichier), `en` passé explicitement par
+        // les tests du groupe "locale anglaise" ci-dessous.
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('fr'),
+        locale: locale,
         home: const LoginScreen(),
       ),
     );
@@ -1039,5 +1044,63 @@ void main() {
         expect(find.text('Erreur Apple.'), findsNothing);
       },
     );
+  });
+
+  group('locale anglaise', () {
+    // Trou de couverture signalé par `qa-testeur` (chantier "traduction de
+    // l'app" Phase B, lot "Auth") : jusqu'ici ce fichier ne pompait jamais
+    // l'écran qu'en français (voir `buildTestWidget`) — aucun test ne
+    // garantissait qu'un texte anglais s'affiche réellement quand la locale
+    // de l'app est `en`, plutôt que de rester en français par un défaut
+    // câblé en dur quelque part. Mêmes clés `.arb` que les tests français
+    // ci-dessus, lues depuis `app_en.arb` plutôt que `app_fr.arb`.
+    testWidgets(
+      'affiche les champs et l\'action en anglais en mode connexion',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+
+        expect(find.text('Email address'), findsOneWidget);
+        expect(find.text('Password'), findsOneWidget);
+        expect(find.text('Confirm password'), findsNothing);
+        expect(find.text('ENTER'), findsOneWidget);
+        expect(find.text('Create an account'), findsOneWidget);
+        expect(find.text('Forgot password?'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'bascule vers le mode inscription et affiche les champs anglais '
+      'attendus',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+
+        await tester.tap(find.text('Create an account'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Confirm password'), findsOneWidget);
+        expect(find.text('CREATE ACCOUNT'), findsOneWidget);
+        expect(find.text('Log in'), findsOneWidget);
+      },
+    );
+
+    testWidgets('affiche un message générique en anglais si le dépôt lève une '
+        'exception inattendue (même repli défensif que la locale française)', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.signInError = Exception('boom');
+
+      growTestViewport(tester);
+      await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+      await fillLoginForm(tester);
+      await tester.tap(find.text('ENTER'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('An unexpected error occurred. Please try again.'),
+        findsOneWidget,
+      );
+    });
   });
 }
