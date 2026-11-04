@@ -11,6 +11,7 @@ import '../../../core/widgets/dashed_border_painter.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../characters/presentation/widgets/portrait_upload_sheet.dart';
 import '../domain/creation_step_help.dart';
 import '../../characters/presentation/providers/character_detail_provider.dart';
@@ -66,54 +67,100 @@ class _AppearanceAndBackstoryStepScreenState
     extends ConsumerState<AppearanceAndBackstoryStepScreen> {
   static const int _totalSteps = 10;
 
+  /// Nombre total de champs (7 champs courts d'identité + 9 champs texte) —
+  /// voir [_fieldSpecsFor] pour le contenu localisé. Reste une constante
+  /// indépendante de la langue : seule la taille des listes
+  /// [_controllers]/[_focusNodes] en dépend, jamais leur libellé.
+  static const int _fieldCount = 16;
+
+  /// Nombre de champs courts d'identité en tête de [_fieldSpecsFor].
+  static const int _shortFieldCount = 7;
+
   /// Les 7 champs courts d'identité puis les 9 champs texte dans l'ordre
-  /// canonique, voir le commentaire de classe ci-dessus. L'index dans cette liste est aussi l'index utilisé dans
-  /// [_controllers]/[_focusNodes] et dans [_submit] pour retrouver la bonne
-  /// valeur du brouillon — les deux listes ci-dessous doivent donc toujours
-  /// rester alignées avec celle-ci.
-  static const List<_TextFieldSpec> _fieldSpecs = [
-    _TextFieldSpec(label: 'SEXE', hint: 'Ex. femme', isShort: true),
-    _TextFieldSpec(label: 'ÂGE', hint: 'Ex. 27 ans', isShort: true),
-    _TextFieldSpec(label: 'TAILLE', hint: 'Ex. 1,75 m', isShort: true),
-    _TextFieldSpec(label: 'POIDS', hint: 'Ex. 70 kg', isShort: true),
-    _TextFieldSpec(label: 'YEUX', hint: 'Ex. verts', isShort: true),
-    _TextFieldSpec(label: 'PEAU', hint: 'Ex. hâlée', isShort: true),
-    _TextFieldSpec(label: 'CHEVEUX', hint: 'Ex. bruns, courts', isShort: true),
+  /// canonique, voir le commentaire de classe ci-dessus. L'index dans cette
+  /// liste est aussi l'index utilisé dans [_controllers]/[_focusNodes] et
+  /// dans [_submit] pour retrouver la bonne valeur du brouillon — les deux
+  /// listes ci-dessous doivent donc toujours rester alignées avec celle-ci.
+  ///
+  /// Fonction plutôt que `const List` (chantier "traduction de l'app"
+  /// Phase B) : chaque libellé/placeholder vient désormais d'
+  /// [AppLocalizations], qui n'est disponible qu'avec un [BuildContext] —
+  /// reconstruite à chaque `build`, coût négligeable (16 éléments). Mêmes
+  /// textes que `character_story_edit_sheet.dart::_fieldSpecsFor` pour les 9
+  /// champs texte (seul autre précédent de saisie de ces champs, voir D147)
+  /// — duplication assumée plutôt que factorisation prématurée, comme avant
+  /// ce lot.
+  static List<_TextFieldSpec> _fieldSpecsFor(AppLocalizations l10n) => [
     _TextFieldSpec(
-      label: 'APPARENCE PHYSIQUE',
-      hint: "Décris l'apparence physique de ton personnage…",
+      label: l10n.appearanceAndBackstoryStepScreenSexeLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenSexeHint,
+      isShort: true,
     ),
     _TextFieldSpec(
-      label: 'TRAITS DE PERSONNALITÉ',
-      hint: 'Décris les traits de personnalité de ton personnage…',
+      label: l10n.appearanceAndBackstoryStepScreenAgeLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenAgeHint,
+      isShort: true,
     ),
     _TextFieldSpec(
-      label: 'IDÉAUX',
-      hint: 'Quels idéaux guident ton personnage ?',
+      label: l10n.appearanceAndBackstoryStepScreenHeightLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenHeightHint,
+      isShort: true,
     ),
     _TextFieldSpec(
-      label: 'LIENS',
-      hint: "Quels liens unissent ton personnage à d'autres ?",
+      label: l10n.appearanceAndBackstoryStepScreenWeightLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenWeightHint,
+      isShort: true,
     ),
     _TextFieldSpec(
-      label: 'DÉFAUTS',
-      hint: 'Quels défauts ou faiblesses a ton personnage ?',
+      label: l10n.appearanceAndBackstoryStepScreenEyesLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenEyesHint,
+      isShort: true,
     ),
     _TextFieldSpec(
-      label: 'HISTOIRE PERSONNELLE',
-      hint: "Raconte l'histoire personnelle de ton personnage…",
+      label: l10n.appearanceAndBackstoryStepScreenSkinLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenSkinHint,
+      isShort: true,
     ),
     _TextFieldSpec(
-      label: 'ALLIÉS',
-      hint: 'Quels alliés ou organisations soutiennent ton personnage ?',
+      label: l10n.appearanceAndBackstoryStepScreenHairLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenHairHint,
+      isShort: true,
     ),
     _TextFieldSpec(
-      label: 'PARTICULARITÉS',
-      hint: 'Décris les particularités de ton personnage…',
+      label: l10n.appearanceAndBackstoryStepScreenAppearanceLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenAppearanceHint,
     ),
     _TextFieldSpec(
-      label: 'TRÉSOR',
-      hint: 'Quels trésors ou objets précieux possède ton personnage ?',
+      label: l10n.appearanceAndBackstoryStepScreenTraitsLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenTraitsHint,
+    ),
+    _TextFieldSpec(
+      label: l10n.appearanceAndBackstoryStepScreenIdealsLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenIdealsHint,
+    ),
+    _TextFieldSpec(
+      label: l10n.appearanceAndBackstoryStepScreenBondsLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenBondsHint,
+    ),
+    _TextFieldSpec(
+      label: l10n.appearanceAndBackstoryStepScreenFlawsLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenFlawsHint,
+    ),
+    _TextFieldSpec(
+      label: l10n.appearanceAndBackstoryStepScreenBackstoryLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenBackstoryHint,
+    ),
+    _TextFieldSpec(
+      label: l10n.appearanceAndBackstoryStepScreenAlliesLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenAlliesHint,
+    ),
+    _TextFieldSpec(
+      label: l10n.appearanceAndBackstoryStepScreenFeaturesLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenFeaturesHint,
+    ),
+    _TextFieldSpec(
+      label: l10n.appearanceAndBackstoryStepScreenTreasureLabel,
+      hint: l10n.appearanceAndBackstoryStepScreenTreasureHint,
     ),
   ];
 
@@ -151,7 +198,7 @@ class _AppearanceAndBackstoryStepScreenState
     _controllers = [
       for (final value in draftValues) TextEditingController(text: value ?? ''),
     ];
-    _focusNodes = [for (final _ in _fieldSpecs) FocusNode()];
+    _focusNodes = [for (var i = 0; i < _fieldCount; i++) FocusNode()];
   }
 
   @override
@@ -246,15 +293,10 @@ class _AppearanceAndBackstoryStepScreenState
           ?.portraitUrl ??
       session.snapshot.portraitUrl;
 
-  /// Nombre de champs courts d'identité en tête de [_fieldSpecs].
-  static final int _shortFieldCount = _fieldSpecs
-      .where((spec) => spec.isShort)
-      .length;
-
-  Widget _fieldBlock(int i) {
-    final isLast = i == _fieldSpecs.length - 1;
+  Widget _fieldBlock(int i, List<_TextFieldSpec> fieldSpecs) {
+    final isLast = i == fieldSpecs.length - 1;
     return _TextFieldBlock(
-      spec: _fieldSpecs[i],
+      spec: fieldSpecs[i],
       controller: _controllers[i],
       focusNode: _focusNodes[i],
       textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
@@ -270,6 +312,7 @@ class _AppearanceAndBackstoryStepScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: Column(
         children: [
@@ -277,18 +320,25 @@ class _AppearanceAndBackstoryStepScreenState
             onBack: _goBack,
             currentStep: 9,
             totalSteps: _totalSteps,
+            headerTitle: l10n.appearanceAndBackstoryStepScreenHeaderTitle,
+            stepCounterLabel: l10n.appearanceAndBackstoryStepScreenStepCounter(
+              9,
+              _totalSteps,
+            ),
+            helpTooltip: l10n.appearanceAndBackstoryStepScreenHelpTooltip,
             onHelp: () => showStepHelpSheet(
               context,
               CreationStepHelp.appearanceAndBackstory,
             ),
           ),
-          Expanded(child: _buildContent()),
+          Expanded(child: _buildContent(l10n)),
         ],
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations l10n) {
+    final fieldSpecs = _fieldSpecsFor(l10n);
     final editSession = ref.watch(characterEditSessionControllerProvider);
     return SafeArea(
       top: false,
@@ -313,6 +363,11 @@ class _AppearanceAndBackstoryStepScreenState
                       ? null
                       : _currentPortraitUrl(editSession),
                   onTap: _pickPortrait,
+                  title: l10n.appearanceAndBackstoryStepScreenPortraitTitle,
+                  hasPhotoSubtitle: l10n
+                      .appearanceAndBackstoryStepScreenPortraitHasPhotoSubtitle,
+                  emptySubtitle: l10n
+                      .appearanceAndBackstoryStepScreenPortraitEmptySubtitle,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 const _AlignmentField(),
@@ -323,19 +378,19 @@ class _AppearanceAndBackstoryStepScreenState
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: _fieldBlock(i)),
+                      Expanded(child: _fieldBlock(i, fieldSpecs)),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: i + 1 < _shortFieldCount
-                            ? _fieldBlock(i + 1)
+                            ? _fieldBlock(i + 1, fieldSpecs)
                             : const SizedBox.shrink(),
                       ),
                     ],
                   ),
                 ],
-                for (var i = _shortFieldCount; i < _fieldSpecs.length; i++) ...[
+                for (var i = _shortFieldCount; i < fieldSpecs.length; i++) ...[
                   const SizedBox(height: AppSpacing.md),
-                  _fieldBlock(i),
+                  _fieldBlock(i, fieldSpecs),
                 ],
                 // Marge basse supplémentaire pour que le 9e champ ("Trésor")
                 // ne reste jamais masqué par le clavier une fois focus —
@@ -355,7 +410,7 @@ class _AppearanceAndBackstoryStepScreenState
                   children: [
                     Expanded(
                       child: SecondaryButton(
-                        label: 'Retour',
+                        label: l10n.appearanceAndBackstoryStepScreenBackButton,
                         surface: SecondaryButtonSurface.parchment,
                         onPressed: _goBack,
                       ),
@@ -363,7 +418,7 @@ class _AppearanceAndBackstoryStepScreenState
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: PrimaryButton(
-                        label: 'Suivant',
+                        label: l10n.appearanceAndBackstoryStepScreenNextButton,
                         onPressed: _submit,
                       ),
                     ),
@@ -383,7 +438,7 @@ class _AppearanceAndBackstoryStepScreenState
 }
 
 /// Libellé + placeholder d'un des 16 champs texte, afin de garder
-/// [_AppearanceAndBackstoryStepScreenState._fieldSpecs] lisible comme un
+/// [_AppearanceAndBackstoryStepScreenState._fieldSpecsFor] lisible comme un
 /// tableau de données plutôt que 9 blocs de code dupliqués.
 class _TextFieldSpec {
   const _TextFieldSpec({
@@ -457,6 +512,9 @@ class _PortraitTile extends StatelessWidget {
   const _PortraitTile({
     required this.portraitBytes,
     required this.onTap,
+    required this.title,
+    required this.hasPhotoSubtitle,
+    required this.emptySubtitle,
     this.portraitUrl,
   });
 
@@ -465,6 +523,9 @@ class _PortraitTile extends StatelessWidget {
   /// Portrait déjà enregistré (mode modification uniquement).
   final String? portraitUrl;
   final VoidCallback onTap;
+  final String title;
+  final String hasPhotoSubtitle;
+  final String emptySubtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -506,7 +567,7 @@ class _PortraitTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Portrait',
+                    title,
                     style: AppTypography.body(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -514,9 +575,7 @@ class _PortraitTile extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    hasPortrait
-                        ? 'Touchez pour changer ou retirer'
-                        : 'Optionnel — touchez pour en ajouter un',
+                    hasPortrait ? hasPhotoSubtitle : emptySubtitle,
                     style: AppTypography.body(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -540,6 +599,7 @@ class _AlignmentField extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final alignmentId = ref.watch(
       characterCreationDraftControllerProvider.select(
         (draft) => draft.alignmentId,
@@ -550,7 +610,7 @@ class _AlignmentField extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'ALIGNEMENT',
+          l10n.appearanceAndBackstoryStepScreenAlignmentLabel,
           style: AppTypography.body(
             fontSize: 13,
             fontWeight: FontWeight.w800,
@@ -566,7 +626,11 @@ class _AlignmentField extends ConsumerWidget {
                 : null,
             isExpanded: true,
             items: [
-              const DropdownMenuItem<int?>(child: Text('Aucun')),
+              DropdownMenuItem<int?>(
+                child: Text(
+                  l10n.appearanceAndBackstoryStepScreenAlignmentNoneOption,
+                ),
+              ),
               for (final option in catalog.alignments)
                 DropdownMenuItem<int?>(
                   value: option.id,
@@ -582,7 +646,7 @@ class _AlignmentField extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Impossible de charger les alignements.',
+                  l10n.appearanceAndBackstoryStepScreenAlignmentErrorMessage,
                   style: AppTypography.body(
                     fontSize: 13,
                     color: AppColors.textMuted,
@@ -591,7 +655,9 @@ class _AlignmentField extends ConsumerWidget {
               ),
               TextButton(
                 onPressed: () => ref.invalidate(alignmentCatalogProvider),
-                child: const Text('Réessayer'),
+                child: Text(
+                  l10n.appearanceAndBackstoryStepScreenAlignmentRetryButton,
+                ),
               ),
             ],
           ),
@@ -611,12 +677,18 @@ class _Header extends StatelessWidget {
     required this.onBack,
     required this.currentStep,
     required this.totalSteps,
+    required this.headerTitle,
+    required this.stepCounterLabel,
+    required this.helpTooltip,
     required this.onHelp,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
+  final String headerTitle;
+  final String stepCounterLabel;
+  final String helpTooltip;
   final VoidCallback onHelp;
 
   @override
@@ -653,7 +725,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
-                      tooltip: 'Aide',
+                      tooltip: helpTooltip,
                       icon: const Icon(
                         Icons.help_outline,
                         color: AppColors.textOnWood,
@@ -671,7 +743,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '9. Histoire',
+                          headerTitle,
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -679,7 +751,7 @@ class _Header extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          stepCounterLabel,
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,

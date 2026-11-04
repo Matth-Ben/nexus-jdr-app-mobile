@@ -12,6 +12,7 @@ import '../../../core/widgets/portrait_frame.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../characters/presentation/providers/character_detail_provider.dart';
 import '../../characters/presentation/providers/character_providers.dart';
 import '../domain/ability_score_definitions.dart';
@@ -209,10 +210,11 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
     final data = _data;
     final name = _nameController.text.trim();
     if (data == null || name.isEmpty || _isSubmitting) return;
+    final l10n = AppLocalizations.of(context)!;
 
     final editSession = ref.read(characterEditSessionControllerProvider);
     if (editSession != null) {
-      await _saveEdit(editSession, data, name);
+      await _saveEdit(editSession, data, name, l10n);
       return;
     }
 
@@ -272,11 +274,8 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
       context.go(returnRoute ?? '/');
       if (portraitFailed) {
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Personnage créé, mais le portrait n'a pas pu être envoyé. "
-              'Ajoutez-le depuis la fiche.',
-            ),
+          SnackBar(
+            content: Text(l10n.summaryStepScreenPortraitUploadFailedMessage),
           ),
         );
       }
@@ -290,7 +289,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _errorMessage = 'Une erreur est survenue. Réessayez.';
+        _errorMessage = l10n.summaryStepScreenGenericSubmitErrorMessage;
       });
     }
   }
@@ -301,6 +300,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
     CharacterEditSession session,
     SummaryStepData data,
     String name,
+    AppLocalizations l10n,
   ) async {
     setState(() {
       _isSubmitting = true;
@@ -332,7 +332,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
       final messenger = ScaffoldMessenger.of(context);
       finishCharacterEdit(context, ref);
       messenger.showSnackBar(
-        const SnackBar(content: Text('Modifications enregistrées.')),
+        SnackBar(content: Text(l10n.summaryStepScreenEditSavedMessage)),
       );
     } on CharacterCreationFailure catch (failure) {
       if (!mounted) return;
@@ -344,13 +344,14 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _errorMessage = 'Une erreur est survenue. Réessayez.';
+        _errorMessage = l10n.summaryStepScreenGenericSubmitErrorMessage;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dataAsync = ref.watch(summaryStepDataProvider);
 
     return Scaffold(
@@ -361,16 +362,23 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
               onBack: _goBack,
               currentStep: 10,
               totalSteps: _totalSteps,
+              headerTitle: l10n.summaryStepScreenHeaderTitle,
+              stepCounterLabel: l10n.summaryStepScreenStepCounter(
+                10,
+                _totalSteps,
+              ),
+              helpTooltip: l10n.summaryStepScreenHelpTooltip,
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.summary),
             ),
-            Expanded(child: _buildContent(data)),
+            Expanded(child: _buildContent(data, l10n)),
           ],
         ),
         loading: () => Column(
           children: [
             _MinimalHeader(
               onBack: _goBack,
+              helpTooltip: l10n.summaryStepScreenHelpTooltip,
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.summary),
             ),
@@ -391,6 +399,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
           children: [
             _MinimalHeader(
               onBack: _goBack,
+              helpTooltip: l10n.summaryStepScreenHelpTooltip,
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.summary),
             ),
@@ -398,7 +407,8 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
               child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
-                    : 'Impossible de charger le récapitulatif. Réessayez.',
+                    : l10n.summaryStepScreenGenericErrorMessage,
+                retryLabel: l10n.summaryStepScreenRetryButton,
                 // Invalide les providers *feuilles* plutôt que le seul
                 // `summaryStepDataProvider` — même bug déjà corrigé sur les
                 // étapes précédentes (voir leur documentation) : invalider
@@ -435,7 +445,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
     );
   }
 
-  Widget _buildContent(SummaryStepData data) {
+  Widget _buildContent(SummaryStepData data, AppLocalizations l10n) {
     _data = data;
     final draft = ref.watch(characterCreationDraftControllerProvider);
 
@@ -487,12 +497,12 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
           stepNumber: 3,
         ),
       (
-        title: 'Caractéristiques',
-        value: _formatAbilityScores(finalAbilityScores),
+        title: l10n.summaryStepScreenAbilityScoresRowTitle,
+        value: _formatAbilityScores(finalAbilityScores, l10n),
         stepNumber: 5,
       ),
       (
-        title: 'Compétences',
+        title: l10n.summaryStepScreenSkillsRowTitle,
         value: SkillProficiencyResolver.resolveNames(
           classSkillNames: draft.classSkillChoices,
           backgroundSkillNames: data.backgroundOption.skillProficiencies,
@@ -505,7 +515,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
       ),
       if (draft.classToolChoices.isNotEmpty || draft.raceToolChoices.isNotEmpty)
         (
-          title: 'Outils',
+          title: l10n.summaryStepScreenToolsRowTitle,
           value: [
             ...draft.classToolChoices,
             ...draft.raceToolChoices,
@@ -514,32 +524,38 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
         ),
       if (draft.backgroundLanguageChoices.isNotEmpty)
         (
-          title: 'Langues',
+          title: l10n.summaryStepScreenLanguagesRowTitle,
           value: draft.backgroundLanguageChoices.join(', '),
           stepNumber: 6,
         ),
       if (showCantripRow)
         (
-          title: 'Sorts mineurs',
-          value: '${draft.classCantripChoices.length} sélectionné(s)',
+          title: l10n.summaryStepScreenCantripsRowTitle,
+          value: l10n.summaryStepScreenSpellSelectionCount(
+            draft.classCantripChoices.length,
+          ),
           stepNumber: 7,
         ),
       if (showLevelOneRow)
         (
-          title: 'Sorts niveau 1',
-          value: '${draft.classLevelOneSpellChoices.length} sélectionné(s)',
+          title: l10n.summaryStepScreenLevelOneSpellsRowTitle,
+          value: l10n.summaryStepScreenSpellSelectionCount(
+            draft.classLevelOneSpellChoices.length,
+          ),
           stepNumber: 7,
         ),
       // Mode modification : l'inventaire se gère depuis l'onglet Sac.
       if (editSession == null)
         (
-          title: 'Équipement',
-          value: _formatEquipmentSummary(draft, data),
+          title: l10n.summaryStepScreenEquipmentRowTitle,
+          value: _formatEquipmentSummary(draft, data, l10n),
           stepNumber: 8,
         ),
       (
-        title: 'Histoire & portrait',
-        value: _hasAnyAppearanceText(draft) ? 'Renseignés' : 'Non renseignés',
+        title: l10n.summaryStepScreenAppearanceAndBackstoryRowTitle,
+        value: _hasAnyAppearanceText(draft)
+            ? l10n.summaryStepScreenAppearanceFilledValue
+            : l10n.summaryStepScreenAppearanceEmptyValue,
         stepNumber: 9,
       ),
     ];
@@ -563,6 +579,9 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
                 _NameFieldBlock(
                   controller: _nameController,
                   enabled: !_isSubmitting,
+                  label: l10n.summaryStepScreenNameFieldLabel,
+                  hint: l10n.summaryStepScreenNameFieldHint,
+                  helperText: l10n.summaryStepScreenNameFieldHelperText,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _HeaderCard(
@@ -579,7 +598,9 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
                                 ?.portraitUrl ??
                             editSession.snapshot.portraitUrl,
                   name: trimmedName,
-                  subtitle: _formatHeaderSubtitle(draft, data),
+                  unnamedFallback:
+                      l10n.summaryStepScreenUnnamedCharacterFallback,
+                  subtitle: _formatHeaderSubtitle(draft, data, l10n),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 for (var i = 0; i < rows.length; i++) ...[
@@ -614,7 +635,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
                     constraints: const BoxConstraints(minHeight: 44),
                     child: Center(
                       child: Text(
-                        '‹ Retour',
+                        l10n.summaryStepScreenBackLink,
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -627,8 +648,8 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
                 const SizedBox(height: AppSpacing.sm),
                 PrimaryButton(
                   label: editSession != null
-                      ? 'Enregistrer les modifications'
-                      : 'Créer le personnage',
+                      ? l10n.summaryStepScreenSaveEditButton
+                      : l10n.summaryStepScreenCreateButton,
                   isLoading: _isSubmitting,
                   onPressed: canSubmit ? _submit : null,
                 ),
@@ -645,26 +666,33 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
   }
 }
 
-/// "For 16 · Dex 14 · ..." dans l'ordre canonique de
-/// `ability_score_definitions.dart` — abréviations dupliquées depuis
-/// `RaceSummaryFormatter._abilityAbbreviations` (privée, non réutilisable
-/// telle quelle) plutôt que promues en constante partagée, même rationale de
-/// duplication systématique que le reste de ce module (voir le commentaire
-/// de classe de `RaceRowMapper`).
-const Map<String, String> _abilityAbbreviations = {
-  'str': 'For',
-  'dex': 'Dex',
-  'con': 'Con',
-  'int': 'Int',
-  'wis': 'Sag',
-  'cha': 'Cha',
+/// "Str 16 · Dex 14 · ..." dans l'ordre canonique de
+/// `ability_score_definitions.dart` — clés `.arb` partagées
+/// `characterAbilityAbbreviationXxx` (chantier "traduction de l'app" Phase B,
+/// lot "Characters — fiche (identité/statistiques)"), code Dart dupliqué
+/// depuis `character_saving_throws_card.dart`/`character_skills_card.dart`
+/// (`_abilityAbbreviations`, privée, non réutilisable telle quelle) plutôt
+/// que promu en fonction partagée, même rationale de duplication
+/// systématique que le reste de ce module (voir le commentaire de classe de
+/// `RaceRowMapper`).
+Map<String, String> _abilityAbbreviations(AppLocalizations l10n) => {
+  'str': l10n.characterAbilityAbbreviationStr,
+  'dex': l10n.characterAbilityAbbreviationDex,
+  'con': l10n.characterAbilityAbbreviationCon,
+  'int': l10n.characterAbilityAbbreviationInt,
+  'wis': l10n.characterAbilityAbbreviationWis,
+  'cha': l10n.characterAbilityAbbreviationCha,
 };
 
-String _formatAbilityScores(Map<String, int> finalScores) {
+String _formatAbilityScores(
+  Map<String, int> finalScores,
+  AppLocalizations l10n,
+) {
+  final abbreviations = _abilityAbbreviations(l10n);
   final parts = <String>[
     for (final definition in abilityScoreDefinitions)
       if (finalScores.containsKey(definition.key))
-        '${_abilityAbbreviations[definition.key]} '
+        '${abbreviations[definition.key]} '
             '${finalScores[definition.key]}',
   ];
   return parts.join(' · ');
@@ -679,6 +707,7 @@ String _formatAbilityScores(Map<String, int> finalScores) {
 String _formatHeaderSubtitle(
   CharacterCreationDraft draft,
   SummaryStepData data,
+  AppLocalizations l10n,
 ) {
   String? raceSegment;
   if (draft.raceId != null) {
@@ -707,7 +736,11 @@ String _formatHeaderSubtitle(
   final classSegment = subclassName != null
       ? '${data.classOption.name} ($subclassName)'
       : data.classOption.name;
-  final segments = [?raceSegment, classSegment, 'Niveau 1'];
+  final segments = [
+    ?raceSegment,
+    classSegment,
+    l10n.summaryStepScreenLevelOneSegment,
+  ];
   return segments.join(' · ');
 }
 
@@ -716,6 +749,7 @@ String _formatHeaderSubtitle(
 String _formatEquipmentSummary(
   CharacterCreationDraft draft,
   SummaryStepData data,
+  AppLocalizations l10n,
 ) {
   final tab = draft.equipmentChoiceTab ?? EquipmentChoiceTab.background;
   final classOption = ClassEquipmentOption.select(
@@ -723,11 +757,18 @@ String _formatEquipmentSummary(
     draft.classEquipmentOption,
   );
   final base = tab == EquipmentChoiceTab.background
-      ? 'Historique : ${data.backgroundOption.name}'
-      : 'Achat (${draft.purchasedEquipment.length} objets)';
+      ? l10n.summaryStepScreenEquipmentBackgroundSummary(
+          data.backgroundOption.name,
+        )
+      : l10n.summaryStepScreenEquipmentPurchaseSummary(
+          draft.purchasedEquipment.length,
+        );
   return classOption == null
       ? base
-      : 'Classe : option ${classOption.label} · $base';
+      : l10n.summaryStepScreenEquipmentClassOptionPrefix(
+          classOption.label,
+          base,
+        );
 }
 
 /// `true` si au moins un des 9 champs texte de l'étape 8 est non-null (une
@@ -757,10 +798,19 @@ bool _hasAnyAppearanceText(CharacterCreationDraft draft) {
 /// d'erreur — voir la documentation de classe de [SummaryStepScreen] pour le
 /// rationale de cette désactivation douce plutôt qu'un message d'erreur.
 class _NameFieldBlock extends StatelessWidget {
-  const _NameFieldBlock({required this.controller, required this.enabled});
+  const _NameFieldBlock({
+    required this.controller,
+    required this.enabled,
+    required this.label,
+    required this.hint,
+    required this.helperText,
+  });
 
   final TextEditingController controller;
   final bool enabled;
+  final String label;
+  final String hint;
+  final String helperText;
 
   @override
   Widget build(BuildContext context) {
@@ -768,7 +818,7 @@ class _NameFieldBlock extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'NOM DU PERSONNAGE',
+          label,
           style: AppTypography.body(
             fontSize: 13,
             fontWeight: FontWeight.w800,
@@ -781,13 +831,11 @@ class _NameFieldBlock extends StatelessWidget {
           enabled: enabled,
           textCapitalization: TextCapitalization.words,
           textInputAction: TextInputAction.done,
-          decoration: const InputDecoration(
-            hintText: 'Ex. Halltesse Ambrelune',
-          ),
+          decoration: InputDecoration(hintText: hint),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Requis pour retrouver facilement ton personnage',
+          helperText,
           style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
         ),
       ],
@@ -803,6 +851,7 @@ class _HeaderCard extends StatelessWidget {
     this.portraitUrl,
     required this.name,
     required this.subtitle,
+    required this.unnamedFallback,
   });
 
   final Uint8List? portraitBytes;
@@ -811,6 +860,7 @@ class _HeaderCard extends StatelessWidget {
   final String? portraitUrl;
   final String name;
   final String subtitle;
+  final String unnamedFallback;
 
   @override
   Widget build(BuildContext context) {
@@ -842,7 +892,7 @@ class _HeaderCard extends StatelessWidget {
                   // Jamais `font.display` : c'est une donnée saisie, pas un
                   // titre décoratif — même exception déjà actée pour
                   // `CharacterCard.name`.
-                  name.isEmpty ? 'Personnage sans nom' : name,
+                  name.isEmpty ? unnamedFallback : name,
                   // Repli "Personnage sans nom" (avant toute saisie) rendu
                   // avec le même traitement que `hintStyle`
                   // (`app_theme.dart`, `InputDecorationTheme.hintStyle` :
@@ -957,12 +1007,18 @@ class _Header extends StatelessWidget {
     required this.onBack,
     required this.currentStep,
     required this.totalSteps,
+    required this.headerTitle,
+    required this.stepCounterLabel,
+    required this.helpTooltip,
     required this.onHelp,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
+  final String headerTitle;
+  final String stepCounterLabel;
+  final String helpTooltip;
   final VoidCallback onHelp;
 
   @override
@@ -999,7 +1055,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
-                      tooltip: 'Aide',
+                      tooltip: helpTooltip,
                       icon: const Icon(
                         Icons.help_outline,
                         color: AppColors.textOnWood,
@@ -1017,7 +1073,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '10. Récapitulatif',
+                          headerTitle,
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -1025,7 +1081,7 @@ class _Header extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          stepCounterLabel,
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,
@@ -1052,9 +1108,14 @@ class _Header extends StatelessWidget {
 /// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
 /// chargement/l'erreur — copie exacte du pattern des étapes précédentes.
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({required this.onBack, required this.onHelp});
+  const _MinimalHeader({
+    required this.onBack,
+    required this.helpTooltip,
+    required this.onHelp,
+  });
 
   final VoidCallback onBack;
+  final String helpTooltip;
   final VoidCallback onHelp;
 
   @override
@@ -1086,7 +1147,7 @@ class _MinimalHeader extends StatelessWidget {
               const Spacer(),
               IconButton(
                 onPressed: onHelp,
-                tooltip: 'Aide',
+                tooltip: helpTooltip,
                 icon: const Icon(
                   Icons.help_outline,
                   color: AppColors.textOnWood,
@@ -1101,9 +1162,14 @@ class _MinimalHeader extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
+  const _ErrorState({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
 
   final String message;
+  final String retryLabel;
   final VoidCallback onRetry;
 
   @override
@@ -1126,7 +1192,7 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(label: retryLabel, onPressed: onRetry),
           ],
         ),
       ),

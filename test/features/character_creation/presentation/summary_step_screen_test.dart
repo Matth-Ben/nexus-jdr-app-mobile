@@ -44,12 +44,15 @@ import 'package:personnages/features/character_creation/domain/tool_catalog.dart
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_return_route_provider.dart';
+import 'package:personnages/features/character_creation/presentation/providers/character_edit_session_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/subclass_choice_providers.dart';
+import 'package:personnages/features/character_creation/domain/character_edit_snapshot.dart';
 import 'package:personnages/features/character_creation/presentation/summary_step_screen.dart';
 import 'package:personnages/features/characters/data/warlock_pact_spell_repository.dart';
 import 'package:personnages/features/characters/domain/patron_extended_spells.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   RaceCatalog raceCatalogToReturn = const RaceCatalog(races: [], subraces: []);
@@ -348,10 +351,15 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
@@ -368,9 +376,12 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
   }
 
-  Future<void> pumpSummaryStep(WidgetTester tester) async {
+  Future<void> pumpSummaryStep(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     growTestViewport(tester);
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     for (final step in [
       'step-2',
@@ -516,7 +527,9 @@ void main() {
       await pumpSummaryStep(tester);
 
       expect(find.text('Sorts mineurs'), findsOneWidget);
-      expect(find.text('1 sélectionné(s)'), findsNWidgets(2));
+      // Pluriel ICU introduit à ce lot (voir `summaryStepScreenSpellSelectionCount`)
+      // — remplace l'ancien texte jamais accordé "1 sélectionné(s)".
+      expect(find.text('1 sélectionné'), findsNWidgets(2));
     },
   );
 
@@ -1027,5 +1040,144 @@ void main() {
       expect(find.text('Sous-classe'), findsNothing);
       expect(find.text('Elfe · Magicien · Niveau 1'), findsOneWidget);
     });
+  });
+
+  group('locale anglaise (en) : texte UI fixe traduit — noms de race/classe/'
+      'historique (données D&D) et `SubclassChoiceRules` (D149, hors '
+      'périmètre de ce lot) restent en français', () {
+    testWidgets('affiche un indicateur de chargement avec l\'infobulle '
+        '"Help"', (WidgetTester tester) async {
+      fakeRepository.classCatalogCompleter = Completer<ClassCatalog>();
+
+      await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+      await tester.pumpAndSettle();
+      router.push('/characters/new/step-9');
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byTooltip('Help'), findsOneWidget);
+    });
+
+    testWidgets('message d\'erreur de repli (erreur générique, pas une '
+        '`CharacterCreationFailure`) et bouton "RETRY" en anglais', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.classCatalogErrorToThrow = Exception('boom');
+
+      await pumpSummaryStep(tester, locale: const Locale('en'));
+
+      expect(
+        find.text("Couldn't load the summary. Try again."),
+        findsOneWidget,
+      );
+      expect(find.text('RETRY'), findsOneWidget);
+    });
+
+    testWidgets('écran nominal (champ nom, carte d\'en-tête, lignes de résumé, '
+        'boutons) traduit — \'1 selected\' pour les lignes de sorts (pluriel '
+        'ICU =1)', (WidgetTester tester) async {
+      await pumpSummaryStep(tester, locale: const Locale('en'));
+
+      expect(find.text('10. Summary'), findsOneWidget);
+      expect(find.text('Step 10 / 10'), findsOneWidget);
+      expect(find.text('CHARACTER NAME'), findsOneWidget);
+      expect(
+        find.text('Required to easily find your character'),
+        findsOneWidget,
+      );
+      // "Elfe"/"Magicien" (données D&D) restent en français, seul le
+      // segment fixe "Level 1" (`summaryStepScreenLevelOneSegment`) est
+      // traduit.
+      expect(find.text('Elfe · Magicien · Level 1'), findsOneWidget);
+      expect(find.text('Ability scores'), findsOneWidget);
+      expect(find.text('Skills'), findsOneWidget);
+      expect(find.text('Equipment'), findsOneWidget);
+      expect(find.text('Background: Sage'), findsOneWidget);
+      expect(find.text('Story & portrait'), findsOneWidget);
+      expect(find.text('Filled in'), findsOneWidget);
+      expect(find.text('Cantrips'), findsOneWidget);
+      expect(find.text('Level 1 spells'), findsOneWidget);
+      // Pluriel ICU =1 (`summaryStepScreenSpellSelectionCount`), même
+      // valeur affichée sur les deux lignes de sorts (1 sort choisi
+      // chacune dans `_fullDraft`).
+      expect(find.text('1 selected'), findsNWidgets(2));
+      expect(find.text('‹ Back'), findsOneWidget);
+      expect(find.text('CREATE CHARACTER'), findsOneWidget);
+    });
+
+    testWidgets(
+      'pluriel ICU "other" (`summaryStepScreenSpellSelectionCount`) pour '
+      'plusieurs sorts mineurs sélectionnés',
+      (WidgetTester tester) async {
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .state = _fullDraft.copyWith(
+          classCantripChoices: const ['Lumière', 'Lame de feu', 'Lueur'],
+        );
+
+        await pumpSummaryStep(tester, locale: const Locale('en'));
+
+        expect(find.text('3 selected'), findsOneWidget);
+      },
+    );
+
+    testWidgets('mode modification : bouton "SAVE CHANGES" traduit', (
+      WidgetTester tester,
+    ) async {
+      container
+          .read(characterEditSessionControllerProvider.notifier)
+          .start(
+            CharacterEditSession(
+              snapshot: const CharacterEditSnapshot(
+                characterId: 'char-1',
+                name: 'Halltesse',
+                primaryClassId: 2,
+                primaryClassLevel: 1,
+                totalLevel: 1,
+                maxHp: 6,
+                currentHp: 6,
+              ),
+              originalDraft: _fullDraft,
+              originalClass: _magicien,
+              originalBackground: _sage,
+              originalSpellCatalog: const SpellCatalog(
+                spells: [_lumiereSpell, _boucherSpell],
+              ),
+            ),
+          );
+
+      await pumpSummaryStep(tester, locale: const Locale('en'));
+
+      expect(find.text('SAVE CHANGES'), findsOneWidget);
+    });
+
+    testWidgets(
+      'pluriel ICU "other" (`summaryStepScreenEquipmentPurchaseSummary`) '
+      'pour l\'onglet "Acheter" avec plusieurs objets, et forme singulier '
+      'avec un seul objet',
+      (WidgetTester tester) async {
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .state = _fullDraft.copyWith(
+          equipmentChoiceTab: EquipmentChoiceTab.purchase,
+          purchasedEquipment: const {'Dague': 1, 'Corde': 1, 'Torche': 1},
+        );
+
+        await pumpSummaryStep(tester, locale: const Locale('en'));
+
+        expect(find.text('Purchase (3 items)'), findsOneWidget);
+
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .state = _fullDraft.copyWith(
+          equipmentChoiceTab: EquipmentChoiceTab.purchase,
+          purchasedEquipment: const {'Dague': 1},
+        );
+
+        await pumpSummaryStep(tester, locale: const Locale('en'));
+
+        expect(find.text('Purchase (1 item)'), findsOneWidget);
+      },
+    );
   });
 }

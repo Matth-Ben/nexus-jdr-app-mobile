@@ -4238,4 +4238,279 @@ class AppLocalizationsFr extends AppLocalizations {
   String equipmentStepScreenShopItemSubtitle(String category, String cost) {
     return '$category · $cost po';
   }
+
+  @override
+  String get appearanceAndBackstoryStepScreenHelpTooltip => 'Aide';
+
+  @override
+  String get appearanceAndBackstoryStepScreenHeaderTitle => '9. Histoire';
+
+  @override
+  String appearanceAndBackstoryStepScreenStepCounter(
+    int currentStep,
+    int totalSteps,
+  ) {
+    return 'Étape $currentStep / $totalSteps';
+  }
+
+  @override
+  String get appearanceAndBackstoryStepScreenBackButton => 'Retour';
+
+  @override
+  String get appearanceAndBackstoryStepScreenNextButton => 'Suivant';
+
+  @override
+  String get appearanceAndBackstoryStepScreenPortraitTitle => 'Portrait';
+
+  @override
+  String get appearanceAndBackstoryStepScreenPortraitHasPhotoSubtitle =>
+      'Touchez pour changer ou retirer';
+
+  @override
+  String get appearanceAndBackstoryStepScreenPortraitEmptySubtitle =>
+      'Optionnel — touchez pour en ajouter un';
+
+  @override
+  String get appearanceAndBackstoryStepScreenAlignmentLabel => 'ALIGNEMENT';
+
+  @override
+  String get appearanceAndBackstoryStepScreenAlignmentNoneOption => 'Aucun';
+
+  @override
+  String get appearanceAndBackstoryStepScreenAlignmentErrorMessage =>
+      'Impossible de charger les alignements.';
+
+  @override
+  String get appearanceAndBackstoryStepScreenAlignmentRetryButton =>
+      'Réessayer';
+
+  @override
+  String get appearanceAndBackstoryStepScreenSexeLabel => 'SEXE';
+
+  @override
+  String get appearanceAndBackstoryStepScreenSexeHint => 'Ex. femme';
+
+  @override
+  String get appearanceAndBackstoryStepScreenAgeLabel => 'ÂGE';
+
+  @override
+  String get appearanceAndBackstoryStepScreenAgeHint => 'Ex. 27 ans';
+
+  @override
+  String get appearanceAndBackstoryStepScreenHeightLabel => 'TAILLE';
+
+  @override
+  String get appearanceAndBackstoryStepScreenHeightHint => 'Ex. 1,75 m';
+
+  @override
+  String get appearanceAndBackstoryStepScreenWeightLabel => 'POIDS';
+
+  @override
+  String get appearanceAndBackstoryStepScreenWeightHint => 'Ex. 70 kg';
+
+  @override
+  String get appearanceAndBackstoryStepScreenEyesLabel => 'YEUX';
+
+  @override
+  String get appearanceAndBackstoryStepScreenEyesHint => 'Ex. verts';
+
+  @override
+  String get appearanceAndBackstoryStepScreenSkinLabel => 'PEAU';
+
+  @override
+  String get appearanceAndBackstoryStepScreenSkinHint => 'Ex. hâlée';
+
+  @override
+  String get appearanceAndBackstoryStepScreenHairLabel => 'CHEVEUX';
+
+  @override
+  String get appearanceAndBackstoryStepScreenHairHint => 'Ex. bruns, courts';
+
+  @override
+  String get appearanceAndBackstoryStepScreenAppearanceLabel =>
+      'APPARENCE PHYSIQUE';
+
+  @override
+  String get appearanceAndBackstoryStepScreenAppearanceHint =>
+      'Décris l\'apparence physique de ton personnage…';
+
+  @override
+  String get appearanceAndBackstoryStepScreenTraitsLabel =>
+      'TRAITS DE PERSONNALITÉ';
+
+  @override
+  String get appearanceAndBackstoryStepScreenTraitsHint =>
+      'Décris les traits de personnalité de ton personnage…';
+
+  @override
+  String get appearanceAndBackstoryStepScreenIdealsLabel => 'IDÉAUX';
+
+  @override
+  String get appearanceAndBackstoryStepScreenIdealsHint =>
+      'Quels idéaux guident ton personnage ?';
+
+  @override
+  String get appearanceAndBackstoryStepScreenBondsLabel => 'LIENS';
+
+  @override
+  String get appearanceAndBackstoryStepScreenBondsHint =>
+      'Quels liens unissent ton personnage à d\'autres ?';
+
+  @override
+  String get appearanceAndBackstoryStepScreenFlawsLabel => 'DÉFAUTS';
+
+  @override
+  String get appearanceAndBackstoryStepScreenFlawsHint =>
+      'Quels défauts ou faiblesses a ton personnage ?';
+
+  @override
+  String get appearanceAndBackstoryStepScreenBackstoryLabel =>
+      'HISTOIRE PERSONNELLE';
+
+  @override
+  String get appearanceAndBackstoryStepScreenBackstoryHint =>
+      'Raconte l\'histoire personnelle de ton personnage…';
+
+  @override
+  String get appearanceAndBackstoryStepScreenAlliesLabel => 'ALLIÉS';
+
+  @override
+  String get appearanceAndBackstoryStepScreenAlliesHint =>
+      'Quels alliés ou organisations soutiennent ton personnage ?';
+
+  @override
+  String get appearanceAndBackstoryStepScreenFeaturesLabel => 'PARTICULARITÉS';
+
+  @override
+  String get appearanceAndBackstoryStepScreenFeaturesHint =>
+      'Décris les particularités de ton personnage…';
+
+  @override
+  String get appearanceAndBackstoryStepScreenTreasureLabel => 'TRÉSOR';
+
+  @override
+  String get appearanceAndBackstoryStepScreenTreasureHint =>
+      'Quels trésors ou objets précieux possède ton personnage ?';
+
+  @override
+  String get summaryStepScreenHelpTooltip => 'Aide';
+
+  @override
+  String get summaryStepScreenHeaderTitle => '10. Récapitulatif';
+
+  @override
+  String summaryStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Étape $currentStep / $totalSteps';
+  }
+
+  @override
+  String get summaryStepScreenGenericErrorMessage =>
+      'Impossible de charger le récapitulatif. Réessayez.';
+
+  @override
+  String get summaryStepScreenRetryButton => 'Réessayer';
+
+  @override
+  String get summaryStepScreenPortraitUploadFailedMessage =>
+      'Personnage créé, mais le portrait n\'a pas pu être envoyé. Ajoutez-le depuis la fiche.';
+
+  @override
+  String get summaryStepScreenGenericSubmitErrorMessage =>
+      'Une erreur est survenue. Réessayez.';
+
+  @override
+  String get summaryStepScreenEditSavedMessage => 'Modifications enregistrées.';
+
+  @override
+  String get summaryStepScreenLevelOneSegment => 'Niveau 1';
+
+  @override
+  String get summaryStepScreenAbilityScoresRowTitle => 'Caractéristiques';
+
+  @override
+  String get summaryStepScreenSkillsRowTitle => 'Compétences';
+
+  @override
+  String get summaryStepScreenToolsRowTitle => 'Outils';
+
+  @override
+  String get summaryStepScreenLanguagesRowTitle => 'Langues';
+
+  @override
+  String get summaryStepScreenCantripsRowTitle => 'Sorts mineurs';
+
+  @override
+  String get summaryStepScreenLevelOneSpellsRowTitle => 'Sorts niveau 1';
+
+  @override
+  String summaryStepScreenSpellSelectionCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sélectionnés',
+      one: '1 sélectionné',
+      zero: 'Aucun sélectionné',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get summaryStepScreenEquipmentRowTitle => 'Équipement';
+
+  @override
+  String summaryStepScreenEquipmentBackgroundSummary(String backgroundName) {
+    return 'Historique : $backgroundName';
+  }
+
+  @override
+  String summaryStepScreenEquipmentPurchaseSummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Achat ($count objets)',
+      one: 'Achat (1 objet)',
+      zero: 'Achat (0 objet)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String summaryStepScreenEquipmentClassOptionPrefix(
+    String label,
+    String base,
+  ) {
+    return 'Classe : option $label · $base';
+  }
+
+  @override
+  String get summaryStepScreenAppearanceAndBackstoryRowTitle =>
+      'Histoire & portrait';
+
+  @override
+  String get summaryStepScreenAppearanceFilledValue => 'Renseignés';
+
+  @override
+  String get summaryStepScreenAppearanceEmptyValue => 'Non renseignés';
+
+  @override
+  String get summaryStepScreenNameFieldLabel => 'NOM DU PERSONNAGE';
+
+  @override
+  String get summaryStepScreenNameFieldHint => 'Ex. Halltesse Ambrelune';
+
+  @override
+  String get summaryStepScreenNameFieldHelperText =>
+      'Requis pour retrouver facilement ton personnage';
+
+  @override
+  String get summaryStepScreenUnnamedCharacterFallback => 'Personnage sans nom';
+
+  @override
+  String get summaryStepScreenBackLink => '‹ Retour';
+
+  @override
+  String get summaryStepScreenSaveEditButton => 'Enregistrer les modifications';
+
+  @override
+  String get summaryStepScreenCreateButton => 'Créer le personnage';
 }

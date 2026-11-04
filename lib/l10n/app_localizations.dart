@@ -6917,6 +6917,453 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{category} · {cost} po'**
   String equipmentStepScreenShopItemSubtitle(String category, String cost);
+
+  /// Infobulle de l'icône "?" du bandeau de l'étape 9/10 "Histoire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get appearanceAndBackstoryStepScreenHelpTooltip;
+
+  /// Titre d'étape affiché sur le bandeau bois, en-tête de `AppearanceAndBackstoryStepScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'9. Histoire'**
+  String get appearanceAndBackstoryStepScreenHeaderTitle;
+
+  /// Compteur d'étape affiché à droite du titre sur le bandeau bois.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String appearanceAndBackstoryStepScreenStepCounter(
+    int currentStep,
+    int totalSteps,
+  );
+
+  /// Bouton de retour vers l'étape précédente (8/10 "Équipement").
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get appearanceAndBackstoryStepScreenBackButton;
+
+  /// Bouton de validation vers l'étape suivante — toujours actif (aucun champ requis à cette étape).
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get appearanceAndBackstoryStepScreenNextButton;
+
+  /// Titre de la tuile "Portrait" en tête du corps de l'écran.
+  ///
+  /// In fr, this message translates to:
+  /// **'Portrait'**
+  String get appearanceAndBackstoryStepScreenPortraitTitle;
+
+  /// Sous-titre de la tuile "Portrait" une fois un portrait déjà choisi (brouillon ou personnage existant en mode modification).
+  ///
+  /// In fr, this message translates to:
+  /// **'Touchez pour changer ou retirer'**
+  String get appearanceAndBackstoryStepScreenPortraitHasPhotoSubtitle;
+
+  /// Sous-titre de la tuile "Portrait" tant qu'aucun portrait n'est choisi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Optionnel — touchez pour en ajouter un'**
+  String get appearanceAndBackstoryStepScreenPortraitEmptySubtitle;
+
+  /// Libellé du champ "Alignement" (`_AlignmentField`), déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'ALIGNEMENT'**
+  String get appearanceAndBackstoryStepScreenAlignmentLabel;
+
+  /// Option de repli du menu déroulant "Alignement" (aucun alignement choisi, valeur par défaut).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun'**
+  String get appearanceAndBackstoryStepScreenAlignmentNoneOption;
+
+  /// Message affiché à la place du menu déroulant "Alignement" si `alignmentCatalogProvider` échoue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les alignements.'**
+  String get appearanceAndBackstoryStepScreenAlignmentErrorMessage;
+
+  /// Bouton texte qui relance `alignmentCatalogProvider` après un échec de chargement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get appearanceAndBackstoryStepScreenAlignmentRetryButton;
+
+  /// Libellé du champ court d'identité "Sexe" (`characters.sexe`), déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'SEXE'**
+  String get appearanceAndBackstoryStepScreenSexeLabel;
+
+  /// Placeholder du champ "Sexe".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. femme'**
+  String get appearanceAndBackstoryStepScreenSexeHint;
+
+  /// Libellé du champ court d'identité "Âge" (`characters.age`), déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'ÂGE'**
+  String get appearanceAndBackstoryStepScreenAgeLabel;
+
+  /// Placeholder du champ "Âge".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. 27 ans'**
+  String get appearanceAndBackstoryStepScreenAgeHint;
+
+  /// Libellé du champ court d'identité "Taille" (`characters.height`), déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'TAILLE'**
+  String get appearanceAndBackstoryStepScreenHeightLabel;
+
+  /// Placeholder du champ "Taille" — unité "m" volontairement gardée telle quelle en anglais aussi, même rationale que `equipmentStepScreenPurchaseTabLabel`/D145 pour "po".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. 1,75 m'**
+  String get appearanceAndBackstoryStepScreenHeightHint;
+
+  /// Libellé du champ court d'identité "Poids" (`characters.weight`), déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'POIDS'**
+  String get appearanceAndBackstoryStepScreenWeightLabel;
+
+  /// Placeholder du champ "Poids" — unité "kg" volontairement gardée telle quelle en anglais aussi, même rationale que `equipmentStepScreenPurchaseTabLabel`/D145 pour "po".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. 70 kg'**
+  String get appearanceAndBackstoryStepScreenWeightHint;
+
+  /// Libellé du champ court d'identité "Yeux" (`characters.eyes`), déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'YEUX'**
+  String get appearanceAndBackstoryStepScreenEyesLabel;
+
+  /// Placeholder du champ "Yeux".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. verts'**
+  String get appearanceAndBackstoryStepScreenEyesHint;
+
+  /// Libellé du champ court d'identité "Peau" (`characters.skin`), déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'PEAU'**
+  String get appearanceAndBackstoryStepScreenSkinLabel;
+
+  /// Placeholder du champ "Peau".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. hâlée'**
+  String get appearanceAndBackstoryStepScreenSkinHint;
+
+  /// Libellé du champ court d'identité "Cheveux" (`characters.hair`), déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'CHEVEUX'**
+  String get appearanceAndBackstoryStepScreenHairLabel;
+
+  /// Placeholder du champ "Cheveux".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. bruns, courts'**
+  String get appearanceAndBackstoryStepScreenHairHint;
+
+  /// Libellé du 1er des 9 champs texte libre — même texte que `characterStoryEditSheetAppearanceLabel` (duplication assumée, voir le commentaire de classe de `_fieldSpecsFor`), déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'APPARENCE PHYSIQUE'**
+  String get appearanceAndBackstoryStepScreenAppearanceLabel;
+
+  /// Placeholder du champ "Apparence physique" — même texte que `characterStoryEditSheetAppearanceHint`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Décris l\'apparence physique de ton personnage…'**
+  String get appearanceAndBackstoryStepScreenAppearanceHint;
+
+  /// Libellé du champ "Traits de personnalité" — même texte que `characterStoryEditSheetTraitsLabel`, déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'TRAITS DE PERSONNALITÉ'**
+  String get appearanceAndBackstoryStepScreenTraitsLabel;
+
+  /// Placeholder du champ "Traits de personnalité" — même texte que `characterStoryEditSheetTraitsHint`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Décris les traits de personnalité de ton personnage…'**
+  String get appearanceAndBackstoryStepScreenTraitsHint;
+
+  /// Libellé du champ "Idéaux" — même texte que `characterStoryEditSheetIdealsLabel`, déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'IDÉAUX'**
+  String get appearanceAndBackstoryStepScreenIdealsLabel;
+
+  /// Placeholder du champ "Idéaux" — même texte que `characterStoryEditSheetIdealsHint`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels idéaux guident ton personnage ?'**
+  String get appearanceAndBackstoryStepScreenIdealsHint;
+
+  /// Libellé du champ "Liens" — même texte que `characterStoryEditSheetBondsLabel`, déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'LIENS'**
+  String get appearanceAndBackstoryStepScreenBondsLabel;
+
+  /// Placeholder du champ "Liens" — même texte que `characterStoryEditSheetBondsHint`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels liens unissent ton personnage à d\'autres ?'**
+  String get appearanceAndBackstoryStepScreenBondsHint;
+
+  /// Libellé du champ "Défauts" — même texte que `characterStoryEditSheetFlawsLabel`, déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'DÉFAUTS'**
+  String get appearanceAndBackstoryStepScreenFlawsLabel;
+
+  /// Placeholder du champ "Défauts" — même texte que `characterStoryEditSheetFlawsHint`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels défauts ou faiblesses a ton personnage ?'**
+  String get appearanceAndBackstoryStepScreenFlawsHint;
+
+  /// Libellé du champ "Histoire personnelle" — même texte que `characterStoryEditSheetBackstoryLabel`, déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'HISTOIRE PERSONNELLE'**
+  String get appearanceAndBackstoryStepScreenBackstoryLabel;
+
+  /// Placeholder du champ "Histoire personnelle" — même texte que `characterStoryEditSheetBackstoryHint`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Raconte l\'histoire personnelle de ton personnage…'**
+  String get appearanceAndBackstoryStepScreenBackstoryHint;
+
+  /// Libellé du champ "Alliés" — même texte que `characterStoryEditSheetAlliesLabel`, déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'ALLIÉS'**
+  String get appearanceAndBackstoryStepScreenAlliesLabel;
+
+  /// Placeholder du champ "Alliés" — même texte que `characterStoryEditSheetAlliesHint`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels alliés ou organisations soutiennent ton personnage ?'**
+  String get appearanceAndBackstoryStepScreenAlliesHint;
+
+  /// Libellé du champ "Particularités" — même texte que `characterStoryEditSheetFeaturesLabel`, déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'PARTICULARITÉS'**
+  String get appearanceAndBackstoryStepScreenFeaturesLabel;
+
+  /// Placeholder du champ "Particularités" — même texte que `characterStoryEditSheetFeaturesHint`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Décris les particularités de ton personnage…'**
+  String get appearanceAndBackstoryStepScreenFeaturesHint;
+
+  /// Libellé du champ "Trésor" — même texte que `characterStoryEditSheetTreasureLabel`, déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'TRÉSOR'**
+  String get appearanceAndBackstoryStepScreenTreasureLabel;
+
+  /// Placeholder du champ "Trésor" — même texte que `characterStoryEditSheetTreasureHint`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels trésors ou objets précieux possède ton personnage ?'**
+  String get appearanceAndBackstoryStepScreenTreasureHint;
+
+  /// Infobulle de l'icône "?" du bandeau de l'étape 10/10 "Récapitulatif".
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get summaryStepScreenHelpTooltip;
+
+  /// Titre d'étape affiché sur le bandeau bois, en-tête de `SummaryStepScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'10. Récapitulatif'**
+  String get summaryStepScreenHeaderTitle;
+
+  /// Compteur d'étape affiché à droite du titre sur le bandeau bois.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String summaryStepScreenStepCounter(int currentStep, int totalSteps);
+
+  /// Message de repli affiché quand l'erreur n'est pas une `CharacterCreationFailure` (dont le message, lui, reste en français — D148, hors périmètre de ce lot).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger le récapitulatif. Réessayez.'**
+  String get summaryStepScreenGenericErrorMessage;
+
+  /// Bouton de l'état d'erreur, relance tous les providers feuilles consommés par cette étape.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get summaryStepScreenRetryButton;
+
+  /// `SnackBar` affiché après une création réussie dont l'envoi du portrait (best-effort, voir `_submit`) a échoué.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personnage créé, mais le portrait n\'a pas pu être envoyé. Ajoutez-le depuis la fiche.'**
+  String get summaryStepScreenPortraitUploadFailedMessage;
+
+  /// Message de repli affiché quand l'échec de `createCharacter`/`CharacterEditRepository.save` n'est pas une `CharacterCreationFailure` (dont le message, lui, reste en français — D148, hors périmètre de ce lot) — même clé réutilisée pour `_submit` et `_saveEdit`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une erreur est survenue. Réessayez.'**
+  String get summaryStepScreenGenericSubmitErrorMessage;
+
+  /// `SnackBar` affiché après l'enregistrement réussi d'une modification (mode édition, `_saveEdit`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifications enregistrées.'**
+  String get summaryStepScreenEditSavedMessage;
+
+  /// Dernier segment du sous-titre de la carte d'en-tête ("{Race} · {Classe} · Niveau 1") — toujours "Niveau 1", l'assistant de création ne produisant que des personnages de niveau 1.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau 1'**
+  String get summaryStepScreenLevelOneSegment;
+
+  /// Titre de la ligne de résumé "Caractéristiques", renvoie à l'étape 5/10.
+  ///
+  /// In fr, this message translates to:
+  /// **'Caractéristiques'**
+  String get summaryStepScreenAbilityScoresRowTitle;
+
+  /// Titre de la ligne de résumé "Compétences", renvoie à l'étape 6/10.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compétences'**
+  String get summaryStepScreenSkillsRowTitle;
+
+  /// Titre de la ligne de résumé "Outils" (masquée si aucun outil choisi), renvoie à l'étape 6/10.
+  ///
+  /// In fr, this message translates to:
+  /// **'Outils'**
+  String get summaryStepScreenToolsRowTitle;
+
+  /// Titre de la ligne de résumé "Langues" (masquée si aucune langue d'historique choisie), renvoie à l'étape 6/10.
+  ///
+  /// In fr, this message translates to:
+  /// **'Langues'**
+  String get summaryStepScreenLanguagesRowTitle;
+
+  /// Titre de la ligne de résumé "Sorts mineurs" (classe lanceuse de sorts uniquement), renvoie à l'étape 7/10.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sorts mineurs'**
+  String get summaryStepScreenCantripsRowTitle;
+
+  /// Titre de la ligne de résumé "Sorts niveau 1" (classe lanceuse de sorts uniquement), renvoie à l'étape 7/10.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sorts niveau 1'**
+  String get summaryStepScreenLevelOneSpellsRowTitle;
+
+  /// Valeur des lignes "Sorts mineurs"/"Sorts niveau 1" — ancien texte "{N} sélectionné(s)" (jamais accordé, qu'il y ait 0, 1 ou plusieurs sorts choisis) remplacé par un pluriel ICU à cette occasion.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun sélectionné} =1{1 sélectionné} other{{count} sélectionnés}}'**
+  String summaryStepScreenSpellSelectionCount(int count);
+
+  /// Titre de la ligne de résumé "Équipement" (absente en mode modification, l'inventaire se gérant depuis l'onglet Sac), renvoie à l'étape 8/10.
+  ///
+  /// In fr, this message translates to:
+  /// **'Équipement'**
+  String get summaryStepScreenEquipmentRowTitle;
+
+  /// Valeur de la ligne "Équipement" quand l'onglet "Historique" de l'étape 8/10 est actif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Historique : {backgroundName}'**
+  String summaryStepScreenEquipmentBackgroundSummary(String backgroundName);
+
+  /// Valeur de la ligne "Équipement" quand l'onglet "Acheter" de l'étape 8/10 est actif — ancien texte "Achat ({N} objets)" (jamais accordé, y compris pour 1 objet) remplacé par un pluriel ICU à cette occasion.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Achat (0 objet)} =1{Achat (1 objet)} other{Achat ({count} objets)}}'**
+  String summaryStepScreenEquipmentPurchaseSummary(int count);
+
+  /// Préfixe ajouté devant `summaryStepScreenEquipmentBackgroundSummary`/`summaryStepScreenEquipmentPurchaseSummary` (`base`) quand la classe a une option d'équipement de départ choisie (règles 2024) — `label` est la lettre brute ("A"/"B"), jamais traduite.
+  ///
+  /// In fr, this message translates to:
+  /// **'Classe : option {label} · {base}'**
+  String summaryStepScreenEquipmentClassOptionPrefix(String label, String base);
+
+  /// Titre de la ligne de résumé "Histoire & portrait", renvoie à l'étape 9/10.
+  ///
+  /// In fr, this message translates to:
+  /// **'Histoire & portrait'**
+  String get summaryStepScreenAppearanceAndBackstoryRowTitle;
+
+  /// Valeur de la ligne "Histoire & portrait" si au moins un des 9 champs texte de l'étape 9/10 est renseigné.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renseignés'**
+  String get summaryStepScreenAppearanceFilledValue;
+
+  /// Valeur de la ligne "Histoire & portrait" si les 9 champs texte de l'étape 9/10 sont tous vides.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non renseignés'**
+  String get summaryStepScreenAppearanceEmptyValue;
+
+  /// Libellé du champ "Nom du personnage", déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'NOM DU PERSONNAGE'**
+  String get summaryStepScreenNameFieldLabel;
+
+  /// Placeholder du champ "Nom du personnage".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. Halltesse Ambrelune'**
+  String get summaryStepScreenNameFieldHint;
+
+  /// Texte d'aide discret sous le champ "Nom du personnage" (jamais un style d'erreur, voir la documentation de classe de `SummaryStepScreen`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Requis pour retrouver facilement ton personnage'**
+  String get summaryStepScreenNameFieldHelperText;
+
+  /// Repli affiché par la carte d'en-tête tant qu'aucun nom n'est saisi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personnage sans nom'**
+  String get summaryStepScreenUnnamedCharacterFallback;
+
+  /// Lien "Retour" sous la liste de résumé (style lien souligné, pas un `SecondaryButton`).
+  ///
+  /// In fr, this message translates to:
+  /// **'‹ Retour'**
+  String get summaryStepScreenBackLink;
+
+  /// Libellé du bouton primaire en mode modification.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer les modifications'**
+  String get summaryStepScreenSaveEditButton;
+
+  /// Libellé du bouton primaire en mode création — désactivé tant que le nom (trim) est vide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer le personnage'**
+  String get summaryStepScreenCreateButton;
 }
 
 class _AppLocalizationsDelegate
