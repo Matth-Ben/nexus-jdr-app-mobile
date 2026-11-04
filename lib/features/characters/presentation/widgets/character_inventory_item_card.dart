@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
 import '../../../../core/widgets/dashed_border_painter.dart';
 import '../../../../core/widgets/dice_type_badge.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/dice_notation_parser.dart';
 import '../../domain/inventory_category_rules.dart';
@@ -31,6 +32,7 @@ class CharacterInventoryItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dice = item.weaponProperties?.damageDice != null
         ? DiceNotationParser.parse(item.weaponProperties!.damageDice!)
         : null;
@@ -89,7 +91,10 @@ class CharacterInventoryItemCard extends StatelessWidget {
                       ],
                     ),
                     Text(
-                      '${InventoryCategoryRules.labelFor(item.category)} · x${item.quantity}',
+                      l10n.characterInventoryItemCardSubtitle(
+                        InventoryCategoryRules.labelFor(item.category),
+                        item.quantity,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.body(
@@ -175,7 +180,9 @@ class _Trailing extends StatelessWidget {
     }
 
     return Text(
-      '${WeightFormatter.format(totalWeight)} kg',
+      AppLocalizations.of(context)!.characterInventoryItemCardWeightValue(
+        WeightFormatter.format(totalWeight),
+      ),
       style: AppTypography.body(fontSize: 13, color: AppColors.textMuted),
     );
   }
@@ -208,7 +215,7 @@ class _EquippedBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
-        'ÉQUIPÉ',
+        AppLocalizations.of(context)!.characterInventoryItemCardEquippedBadge,
         style: AppTypography.body(
           fontSize: 11,
           fontWeight: FontWeight.w700,

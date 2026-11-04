@@ -3395,5 +3395,573 @@
   "weaponSlotPickerSheetEmptyLabel": "Vide",
   "@weaponSlotPickerSheetEmptyLabel": {
     "description": "Texte affiché en fin de ligne pour un set sans arme équipée, `showWeaponSlotPickerSheet`."
+  },
+  "characterInventoryTabBodyFilterButtonLabel": "Filtre : {filterLabel}",
+  "@characterInventoryTabBodyFilterButtonLabel": {
+    "description": "Libellé du bouton \"Filtre\" en tête de liste de l'onglet \"Inventaire\" (`CompactActionButton`) — `filterLabel` reste `InventoryCategoryFilter.label`, non traduit (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).",
+    "placeholders": {
+      "filterLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "characterInventoryTabBodyAddItemButtonLabel": "Objet",
+  "@characterInventoryTabBodyAddItemButtonLabel": {
+    "description": "Libellé de la tuile pointillée \"+ Objet\" en pied de l'onglet \"Inventaire\" (`DashedAddTile`)."
+  },
+  "characterInventoryTabBodyRewardButtonLabel": "RÉCOMPENSE",
+  "@characterInventoryTabBodyRewardButtonLabel": {
+    "description": "Libellé du bouton \"Récompense\" en pied de l'onglet \"Inventaire\" (`_RewardButton`)."
+  },
+  "characterInventoryTabBodyNoFilterMatchMessage": "Aucun objet dans cette catégorie.",
+  "@characterInventoryTabBodyNoFilterMatchMessage": {
+    "description": "Message affiché quand au moins un objet existe dans l'inventaire mais qu'aucun ne correspond au filtre de catégorie actif (`_NoFilterMatchState`)."
+  },
+  "characterInventoryTabBodyEmptyTitle": "INVENTAIRE VIDE",
+  "@characterInventoryTabBodyEmptyTitle": {
+    "description": "Titre de l'état vide de l'onglet \"Inventaire\" (`_EmptyInventoryState`), aucun objet du tout dans l'inventaire."
+  },
+  "characterInventoryTabBodyEmptyMessage": "Aucun objet dans cet inventaire pour l'instant.",
+  "@characterInventoryTabBodyEmptyMessage": {
+    "description": "Sous-titre de l'état vide de l'onglet \"Inventaire\" (`_EmptyInventoryState`)."
+  },
+  "characterInventoryItemCardSubtitle": "{category} · x{quantity}",
+  "@characterInventoryItemCardSubtitle": {
+    "description": "Sous-titre d'une carte d'objet de l'onglet \"Inventaire\" (`CharacterInventoryItemCard`) — `category` reste `InventoryCategoryRules.labelFor`, non traduit (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).",
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+  "characterInventoryItemCardEquippedBadge": "ÉQUIPÉ",
+  "@characterInventoryItemCardEquippedBadge": {
+    "description": "Badge affiché à droite d'un objet équipé, à la place de son poids (`_EquippedBadge`)."
+  },
+  "characterInventoryItemCardWeightValue": "{weight} kg",
+  "@characterInventoryItemCardWeightValue": {
+    "description": "Poids affiché à droite d'un objet non équipé (`_Trailing`) — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.",
+    "placeholders": {
+      "weight": {
+        "type": "String"
+      }
+    }
+  },
+  "characterInventoryCapacityGaugeTitle": "CHARGE",
+  "@characterInventoryCapacityGaugeTitle": {
+    "description": "Titre de la jauge \"CHARGE\" de l'onglet \"Inventaire\" (`CharacterInventoryCapacityGauge`)."
+  },
+  "characterInventoryCapacityGaugeValueLabel": "{weight} / {capacity} kg",
+  "@characterInventoryCapacityGaugeValueLabel": {
+    "description": "Valeur \"poids porté / capacité\" affichée à droite du titre de la jauge \"CHARGE\" — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.",
+    "placeholders": {
+      "weight": {
+        "type": "String"
+      },
+      "capacity": {
+        "type": "String"
+      }
+    }
+  },
+  "characterInventoryCapacityGaugeOverloadedWarning": "Surchargé — poids supérieur à la capacité de transport.",
+  "@characterInventoryCapacityGaugeOverloadedWarning": {
+    "description": "Message d'alerte affiché sous la jauge \"CHARGE\" quand le poids porté dépasse la capacité de transport."
+  },
+  "characterInventoryCapacityGaugeSemanticsLabel": "Charge : {weight} kilogrammes sur {capacity} kilogrammes",
+  "@characterInventoryCapacityGaugeSemanticsLabel": {
+    "description": "Libellé d'accessibilité de la jauge \"CHARGE\", cas non surchargé.",
+    "placeholders": {
+      "weight": {
+        "type": "String"
+      },
+      "capacity": {
+        "type": "String"
+      }
+    }
+  },
+  "characterInventoryCapacityGaugeSemanticsLabelOverloaded": "Charge : {weight} kilogrammes sur {capacity} kilogrammes, surchargé",
+  "@characterInventoryCapacityGaugeSemanticsLabelOverloaded": {
+    "description": "Libellé d'accessibilité de la jauge \"CHARGE\", cas surchargé.",
+    "placeholders": {
+      "weight": {
+        "type": "String"
+      },
+      "capacity": {
+        "type": "String"
+      }
+    }
+  },
+  "characterEquippedWeaponsCardTitle": "ARMES ÉQUIPÉES",
+  "@characterEquippedWeaponsCardTitle": {
+    "description": "Titre de la carte « ARMES ÉQUIPÉES » de l'onglet « Personnage » (`CharacterEquippedWeaponsCard`)."
+  },
+  "characterEquippedWeaponsCardPrimarySetTitle": "SET PRINCIPAL",
+  "@characterEquippedWeaponsCardPrimarySetTitle": {
+    "description": "Titre de la sous-section \"Set principal\" de `CharacterEquippedWeaponsCard`."
+  },
+  "characterEquippedWeaponsCardSecondarySetTitle": "SET SECONDAIRE",
+  "@characterEquippedWeaponsCardSecondarySetTitle": {
+    "description": "Titre de la sous-section \"Set secondaire\" de `CharacterEquippedWeaponsCard`."
+  },
+  "characterEquippedWeaponsCardEmptySetMessage": "Aucune arme dans ce set.",
+  "@characterEquippedWeaponsCardEmptySetMessage": {
+    "description": "Message affiché par une sous-section de set sans arme équipée (`_WeaponSlotSection`)."
+  },
+  "characterEquippedWeaponsCardAttackLabel": "Attaque",
+  "@characterEquippedWeaponsCardAttackLabel": {
+    "description": "Libellé de la ligne \"Attaque\" d'une arme équipée (`_Weapon`)."
+  },
+  "characterEquippedWeaponsCardEmptyTitle": "Aucune arme équipée",
+  "@characterEquippedWeaponsCardEmptyTitle": {
+    "description": "Titre de l'état vide de `CharacterEquippedWeaponsCard` (`_EmptyWeapons`), aucune arme équipée."
+  },
+  "characterEquippedWeaponsCardEmptyDescription": "Équipez une arme depuis l'onglet Inventaire pour qu'elle apparaisse ici.",
+  "@characterEquippedWeaponsCardEmptyDescription": {
+    "description": "Sous-titre de l'état vide de `CharacterEquippedWeaponsCard` (`_EmptyWeapons`)."
+  },
+  "characterEquippedWeaponsCardSemanticsLabel": "Arme équipée : {name}",
+  "@characterEquippedWeaponsCardSemanticsLabel": {
+    "description": "Début du libellé d'accessibilité d'une arme équipée (`_Weapon`) — `name` reste `item.name`, donnée de contenu D&D.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "characterEquippedWeaponsCardSemanticsAttackSuffix": ", Attaque : {attackBonus}",
+  "@characterEquippedWeaponsCardSemanticsAttackSuffix": {
+    "description": "Segment \"Attaque\" ajouté au libellé d'accessibilité d'une arme équipée quand un bonus d'attaque est connu.",
+    "placeholders": {
+      "attackBonus": {
+        "type": "String"
+      }
+    }
+  },
+  "characterEquippedWeaponsCardSemanticsRangeSuffix": ", Portée : {range}",
+  "@characterEquippedWeaponsCardSemanticsRangeSuffix": {
+    "description": "Segment \"Portée\" ajouté au libellé d'accessibilité d'une arme équipée à portée (arme à distance).",
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "characterEquippedWeaponsCardRangeValue": "{rangeNormal} m",
+  "@characterEquippedWeaponsCardRangeValue": {
+    "description": "Portée d'une arme équipée sans portée maximale distincte — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.",
+    "placeholders": {
+      "rangeNormal": {
+        "type": "String"
+      }
+    }
+  },
+  "characterEquippedWeaponsCardRangeValueWithMax": "{rangeNormal} m (max {rangeMax} m)",
+  "@characterEquippedWeaponsCardRangeValueWithMax": {
+    "description": "Portée d'une arme équipée avec portée maximale distincte.",
+    "placeholders": {
+      "rangeNormal": {
+        "type": "String"
+      },
+      "rangeMax": {
+        "type": "String"
+      }
+    }
+  },
+  "addItemFlowCatalogEntryLabel": "Depuis le catalogue",
+  "@addItemFlowCatalogEntryLabel": {
+    "description": "Première option de la sheet d'entrée \"+ Ajouter un objet\" (`_AddItemEntrySheetContent`)."
+  },
+  "addItemFlowCustomEntryLabel": "Objet personnalisé",
+  "@addItemFlowCustomEntryLabel": {
+    "description": "Seconde option de la sheet d'entrée \"+ Ajouter un objet\" (`_AddItemEntrySheetContent`)."
+  },
+  "addItemFlowCatalogTitleSingle": "AJOUTER UN OBJET",
+  "@addItemFlowCatalogTitleSingle": {
+    "description": "Titre de la sheet \"Depuis le catalogue\" en sélection simple (`_ItemCatalogPickerContent`, `multiSelect: false`)."
+  },
+  "addItemFlowCatalogTitleMulti": "AJOUTER DES OBJETS",
+  "@addItemFlowCatalogTitleMulti": {
+    "description": "Titre de la sheet \"Depuis le catalogue\" en sélection multiple (`_ItemCatalogPickerContent`, `multiSelect: true`)."
+  },
+  "addItemFlowSearchHint": "Rechercher un objet...",
+  "@addItemFlowSearchHint": {
+    "description": "Texte d'indice du champ de recherche de la sheet \"Depuis le catalogue\"."
+  },
+  "addItemFlowCatalogLoadErrorMessage": "Impossible de charger le catalogue d'objets. Réessayez.",
+  "@addItemFlowCatalogLoadErrorMessage": {
+    "description": "Message d'erreur de repli affiché quand le chargement du catalogue échoue sans `CharacterFailure` exploitable."
+  },
+  "addItemFlowAddButtonLabel": "Ajouter",
+  "@addItemFlowAddButtonLabel": {
+    "description": "Libellé du bouton \"Ajouter\" de la sheet \"Depuis le catalogue\" en sélection multiple, aucun objet coché."
+  },
+  "addItemFlowAddButtonLabelWithCount": "Ajouter ({count})",
+  "@addItemFlowAddButtonLabelWithCount": {
+    "description": "Libellé du bouton \"Ajouter\" de la sheet \"Depuis le catalogue\" en sélection multiple, avec le compte d'objets cochés entre parenthèses — même recette que `characterDeleteConfirmationMultipleConfirmButton`.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addItemFlowNoResultsMessage": "Aucun objet trouvé.",
+  "@addItemFlowNoResultsMessage": {
+    "description": "Message affiché quand la recherche de la sheet \"Depuis le catalogue\" ne trouve aucun objet."
+  },
+  "addItemFlowCatalogItemSubtitleWithWeight": "{cost} po · {weight} kg",
+  "@addItemFlowCatalogItemSubtitleWithWeight": {
+    "description": "Sous-titre d'une ligne du catalogue avec un poids connu (`_CatalogItemRow`) — unités \"po\"/\"kg\" volontairement gardées telles quelles en anglais aussi, même rationale que `characterStatPillsSpeedValue`.",
+    "placeholders": {
+      "cost": {
+        "type": "String"
+      },
+      "weight": {
+        "type": "String"
+      }
+    }
+  },
+  "addItemFlowCatalogItemSubtitleNoWeight": "{cost} po",
+  "@addItemFlowCatalogItemSubtitleNoWeight": {
+    "description": "Sous-titre d'une ligne du catalogue sans poids connu (`_CatalogItemRow`).",
+    "placeholders": {
+      "cost": {
+        "type": "String"
+      }
+    }
+  },
+  "addItemFlowQuantitySheetTitle": "Ajouter {itemName}",
+  "@addItemFlowQuantitySheetTitle": {
+    "description": "Titre de la sheet légère de quantité ouverte au tap sur une ligne du catalogue (`_ItemQuantitySheetContent`) — `itemName` reste le nom de l'objet, donnée de contenu D&D.",
+    "placeholders": {
+      "itemName": {
+        "type": "String"
+      }
+    }
+  },
+  "addItemFlowQuantitySheetAddButton": "Ajouter",
+  "@addItemFlowQuantitySheetAddButton": {
+    "description": "Bouton \"Ajouter\" de la sheet légère de quantité (`_ItemQuantitySheetContent`)."
+  },
+  "addItemFlowCustomSheetTitle": "OBJET PERSONNALISÉ",
+  "@addItemFlowCustomSheetTitle": {
+    "description": "Titre de la sheet \"Objet personnalisé\" (`_CustomItemPickerContent`)."
+  },
+  "addItemFlowCustomNameSectionLabel": "NOM DE L'OBJET",
+  "@addItemFlowCustomNameSectionLabel": {
+    "description": "Libellé de section \"Nom de l'objet\" de la sheet \"Objet personnalisé\"."
+  },
+  "addItemFlowCustomNameHint": "Ex. Amulette de famille",
+  "@addItemFlowCustomNameHint": {
+    "description": "Texte d'indice du champ \"Nom de l'objet\" de la sheet \"Objet personnalisé\"."
+  },
+  "addItemFlowCustomDescriptionSectionLabel": "DESCRIPTION",
+  "@addItemFlowCustomDescriptionSectionLabel": {
+    "description": "Libellé de section \"Description\" de la sheet \"Objet personnalisé\"."
+  },
+  "addItemFlowCustomDescriptionHint": "Ex. Un médaillon gravé aux armes de votre famille.",
+  "@addItemFlowCustomDescriptionHint": {
+    "description": "Texte d'indice du champ \"Description\" de la sheet \"Objet personnalisé\"."
+  },
+  "addItemFlowCustomTypeSectionLabel": "TYPE D'OBJET",
+  "@addItemFlowCustomTypeSectionLabel": {
+    "description": "Libellé de section \"Type d'objet\" de la sheet \"Objet personnalisé\"."
+  },
+  "addItemFlowCustomTypeSimpleOption": "Objet simple",
+  "@addItemFlowCustomTypeSimpleOption": {
+    "description": "Option \"Objet simple\" du `SegmentedToggle` \"Type d'objet\" de la sheet \"Objet personnalisé\"."
+  },
+  "addItemFlowCustomTypeWeaponOption": "Arme",
+  "@addItemFlowCustomTypeWeaponOption": {
+    "description": "Option \"Arme\" du `SegmentedToggle` \"Type d'objet\" de la sheet \"Objet personnalisé\"."
+  },
+  "addItemFlowCustomDiceSectionLabel": "DÉ DE DÉGÂTS",
+  "@addItemFlowCustomDiceSectionLabel": {
+    "description": "Libellé de section \"Dé de dégâts\" de la sheet \"Objet personnalisé\" (visible seulement pour le type \"Arme\")."
+  },
+  "addItemFlowCustomDiceNotationSeparator": "d",
+  "@addItemFlowCustomDiceNotationSeparator": {
+    "description": "Lettre \"d\" affichée entre le nombre de dés et le nombre de faces du dé de dégâts (notation D&D \"NdM\", ex. \"1d8\") — gardée telle quelle en anglais aussi, notation de dés internationale."
+  },
+  "addItemFlowCustomDamageTypeSectionLabel": "TYPE DE DÉGÂTS",
+  "@addItemFlowCustomDamageTypeSectionLabel": {
+    "description": "Libellé de section \"Type de dégâts\" de la sheet \"Objet personnalisé\" (visible seulement pour le type \"Arme\")."
+  },
+  "addItemFlowCustomDamageTypeHint": "Sélectionner",
+  "@addItemFlowCustomDamageTypeHint": {
+    "description": "Texte d'indice du menu déroulant \"Type de dégâts\" de la sheet \"Objet personnalisé\", aucune valeur choisie."
+  },
+  "addItemFlowDamageTypeSlashingLabel": "Tranchant",
+  "@addItemFlowDamageTypeSlashingLabel": {
+    "description": "Libellé affiché pour le type de dégâts \"tranchant\" dans le menu déroulant de la sheet \"Objet personnalisé\" (valeur stockée inchangée)."
+  },
+  "addItemFlowDamageTypePiercingLabel": "Perforant",
+  "@addItemFlowDamageTypePiercingLabel": {
+    "description": "Libellé affiché pour le type de dégâts \"perforant\" dans le menu déroulant de la sheet \"Objet personnalisé\" (valeur stockée inchangée)."
+  },
+  "addItemFlowDamageTypeBludgeoningLabel": "Contondant",
+  "@addItemFlowDamageTypeBludgeoningLabel": {
+    "description": "Libellé affiché pour le type de dégâts \"contondant\" dans le menu déroulant de la sheet \"Objet personnalisé\" (valeur stockée inchangée)."
+  },
+  "addItemFlowCustomPropertiesSectionLabel": "PROPRIÉTÉS",
+  "@addItemFlowCustomPropertiesSectionLabel": {
+    "description": "Libellé de section \"Propriétés\" de la sheet \"Objet personnalisé\" (visible seulement pour le type \"Arme\")."
+  },
+  "addItemFlowCustomPropertiesHint": "Ex. légère, finesse",
+  "@addItemFlowCustomPropertiesHint": {
+    "description": "Texte d'indice du champ \"Propriétés\" de la sheet \"Objet personnalisé\"."
+  },
+  "addItemFlowCustomPropertiesCaption": "Séparez plusieurs propriétés par une virgule.",
+  "@addItemFlowCustomPropertiesCaption": {
+    "description": "Légende sous le champ \"Propriétés\" de la sheet \"Objet personnalisé\"."
+  },
+  "addItemFlowCustomQuantitySectionLabel": "QUANTITÉ",
+  "@addItemFlowCustomQuantitySectionLabel": {
+    "description": "Libellé de section \"Quantité\" de la sheet \"Objet personnalisé\"."
+  },
+  "addItemFlowCustomCancelButton": "Annuler",
+  "@addItemFlowCustomCancelButton": {
+    "description": "Bouton secondaire \"Annuler\" de la sheet \"Objet personnalisé\"."
+  },
+  "addItemFlowCustomAddButton": "Ajouter",
+  "@addItemFlowCustomAddButton": {
+    "description": "Bouton primaire \"Ajouter\" de la sheet \"Objet personnalisé\"."
+  },
+  "itemActionSheetInfoLabel": "Infos",
+  "@itemActionSheetInfoLabel": {
+    "description": "Action \"Infos\" de la sheet d'actions d'objet (`_ItemActionSheetContent`), toujours affichée."
+  },
+  "itemActionSheetUseLabel": "Utiliser",
+  "@itemActionSheetUseLabel": {
+    "description": "Action \"Utiliser\" de la sheet d'actions d'objet, affichée pour un objet consommable."
+  },
+  "itemActionSheetEquipLabel": "Équiper",
+  "@itemActionSheetEquipLabel": {
+    "description": "Action \"Équiper\" de la sheet d'actions d'objet (arme non équipée, ou armure/bouclier non équipé)."
+  },
+  "itemActionSheetChangeSetLabel": "Changer de set",
+  "@itemActionSheetChangeSetLabel": {
+    "description": "Action \"Changer de set\" de la sheet d'actions d'objet, pour une arme déjà équipée."
+  },
+  "itemActionSheetUnequipLabel": "Déséquiper",
+  "@itemActionSheetUnequipLabel": {
+    "description": "Action \"Déséquiper\" de la sheet d'actions d'objet (arme, armure ou bouclier déjà équipé)."
+  },
+  "itemActionSheetAttuneLabel": "Harmoniser cet objet",
+  "@itemActionSheetAttuneLabel": {
+    "description": "Action \"Harmoniser cet objet\" de la sheet d'actions d'objet, objet pas encore harmonisé."
+  },
+  "itemActionSheetStopAttuneLabel": "Ne plus harmoniser",
+  "@itemActionSheetStopAttuneLabel": {
+    "description": "Action \"Ne plus harmoniser\" de la sheet d'actions d'objet, objet déjà harmonisé."
+  },
+  "itemActionSheetAttunementCapReachedLabel": "Limite ({cap}) atteinte",
+  "@itemActionSheetAttunementCapReachedLabel": {
+    "description": "Texte de fin de ligne de l'action d'harmonisation quand le plafond `CharacterDetail.attunementCap` est atteint pour un objet pas encore harmonisé.",
+    "placeholders": {
+      "cap": {
+        "type": "int"
+      }
+    }
+  },
+  "itemActionSheetRemoveLabel": "Retirer",
+  "@itemActionSheetRemoveLabel": {
+    "description": "Action \"Retirer\" de la sheet d'actions d'objet, toujours affichée."
+  },
+  "itemActionSheetSubtitle": "{category} · x{quantity}",
+  "@itemActionSheetSubtitle": {
+    "description": "Sous-titre de l'objet en tête de la sheet d'actions d'objet — `category` reste `InventoryCategoryRules.labelFor`, non traduit (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).",
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+  "itemActionSheetRemoveConfirmationTitle": "Retirer {itemName} ?",
+  "@itemActionSheetRemoveConfirmationTitle": {
+    "description": "Titre du dialogue de confirmation \"Retirer {nom} ?\" — `itemName` reste le nom de l'objet, donnée de contenu D&D.",
+    "placeholders": {
+      "itemName": {
+        "type": "String"
+      }
+    }
+  },
+  "itemActionSheetRemoveConfirmationBody": "Cette action est définitive.",
+  "@itemActionSheetRemoveConfirmationBody": {
+    "description": "Corps du dialogue de confirmation \"Retirer {nom} ?\"."
+  },
+  "itemActionSheetRemoveConfirmationCancelButton": "Annuler",
+  "@itemActionSheetRemoveConfirmationCancelButton": {
+    "description": "Bouton secondaire \"Annuler\" du dialogue de confirmation \"Retirer {nom} ?\"."
+  },
+  "itemActionSheetRemoveConfirmationConfirmButton": "Retirer",
+  "@itemActionSheetRemoveConfirmationConfirmButton": {
+    "description": "Bouton destructif de confirmation du dialogue \"Retirer {nom} ?\"."
+  },
+  "itemInfoPanelWeightLabel": "Poids unitaire",
+  "@itemInfoPanelWeightLabel": {
+    "description": "Libellé de la ligne \"Poids unitaire\" du panneau \"Infos\" d'un objet."
+  },
+  "itemInfoPanelWeightValue": "{weight} kg",
+  "@itemInfoPanelWeightValue": {
+    "description": "Valeur de la ligne \"Poids unitaire\" du panneau \"Infos\" d'un objet — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.",
+    "placeholders": {
+      "weight": {
+        "type": "String"
+      }
+    }
+  },
+  "itemInfoPanelCostLabel": "Coût",
+  "@itemInfoPanelCostLabel": {
+    "description": "Libellé de la ligne \"Coût\" du panneau \"Infos\" d'un objet."
+  },
+  "itemInfoPanelCostValue": "{cost} po",
+  "@itemInfoPanelCostValue": {
+    "description": "Valeur de la ligne \"Coût\" du panneau \"Infos\" d'un objet — unité \"po\" volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.",
+    "placeholders": {
+      "cost": {
+        "type": "String"
+      }
+    }
+  },
+  "itemInfoPanelSetLabel": "Set",
+  "@itemInfoPanelSetLabel": {
+    "description": "Libellé de la ligne \"Set\" du panneau \"Infos\" d'une arme équipée dont le set est connu — la valeur affichée reste `WeaponSlot.label`, non traduite (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique)."
+  },
+  "itemInfoPanelAttackLabel": "Attaque",
+  "@itemInfoPanelAttackLabel": {
+    "description": "Libellé de la ligne \"Attaque\" du panneau \"Infos\" d'une arme."
+  },
+  "itemInfoPanelDamageLabel": "Dégâts",
+  "@itemInfoPanelDamageLabel": {
+    "description": "Libellé de la ligne \"Dégâts\" du panneau \"Infos\" d'une arme."
+  },
+  "itemInfoPanelPropertiesLabel": "Propriétés",
+  "@itemInfoPanelPropertiesLabel": {
+    "description": "Libellé de la ligne \"Propriétés\" du panneau \"Infos\" d'une arme."
+  },
+  "itemInfoPanelRangeLabel": "Portée",
+  "@itemInfoPanelRangeLabel": {
+    "description": "Libellé de la ligne \"Portée\" du panneau \"Infos\" d'une arme à distance."
+  },
+  "itemInfoPanelRangeValue": "{rangeNormal} m",
+  "@itemInfoPanelRangeValue": {
+    "description": "Valeur de la ligne \"Portée\" sans portée maximale distincte — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.",
+    "placeholders": {
+      "rangeNormal": {
+        "type": "String"
+      }
+    }
+  },
+  "itemInfoPanelRangeValueWithMax": "{rangeNormal} m (max {rangeMax} m)",
+  "@itemInfoPanelRangeValueWithMax": {
+    "description": "Valeur de la ligne \"Portée\" avec portée maximale distincte.",
+    "placeholders": {
+      "rangeNormal": {
+        "type": "String"
+      },
+      "rangeMax": {
+        "type": "String"
+      }
+    }
+  },
+  "itemInfoPanelArmorClassLabel": "CA de base",
+  "@itemInfoPanelArmorClassLabel": {
+    "description": "Libellé de la ligne \"CA de base\" du panneau \"Infos\" d'une armure/bouclier."
+  },
+  "itemInfoPanelDexBonusLabel": "Bonus Dex",
+  "@itemInfoPanelDexBonusLabel": {
+    "description": "Libellé de la ligne \"Bonus Dex\" du panneau \"Infos\" d'une armure/bouclier — la valeur affichée reste `InventoryArmorDexBonusFormatter.format`, non traduite (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique)."
+  },
+  "itemInfoPanelStrengthRequirementLabel": "Force requise",
+  "@itemInfoPanelStrengthRequirementLabel": {
+    "description": "Libellé de la ligne \"Force requise\" du panneau \"Infos\" d'une armure, affichée seulement si renseignée."
+  },
+  "itemInfoPanelStealthDisadvantageLabel": "Désavantage discrétion",
+  "@itemInfoPanelStealthDisadvantageLabel": {
+    "description": "Libellé de la ligne \"Désavantage discrétion\" du panneau \"Infos\" d'une armure/bouclier."
+  },
+  "itemInfoPanelYesLabel": "Oui",
+  "@itemInfoPanelYesLabel": {
+    "description": "Valeur \"Oui\" de la ligne \"Désavantage discrétion\" du panneau \"Infos\" d'une armure/bouclier."
+  },
+  "itemInfoPanelNoLabel": "Non",
+  "@itemInfoPanelNoLabel": {
+    "description": "Valeur \"Non\" de la ligne \"Désavantage discrétion\" du panneau \"Infos\" d'une armure/bouclier."
+  },
+  "itemInfoPanelRarityLabel": "Rareté",
+  "@itemInfoPanelRarityLabel": {
+    "description": "Libellé de la ligne \"Rareté\" du panneau \"Infos\" d'un objet, affichée seulement si renseignée."
+  },
+  "itemInfoPanelDescriptionSectionLabel": "DESCRIPTION",
+  "@itemInfoPanelDescriptionSectionLabel": {
+    "description": "Titre de la section \"Description\" du panneau \"Infos\" d'un objet."
+  },
+  "itemInfoPanelDescriptionUnavailable": "Aucune description disponible.",
+  "@itemInfoPanelDescriptionUnavailable": {
+    "description": "Texte de repli de la section \"Description\" du panneau \"Infos\", objet sans description renseignée."
+  },
+  "itemInfoPanelUseButton": "Utiliser",
+  "@itemInfoPanelUseButton": {
+    "description": "Bouton de pied \"Utiliser\" du panneau \"Infos\", objet consommable."
+  },
+  "itemInfoPanelEquipButton": "Équiper",
+  "@itemInfoPanelEquipButton": {
+    "description": "Bouton de pied \"Équiper\" du panneau \"Infos\" (armure/bouclier non équipé)."
+  },
+  "itemInfoPanelUnequipButton": "Déséquiper",
+  "@itemInfoPanelUnequipButton": {
+    "description": "Bouton de pied \"Déséquiper\" du panneau \"Infos\" (armure/bouclier équipé)."
+  },
+  "itemInfoPanelAttuneLabel": "Harmoniser cet objet",
+  "@itemInfoPanelAttuneLabel": {
+    "description": "Lien \"Harmoniser cet objet\" du panneau \"Infos\" (`_ToggleAttunedLink`), objet pas encore harmonisé."
+  },
+  "itemInfoPanelStopAttuneLabel": "Ne plus harmoniser",
+  "@itemInfoPanelStopAttuneLabel": {
+    "description": "Lien \"Ne plus harmoniser\" du panneau \"Infos\" (`_ToggleAttunedLink`), objet déjà harmonisé."
+  },
+  "itemInfoPanelAttunementCapReachedCaption": "{cap, plural, =1{Limite de 1 objet harmonisé atteinte.} other{Limite de {cap} objets harmonisés atteinte.}}",
+  "@itemInfoPanelAttunementCapReachedCaption": {
+    "description": "Légende affichée sous le lien d'harmonisation du panneau \"Infos\" quand le plafond `CharacterDetail.attunementCap` est atteint pour un objet pas encore harmonisé.",
+    "placeholders": {
+      "cap": {
+        "type": "int"
+      }
+    }
+  },
+  "currencyAdjustmentSheetTitle": "Ajuster les {currencyLabel}",
+  "@currencyAdjustmentSheetTitle": {
+    "description": "Titre de la sheet d'ajustement de monnaie — `currencyLabel` reste `CurrencyKind.fullLabel`, non traduit (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).",
+    "placeholders": {
+      "currencyLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "currencyAdjustmentSheetAddOption": "Ajouter",
+  "@currencyAdjustmentSheetAddOption": {
+    "description": "Option \"Ajouter\" du `SegmentedToggle` de la sheet d'ajustement de monnaie."
+  },
+  "currencyAdjustmentSheetRemoveOption": "Retirer",
+  "@currencyAdjustmentSheetRemoveOption": {
+    "description": "Option \"Retirer\" du `SegmentedToggle` de la sheet d'ajustement de monnaie."
+  },
+  "currencyAdjustmentSheetCancelButton": "Annuler",
+  "@currencyAdjustmentSheetCancelButton": {
+    "description": "Bouton secondaire \"Annuler\" de la sheet d'ajustement de monnaie."
+  },
+  "currencyAdjustmentSheetApplyButton": "Appliquer",
+  "@currencyAdjustmentSheetApplyButton": {
+    "description": "Bouton primaire \"Appliquer\" de la sheet d'ajustement de monnaie."
+  },
+  "inventoryCategoryFilterSheetTitle": "FILTRER PAR CATÉGORIE",
+  "@inventoryCategoryFilterSheetTitle": {
+    "description": "Titre de la sheet \"Filtrer par catégorie\" de l'onglet \"Inventaire\"."
   }
 }

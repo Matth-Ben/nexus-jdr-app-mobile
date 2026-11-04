@@ -2552,4 +2552,397 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get weaponSlotPickerSheetEmptyLabel => 'Empty';
+
+  @override
+  String characterInventoryTabBodyFilterButtonLabel(String filterLabel) {
+    return 'Filter: $filterLabel';
+  }
+
+  @override
+  String get characterInventoryTabBodyAddItemButtonLabel => 'Item';
+
+  @override
+  String get characterInventoryTabBodyRewardButtonLabel => 'REWARD';
+
+  @override
+  String get characterInventoryTabBodyNoFilterMatchMessage =>
+      'No item in this category.';
+
+  @override
+  String get characterInventoryTabBodyEmptyTitle => 'EMPTY INVENTORY';
+
+  @override
+  String get characterInventoryTabBodyEmptyMessage =>
+      'No item in this inventory yet.';
+
+  @override
+  String characterInventoryItemCardSubtitle(String category, int quantity) {
+    return '$category · x$quantity';
+  }
+
+  @override
+  String get characterInventoryItemCardEquippedBadge => 'EQUIPPED';
+
+  @override
+  String characterInventoryItemCardWeightValue(String weight) {
+    return '$weight kg';
+  }
+
+  @override
+  String get characterInventoryCapacityGaugeTitle => 'LOAD';
+
+  @override
+  String characterInventoryCapacityGaugeValueLabel(
+    String weight,
+    String capacity,
+  ) {
+    return '$weight / $capacity kg';
+  }
+
+  @override
+  String get characterInventoryCapacityGaugeOverloadedWarning =>
+      'Overloaded — weight exceeds carrying capacity.';
+
+  @override
+  String characterInventoryCapacityGaugeSemanticsLabel(
+    String weight,
+    String capacity,
+  ) {
+    return 'Load: $weight kilograms out of $capacity kilograms';
+  }
+
+  @override
+  String characterInventoryCapacityGaugeSemanticsLabelOverloaded(
+    String weight,
+    String capacity,
+  ) {
+    return 'Load: $weight kilograms out of $capacity kilograms, overloaded';
+  }
+
+  @override
+  String get characterEquippedWeaponsCardTitle => 'EQUIPPED WEAPONS';
+
+  @override
+  String get characterEquippedWeaponsCardPrimarySetTitle => 'PRIMARY SET';
+
+  @override
+  String get characterEquippedWeaponsCardSecondarySetTitle => 'SECONDARY SET';
+
+  @override
+  String get characterEquippedWeaponsCardEmptySetMessage =>
+      'No weapon in this set.';
+
+  @override
+  String get characterEquippedWeaponsCardAttackLabel => 'Attack';
+
+  @override
+  String get characterEquippedWeaponsCardEmptyTitle => 'No weapon equipped';
+
+  @override
+  String get characterEquippedWeaponsCardEmptyDescription =>
+      'Equip a weapon from the Inventory tab for it to appear here.';
+
+  @override
+  String characterEquippedWeaponsCardSemanticsLabel(String name) {
+    return 'Equipped weapon: $name';
+  }
+
+  @override
+  String characterEquippedWeaponsCardSemanticsAttackSuffix(String attackBonus) {
+    return ', Attack: $attackBonus';
+  }
+
+  @override
+  String characterEquippedWeaponsCardSemanticsRangeSuffix(String range) {
+    return ', Range: $range';
+  }
+
+  @override
+  String characterEquippedWeaponsCardRangeValue(String rangeNormal) {
+    return '$rangeNormal m';
+  }
+
+  @override
+  String characterEquippedWeaponsCardRangeValueWithMax(
+    String rangeNormal,
+    String rangeMax,
+  ) {
+    return '$rangeNormal m (max $rangeMax m)';
+  }
+
+  @override
+  String get addItemFlowCatalogEntryLabel => 'From the catalog';
+
+  @override
+  String get addItemFlowCustomEntryLabel => 'Custom item';
+
+  @override
+  String get addItemFlowCatalogTitleSingle => 'ADD AN ITEM';
+
+  @override
+  String get addItemFlowCatalogTitleMulti => 'ADD ITEMS';
+
+  @override
+  String get addItemFlowSearchHint => 'Search for an item...';
+
+  @override
+  String get addItemFlowCatalogLoadErrorMessage =>
+      'Unable to load the item catalog. Please try again.';
+
+  @override
+  String get addItemFlowAddButtonLabel => 'Add';
+
+  @override
+  String addItemFlowAddButtonLabelWithCount(int count) {
+    return 'Add ($count)';
+  }
+
+  @override
+  String get addItemFlowNoResultsMessage => 'No item found.';
+
+  @override
+  String addItemFlowCatalogItemSubtitleWithWeight(String cost, String weight) {
+    return '$cost po · $weight kg';
+  }
+
+  @override
+  String addItemFlowCatalogItemSubtitleNoWeight(String cost) {
+    return '$cost po';
+  }
+
+  @override
+  String addItemFlowQuantitySheetTitle(String itemName) {
+    return 'Add $itemName';
+  }
+
+  @override
+  String get addItemFlowQuantitySheetAddButton => 'Add';
+
+  @override
+  String get addItemFlowCustomSheetTitle => 'CUSTOM ITEM';
+
+  @override
+  String get addItemFlowCustomNameSectionLabel => 'ITEM NAME';
+
+  @override
+  String get addItemFlowCustomNameHint => 'E.g. Family amulet';
+
+  @override
+  String get addItemFlowCustomDescriptionSectionLabel => 'DESCRIPTION';
+
+  @override
+  String get addItemFlowCustomDescriptionHint =>
+      'E.g. A medallion engraved with your family\'s arms.';
+
+  @override
+  String get addItemFlowCustomTypeSectionLabel => 'ITEM TYPE';
+
+  @override
+  String get addItemFlowCustomTypeSimpleOption => 'Simple item';
+
+  @override
+  String get addItemFlowCustomTypeWeaponOption => 'Weapon';
+
+  @override
+  String get addItemFlowCustomDiceSectionLabel => 'DAMAGE DIE';
+
+  @override
+  String get addItemFlowCustomDiceNotationSeparator => 'd';
+
+  @override
+  String get addItemFlowCustomDamageTypeSectionLabel => 'DAMAGE TYPE';
+
+  @override
+  String get addItemFlowCustomDamageTypeHint => 'Select';
+
+  @override
+  String get addItemFlowDamageTypeSlashingLabel => 'Slashing';
+
+  @override
+  String get addItemFlowDamageTypePiercingLabel => 'Piercing';
+
+  @override
+  String get addItemFlowDamageTypeBludgeoningLabel => 'Bludgeoning';
+
+  @override
+  String get addItemFlowCustomPropertiesSectionLabel => 'PROPERTIES';
+
+  @override
+  String get addItemFlowCustomPropertiesHint => 'E.g. light, finesse';
+
+  @override
+  String get addItemFlowCustomPropertiesCaption =>
+      'Separate multiple properties with a comma.';
+
+  @override
+  String get addItemFlowCustomQuantitySectionLabel => 'QUANTITY';
+
+  @override
+  String get addItemFlowCustomCancelButton => 'Cancel';
+
+  @override
+  String get addItemFlowCustomAddButton => 'Add';
+
+  @override
+  String get itemActionSheetInfoLabel => 'Info';
+
+  @override
+  String get itemActionSheetUseLabel => 'Use';
+
+  @override
+  String get itemActionSheetEquipLabel => 'Equip';
+
+  @override
+  String get itemActionSheetChangeSetLabel => 'Change set';
+
+  @override
+  String get itemActionSheetUnequipLabel => 'Unequip';
+
+  @override
+  String get itemActionSheetAttuneLabel => 'Attune to this item';
+
+  @override
+  String get itemActionSheetStopAttuneLabel => 'Stop attuning';
+
+  @override
+  String itemActionSheetAttunementCapReachedLabel(int cap) {
+    return 'Limit ($cap) reached';
+  }
+
+  @override
+  String get itemActionSheetRemoveLabel => 'Remove';
+
+  @override
+  String itemActionSheetSubtitle(String category, int quantity) {
+    return '$category · x$quantity';
+  }
+
+  @override
+  String itemActionSheetRemoveConfirmationTitle(String itemName) {
+    return 'Remove $itemName?';
+  }
+
+  @override
+  String get itemActionSheetRemoveConfirmationBody =>
+      'This action is permanent.';
+
+  @override
+  String get itemActionSheetRemoveConfirmationCancelButton => 'Cancel';
+
+  @override
+  String get itemActionSheetRemoveConfirmationConfirmButton => 'Remove';
+
+  @override
+  String get itemInfoPanelWeightLabel => 'Unit weight';
+
+  @override
+  String itemInfoPanelWeightValue(String weight) {
+    return '$weight kg';
+  }
+
+  @override
+  String get itemInfoPanelCostLabel => 'Cost';
+
+  @override
+  String itemInfoPanelCostValue(String cost) {
+    return '$cost po';
+  }
+
+  @override
+  String get itemInfoPanelSetLabel => 'Set';
+
+  @override
+  String get itemInfoPanelAttackLabel => 'Attack';
+
+  @override
+  String get itemInfoPanelDamageLabel => 'Damage';
+
+  @override
+  String get itemInfoPanelPropertiesLabel => 'Properties';
+
+  @override
+  String get itemInfoPanelRangeLabel => 'Range';
+
+  @override
+  String itemInfoPanelRangeValue(String rangeNormal) {
+    return '$rangeNormal m';
+  }
+
+  @override
+  String itemInfoPanelRangeValueWithMax(String rangeNormal, String rangeMax) {
+    return '$rangeNormal m (max $rangeMax m)';
+  }
+
+  @override
+  String get itemInfoPanelArmorClassLabel => 'Base AC';
+
+  @override
+  String get itemInfoPanelDexBonusLabel => 'Dex bonus';
+
+  @override
+  String get itemInfoPanelStrengthRequirementLabel => 'Strength requirement';
+
+  @override
+  String get itemInfoPanelStealthDisadvantageLabel => 'Stealth disadvantage';
+
+  @override
+  String get itemInfoPanelYesLabel => 'Yes';
+
+  @override
+  String get itemInfoPanelNoLabel => 'No';
+
+  @override
+  String get itemInfoPanelRarityLabel => 'Rarity';
+
+  @override
+  String get itemInfoPanelDescriptionSectionLabel => 'DESCRIPTION';
+
+  @override
+  String get itemInfoPanelDescriptionUnavailable => 'No description available.';
+
+  @override
+  String get itemInfoPanelUseButton => 'Use';
+
+  @override
+  String get itemInfoPanelEquipButton => 'Equip';
+
+  @override
+  String get itemInfoPanelUnequipButton => 'Unequip';
+
+  @override
+  String get itemInfoPanelAttuneLabel => 'Attune to this item';
+
+  @override
+  String get itemInfoPanelStopAttuneLabel => 'Stop attuning';
+
+  @override
+  String itemInfoPanelAttunementCapReachedCaption(int cap) {
+    String _temp0 = intl.Intl.pluralLogic(
+      cap,
+      locale: localeName,
+      other: 'Limit of $cap attuned items reached.',
+      one: 'Limit of 1 attuned item reached.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String currencyAdjustmentSheetTitle(String currencyLabel) {
+    return 'Adjust $currencyLabel';
+  }
+
+  @override
+  String get currencyAdjustmentSheetAddOption => 'Add';
+
+  @override
+  String get currencyAdjustmentSheetRemoveOption => 'Remove';
+
+  @override
+  String get currencyAdjustmentSheetCancelButton => 'Cancel';
+
+  @override
+  String get currencyAdjustmentSheetApplyButton => 'Apply';
+
+  @override
+  String get inventoryCategoryFilterSheetTitle => 'FILTER BY CATEGORY';
 }

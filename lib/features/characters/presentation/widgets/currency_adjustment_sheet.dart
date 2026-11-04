@@ -7,6 +7,7 @@ import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/segmented_toggle.dart';
 import '../../../../core/widgets/stepper_counter.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/currency_kind.dart';
 
 enum _CurrencyAdjustmentMode { add, remove }
@@ -84,6 +85,7 @@ class _CurrencyAdjustmentSheetContentState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final atBalanceCap =
         _mode == _CurrencyAdjustmentMode.remove &&
         _amount >= widget.currentAmount;
@@ -101,7 +103,7 @@ class _CurrencyAdjustmentSheetContentState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Ajuster les ${widget.currency.fullLabel}',
+              l10n.currencyAdjustmentSheetTitle(widget.currency.fullLabel),
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -109,14 +111,14 @@ class _CurrencyAdjustmentSheetContentState
             ),
             const SizedBox(height: AppSpacing.md),
             SegmentedToggle<_CurrencyAdjustmentMode>(
-              options: const [
+              options: [
                 SegmentedToggleOption(
                   value: _CurrencyAdjustmentMode.add,
-                  label: 'Ajouter',
+                  label: l10n.currencyAdjustmentSheetAddOption,
                 ),
                 SegmentedToggleOption(
                   value: _CurrencyAdjustmentMode.remove,
-                  label: 'Retirer',
+                  label: l10n.currencyAdjustmentSheetRemoveOption,
                 ),
               ],
               value: _mode,
@@ -139,7 +141,7 @@ class _CurrencyAdjustmentSheetContentState
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Annuler',
+                    label: l10n.currencyAdjustmentSheetCancelButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -147,7 +149,7 @@ class _CurrencyAdjustmentSheetContentState
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: PrimaryButton(
-                    label: 'Appliquer',
+                    label: l10n.currencyAdjustmentSheetApplyButton,
                     onPressed: _amount > 0 ? _apply : null,
                   ),
                 ),

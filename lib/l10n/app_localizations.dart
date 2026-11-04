@@ -4233,6 +4233,654 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Vide'**
   String get weaponSlotPickerSheetEmptyLabel;
+
+  /// Libellé du bouton "Filtre" en tête de liste de l'onglet "Inventaire" (`CompactActionButton`) — `filterLabel` reste `InventoryCategoryFilter.label`, non traduit (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtre : {filterLabel}'**
+  String characterInventoryTabBodyFilterButtonLabel(String filterLabel);
+
+  /// Libellé de la tuile pointillée "+ Objet" en pied de l'onglet "Inventaire" (`DashedAddTile`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet'**
+  String get characterInventoryTabBodyAddItemButtonLabel;
+
+  /// Libellé du bouton "Récompense" en pied de l'onglet "Inventaire" (`_RewardButton`).
+  ///
+  /// In fr, this message translates to:
+  /// **'RÉCOMPENSE'**
+  String get characterInventoryTabBodyRewardButtonLabel;
+
+  /// Message affiché quand au moins un objet existe dans l'inventaire mais qu'aucun ne correspond au filtre de catégorie actif (`_NoFilterMatchState`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun objet dans cette catégorie.'**
+  String get characterInventoryTabBodyNoFilterMatchMessage;
+
+  /// Titre de l'état vide de l'onglet "Inventaire" (`_EmptyInventoryState`), aucun objet du tout dans l'inventaire.
+  ///
+  /// In fr, this message translates to:
+  /// **'INVENTAIRE VIDE'**
+  String get characterInventoryTabBodyEmptyTitle;
+
+  /// Sous-titre de l'état vide de l'onglet "Inventaire" (`_EmptyInventoryState`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun objet dans cet inventaire pour l\'instant.'**
+  String get characterInventoryTabBodyEmptyMessage;
+
+  /// Sous-titre d'une carte d'objet de l'onglet "Inventaire" (`CharacterInventoryItemCard`) — `category` reste `InventoryCategoryRules.labelFor`, non traduit (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'{category} · x{quantity}'**
+  String characterInventoryItemCardSubtitle(String category, int quantity);
+
+  /// Badge affiché à droite d'un objet équipé, à la place de son poids (`_EquippedBadge`).
+  ///
+  /// In fr, this message translates to:
+  /// **'ÉQUIPÉ'**
+  String get characterInventoryItemCardEquippedBadge;
+
+  /// Poids affiché à droite d'un objet non équipé (`_Trailing`) — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{weight} kg'**
+  String characterInventoryItemCardWeightValue(String weight);
+
+  /// Titre de la jauge "CHARGE" de l'onglet "Inventaire" (`CharacterInventoryCapacityGauge`).
+  ///
+  /// In fr, this message translates to:
+  /// **'CHARGE'**
+  String get characterInventoryCapacityGaugeTitle;
+
+  /// Valeur "poids porté / capacité" affichée à droite du titre de la jauge "CHARGE" — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{weight} / {capacity} kg'**
+  String characterInventoryCapacityGaugeValueLabel(
+    String weight,
+    String capacity,
+  );
+
+  /// Message d'alerte affiché sous la jauge "CHARGE" quand le poids porté dépasse la capacité de transport.
+  ///
+  /// In fr, this message translates to:
+  /// **'Surchargé — poids supérieur à la capacité de transport.'**
+  String get characterInventoryCapacityGaugeOverloadedWarning;
+
+  /// Libellé d'accessibilité de la jauge "CHARGE", cas non surchargé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Charge : {weight} kilogrammes sur {capacity} kilogrammes'**
+  String characterInventoryCapacityGaugeSemanticsLabel(
+    String weight,
+    String capacity,
+  );
+
+  /// Libellé d'accessibilité de la jauge "CHARGE", cas surchargé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Charge : {weight} kilogrammes sur {capacity} kilogrammes, surchargé'**
+  String characterInventoryCapacityGaugeSemanticsLabelOverloaded(
+    String weight,
+    String capacity,
+  );
+
+  /// Titre de la carte « ARMES ÉQUIPÉES » de l'onglet « Personnage » (`CharacterEquippedWeaponsCard`).
+  ///
+  /// In fr, this message translates to:
+  /// **'ARMES ÉQUIPÉES'**
+  String get characterEquippedWeaponsCardTitle;
+
+  /// Titre de la sous-section "Set principal" de `CharacterEquippedWeaponsCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'SET PRINCIPAL'**
+  String get characterEquippedWeaponsCardPrimarySetTitle;
+
+  /// Titre de la sous-section "Set secondaire" de `CharacterEquippedWeaponsCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'SET SECONDAIRE'**
+  String get characterEquippedWeaponsCardSecondarySetTitle;
+
+  /// Message affiché par une sous-section de set sans arme équipée (`_WeaponSlotSection`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune arme dans ce set.'**
+  String get characterEquippedWeaponsCardEmptySetMessage;
+
+  /// Libellé de la ligne "Attaque" d'une arme équipée (`_Weapon`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Attaque'**
+  String get characterEquippedWeaponsCardAttackLabel;
+
+  /// Titre de l'état vide de `CharacterEquippedWeaponsCard` (`_EmptyWeapons`), aucune arme équipée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune arme équipée'**
+  String get characterEquippedWeaponsCardEmptyTitle;
+
+  /// Sous-titre de l'état vide de `CharacterEquippedWeaponsCard` (`_EmptyWeapons`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Équipez une arme depuis l\'onglet Inventaire pour qu\'elle apparaisse ici.'**
+  String get characterEquippedWeaponsCardEmptyDescription;
+
+  /// Début du libellé d'accessibilité d'une arme équipée (`_Weapon`) — `name` reste `item.name`, donnée de contenu D&D.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arme équipée : {name}'**
+  String characterEquippedWeaponsCardSemanticsLabel(String name);
+
+  /// Segment "Attaque" ajouté au libellé d'accessibilité d'une arme équipée quand un bonus d'attaque est connu.
+  ///
+  /// In fr, this message translates to:
+  /// **', Attaque : {attackBonus}'**
+  String characterEquippedWeaponsCardSemanticsAttackSuffix(String attackBonus);
+
+  /// Segment "Portée" ajouté au libellé d'accessibilité d'une arme équipée à portée (arme à distance).
+  ///
+  /// In fr, this message translates to:
+  /// **', Portée : {range}'**
+  String characterEquippedWeaponsCardSemanticsRangeSuffix(String range);
+
+  /// Portée d'une arme équipée sans portée maximale distincte — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{rangeNormal} m'**
+  String characterEquippedWeaponsCardRangeValue(String rangeNormal);
+
+  /// Portée d'une arme équipée avec portée maximale distincte.
+  ///
+  /// In fr, this message translates to:
+  /// **'{rangeNormal} m (max {rangeMax} m)'**
+  String characterEquippedWeaponsCardRangeValueWithMax(
+    String rangeNormal,
+    String rangeMax,
+  );
+
+  /// Première option de la sheet d'entrée "+ Ajouter un objet" (`_AddItemEntrySheetContent`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Depuis le catalogue'**
+  String get addItemFlowCatalogEntryLabel;
+
+  /// Seconde option de la sheet d'entrée "+ Ajouter un objet" (`_AddItemEntrySheetContent`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet personnalisé'**
+  String get addItemFlowCustomEntryLabel;
+
+  /// Titre de la sheet "Depuis le catalogue" en sélection simple (`_ItemCatalogPickerContent`, `multiSelect: false`).
+  ///
+  /// In fr, this message translates to:
+  /// **'AJOUTER UN OBJET'**
+  String get addItemFlowCatalogTitleSingle;
+
+  /// Titre de la sheet "Depuis le catalogue" en sélection multiple (`_ItemCatalogPickerContent`, `multiSelect: true`).
+  ///
+  /// In fr, this message translates to:
+  /// **'AJOUTER DES OBJETS'**
+  String get addItemFlowCatalogTitleMulti;
+
+  /// Texte d'indice du champ de recherche de la sheet "Depuis le catalogue".
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher un objet...'**
+  String get addItemFlowSearchHint;
+
+  /// Message d'erreur de repli affiché quand le chargement du catalogue échoue sans `CharacterFailure` exploitable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger le catalogue d\'objets. Réessayez.'**
+  String get addItemFlowCatalogLoadErrorMessage;
+
+  /// Libellé du bouton "Ajouter" de la sheet "Depuis le catalogue" en sélection multiple, aucun objet coché.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get addItemFlowAddButtonLabel;
+
+  /// Libellé du bouton "Ajouter" de la sheet "Depuis le catalogue" en sélection multiple, avec le compte d'objets cochés entre parenthèses — même recette que `characterDeleteConfirmationMultipleConfirmButton`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter ({count})'**
+  String addItemFlowAddButtonLabelWithCount(int count);
+
+  /// Message affiché quand la recherche de la sheet "Depuis le catalogue" ne trouve aucun objet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun objet trouvé.'**
+  String get addItemFlowNoResultsMessage;
+
+  /// Sous-titre d'une ligne du catalogue avec un poids connu (`_CatalogItemRow`) — unités "po"/"kg" volontairement gardées telles quelles en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{cost} po · {weight} kg'**
+  String addItemFlowCatalogItemSubtitleWithWeight(String cost, String weight);
+
+  /// Sous-titre d'une ligne du catalogue sans poids connu (`_CatalogItemRow`).
+  ///
+  /// In fr, this message translates to:
+  /// **'{cost} po'**
+  String addItemFlowCatalogItemSubtitleNoWeight(String cost);
+
+  /// Titre de la sheet légère de quantité ouverte au tap sur une ligne du catalogue (`_ItemQuantitySheetContent`) — `itemName` reste le nom de l'objet, donnée de contenu D&D.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter {itemName}'**
+  String addItemFlowQuantitySheetTitle(String itemName);
+
+  /// Bouton "Ajouter" de la sheet légère de quantité (`_ItemQuantitySheetContent`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get addItemFlowQuantitySheetAddButton;
+
+  /// Titre de la sheet "Objet personnalisé" (`_CustomItemPickerContent`).
+  ///
+  /// In fr, this message translates to:
+  /// **'OBJET PERSONNALISÉ'**
+  String get addItemFlowCustomSheetTitle;
+
+  /// Libellé de section "Nom de l'objet" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'NOM DE L\'OBJET'**
+  String get addItemFlowCustomNameSectionLabel;
+
+  /// Texte d'indice du champ "Nom de l'objet" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. Amulette de famille'**
+  String get addItemFlowCustomNameHint;
+
+  /// Libellé de section "Description" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'DESCRIPTION'**
+  String get addItemFlowCustomDescriptionSectionLabel;
+
+  /// Texte d'indice du champ "Description" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. Un médaillon gravé aux armes de votre famille.'**
+  String get addItemFlowCustomDescriptionHint;
+
+  /// Libellé de section "Type d'objet" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'TYPE D\'OBJET'**
+  String get addItemFlowCustomTypeSectionLabel;
+
+  /// Option "Objet simple" du `SegmentedToggle` "Type d'objet" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet simple'**
+  String get addItemFlowCustomTypeSimpleOption;
+
+  /// Option "Arme" du `SegmentedToggle` "Type d'objet" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Arme'**
+  String get addItemFlowCustomTypeWeaponOption;
+
+  /// Libellé de section "Dé de dégâts" de la sheet "Objet personnalisé" (visible seulement pour le type "Arme").
+  ///
+  /// In fr, this message translates to:
+  /// **'DÉ DE DÉGÂTS'**
+  String get addItemFlowCustomDiceSectionLabel;
+
+  /// Lettre "d" affichée entre le nombre de dés et le nombre de faces du dé de dégâts (notation D&D "NdM", ex. "1d8") — gardée telle quelle en anglais aussi, notation de dés internationale.
+  ///
+  /// In fr, this message translates to:
+  /// **'d'**
+  String get addItemFlowCustomDiceNotationSeparator;
+
+  /// Libellé de section "Type de dégâts" de la sheet "Objet personnalisé" (visible seulement pour le type "Arme").
+  ///
+  /// In fr, this message translates to:
+  /// **'TYPE DE DÉGÂTS'**
+  String get addItemFlowCustomDamageTypeSectionLabel;
+
+  /// Texte d'indice du menu déroulant "Type de dégâts" de la sheet "Objet personnalisé", aucune valeur choisie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sélectionner'**
+  String get addItemFlowCustomDamageTypeHint;
+
+  /// Libellé affiché pour le type de dégâts "tranchant" dans le menu déroulant de la sheet "Objet personnalisé" (valeur stockée inchangée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tranchant'**
+  String get addItemFlowDamageTypeSlashingLabel;
+
+  /// Libellé affiché pour le type de dégâts "perforant" dans le menu déroulant de la sheet "Objet personnalisé" (valeur stockée inchangée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Perforant'**
+  String get addItemFlowDamageTypePiercingLabel;
+
+  /// Libellé affiché pour le type de dégâts "contondant" dans le menu déroulant de la sheet "Objet personnalisé" (valeur stockée inchangée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Contondant'**
+  String get addItemFlowDamageTypeBludgeoningLabel;
+
+  /// Libellé de section "Propriétés" de la sheet "Objet personnalisé" (visible seulement pour le type "Arme").
+  ///
+  /// In fr, this message translates to:
+  /// **'PROPRIÉTÉS'**
+  String get addItemFlowCustomPropertiesSectionLabel;
+
+  /// Texte d'indice du champ "Propriétés" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. légère, finesse'**
+  String get addItemFlowCustomPropertiesHint;
+
+  /// Légende sous le champ "Propriétés" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Séparez plusieurs propriétés par une virgule.'**
+  String get addItemFlowCustomPropertiesCaption;
+
+  /// Libellé de section "Quantité" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'QUANTITÉ'**
+  String get addItemFlowCustomQuantitySectionLabel;
+
+  /// Bouton secondaire "Annuler" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get addItemFlowCustomCancelButton;
+
+  /// Bouton primaire "Ajouter" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get addItemFlowCustomAddButton;
+
+  /// Action "Infos" de la sheet d'actions d'objet (`_ItemActionSheetContent`), toujours affichée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Infos'**
+  String get itemActionSheetInfoLabel;
+
+  /// Action "Utiliser" de la sheet d'actions d'objet, affichée pour un objet consommable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser'**
+  String get itemActionSheetUseLabel;
+
+  /// Action "Équiper" de la sheet d'actions d'objet (arme non équipée, ou armure/bouclier non équipé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Équiper'**
+  String get itemActionSheetEquipLabel;
+
+  /// Action "Changer de set" de la sheet d'actions d'objet, pour une arme déjà équipée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer de set'**
+  String get itemActionSheetChangeSetLabel;
+
+  /// Action "Déséquiper" de la sheet d'actions d'objet (arme, armure ou bouclier déjà équipé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Déséquiper'**
+  String get itemActionSheetUnequipLabel;
+
+  /// Action "Harmoniser cet objet" de la sheet d'actions d'objet, objet pas encore harmonisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Harmoniser cet objet'**
+  String get itemActionSheetAttuneLabel;
+
+  /// Action "Ne plus harmoniser" de la sheet d'actions d'objet, objet déjà harmonisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne plus harmoniser'**
+  String get itemActionSheetStopAttuneLabel;
+
+  /// Texte de fin de ligne de l'action d'harmonisation quand le plafond `CharacterDetail.attunementCap` est atteint pour un objet pas encore harmonisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Limite ({cap}) atteinte'**
+  String itemActionSheetAttunementCapReachedLabel(int cap);
+
+  /// Action "Retirer" de la sheet d'actions d'objet, toujours affichée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get itemActionSheetRemoveLabel;
+
+  /// Sous-titre de l'objet en tête de la sheet d'actions d'objet — `category` reste `InventoryCategoryRules.labelFor`, non traduit (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'{category} · x{quantity}'**
+  String itemActionSheetSubtitle(String category, int quantity);
+
+  /// Titre du dialogue de confirmation "Retirer {nom} ?" — `itemName` reste le nom de l'objet, donnée de contenu D&D.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer {itemName} ?'**
+  String itemActionSheetRemoveConfirmationTitle(String itemName);
+
+  /// Corps du dialogue de confirmation "Retirer {nom} ?".
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action est définitive.'**
+  String get itemActionSheetRemoveConfirmationBody;
+
+  /// Bouton secondaire "Annuler" du dialogue de confirmation "Retirer {nom} ?".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get itemActionSheetRemoveConfirmationCancelButton;
+
+  /// Bouton destructif de confirmation du dialogue "Retirer {nom} ?".
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get itemActionSheetRemoveConfirmationConfirmButton;
+
+  /// Libellé de la ligne "Poids unitaire" du panneau "Infos" d'un objet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Poids unitaire'**
+  String get itemInfoPanelWeightLabel;
+
+  /// Valeur de la ligne "Poids unitaire" du panneau "Infos" d'un objet — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{weight} kg'**
+  String itemInfoPanelWeightValue(String weight);
+
+  /// Libellé de la ligne "Coût" du panneau "Infos" d'un objet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coût'**
+  String get itemInfoPanelCostLabel;
+
+  /// Valeur de la ligne "Coût" du panneau "Infos" d'un objet — unité "po" volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{cost} po'**
+  String itemInfoPanelCostValue(String cost);
+
+  /// Libellé de la ligne "Set" du panneau "Infos" d'une arme équipée dont le set est connu — la valeur affichée reste `WeaponSlot.label`, non traduite (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Set'**
+  String get itemInfoPanelSetLabel;
+
+  /// Libellé de la ligne "Attaque" du panneau "Infos" d'une arme.
+  ///
+  /// In fr, this message translates to:
+  /// **'Attaque'**
+  String get itemInfoPanelAttackLabel;
+
+  /// Libellé de la ligne "Dégâts" du panneau "Infos" d'une arme.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dégâts'**
+  String get itemInfoPanelDamageLabel;
+
+  /// Libellé de la ligne "Propriétés" du panneau "Infos" d'une arme.
+  ///
+  /// In fr, this message translates to:
+  /// **'Propriétés'**
+  String get itemInfoPanelPropertiesLabel;
+
+  /// Libellé de la ligne "Portée" du panneau "Infos" d'une arme à distance.
+  ///
+  /// In fr, this message translates to:
+  /// **'Portée'**
+  String get itemInfoPanelRangeLabel;
+
+  /// Valeur de la ligne "Portée" sans portée maximale distincte — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{rangeNormal} m'**
+  String itemInfoPanelRangeValue(String rangeNormal);
+
+  /// Valeur de la ligne "Portée" avec portée maximale distincte.
+  ///
+  /// In fr, this message translates to:
+  /// **'{rangeNormal} m (max {rangeMax} m)'**
+  String itemInfoPanelRangeValueWithMax(String rangeNormal, String rangeMax);
+
+  /// Libellé de la ligne "CA de base" du panneau "Infos" d'une armure/bouclier.
+  ///
+  /// In fr, this message translates to:
+  /// **'CA de base'**
+  String get itemInfoPanelArmorClassLabel;
+
+  /// Libellé de la ligne "Bonus Dex" du panneau "Infos" d'une armure/bouclier — la valeur affichée reste `InventoryArmorDexBonusFormatter.format`, non traduite (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonus Dex'**
+  String get itemInfoPanelDexBonusLabel;
+
+  /// Libellé de la ligne "Force requise" du panneau "Infos" d'une armure, affichée seulement si renseignée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Force requise'**
+  String get itemInfoPanelStrengthRequirementLabel;
+
+  /// Libellé de la ligne "Désavantage discrétion" du panneau "Infos" d'une armure/bouclier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désavantage discrétion'**
+  String get itemInfoPanelStealthDisadvantageLabel;
+
+  /// Valeur "Oui" de la ligne "Désavantage discrétion" du panneau "Infos" d'une armure/bouclier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Oui'**
+  String get itemInfoPanelYesLabel;
+
+  /// Valeur "Non" de la ligne "Désavantage discrétion" du panneau "Infos" d'une armure/bouclier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non'**
+  String get itemInfoPanelNoLabel;
+
+  /// Libellé de la ligne "Rareté" du panneau "Infos" d'un objet, affichée seulement si renseignée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rareté'**
+  String get itemInfoPanelRarityLabel;
+
+  /// Titre de la section "Description" du panneau "Infos" d'un objet.
+  ///
+  /// In fr, this message translates to:
+  /// **'DESCRIPTION'**
+  String get itemInfoPanelDescriptionSectionLabel;
+
+  /// Texte de repli de la section "Description" du panneau "Infos", objet sans description renseignée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune description disponible.'**
+  String get itemInfoPanelDescriptionUnavailable;
+
+  /// Bouton de pied "Utiliser" du panneau "Infos", objet consommable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser'**
+  String get itemInfoPanelUseButton;
+
+  /// Bouton de pied "Équiper" du panneau "Infos" (armure/bouclier non équipé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Équiper'**
+  String get itemInfoPanelEquipButton;
+
+  /// Bouton de pied "Déséquiper" du panneau "Infos" (armure/bouclier équipé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Déséquiper'**
+  String get itemInfoPanelUnequipButton;
+
+  /// Lien "Harmoniser cet objet" du panneau "Infos" (`_ToggleAttunedLink`), objet pas encore harmonisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Harmoniser cet objet'**
+  String get itemInfoPanelAttuneLabel;
+
+  /// Lien "Ne plus harmoniser" du panneau "Infos" (`_ToggleAttunedLink`), objet déjà harmonisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne plus harmoniser'**
+  String get itemInfoPanelStopAttuneLabel;
+
+  /// Légende affichée sous le lien d'harmonisation du panneau "Infos" quand le plafond `CharacterDetail.attunementCap` est atteint pour un objet pas encore harmonisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'{cap, plural, =1{Limite de 1 objet harmonisé atteinte.} other{Limite de {cap} objets harmonisés atteinte.}}'**
+  String itemInfoPanelAttunementCapReachedCaption(int cap);
+
+  /// Titre de la sheet d'ajustement de monnaie — `currencyLabel` reste `CurrencyKind.fullLabel`, non traduit (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajuster les {currencyLabel}'**
+  String currencyAdjustmentSheetTitle(String currencyLabel);
+
+  /// Option "Ajouter" du `SegmentedToggle` de la sheet d'ajustement de monnaie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get currencyAdjustmentSheetAddOption;
+
+  /// Option "Retirer" du `SegmentedToggle` de la sheet d'ajustement de monnaie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get currencyAdjustmentSheetRemoveOption;
+
+  /// Bouton secondaire "Annuler" de la sheet d'ajustement de monnaie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get currencyAdjustmentSheetCancelButton;
+
+  /// Bouton primaire "Appliquer" de la sheet d'ajustement de monnaie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appliquer'**
+  String get currencyAdjustmentSheetApplyButton;
+
+  /// Titre de la sheet "Filtrer par catégorie" de l'onglet "Inventaire".
+  ///
+  /// In fr, this message translates to:
+  /// **'FILTRER PAR CATÉGORIE'**
+  String get inventoryCategoryFilterSheetTitle;
 }
 
 class _AppLocalizationsDelegate

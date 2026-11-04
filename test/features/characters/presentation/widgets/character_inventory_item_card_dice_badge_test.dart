@@ -9,11 +9,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/dice_type_badge.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_inventory_item_card.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 void main() {
   Future<void> pump(WidgetTester tester, CharacterInventoryItem item) {
     return tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
         home: Scaffold(body: CharacterInventoryItemCard(item: item)),
       ),
     );

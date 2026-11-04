@@ -13,6 +13,7 @@ import '../../../../core/widgets/segmented_toggle.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../../../core/widgets/stepper_counter.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../character_creation/domain/gold_amount_formatter.dart';
 import '../../domain/character_failure.dart';
 import '../../domain/inventory_catalog_item.dart';
@@ -170,19 +171,20 @@ class _AddItemEntrySheetContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SheetActionRow(
             icon: Icons.search,
-            label: 'Depuis le catalogue',
+            label: l10n.addItemFlowCatalogEntryLabel,
             onTap: () => Navigator.of(context).pop(AddItemEntryChoice.catalog),
           ),
           const SheetActionDivider(),
           SheetActionRow(
             icon: Icons.edit_note,
-            label: 'Objet personnalisé',
+            label: l10n.addItemFlowCustomEntryLabel,
             onTap: () => Navigator.of(context).pop(AddItemEntryChoice.custom),
           ),
         ],
@@ -291,6 +293,7 @@ class _ItemCatalogPickerContentState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final catalogAsync = ref.watch(inventoryCatalogProvider);
 
     return SafeArea(
@@ -303,8 +306,8 @@ class _ItemCatalogPickerContentState
             children: [
               SheetHeaderBar(
                 title: widget.multiSelect
-                    ? 'AJOUTER DES OBJETS'
-                    : 'AJOUTER UN OBJET',
+                    ? l10n.addItemFlowCatalogTitleMulti
+                    : l10n.addItemFlowCatalogTitleSingle,
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -315,9 +318,12 @@ class _ItemCatalogPickerContentState
                 ),
                 child: TextFormField(
                   controller: _searchController,
-                  decoration: const InputDecoration(
-                    hintText: 'Rechercher un objet...',
-                    prefixIcon: Icon(Icons.search, color: AppColors.textMuted),
+                  decoration: InputDecoration(
+                    hintText: l10n.addItemFlowSearchHint,
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ),
               ),
@@ -332,8 +338,7 @@ class _ItemCatalogPickerContentState
                   error: (error, stackTrace) => ErrorRetryState(
                     message: error is CharacterFailure
                         ? error.message
-                        : "Impossible de charger le catalogue d'objets. "
-                              'Réessayez.',
+                        : l10n.addItemFlowCatalogLoadErrorMessage,
                     onRetry: () => ref.invalidate(inventoryCatalogProvider),
                   ),
                 ),
@@ -348,8 +353,10 @@ class _ItemCatalogPickerContentState
                   ),
                   child: PrimaryButton(
                     label: _selectedCount == 0
-                        ? 'Ajouter'
-                        : 'Ajouter ($_selectedCount)',
+                        ? l10n.addItemFlowAddButtonLabel
+                        : l10n.addItemFlowAddButtonLabelWithCount(
+                            _selectedCount,
+                          ),
                     onPressed: _selectedCount == 0
                         ? null
                         : () =>
@@ -365,6 +372,7 @@ class _ItemCatalogPickerContentState
   }
 
   Widget _buildList(List<InventoryCatalogItem> items) {
+    final l10n = AppLocalizations.of(context)!;
     final query = _searchController.text.trim().toLowerCase();
     final filtered = query.isEmpty
         ? items
@@ -375,7 +383,7 @@ class _ItemCatalogPickerContentState
     if (filtered.isEmpty) {
       return Center(
         child: Text(
-          'Aucun objet trouvé.',
+          l10n.addItemFlowNoResultsMessage,
           style: AppTypography.body(color: AppColors.textMuted),
         ),
       );
@@ -482,11 +490,15 @@ class _CatalogItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final weight = item.weight;
+    final formattedCost = GoldAmountFormatter.format(item.costAmount);
     final subtitle = weight != null
-        ? '${GoldAmountFormatter.format(item.costAmount)} po · '
-              '${WeightFormatter.format(weight)} kg'
-        : '${GoldAmountFormatter.format(item.costAmount)} po';
+        ? l10n.addItemFlowCatalogItemSubtitleWithWeight(
+            formattedCost,
+            WeightFormatter.format(weight),
+          )
+        : l10n.addItemFlowCatalogItemSubtitleNoWeight(formattedCost);
 
     return Material(
       color: selected ? AppColors.parchmentCard : Colors.transparent,
@@ -561,6 +573,7 @@ class _ItemQuantitySheetContentState extends State<_ItemQuantitySheetContent> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -574,7 +587,7 @@ class _ItemQuantitySheetContentState extends State<_ItemQuantitySheetContent> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Ajouter ${widget.item.name}',
+              l10n.addItemFlowQuantitySheetTitle(widget.item.name),
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -592,7 +605,7 @@ class _ItemQuantitySheetContentState extends State<_ItemQuantitySheetContent> {
             ),
             const SizedBox(height: AppSpacing.md),
             PrimaryButton(
-              label: 'Ajouter',
+              label: l10n.addItemFlowQuantitySheetAddButton,
               onPressed: () => Navigator.of(context).pop(_quantity),
             ),
           ],
@@ -605,11 +618,13 @@ class _ItemQuantitySheetContentState extends State<_ItemQuantitySheetContent> {
 /// Types de dégâts d'une arme personnalisée — mêmes valeurs (minuscules) que
 /// `weapon_properties.damage_type` côté catalogue, voir
 /// `CharacterInventoryWeaponProperties.damageType`. Libellés capitalisés à
-/// l'affichage (spec visuelle), valeur stockée telle quelle.
-const Map<String, String> _customDamageTypeLabels = {
-  'tranchant': 'Tranchant',
-  'perforant': 'Perforant',
-  'contondant': 'Contondant',
+/// l'affichage (spec visuelle), valeur stockée telle quelle — fonction plutôt
+/// que `const Map` (nécessite `AppLocalizations`, qui requiert un
+/// `BuildContext`), même recette que `profile_faq_screen.dart`.
+Map<String, String> _customDamageTypeLabels(AppLocalizations l10n) => {
+  'tranchant': l10n.addItemFlowDamageTypeSlashingLabel,
+  'perforant': l10n.addItemFlowDamageTypePiercingLabel,
+  'contondant': l10n.addItemFlowDamageTypeBludgeoningLabel,
 };
 
 /// Faces de dé proposées pour le dé de dégâts d'une arme personnalisée —
@@ -741,6 +756,7 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: FractionallySizedBox(
@@ -749,7 +765,7 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
           decoration: const BoxDecoration(color: AppColors.parchmentBg),
           child: Column(
             children: [
-              const SheetHeaderBar(title: 'OBJET PERSONNALISÉ'),
+              SheetHeaderBar(title: l10n.addItemFlowCustomSheetTitle),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(AppSpacing.lg),
@@ -757,7 +773,7 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "NOM DE L'OBJET",
+                        l10n.addItemFlowCustomNameSectionLabel,
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
@@ -769,13 +785,13 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                         key: const Key('customItemNameField'),
                         controller: _nameController,
                         autofocus: true,
-                        decoration: const InputDecoration(
-                          hintText: 'Ex. Amulette de famille',
+                        decoration: InputDecoration(
+                          hintText: l10n.addItemFlowCustomNameHint,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
-                        'DESCRIPTION',
+                        l10n.addItemFlowCustomDescriptionSectionLabel,
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
@@ -788,15 +804,13 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                         controller: _descriptionController,
                         minLines: 3,
                         maxLines: null,
-                        decoration: const InputDecoration(
-                          hintText:
-                              'Ex. Un médaillon gravé aux armes de '
-                              'votre famille.',
+                        decoration: InputDecoration(
+                          hintText: l10n.addItemFlowCustomDescriptionHint,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
-                        "TYPE D'OBJET",
+                        l10n.addItemFlowCustomTypeSectionLabel,
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
@@ -805,12 +819,15 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       SegmentedToggle<bool>(
-                        options: const [
+                        options: [
                           SegmentedToggleOption(
                             value: false,
-                            label: 'Objet simple',
+                            label: l10n.addItemFlowCustomTypeSimpleOption,
                           ),
-                          SegmentedToggleOption(value: true, label: 'Arme'),
+                          SegmentedToggleOption(
+                            value: true,
+                            label: l10n.addItemFlowCustomTypeWeaponOption,
+                          ),
                         ],
                         value: _isWeapon,
                         onChanged: (value) => setState(() => _isWeapon = value),
@@ -818,7 +835,7 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                       if (_isWeapon) ...[
                         const SizedBox(height: AppSpacing.md),
                         Text(
-                          'DÉ DE DÉGÂTS',
+                          l10n.addItemFlowCustomDiceSectionLabel,
                           style: AppTypography.body(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
@@ -837,7 +854,7 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                             ),
                             const SizedBox(width: AppSpacing.sm),
                             Text(
-                              'd',
+                              l10n.addItemFlowCustomDiceNotationSeparator,
                               style: AppTypography.body(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
@@ -864,7 +881,7 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                         ),
                         const SizedBox(height: AppSpacing.md),
                         Text(
-                          'TYPE DE DÉGÂTS',
+                          l10n.addItemFlowCustomDamageTypeSectionLabel,
                           style: AppTypography.body(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
@@ -876,9 +893,11 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                           key: const Key('customItemDamageTypeField'),
                           initialValue: _damageType,
                           isExpanded: true,
-                          hint: const Text('Sélectionner'),
+                          hint: Text(l10n.addItemFlowCustomDamageTypeHint),
                           items: [
-                            for (final entry in _customDamageTypeLabels.entries)
+                            for (final entry in _customDamageTypeLabels(
+                              l10n,
+                            ).entries)
                               DropdownMenuItem(
                                 value: entry.key,
                                 child: Text(entry.value),
@@ -889,7 +908,7 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                         ),
                         const SizedBox(height: AppSpacing.md),
                         Text(
-                          'PROPRIÉTÉS',
+                          l10n.addItemFlowCustomPropertiesSectionLabel,
                           style: AppTypography.body(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
@@ -900,13 +919,13 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                         TextFormField(
                           key: const Key('customItemPropertiesField'),
                           controller: _propertiesController,
-                          decoration: const InputDecoration(
-                            hintText: 'Ex. légère, finesse',
+                          decoration: InputDecoration(
+                            hintText: l10n.addItemFlowCustomPropertiesHint,
                           ),
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
-                          'Séparez plusieurs propriétés par une virgule.',
+                          l10n.addItemFlowCustomPropertiesCaption,
                           style: AppTypography.body(
                             fontSize: 12,
                             color: AppColors.textMuted,
@@ -915,7 +934,7 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                       ],
                       const SizedBox(height: AppSpacing.md),
                       Text(
-                        'QUANTITÉ',
+                        l10n.addItemFlowCustomQuantitySectionLabel,
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
@@ -945,7 +964,7 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                   children: [
                     Expanded(
                       child: SecondaryButton(
-                        label: 'Annuler',
+                        label: l10n.addItemFlowCustomCancelButton,
                         surface: SecondaryButtonSurface.parchment,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
@@ -953,7 +972,7 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: PrimaryButton(
-                        label: 'Ajouter',
+                        label: l10n.addItemFlowCustomAddButton,
                         onPressed: _canSubmit ? _submit : null,
                       ),
                     ),

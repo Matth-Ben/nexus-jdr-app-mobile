@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/weight_formatter.dart';
 
@@ -29,6 +30,7 @@ class CharacterInventoryCapacityGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final weight = detail.inventoryWeight;
     final capacity = detail.carryingCapacity;
     // `capacity` est toujours > 0 en pratique (score de Force minimal de 1,
@@ -36,12 +38,19 @@ class CharacterInventoryCapacityGauge extends StatelessWidget {
     // de diviser par 0 sur une donnée de test/incohérente.
     final ratio = capacity <= 0 ? 0.0 : weight / capacity;
     final overloaded = detail.isOverloaded;
+    final formattedWeight = WeightFormatter.format(weight);
+    final formattedCapacity = WeightFormatter.format(capacity);
 
     return Semantics(
-      label:
-          'Charge : ${WeightFormatter.format(weight)} kilogrammes sur '
-          '${WeightFormatter.format(capacity)} kilogrammes'
-          '${overloaded ? ', surchargé' : ''}',
+      label: overloaded
+          ? l10n.characterInventoryCapacityGaugeSemanticsLabelOverloaded(
+              formattedWeight,
+              formattedCapacity,
+            )
+          : l10n.characterInventoryCapacityGaugeSemanticsLabel(
+              formattedWeight,
+              formattedCapacity,
+            ),
       container: true,
       excludeSemantics: true,
       child: Column(
@@ -51,15 +60,17 @@ class CharacterInventoryCapacityGauge extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'CHARGE',
+                l10n.characterInventoryCapacityGaugeTitle,
                 style: AppTypography.display(
                   fontSize: 11,
                   color: AppColors.textSecondary,
                 ),
               ),
               Text(
-                '${WeightFormatter.format(weight)} / '
-                '${WeightFormatter.format(capacity)} kg',
+                l10n.characterInventoryCapacityGaugeValueLabel(
+                  formattedWeight,
+                  formattedCapacity,
+                ),
                 style: AppTypography.body(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -75,7 +86,7 @@ class CharacterInventoryCapacityGauge extends StatelessWidget {
           if (overloaded) ...[
             const SizedBox(height: AppSpacing.xs / 2),
             Text(
-              'Surchargé — poids supérieur à la capacité de transport.',
+              l10n.characterInventoryCapacityGaugeOverloadedWarning,
               style: AppTypography.body(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
