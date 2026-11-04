@@ -11,6 +11,7 @@ import '../../../core/widgets/menu_tile.dart';
 import '../../../core/widgets/profile_avatar.dart';
 import '../../../core/widgets/settings_list_card.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../auth/domain/auth_failure.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 import 'providers/package_info_provider.dart';
@@ -43,6 +44,7 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(currentUserProvider);
     final rawDisplayName = (user?.userMetadata?['full_name'] as String?)
         ?.trim();
@@ -111,6 +113,12 @@ class ProfileScreen extends ConsumerWidget {
                         icon: Icons.notifications_none,
                         label: 'Notifications',
                         onTap: () => context.push('/profile/notifications'),
+                      ),
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.language,
+                        label: l10n.profileLanguageMenuEntry,
+                        onTap: () => context.push('/profile/language'),
                       ),
                       MenuTile(
                         standalone: false,

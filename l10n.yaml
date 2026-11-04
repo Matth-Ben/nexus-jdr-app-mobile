@@ -1,0 +1,11 @@
+# Configuration de `flutter gen-l10n` (chantier "traduction de l'app" Phase A
+# — infrastructure + réglage de langue uniquement, voir
+# `lib/features/profile/presentation/profile_language_screen.dart`).
+#
+# Le français est la langue de référence/source de cette app (décision
+# explicite, inverse de la convention Flutter par défaut `app_en.arb`) :
+# `template-arb-file` pointe donc sur `app_fr.arb`, pas `app_en.arb`.
+arb-dir: lib/l10n
+template-arb-file: app_fr.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations

@@ -1,0 +1,11 @@
+{
+  "@@locale": "en",
+  "profileLanguageMenuEntry": "Language",
+  "profileLanguageScreenTitle": "LANGUAGE",
+  "profileLanguagePhoneOption": "Phone language",
+  "profileLanguagePhoneOptionSubtitle": "Langue du téléphone",
+  "profileLanguagePhoneOptionDetail": "Suit la langue de l'appareil (FR/EN) ; repli sur le français si l'appareil utilise une autre langue. / Follows the device's language (FR/EN); falls back to French otherwise.",
+  "profileLanguageFrenchOption": "Français",
+  "profileLanguageEnglishOption": "English",
+  "profileLanguageSaveError": "Couldn't save this setting. Please try again."
+}

@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/analytics/analytics_preferences_provider.dart';
 import 'core/analytics/analytics_service.dart';
+import 'core/i18n/locale_preference_provider.dart';
 import 'core/network/env_config.dart';
 import 'core/network/timeout_http_client.dart';
 import 'core/notifications/notification_providers.dart';
@@ -25,6 +26,7 @@ import 'features/characters/presentation/providers/character_providers.dart';
 import 'features/characters/presentation/providers/character_write_sync_coordinator.dart';
 import 'features/splash/presentation/splash_screen.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -543,6 +545,35 @@ class NexusJdrApp extends ConsumerWidget {
       // premier plan (`PushTokenRegistrar`).
       scaffoldMessengerKey: ref.watch(scaffoldMessengerKeyProvider),
       routerConfig: router,
+      // Chantier "traduction de l'app" Phase A — infrastructure `.arb`
+      // uniquement (voir `core/i18n/locale_preference_provider.dart` et
+      // `features/profile/presentation/profile_language_screen.dart`) : le
+      // reste des textes de l'app est encore en dur en français (Phase B).
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      // `AppLocalizations.supportedLocales` est généré par `flutter
+      // gen-l10n` par ordre alphabétique (`[en, fr]`), pas par ordre de
+      // déclaration de `l10n.yaml`/`app_fr.arb` : l'algorithme de résolution
+      // par défaut de Flutter (`basicLocaleListResolution`) replierait donc
+      // sur l'anglais — `supportedLocales.first` — pour un appareil dans une
+      // langue ni FR ni EN, alors que le français est la langue de repli
+      // voulue (décision déjà actée, voir le chantier). Callback explicite
+      // plutôt que de supposer ce comportement par défaut.
+      localeResolutionCallback: (deviceLocale, supportedLocales) {
+        if (deviceLocale != null) {
+          for (final supported in supportedLocales) {
+            if (supported.languageCode == deviceLocale.languageCode) {
+              return supported;
+            }
+          }
+        }
+        return const Locale('fr');
+      },
+      // `null` laisse `localeResolutionCallback` ci-dessus résoudre la
+      // langue selon l'appareil ; une valeur explicite (`setLocale` dans
+      // `LocalePreferenceController`) force cette langue indépendamment du
+      // téléphone.
+      locale: ref.watch(localePreferenceControllerProvider),
     );
   }
 }

@@ -41,6 +41,7 @@ import '../../features/profile/presentation/profile_delete_account_screen.dart';
 import '../../features/profile/presentation/profile_edit_screen.dart';
 import '../../features/profile/presentation/profile_faq_screen.dart';
 import '../../features/profile/presentation/profile_help_screen.dart';
+import '../../features/profile/presentation/profile_language_screen.dart';
 import '../../features/profile/presentation/profile_legal_screen.dart';
 import '../../features/profile/presentation/profile_notifications_screen.dart';
 import '../../features/profile/presentation/profile_privacy_policy_screen.dart';
@@ -379,6 +380,14 @@ GoRouter appRouter(Ref ref) {
         name: 'profile-notifications',
         path: '/profile/notifications',
         builder: (context, state) => const ProfileNotificationsScreen(),
+      ),
+      GoRoute(
+        // Sous-écran "Langue" (`features/profile/`, chantier "traduction de
+        // l'app" Phase A), poussé depuis la tuile "Langue" de
+        // `ProfileScreen` — voir la doc de classe de `ProfileLanguageScreen`.
+        name: 'profile-language',
+        path: '/profile/language',
+        builder: (context, state) => const ProfileLanguageScreen(),
       ),
       GoRoute(
         name: 'character-detail',
