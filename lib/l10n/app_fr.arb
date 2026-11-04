@@ -335,7 +335,7 @@
   },
   "profileDeleteAccountWarningMessage": "Cette action est irréversible. Elle supprimera définitivement :\n• Tous tes personnages et leurs portraits\n• Tes rattachements aux histoires que tu as rejointes\n• Toutes les histoires que tu as créées en tant que MJ sur l'app Histoires (et l'accès de tes joueurs à ces histoires)\n\nCette action ne peut pas être annulée.",
   "@profileDeleteAccountWarningMessage": {
-    "description": "Corps du bandeau d'avertissement \"ACTION IRRÉVERSIBLE\" de `profile_delete_account_screen.dart` — texte à ne pas modifier sans revalider auprès du chef de projet."
+    "description": "Corps du bandeau d'avertissement \"ACTION IRRÉVERSIBLE\" de `profile_delete_account_screen.dart` — texte à ne pas modifier sans revalider auprès du chef de projet. Justification de son ampleur : le compte Supabase est unique et partagé avec l'app web \"Histoires\" ; supprimer le compte (`auth.admin.deleteUser`) cascade en base non seulement vers les personnages de cette app, mais aussi vers les histoires que ce compte a créées en tant que MJ côté web (`stories.user_id`) et ses entrées codex (`codex_entries.user_id`), toutes deux référençant `auth.users` en cascade — vérifié par le chantier backend qui a construit l'edge function `delete-account` (dépôt web `markdown-editor`). Ce texte doit refléter cette ampleur réelle, pas seulement les données propres à l'app mobile."
   },
   "profileDeleteAccountConfirmationCheckboxLabel": "Je comprends que cette action est définitive et que mes données ne pourront pas être récupérées.",
   "@profileDeleteAccountConfirmationCheckboxLabel": {

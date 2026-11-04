@@ -396,10 +396,23 @@ class _ErrorBanner extends StatelessWidget {
 /// `docs/cahier-des-charges/09-maquettes-captures.md`, section "Profil —
 /// Suppression du compte") : icône et titre centrés au-dessus du texte
 /// `profileDeleteAccountWarningMessage` (texte à ne pas modifier sans
-/// revalider auprès du chef de projet) — agencement distinct de
-/// l'`AlertBanner` partagé (`core/widgets/alert_banner.dart`, icône + texte
-/// alignés en ligne, sans titre), non extrait en composant partagé car
-/// c'est pour l'instant son seul usage dans ce dépôt.
+/// revalider auprès du chef de projet ; le texte lui-même vit désormais dans
+/// `app_fr.arb`/`app_en.arb`, dont la description documente la justification
+/// ci-dessous) — agencement distinct de l'`AlertBanner` partagé
+/// (`core/widgets/alert_banner.dart`, icône + texte alignés en ligne, sans
+/// titre), non extrait en composant partagé car c'est pour l'instant son
+/// seul usage dans ce dépôt.
+///
+/// Justification de l'ampleur de ce texte : le compte Supabase est unique et
+/// partagé avec l'app web "Histoires", donc supprimer le compte
+/// (`auth.admin.deleteUser`) cascade en base non seulement vers les
+/// personnages de cette app, mais aussi vers les histoires que ce compte a
+/// créées en tant que MJ côté web (`stories.user_id`) et ses entrées codex
+/// (`codex_entries.user_id`), toutes deux référençant `auth.users` en
+/// cascade — vérifié par le chantier backend qui a construit l'edge function
+/// `delete-account` (dépôt web `markdown-editor`). Le texte affiché doit
+/// refléter cette ampleur réelle, pas seulement les données propres à l'app
+/// mobile.
 class _IrreversibleActionBanner extends StatelessWidget {
   const _IrreversibleActionBanner({required this.l10n});
 
