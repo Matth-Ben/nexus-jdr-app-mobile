@@ -41,17 +41,21 @@ import 'package:personnages/features/character_creation/presentation/providers/c
 import 'package:personnages/features/character_creation/presentation/providers/subclass_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/providers/subclass_feature_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/subclass_step_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   ClassCatalog? catalogToReturn;
+  Object? catalogErrorToThrow;
 
   @override
   Future<RaceCatalog> fetchRaceCatalog() async =>
       const RaceCatalog(races: [], subraces: []);
 
   @override
-  Future<ClassCatalog> fetchClassCatalog() async =>
-      catalogToReturn ?? const ClassCatalog(classes: []);
+  Future<ClassCatalog> fetchClassCatalog() async {
+    if (catalogErrorToThrow != null) throw catalogErrorToThrow!;
+    return catalogToReturn ?? const ClassCatalog(classes: []);
+  }
 
   @override
   Future<BackgroundCatalog> fetchBackgroundCatalog() async =>
@@ -212,21 +216,29 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
   CharacterCreationDraft readDraft() =>
       container.read(characterCreationDraftControllerProvider);
 
-  Future<void> pumpSubclassStep(WidgetTester tester) async {
+  Future<void> pumpSubclassStep(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     container
         .read(characterCreationDraftControllerProvider.notifier)
         .setClass(classId: 3, subclassId: null);
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     router.push('/characters/new/subclass');
     await tester.pumpAndSettle();
@@ -240,11 +252,12 @@ void main() {
     WidgetTester tester, {
     required int classId,
     required int subclassId,
+    Locale locale = const Locale('fr'),
   }) async {
     container
         .read(characterCreationDraftControllerProvider.notifier)
         .setClass(classId: classId, subclassId: subclassId);
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     router.push('/characters/new/subclass');
     await tester.pumpAndSettle();
@@ -574,6 +587,101 @@ void main() {
         expect(find.text('Ancêtre draconique'), findsNothing);
         expect(find.text('Dragon rouge'), findsNothing);
         expect(find.text('Dragon bleu'), findsNothing);
+      },
+    );
+  });
+
+  group('traduction anglaise', () {
+    testWidgets('en-tête, compteur, intro, boutons, tooltip d\'aide et '
+        '`SubclassChoiceBlock` (intro/indication/label de sémantique) en '
+        'anglais — le libellé "Domaine divin" (`SubclassChoiceRules`, '
+        'domaine non traduit, D149 de docs/dette-technique.md) reste en '
+        'français, "NEXT" écrit toujours le brouillon', (
+      WidgetTester tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+
+      await pumpSubclassStep(tester, locale: const Locale('en'));
+
+      expect(find.text('3. Subclass'), findsOneWidget);
+      expect(find.text('Step 3 / 10'), findsOneWidget);
+      expect(
+        find.text('This choice is made right at level 1 for Clerc.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('This choice is made right at level 1 for this class.'),
+        findsOneWidget,
+      );
+      expect(find.text('Choose an option to continue.'), findsOneWidget);
+      expect(find.text('BACK'), findsOneWidget);
+      expect(find.text('NEXT'), findsOneWidget);
+      expect(find.byTooltip('Help'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp('Domaine divin, required choice')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Domaine de la Vie'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('NEXT'));
+      await tester.pumpAndSettle();
+
+      expect(
+        readDraft(),
+        const CharacterCreationDraft(classId: 3, subclassId: 31),
+      );
+      expect(find.text('Étape suivante'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('message d\'erreur de repli (erreur générique, pas une '
+        '`CharacterCreationFailure`) et bouton "RETRY" en anglais', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.catalogErrorToThrow = Exception('boom');
+
+      await pumpSubclassStep(tester, locale: const Locale('en'));
+
+      expect(
+        find.text("Couldn't load the available classes. Try again."),
+        findsOneWidget,
+      );
+      expect(find.text('RETRY'), findsOneWidget);
+
+      fakeRepository.catalogErrorToThrow = null;
+      await tester.tap(find.text('RETRY'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Domaine de la Vie'), findsOneWidget);
+    });
+
+    testWidgets(
+      '`SubclassFeatureChoiceBlock` (Ancêtre draconique) : indication et '
+      'label de sémantique en anglais — le nom de l\'aptitude lui-même '
+      '(donnée) reste en français',
+      (WidgetTester tester) async {
+        final handle = tester.ensureSemantics();
+        fakeFeatureRepository.choiceToReturn = const SubclassFeatureChoice(
+          classFeatureId: 368,
+          featureName: 'Ancêtre draconique',
+          options: [_dragonRouge, _dragonBleu],
+        );
+
+        await pumpSubclassFeatureStep(
+          tester,
+          classId: 6,
+          subclassId: 12,
+          locale: const Locale('en'),
+        );
+
+        expect(find.text('Ancêtre draconique'), findsOneWidget);
+        expect(find.text('Choose an option to continue.'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(RegExp('Ancêtre draconique, required choice')),
+          findsOneWidget,
+        );
+        handle.dispose();
       },
     );
   });

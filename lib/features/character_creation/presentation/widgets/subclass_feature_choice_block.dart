@@ -8,6 +8,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/selectable_option_tile.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/creation_step_help.dart';
 import '../../domain/subclass_feature_choice.dart';
 import 'step_help_sheet.dart';
@@ -79,37 +80,36 @@ class _SubclassFeatureChoiceBlockState
     _announced = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       SemanticsService.sendAnnouncement(
         View.of(context),
-        'Choisis ${_articleFor(choice.featureName)}.',
+        l10n.subclassFeatureChoiceBlockAnnouncement(
+          choice.featureName.toLowerCase(),
+        ),
         TextDirection.ltr,
       );
     });
   }
 
-  /// Formule générique "Choisis ton/ta/ses [aptitude]." — contrairement à
-  /// `SubclassChoiceRules.announcementFor` (3 libellés fixes connus), cette
-  /// aptitude est résolue depuis les données (`featureName`), jamais une
-  /// liste de noms de classe codée en dur : accord neutre "le choix de"
-  /// plutôt qu'un genre deviné à tort.
-  static String _articleFor(String featureName) =>
-      'le choix de ${featureName.toLowerCase()}';
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final choice = widget.catalogAsync.asData?.value;
     final options = choice?.options;
     final isEmptyChoice =
         widget.catalogAsync.hasValue &&
         choice != null &&
         (options?.isEmpty ?? false);
-    final title = choice?.featureName ?? 'Choix de sous-classe';
+    final title =
+        choice?.featureName ?? l10n.subclassFeatureChoiceBlockFallbackTitle;
 
     return Padding(
       padding: const EdgeInsets.only(left: AppSpacing.md, top: AppSpacing.sm),
       child: Semantics(
         container: true,
-        label: isEmptyChoice ? title : '$title, choix obligatoire',
+        label: isEmptyChoice
+            ? title
+            : l10n.subclassFeatureChoiceBlockRequiredSemanticsLabel(title),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -121,14 +121,14 @@ class _SubclassFeatureChoiceBlockState
               ),
             ),
             const SizedBox(height: 2),
-            _buildBody(),
+            _buildBody(l10n),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     return widget.catalogAsync.when(
       skipLoadingOnRefresh: false,
       loading: () => const SizedBox(
@@ -153,8 +153,7 @@ class _SubclassFeatureChoiceBlockState
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    'Impossible de charger ce choix de sous-classe. '
-                    'Réessaie.',
+                    l10n.subclassFeatureChoiceBlockErrorMessage,
                     style: AppTypography.body(fontSize: 14),
                   ),
                 ),
@@ -162,7 +161,7 @@ class _SubclassFeatureChoiceBlockState
             ),
             const SizedBox(height: AppSpacing.sm),
             SecondaryButton(
-              label: 'Réessayer',
+              label: l10n.subclassFeatureChoiceBlockRetryButton,
               surface: SecondaryButtonSurface.parchment,
               onPressed: widget.onRetry,
             ),
@@ -181,8 +180,7 @@ class _SubclassFeatureChoiceBlockState
           return Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xs),
             child: Text(
-              "Aucune option n'est disponible pour ce choix. Tu peux "
-              'continuer sans en faire.',
+              l10n.subclassFeatureChoiceBlockNoOptionsMessage,
               style: AppTypography.body(
                 fontSize: 13,
                 color: AppColors.textMuted,
@@ -194,7 +192,7 @@ class _SubclassFeatureChoiceBlockState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Ce choix se fait dès le niveau 1 de ta sous-classe.',
+              l10n.subclassFeatureChoiceBlockIntroText,
               style: AppTypography.body(
                 fontSize: 13,
                 color: AppColors.textMuted,
@@ -203,7 +201,7 @@ class _SubclassFeatureChoiceBlockState
             if (widget.selectedOptionName == null) ...[
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Choisis une option pour continuer.',
+                l10n.subclassFeatureChoiceBlockChooseOptionHint,
                 style: AppTypography.body(
                   fontSize: 12,
                   color: AppColors.accentBrick,

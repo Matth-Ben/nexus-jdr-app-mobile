@@ -3794,4 +3794,181 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backgroundStepScreenNextButton => 'Next';
+
+  @override
+  String get classStepScreenHelpTooltip => 'Help';
+
+  @override
+  String get classStepScreenHeaderTitle => '3. Class';
+
+  @override
+  String classStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Step $currentStep / $totalSteps';
+  }
+
+  @override
+  String get classStepScreenIntroText =>
+      'Choose the path your character will follow.';
+
+  @override
+  String get classStepScreenLockedBannerMessage =>
+      'Class and subclass can only be changed at level 1.';
+
+  @override
+  String get classStepScreenBackButton => 'Back';
+
+  @override
+  String get classStepScreenNextButton => 'Next';
+
+  @override
+  String get classStepScreenGenericErrorMessage =>
+      'Couldn\'t load the available classes. Try again.';
+
+  @override
+  String get classStepScreenRetryButton => 'Retry';
+
+  @override
+  String get classChoiceStepScreenHelpTooltip => 'Help';
+
+  @override
+  String classChoiceStepScreenHeaderTitle(String title) {
+    return '3. $title';
+  }
+
+  @override
+  String classChoiceStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Step $currentStep / $totalSteps';
+  }
+
+  @override
+  String classChoiceStepScreenIntroText(String className) {
+    return 'This choice is made right at level 1 for $className.';
+  }
+
+  @override
+  String get classChoiceStepScreenChooseOptionHint =>
+      'Choose an option to continue.';
+
+  @override
+  String get classChoiceStepScreenFallbackClassName => 'this class';
+
+  @override
+  String get classChoiceStepScreenBackButton => 'Back';
+
+  @override
+  String get classChoiceStepScreenNextButton => 'Next';
+
+  @override
+  String get classChoiceStepScreenGenericErrorMessage =>
+      'Couldn\'t load the available classes. Try again.';
+
+  @override
+  String get classChoiceStepScreenRetryButton => 'Retry';
+
+  @override
+  String get classChoiceStepScreenSkillsSectionTitle => 'PROFICIENT SKILLS';
+
+  @override
+  String classChoiceStepScreenQuotaBadge(
+    int selectedCount,
+    int effectiveQuota,
+  ) {
+    return '$selectedCount / $effectiveQuota chosen';
+  }
+
+  @override
+  String get classChoiceStepScreenNoOptionsAvailableMessage =>
+      'No option is available for this choice. You can continue without making one.';
+
+  @override
+  String get classChoiceStepScreenSkillsErrorMessage =>
+      'Couldn\'t load the available skills. Try again.';
+
+  @override
+  String get subclassStepScreenHelpTooltip => 'Help';
+
+  @override
+  String get subclassStepScreenHeaderTitle => '3. Subclass';
+
+  @override
+  String subclassStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Step $currentStep / $totalSteps';
+  }
+
+  @override
+  String subclassStepScreenIntroText(String className) {
+    return 'This choice is made right at level 1 for $className.';
+  }
+
+  @override
+  String get subclassStepScreenFallbackClassName => 'this class';
+
+  @override
+  String get subclassStepScreenBackButton => 'Back';
+
+  @override
+  String get subclassStepScreenNextButton => 'Next';
+
+  @override
+  String get subclassStepScreenGenericErrorMessage =>
+      'Couldn\'t load the available classes. Try again.';
+
+  @override
+  String get subclassStepScreenRetryButton => 'Retry';
+
+  @override
+  String subclassChoiceBlockRequiredSemanticsLabel(String title) {
+    return '$title, required choice';
+  }
+
+  @override
+  String get subclassChoiceBlockIntroText =>
+      'This choice is made right at level 1 for this class.';
+
+  @override
+  String get subclassChoiceBlockChooseOptionHint =>
+      'Choose an option to continue.';
+
+  @override
+  String get subclassChoiceBlockEmptyMessage =>
+      'No subclass is available for this class. You can continue without choosing one.';
+
+  @override
+  String get subclassChoiceBlockErrorMessage =>
+      'Couldn\'t load the available subclasses. Try again.';
+
+  @override
+  String get subclassChoiceBlockRetryButton => 'Retry';
+
+  @override
+  String get subclassFeatureChoiceBlockFallbackTitle => 'Subclass choice';
+
+  @override
+  String subclassFeatureChoiceBlockRequiredSemanticsLabel(String title) {
+    return '$title, required choice';
+  }
+
+  @override
+  String subclassFeatureChoiceBlockAnnouncement(String featureName) {
+    return 'Choose the $featureName choice.';
+  }
+
+  @override
+  String get subclassFeatureChoiceBlockIntroText =>
+      'This choice is made right at level 1 of your subclass.';
+
+  @override
+  String get subclassFeatureChoiceBlockChooseOptionHint =>
+      'Choose an option to continue.';
+
+  @override
+  String get subclassFeatureChoiceBlockNoOptionsMessage =>
+      'No option is available for this choice. You can continue without making one.';
+
+  @override
+  String get subclassFeatureChoiceBlockErrorMessage =>
+      'Couldn\'t load this subclass choice. Try again.';
+
+  @override
+  String get subclassFeatureChoiceBlockRetryButton => 'Retry';
 }

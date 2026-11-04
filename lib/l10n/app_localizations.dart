@@ -6269,6 +6269,282 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Suivant'**
   String get backgroundStepScreenNextButton;
+
+  /// Tooltip de l'icône "?" du bandeau bois (`_Header`/`_MinimalHeader`), ouvre l'aide contextuelle de l'étape.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get classStepScreenHelpTooltip;
+
+  /// Titre d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'3. Classe'**
+  String get classStepScreenHeaderTitle;
+
+  /// Compteur d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String classStepScreenStepCounter(int currentStep, int totalSteps);
+
+  /// Phrase d'intro affichée au-dessus de la liste des classes.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis la voie que ton personnage empruntera.'**
+  String get classStepScreenIntroText;
+
+  /// Message de `InfoBanner` affiché en mode modification quand la classe est verrouillée (niveau > 1).
+  ///
+  /// In fr, this message translates to:
+  /// **'La classe et la sous-classe ne peuvent être modifiées qu\'au niveau 1.'**
+  String get classStepScreenLockedBannerMessage;
+
+  /// `SecondaryButton` "Retour" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get classStepScreenBackButton;
+
+  /// `PrimaryButton` "Suivant" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get classStepScreenNextButton;
+
+  /// Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les classes disponibles. Réessayez.'**
+  String get classStepScreenGenericErrorMessage;
+
+  /// `SecondaryButton` "Réessayer" de `_ErrorState` (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get classStepScreenRetryButton;
+
+  /// Tooltip de l'icône "?" du bandeau bois (`_Header`), ouvre l'aide contextuelle de l'étape (style de combat/ennemi juré/expertise).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get classChoiceStepScreenHelpTooltip;
+
+  /// Titre d'étape du bandeau bois (`_Header`), {title} vient de `ClassChoiceRules.titleFor` (domaine, reste en français — D149 de docs/dette-technique.md).
+  ///
+  /// In fr, this message translates to:
+  /// **'3. {title}'**
+  String classChoiceStepScreenHeaderTitle(String title);
+
+  /// Compteur d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String classChoiceStepScreenStepCounter(int currentStep, int totalSteps);
+
+  /// Phrase d'intro affichée au-dessus des options, {className} vient des données (`ClassOption.name`, non traduit).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce choix se fait dès le niveau 1 pour {className}.'**
+  String classChoiceStepScreenIntroText(String className);
+
+  /// Indication affichée en rouge tant qu'aucune option n'est sélectionnée (`_NamedChoiceBody`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis une option pour continuer.'**
+  String get classChoiceStepScreenChooseOptionHint;
+
+  /// Libellé de repli si l'id de classe du brouillon est absent du catalogue chargé (`_NamedChoiceBody`, cas défensif), même principe que `subraceStepScreenFallbackRaceName`.
+  ///
+  /// In fr, this message translates to:
+  /// **'cette classe'**
+  String get classChoiceStepScreenFallbackClassName;
+
+  /// `SecondaryButton` "Retour" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get classChoiceStepScreenBackButton;
+
+  /// `PrimaryButton` "Suivant" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get classChoiceStepScreenNextButton;
+
+  /// Message de repli de `_ErrorState` (`_NamedChoiceBody`) quand l'erreur n'est pas une `CharacterCreationFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les classes disponibles. Réessayez.'**
+  String get classChoiceStepScreenGenericErrorMessage;
+
+  /// `SecondaryButton` "Réessayer" de `_ErrorState` (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get classChoiceStepScreenRetryButton;
+
+  /// Titre de section au-dessus des compétences candidates à l'Expertise (`_ExpertiseBody`/`_SectionHeader`).
+  ///
+  /// In fr, this message translates to:
+  /// **'COMPÉTENCES MAÎTRISÉES'**
+  String get classChoiceStepScreenSkillsSectionTitle;
+
+  /// Badge de quota de `_SectionHeader` (`_ExpertiseBody`), ex. "0 / 2 choisies".
+  ///
+  /// In fr, this message translates to:
+  /// **'{selectedCount} / {effectiveQuota} choisies'**
+  String classChoiceStepScreenQuotaBadge(int selectedCount, int effectiveQuota);
+
+  /// Message défensif affiché quand `effectiveQuota <= 0` (`_ExpertiseBody`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune option n\'est disponible pour ce choix. Tu peux continuer sans en faire.'**
+  String get classChoiceStepScreenNoOptionsAvailableMessage;
+
+  /// Message de repli de `_ErrorState` (`_ExpertiseBody`) quand l'erreur n'est pas une `CharacterCreationFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les compétences disponibles. Réessayez.'**
+  String get classChoiceStepScreenSkillsErrorMessage;
+
+  /// Tooltip de l'icône "?" du bandeau bois (`_Header`/`_MinimalHeader`), ouvre l'aide contextuelle de l'étape.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get subclassStepScreenHelpTooltip;
+
+  /// Titre d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'3. Sous-classe'**
+  String get subclassStepScreenHeaderTitle;
+
+  /// Compteur d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String subclassStepScreenStepCounter(int currentStep, int totalSteps);
+
+  /// Phrase d'intro affichée au-dessus du bloc de choix de sous-classe, {className} vient des données (`ClassOption.name`, non traduit).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce choix se fait dès le niveau 1 pour {className}.'**
+  String subclassStepScreenIntroText(String className);
+
+  /// Libellé de repli si l'id de classe du brouillon est absent du catalogue chargé (cas défensif), même principe que `subraceStepScreenFallbackRaceName`.
+  ///
+  /// In fr, this message translates to:
+  /// **'cette classe'**
+  String get subclassStepScreenFallbackClassName;
+
+  /// `SecondaryButton` "Retour" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get subclassStepScreenBackButton;
+
+  /// `PrimaryButton` "Suivant" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get subclassStepScreenNextButton;
+
+  /// Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les classes disponibles. Réessayez.'**
+  String get subclassStepScreenGenericErrorMessage;
+
+  /// `SecondaryButton` "Réessayer" de `_ErrorState` (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get subclassStepScreenRetryButton;
+
+  /// Label de `Semantics` quand au moins une option est disponible, {title} vient de `SubclassChoiceRules.titleFor` (domaine, reste en français — D149 de docs/dette-technique.md).
+  ///
+  /// In fr, this message translates to:
+  /// **'{title}, choix obligatoire'**
+  String subclassChoiceBlockRequiredSemanticsLabel(String title);
+
+  /// Phrase affichée au-dessus de la liste d'options de sous-classe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce choix se fait dès le niveau 1 pour cette classe.'**
+  String get subclassChoiceBlockIntroText;
+
+  /// Indication affichée en rouge tant qu'aucune sous-classe n'est sélectionnée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis une option pour continuer.'**
+  String get subclassChoiceBlockChooseOptionHint;
+
+  /// Message défensif affiché quand le catalogue ne propose aucune option pour cette classe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune sous-classe n\'est disponible pour cette classe. Tu peux continuer sans en choisir.'**
+  String get subclassChoiceBlockEmptyMessage;
+
+  /// Message d'erreur affiché en cas d'échec de chargement du catalogue de sous-classes.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les sous-classes disponibles. Réessaie.'**
+  String get subclassChoiceBlockErrorMessage;
+
+  /// `SecondaryButton` "Réessayer" affiché sous le message d'erreur (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get subclassChoiceBlockRetryButton;
+
+  /// Titre de repli affiché avant que le choix (`SubclassFeatureChoice`) n'ait fini de se charger.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choix de sous-classe'**
+  String get subclassFeatureChoiceBlockFallbackTitle;
+
+  /// Label de `Semantics` quand au moins une option est disponible, {title} vient de `SubclassFeatureChoice.featureName` (donnée, non traduite).
+  ///
+  /// In fr, this message translates to:
+  /// **'{title}, choix obligatoire'**
+  String subclassFeatureChoiceBlockRequiredSemanticsLabel(String title);
+
+  /// Texte annoncé aux lecteurs d'écran quand les options apparaissent, {featureName} vient de `SubclassFeatureChoice.featureName` (déjà passé en minuscules par l'appelant, donnée non traduite).
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis le choix de {featureName}.'**
+  String subclassFeatureChoiceBlockAnnouncement(String featureName);
+
+  /// Phrase affichée au-dessus de la liste d'options du second choix de sous-classe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce choix se fait dès le niveau 1 de ta sous-classe.'**
+  String get subclassFeatureChoiceBlockIntroText;
+
+  /// Indication affichée en rouge tant qu'aucune option n'est sélectionnée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis une option pour continuer.'**
+  String get subclassFeatureChoiceBlockChooseOptionHint;
+
+  /// Message défensif affiché quand `options` est vide (ex. D95, class_options pas encore peuplées).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune option n\'est disponible pour ce choix. Tu peux continuer sans en faire.'**
+  String get subclassFeatureChoiceBlockNoOptionsMessage;
+
+  /// Message d'erreur affiché en cas d'échec de chargement du second choix de niveau 1.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger ce choix de sous-classe. Réessaie.'**
+  String get subclassFeatureChoiceBlockErrorMessage;
+
+  /// `SecondaryButton` "Réessayer" affiché sous le message d'erreur (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get subclassFeatureChoiceBlockRetryButton;
 }
 
 class _AppLocalizationsDelegate
