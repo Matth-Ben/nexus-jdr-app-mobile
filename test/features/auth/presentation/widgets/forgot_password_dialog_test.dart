@@ -8,9 +8,10 @@
 //
 // Point central de ces tests : que l'appel réussisse ou échoue, la boîte de
 // dialogue se ferme et affiche toujours le même message neutre
-// ([forgotPasswordNeutralMessage]) — jamais un message qui confirmerait ou
-// infirmerait l'existence d'un compte pour l'e-mail saisi (voir la doc de
-// classe de `showForgotPasswordDialog`).
+// (`forgotPasswordNeutralMessage` ci-dessous, texte français résolu via
+// `AppLocalizations` — chantier "traduction de l'app" Phase B) — jamais un
+// message qui confirmerait ou infirmerait l'existence d'un compte pour
+// l'e-mail saisi (voir la doc de classe de `showForgotPasswordDialog`).
 
 import 'dart:async';
 import 'dart:typed_data';
@@ -23,6 +24,16 @@ import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/auth/presentation/widgets/forgot_password_dialog.dart';
+import 'package:personnages/l10n/app_localizations.dart';
+
+/// Texte français du message neutre (`app_fr.arb::authForgotPasswordNeutralMessage`),
+/// dupliqué ici plutôt que résolu via `AppLocalizations` (voir
+/// `profile_language_screen_test.dart` pour le même principe) : ces tests
+/// forcent la locale `fr` ci-dessous, donc ce texte reste la valeur
+/// attendue à l'écran.
+const String forgotPasswordNeutralMessage =
+    'Si un compte existe avec cet email, un lien de réinitialisation vient '
+    "d'être envoyé.";
 
 class _FakeAuthRepository implements AuthRepository {
   int resetPasswordCallCount = 0;
@@ -97,6 +108,13 @@ void main() {
     return ProviderScope(
       overrides: [authRepositoryProvider.overrideWithValue(fakeRepository)],
       child: MaterialApp(
+        // Locale forcée à `fr` (déterministe, indépendante de l'hôte qui
+        // exécute `flutter test`) : les assertions de ces tests comparent
+        // du texte français en dur, même principe que
+        // `profile_language_screen_test.dart`.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
         home: Scaffold(
           body: Builder(
             builder: (context) => Consumer(

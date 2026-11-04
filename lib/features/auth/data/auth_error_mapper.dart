@@ -10,9 +10,13 @@ const String _networkErrorMessage =
 const String _genericErrorMessage = 'Une erreur est survenue. Réessayez.';
 
 /// Traduit une [AuthException] Supabase en [AuthFailure] avec un message
-/// utilisateur en français, pour ne jamais afficher un message brut non
-/// traduit à l'écran (voir `AuthRepository`, qui est l'unique appelant côté
-/// app).
+/// utilisateur en français ([AuthFailure.message]), pour ne jamais afficher
+/// un message brut non traduit à l'écran (voir `AuthRepository`, qui est
+/// l'unique appelant côté app), et avec un [AuthErrorCode] stable
+/// ([AuthFailure.code]) permettant à la couche `presentation/` de résoudre
+/// un texte localisé — voir la doc de classe d'[AuthErrorCode] pour le choix
+/// architectural complet (`message` reste produit pour les appelants pas
+/// encore migrés, `code` n'est lu que par `login_screen.dart` à ce stade).
 ///
 /// Se base d'abord sur `error.code` (identifiants stables documentés par
 /// Supabase : https://supabase.com/docs/guides/auth/debugging/error-codes),
@@ -37,7 +41,10 @@ AuthFailure mapAuthException(AuthException error) {
 
   if (code == 'invalid_credentials' ||
       message.contains('invalid login credentials')) {
-    return const AuthFailure('Adresse e-mail ou mot de passe incorrect.');
+    return const AuthFailure(
+      'Adresse e-mail ou mot de passe incorrect.',
+      code: AuthErrorCode.invalidCredentials,
+    );
   }
 
   if (code == 'email_exists' ||
@@ -49,6 +56,7 @@ AuthFailure mapAuthException(AuthException error) {
       (message.contains('already') && message.contains('registered'))) {
     return const AuthFailure(
       'Un compte existe déjà avec cette adresse e-mail.',
+      code: AuthErrorCode.emailAlreadyExists,
     );
   }
 
@@ -56,6 +64,7 @@ AuthFailure mapAuthException(AuthException error) {
     return AuthFailure(
       'Le mot de passe doit contenir au moins '
       '${AuthValidators.minPasswordLength} caractères.',
+      code: AuthErrorCode.weakPassword,
     );
   }
 
@@ -63,17 +72,22 @@ AuthFailure mapAuthException(AuthException error) {
     return const AuthFailure(
       "Confirmez votre adresse e-mail avant de vous connecter "
       "(vérifiez votre boîte de réception).",
+      code: AuthErrorCode.emailNotConfirmed,
     );
   }
 
   if (code == 'validation_failed' && message.contains('email')) {
-    return const AuthFailure('Adresse e-mail invalide.');
+    return const AuthFailure(
+      'Adresse e-mail invalide.',
+      code: AuthErrorCode.invalidEmail,
+    );
   }
 
   if (code == 'over_request_rate_limit' ||
       code == 'over_email_send_rate_limit') {
     return const AuthFailure(
       'Trop de tentatives. Réessayez dans quelques instants.',
+      code: AuthErrorCode.tooManyRequests,
     );
   }
 
@@ -84,7 +98,8 @@ AuthFailure mapAuthException(AuthException error) {
 
 /// Message générique pour toute erreur qui n'est pas une [AuthException]
 /// (ex. absence de réseau).
-AuthFailure mapUnknownError() => const AuthFailure(_networkErrorMessage);
+AuthFailure mapUnknownError() =>
+    const AuthFailure(_networkErrorMessage, code: AuthErrorCode.network);
 
 /// Message générique pour `AuthRepository.deleteAccount` — même texte fixe
 /// affiché par `profile_delete_account_screen.dart` pour toute erreur autre

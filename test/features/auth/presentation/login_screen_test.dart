@@ -16,6 +16,7 @@ import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:personnages/features/auth/presentation/login_screen.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 /// Double de test pour [AuthRepository].
 ///
@@ -159,7 +160,16 @@ void main() {
         if (appleSignInSupported != null)
           appleSignInSupportedProvider.overrideWithValue(appleSignInSupported),
       ],
-      child: const MaterialApp(home: LoginScreen()),
+      child: MaterialApp(
+        // Locale forcée à `fr` (déterministe, indépendante de l'hôte qui
+        // exécute `flutter test`) : les assertions de ces tests comparent
+        // du texte français en dur, même principe que
+        // `profile_language_screen_test.dart`.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
+        home: const LoginScreen(),
+      ),
     );
   }
 

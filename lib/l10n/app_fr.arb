@@ -31,5 +31,211 @@
   "profileLanguageSaveError": "Impossible d'enregistrer ce réglage. Réessaie.",
   "@profileLanguageSaveError": {
     "description": "SnackBar d'erreur générique si l'écriture SharedPreferences échoue au tap sur une option — même ton que les autres écrans Profil."
+  },
+
+  "authLoginBrandTitle": "NEXUS JDR",
+  "@authLoginBrandTitle": {
+    "description": "Nom de marque affiché sous le badge de `login_screen.dart` — identique dans les deux fichiers .arb (nom propre, jamais traduit)."
+  },
+  "authLoginTagline": "Le registre des aventuriers",
+  "@authLoginTagline": {
+    "description": "Accroche sous le nom de marque, écran de connexion."
+  },
+  "authLoginSharedAccountNotice": "Même compte que l'app Histoires",
+  "@authLoginSharedAccountNotice": {
+    "description": "Mention sous la carte de connexion, rappelant le compte partagé avec l'app web \"Histoires\"."
+  },
+  "authLoginCardTitleSignUp": "CRÉER UN COMPTE",
+  "@authLoginCardTitleSignUp": {
+    "description": "Titre de la carte en mode inscription (`_AuthCard`)."
+  },
+  "authLoginCardTitleLogin": "ENTRER DANS LA TAVERNE",
+  "@authLoginCardTitleLogin": {
+    "description": "Titre de la carte en mode connexion (`_AuthCard`)."
+  },
+  "authLoginEmailLabel": "Adresse e-mail",
+  "@authLoginEmailLabel": {
+    "description": "Libellé du champ e-mail du formulaire de connexion/inscription."
+  },
+  "authLoginEmailHint": "nom@exemple.com",
+  "@authLoginEmailHint": {
+    "description": "Placeholder du champ e-mail du formulaire de connexion/inscription."
+  },
+  "authLoginPasswordLabel": "Mot de passe",
+  "@authLoginPasswordLabel": {
+    "description": "Libellé du champ mot de passe du formulaire de connexion/inscription."
+  },
+  "authLoginPasswordHint": "••••••••",
+  "@authLoginPasswordHint": {
+    "description": "Placeholder (points masqués) du champ mot de passe."
+  },
+  "authLoginForgotPasswordLink": "Mot de passe oublié ?",
+  "@authLoginForgotPasswordLink": {
+    "description": "Lien sous le champ mot de passe en mode connexion, ouvre `forgot_password_dialog.dart`."
+  },
+  "authLoginConfirmPasswordLabel": "Confirmer le mot de passe",
+  "@authLoginConfirmPasswordLabel": {
+    "description": "Libellé du champ de confirmation de mot de passe, mode inscription uniquement."
+  },
+  "authLoginPseudoLabel": "Pseudo",
+  "@authLoginPseudoLabel": {
+    "description": "Libellé du champ pseudo (optionnel), mode inscription uniquement."
+  },
+  "authLoginPseudoHint": "Comment veux-tu qu'on t'appelle ?",
+  "@authLoginPseudoHint": {
+    "description": "Placeholder du champ pseudo, mode inscription uniquement."
+  },
+  "authLoginPseudoHelper": "Facultatif — tu pourras le changer plus tard dans ton profil.",
+  "@authLoginPseudoHelper": {
+    "description": "Texte d'aide sous le champ pseudo, mode inscription uniquement."
+  },
+  "authLoginSubmitSignUp": "Créer le compte",
+  "@authLoginSubmitSignUp": {
+    "description": "Libellé du `PrimaryButton` de soumission en mode inscription."
+  },
+  "authLoginSubmitLogin": "Entrer",
+  "@authLoginSubmitLogin": {
+    "description": "Libellé du `PrimaryButton` de soumission en mode connexion."
+  },
+  "authLoginOrDivider": "OU",
+  "@authLoginOrDivider": {
+    "description": "Séparateur entre le formulaire e-mail/mot de passe et les boutons de connexion sociale."
+  },
+  "authLoginContinueWithApple": "Continuer avec Apple",
+  "@authLoginContinueWithApple": {
+    "description": "Libellé du bouton de connexion Apple (iOS/macOS uniquement, voir `appleSignInSupportedProvider`)."
+  },
+  "authLoginContinueWithGoogle": "Continuer avec Google",
+  "@authLoginContinueWithGoogle": {
+    "description": "Libellé du bouton de connexion Google."
+  },
+  "authLoginSwitchModePromptLogin": "Déjà un compte ? ",
+  "@authLoginSwitchModePromptLogin": {
+    "description": "Texte précédant le lien de bascule, affiché en mode inscription (espace final volontaire avant le lien)."
+  },
+  "authLoginSwitchModePromptSignUp": "Pas encore de compte ? ",
+  "@authLoginSwitchModePromptSignUp": {
+    "description": "Texte précédant le lien de bascule, affiché en mode connexion (espace final volontaire avant le lien)."
+  },
+  "authLoginSwitchModeActionLogin": "Se connecter",
+  "@authLoginSwitchModeActionLogin": {
+    "description": "Lien de bascule vers le mode connexion, affiché en mode inscription."
+  },
+  "authLoginSwitchModeActionSignUp": "Créer un compte",
+  "@authLoginSwitchModeActionSignUp": {
+    "description": "Lien de bascule vers le mode inscription, affiché en mode connexion."
+  },
+  "authLoginSignUpConfirmationTitle": "VÉRIFIEZ VOS E-MAILS",
+  "@authLoginSignUpConfirmationTitle": {
+    "description": "Titre de l'état \"vérifiez vos e-mails\" après une inscription nécessitant une confirmation par e-mail."
+  },
+  "authLoginSignUpConfirmationBody": "Un e-mail de confirmation vient d'être envoyé à {email}. Cliquez sur le lien qu'il contient pour activer votre compte.",
+  "@authLoginSignUpConfirmationBody": {
+    "description": "Corps de l'état \"vérifiez vos e-mails\", avec l'adresse saisie à l'inscription.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "nom@exemple.com"
+      }
+    }
+  },
+  "authLoginBackToLogin": "Retour à la connexion",
+  "@authLoginBackToLogin": {
+    "description": "Bouton de retour au formulaire depuis l'état \"vérifiez vos e-mails\"."
+  },
+
+  "authForgotPasswordTitle": "Mot de passe oublié ?",
+  "@authForgotPasswordTitle": {
+    "description": "Titre de la boîte de dialogue `forgot_password_dialog.dart`."
+  },
+  "authForgotPasswordDescription": "Saisissez votre adresse e-mail : nous vous enverrons un lien pour définir un nouveau mot de passe.",
+  "@authForgotPasswordDescription": {
+    "description": "Texte d'explication de la boîte de dialogue \"Mot de passe oublié ?\"."
+  },
+  "authForgotPasswordEmailHint": "nom@exemple.com",
+  "@authForgotPasswordEmailHint": {
+    "description": "Placeholder du champ e-mail de la boîte de dialogue \"Mot de passe oublié ?\"."
+  },
+  "authForgotPasswordCancel": "Annuler",
+  "@authForgotPasswordCancel": {
+    "description": "Bouton d'annulation de la boîte de dialogue \"Mot de passe oublié ?\"."
+  },
+  "authForgotPasswordSubmit": "Envoyer le lien",
+  "@authForgotPasswordSubmit": {
+    "description": "Bouton de soumission de la boîte de dialogue \"Mot de passe oublié ?\"."
+  },
+  "authForgotPasswordNeutralMessage": "Si un compte existe avec cet email, un lien de réinitialisation vient d'être envoyé.",
+  "@authForgotPasswordNeutralMessage": {
+    "description": "SnackBar affiché après toute tentative d'envoi (succès ou échec confondus) — message volontairement neutre, voir la doc de classe de `showForgotPasswordDialog`."
+  },
+
+  "authErrorInvalidCredentials": "Adresse e-mail ou mot de passe incorrect.",
+  "@authErrorInvalidCredentials": {
+    "description": "Message résolu depuis `AuthErrorCode.invalidCredentials` (`auth_error_mapper.dart`), affiché par `login_screen.dart`."
+  },
+  "authErrorEmailAlreadyExists": "Un compte existe déjà avec cette adresse e-mail.",
+  "@authErrorEmailAlreadyExists": {
+    "description": "Message résolu depuis `AuthErrorCode.emailAlreadyExists`."
+  },
+  "authErrorWeakPassword": "Le mot de passe doit contenir au moins {minLength} caractères.",
+  "@authErrorWeakPassword": {
+    "description": "Message résolu depuis `AuthErrorCode.weakPassword` (erreur renvoyée par Supabase, distincte de la validation locale `authValidationPasswordTooShort`).",
+    "placeholders": {
+      "minLength": {
+        "type": "int",
+        "example": "6"
+      }
+    }
+  },
+  "authErrorEmailNotConfirmed": "Confirmez votre adresse e-mail avant de vous connecter (vérifiez votre boîte de réception).",
+  "@authErrorEmailNotConfirmed": {
+    "description": "Message résolu depuis `AuthErrorCode.emailNotConfirmed`."
+  },
+  "authErrorInvalidEmail": "Adresse e-mail invalide.",
+  "@authErrorInvalidEmail": {
+    "description": "Message résolu depuis `AuthErrorCode.invalidEmail` (erreur renvoyée par Supabase, distincte de la validation locale `authValidationEmailInvalid`)."
+  },
+  "authErrorTooManyRequests": "Trop de tentatives. Réessayez dans quelques instants.",
+  "@authErrorTooManyRequests": {
+    "description": "Message résolu depuis `AuthErrorCode.tooManyRequests`."
+  },
+  "authErrorNetwork": "Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.",
+  "@authErrorNetwork": {
+    "description": "Message résolu depuis `AuthErrorCode.network` (absence de réseau, voir `mapUnknownError`)."
+  },
+  "authErrorUnexpected": "Une erreur inattendue est survenue. Réessayez.",
+  "@authErrorUnexpected": {
+    "description": "Repli défensif affiché par `login_screen.dart` pour toute exception qui n'est pas une `AuthFailure`."
+  },
+
+  "authValidationEmailRequired": "Saisissez votre adresse e-mail.",
+  "@authValidationEmailRequired": {
+    "description": "Erreur de validation locale, champ e-mail vide (`AuthValidators.email`)."
+  },
+  "authValidationEmailInvalid": "Adresse e-mail invalide.",
+  "@authValidationEmailInvalid": {
+    "description": "Erreur de validation locale, format d'e-mail invalide (`AuthValidators.email`)."
+  },
+  "authValidationPasswordRequired": "Saisissez votre mot de passe.",
+  "@authValidationPasswordRequired": {
+    "description": "Erreur de validation locale, champ mot de passe vide (`AuthValidators.password`)."
+  },
+  "authValidationPasswordTooShort": "Le mot de passe doit contenir au moins {minLength} caractères.",
+  "@authValidationPasswordTooShort": {
+    "description": "Erreur de validation locale, mot de passe trop court (`AuthValidators.password`).",
+    "placeholders": {
+      "minLength": {
+        "type": "int",
+        "example": "6"
+      }
+    }
+  },
+  "authValidationPasswordConfirmationRequired": "Confirmez votre mot de passe.",
+  "@authValidationPasswordConfirmationRequired": {
+    "description": "Erreur de validation locale, champ de confirmation vide (`AuthValidators.passwordConfirmation`)."
+  },
+  "authValidationPasswordConfirmationMismatch": "Les mots de passe ne correspondent pas.",
+  "@authValidationPasswordConfirmationMismatch": {
+    "description": "Erreur de validation locale, confirmation différente du mot de passe (`AuthValidators.passwordConfirmation`)."
   }
 }
