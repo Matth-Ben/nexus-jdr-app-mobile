@@ -557,6 +557,46 @@ void main() {
     },
   );
 
+  testWidgets('pluriel ICU (`summaryStepScreenEquipmentPurchaseSummary`) sur '
+      'onglet "Acheter" : couvre les formes =0/=1/other en français, '
+      'aucune des deux jamais testée avant ce commit (trou de couverture '
+      'signalé par qa-testeur) — forme =0 atteignable en jeu réel (bouton '
+      'Suivant reste actif sur cet onglet même sans rien acheter, voir '
+      '`EquipmentStepSelection.canProceed`)', (WidgetTester tester) async {
+    container
+        .read(characterCreationDraftControllerProvider.notifier)
+        .state = _fullDraft.copyWith(
+      equipmentChoiceTab: EquipmentChoiceTab.purchase,
+      purchasedEquipment: const {},
+    );
+
+    await pumpSummaryStep(tester);
+
+    expect(find.text('Achat (0 objet)'), findsOneWidget);
+
+    container
+        .read(characterCreationDraftControllerProvider.notifier)
+        .state = _fullDraft.copyWith(
+      equipmentChoiceTab: EquipmentChoiceTab.purchase,
+      purchasedEquipment: const {'Dague': 1},
+    );
+
+    await pumpSummaryStep(tester);
+
+    expect(find.text('Achat (1 objet)'), findsOneWidget);
+
+    container
+        .read(characterCreationDraftControllerProvider.notifier)
+        .state = _fullDraft.copyWith(
+      equipmentChoiceTab: EquipmentChoiceTab.purchase,
+      purchasedEquipment: const {'Dague': 1, 'Corde': 1, 'Torche': 1},
+    );
+
+    await pumpSummaryStep(tester);
+
+    expect(find.text('Achat (3 objets)'), findsOneWidget);
+  });
+
   testWidgets(
     '"Créer le personnage" est désactivé tant que le nom est vide, activé '
     'dès qu\'un nom non blanc est saisi',
@@ -1151,33 +1191,42 @@ void main() {
       expect(find.text('SAVE CHANGES'), findsOneWidget);
     });
 
-    testWidgets(
-      'pluriel ICU "other" (`summaryStepScreenEquipmentPurchaseSummary`) '
-      'pour l\'onglet "Acheter" avec plusieurs objets, et forme singulier '
-      'avec un seul objet',
-      (WidgetTester tester) async {
-        container
-            .read(characterCreationDraftControllerProvider.notifier)
-            .state = _fullDraft.copyWith(
-          equipmentChoiceTab: EquipmentChoiceTab.purchase,
-          purchasedEquipment: const {'Dague': 1, 'Corde': 1, 'Torche': 1},
-        );
+    testWidgets('pluriel ICU (`summaryStepScreenEquipmentPurchaseSummary`) sur '
+        'onglet "Acheter" : formes other (plusieurs objets), =1 (un '
+        'seul objet) et =0 (rien acheté, atteignable en jeu réel — voir '
+        'EquipmentStepSelection.canProceed)', (WidgetTester tester) async {
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .state = _fullDraft.copyWith(
+        equipmentChoiceTab: EquipmentChoiceTab.purchase,
+        purchasedEquipment: const {'Dague': 1, 'Corde': 1, 'Torche': 1},
+      );
 
-        await pumpSummaryStep(tester, locale: const Locale('en'));
+      await pumpSummaryStep(tester, locale: const Locale('en'));
 
-        expect(find.text('Purchase (3 items)'), findsOneWidget);
+      expect(find.text('Purchase (3 items)'), findsOneWidget);
 
-        container
-            .read(characterCreationDraftControllerProvider.notifier)
-            .state = _fullDraft.copyWith(
-          equipmentChoiceTab: EquipmentChoiceTab.purchase,
-          purchasedEquipment: const {'Dague': 1},
-        );
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .state = _fullDraft.copyWith(
+        equipmentChoiceTab: EquipmentChoiceTab.purchase,
+        purchasedEquipment: const {'Dague': 1},
+      );
 
-        await pumpSummaryStep(tester, locale: const Locale('en'));
+      await pumpSummaryStep(tester, locale: const Locale('en'));
 
-        expect(find.text('Purchase (1 item)'), findsOneWidget);
-      },
-    );
+      expect(find.text('Purchase (1 item)'), findsOneWidget);
+
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .state = _fullDraft.copyWith(
+        equipmentChoiceTab: EquipmentChoiceTab.purchase,
+        purchasedEquipment: const {},
+      );
+
+      await pumpSummaryStep(tester, locale: const Locale('en'));
+
+      expect(find.text('Purchase (0 items)'), findsOneWidget);
+    });
   });
 }
