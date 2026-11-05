@@ -6630,7 +6630,7 @@ abstract class AppLocalizations {
   /// **'Scores finaux : bonus de race et améliorations déjà inclus. Ajuste-les librement (1 à 30).'**
   String get abilityScoreStepScreenEditIntroMessage;
 
-  /// Rappel affiché en mode modification quand la race a changé depuis l'original, {before}/{after} viennent de `_racialBonusesLabel` (bonus de race/sous-race formatés par `RaceSummaryFormatter.formatAbilityBonuses`, domaine, non traduit — D148/D149 de docs/dette-technique.md).
+  /// Rappel affiché en mode modification quand la race a changé depuis l'original, {before}/{after} viennent de `_racialBonusesLabel` (bonus de race/sous-race formatés par `RaceSummaryFormatter.formatAbilityBonuses`, domaine, non traduit — D157 de docs/dette-technique.md).
   ///
   /// In fr, this message translates to:
   /// **'Race modifiée — reporte toi-même la différence de bonus :\navant : {before}\nmaintenant : {after}'**
@@ -7364,6 +7364,108 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Créer le personnage'**
   String get summaryStepScreenCreateButton;
+
+  /// Libellé du bandeau bois de chaque étape de l'assistant hors mode modification (`CreationModeTitle`).
+  ///
+  /// In fr, this message translates to:
+  /// **'CRÉATION'**
+  String get creationModeTitleCreationLabel;
+
+  /// Libellé du bandeau bois de chaque étape de l'assistant quand une `CharacterEditSession` est ouverte (`CreationModeTitle`).
+  ///
+  /// In fr, this message translates to:
+  /// **'MODIFICATION'**
+  String get creationModeTitleModificationLabel;
+
+  /// Préfixe du pied de page des étapes 1 à 9, hors mode modification (`DraftAutosaveFooter`).
+  ///
+  /// In fr, this message translates to:
+  /// **'↻ Brouillon sauvegardé automatiquement · '**
+  String get draftAutosaveFooterAutosavedPrefix;
+
+  /// Préfixe du pied de page des étapes 1 à 9, en mode modification (`DraftAutosaveFooter`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Modification en cours · '**
+  String get draftAutosaveFooterModifyingPrefix;
+
+  /// Lien tapable du pied de page hors mode modification, ouvre `showAbandonCreationConfirmationDialog` (`DraftAutosaveFooter`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Abandonner'**
+  String get draftAutosaveFooterAbandonLink;
+
+  /// Lien tapable du pied de page en mode modification, ouvre `showAbandonCreationConfirmationDialog` (`DraftAutosaveFooter`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler les modifications'**
+  String get draftAutosaveFooterCancelModificationsLink;
+
+  /// Titre du dialogue de confirmation hors mode modification (`showAbandonCreationConfirmationDialog`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Abandonner la création ?'**
+  String get abandonCreationFlowAbandonDialogTitle;
+
+  /// Titre du dialogue de confirmation en mode modification (`showAbandonCreationConfirmationDialog`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler les modifications ?'**
+  String get abandonCreationFlowCancelEditDialogTitle;
+
+  /// Corps du dialogue de confirmation hors mode modification (`showAbandonCreationConfirmationDialog`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Les choix déjà faits dans ce brouillon seront perdus. Cette action est définitive.'**
+  String get abandonCreationFlowAbandonDialogMessage;
+
+  /// Corps du dialogue de confirmation en mode modification (`showAbandonCreationConfirmationDialog`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Le personnage reste tel qu\'il était : rien de ce qui a été changé dans cet assistant ne sera enregistré.'**
+  String get abandonCreationFlowCancelEditDialogMessage;
+
+  /// Bouton secondaire du dialogue de confirmation (referme sans rien faire), même libellé dans les deux modes.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get abandonCreationFlowContinueButton;
+
+  /// Bouton destructif du dialogue de confirmation hors mode modification.
+  ///
+  /// In fr, this message translates to:
+  /// **'Abandonner'**
+  String get abandonCreationFlowAbandonButton;
+
+  /// Bouton destructif du dialogue de confirmation en mode modification.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get abandonCreationFlowCancelEditButton;
+
+  /// Titre de la carte de répartition des bonus raciaux au choix (`RacialBonusChoiceCard`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonus racial au choix'**
+  String get racialBonusChoiceCardTitle;
+
+  /// Sous-titre de la carte tant que la répartition n'est pas complète — `ruleLabel` vient de `RacialBonusChoiceSpec.ruleLabel` (texte en dur en français, hors périmètre de ce lot, voir D154).
+  ///
+  /// In fr, this message translates to:
+  /// **'{ruleLabel} — à répartir'**
+  String racialBonusChoiceCardRuleIncomplete(String ruleLabel);
+
+  /// Option du `SegmentedToggle` du motif de bonus flexible (+2 à une caractéristique, +1 à une autre).
+  ///
+  /// In fr, this message translates to:
+  /// **'+2 / +1'**
+  String get racialBonusChoiceCardTwoOnePatternLabel;
+
+  /// Option du `SegmentedToggle` du motif de bonus flexible (+1 à trois caractéristiques).
+  ///
+  /// In fr, this message translates to:
+  /// **'+1 / +1 / +1'**
+  String get racialBonusChoiceCardOneOneOnePatternLabel;
 }
 
 class _AppLocalizationsDelegate

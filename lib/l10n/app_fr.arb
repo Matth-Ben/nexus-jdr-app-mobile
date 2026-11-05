@@ -5450,7 +5450,7 @@
   },
   "abilityScoreStepScreenRaceChangedMessage": "Race modifiée — reporte toi-même la différence de bonus :\navant : {before}\nmaintenant : {after}",
   "@abilityScoreStepScreenRaceChangedMessage": {
-    "description": "Rappel affiché en mode modification quand la race a changé depuis l'original, {before}/{after} viennent de `_racialBonusesLabel` (bonus de race/sous-race formatés par `RaceSummaryFormatter.formatAbilityBonuses`, domaine, non traduit — D148/D149 de docs/dette-technique.md).",
+    "description": "Rappel affiché en mode modification quand la race a changé depuis l'original, {before}/{after} viennent de `_racialBonusesLabel` (bonus de race/sous-race formatés par `RaceSummaryFormatter.formatAbilityBonuses`, domaine, non traduit — D157 de docs/dette-technique.md).",
     "placeholders": {
       "before": {
         "type": "String"
@@ -6056,5 +6056,78 @@
   "summaryStepScreenCreateButton": "Créer le personnage",
   "@summaryStepScreenCreateButton": {
     "description": "Libellé du bouton primaire en mode création — désactivé tant que le nom (trim) est vide."
+  },
+  "creationModeTitleCreationLabel": "CRÉATION",
+  "@creationModeTitleCreationLabel": {
+    "description": "Libellé du bandeau bois de chaque étape de l'assistant hors mode modification (`CreationModeTitle`)."
+  },
+  "creationModeTitleModificationLabel": "MODIFICATION",
+  "@creationModeTitleModificationLabel": {
+    "description": "Libellé du bandeau bois de chaque étape de l'assistant quand une `CharacterEditSession` est ouverte (`CreationModeTitle`)."
+  },
+  "draftAutosaveFooterAutosavedPrefix": "↻ Brouillon sauvegardé automatiquement · ",
+  "@draftAutosaveFooterAutosavedPrefix": {
+    "description": "Préfixe du pied de page des étapes 1 à 9, hors mode modification (`DraftAutosaveFooter`)."
+  },
+  "draftAutosaveFooterModifyingPrefix": "Modification en cours · ",
+  "@draftAutosaveFooterModifyingPrefix": {
+    "description": "Préfixe du pied de page des étapes 1 à 9, en mode modification (`DraftAutosaveFooter`)."
+  },
+  "draftAutosaveFooterAbandonLink": "Abandonner",
+  "@draftAutosaveFooterAbandonLink": {
+    "description": "Lien tapable du pied de page hors mode modification, ouvre `showAbandonCreationConfirmationDialog` (`DraftAutosaveFooter`)."
+  },
+  "draftAutosaveFooterCancelModificationsLink": "Annuler les modifications",
+  "@draftAutosaveFooterCancelModificationsLink": {
+    "description": "Lien tapable du pied de page en mode modification, ouvre `showAbandonCreationConfirmationDialog` (`DraftAutosaveFooter`)."
+  },
+  "abandonCreationFlowAbandonDialogTitle": "Abandonner la création ?",
+  "@abandonCreationFlowAbandonDialogTitle": {
+    "description": "Titre du dialogue de confirmation hors mode modification (`showAbandonCreationConfirmationDialog`)."
+  },
+  "abandonCreationFlowCancelEditDialogTitle": "Annuler les modifications ?",
+  "@abandonCreationFlowCancelEditDialogTitle": {
+    "description": "Titre du dialogue de confirmation en mode modification (`showAbandonCreationConfirmationDialog`)."
+  },
+  "abandonCreationFlowAbandonDialogMessage": "Les choix déjà faits dans ce brouillon seront perdus. Cette action est définitive.",
+  "@abandonCreationFlowAbandonDialogMessage": {
+    "description": "Corps du dialogue de confirmation hors mode modification (`showAbandonCreationConfirmationDialog`)."
+  },
+  "abandonCreationFlowCancelEditDialogMessage": "Le personnage reste tel qu'il était : rien de ce qui a été changé dans cet assistant ne sera enregistré.",
+  "@abandonCreationFlowCancelEditDialogMessage": {
+    "description": "Corps du dialogue de confirmation en mode modification (`showAbandonCreationConfirmationDialog`)."
+  },
+  "abandonCreationFlowContinueButton": "Continuer",
+  "@abandonCreationFlowContinueButton": {
+    "description": "Bouton secondaire du dialogue de confirmation (referme sans rien faire), même libellé dans les deux modes."
+  },
+  "abandonCreationFlowAbandonButton": "Abandonner",
+  "@abandonCreationFlowAbandonButton": {
+    "description": "Bouton destructif du dialogue de confirmation hors mode modification."
+  },
+  "abandonCreationFlowCancelEditButton": "Annuler",
+  "@abandonCreationFlowCancelEditButton": {
+    "description": "Bouton destructif du dialogue de confirmation en mode modification."
+  },
+  "racialBonusChoiceCardTitle": "Bonus racial au choix",
+  "@racialBonusChoiceCardTitle": {
+    "description": "Titre de la carte de répartition des bonus raciaux au choix (`RacialBonusChoiceCard`)."
+  },
+  "racialBonusChoiceCardRuleIncomplete": "{ruleLabel} — à répartir",
+  "@racialBonusChoiceCardRuleIncomplete": {
+    "description": "Sous-titre de la carte tant que la répartition n'est pas complète — `ruleLabel` vient de `RacialBonusChoiceSpec.ruleLabel` (texte en dur en français, hors périmètre de ce lot, voir D154).",
+    "placeholders": {
+      "ruleLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "racialBonusChoiceCardTwoOnePatternLabel": "+2 / +1",
+  "@racialBonusChoiceCardTwoOnePatternLabel": {
+    "description": "Option du `SegmentedToggle` du motif de bonus flexible (+2 à une caractéristique, +1 à une autre)."
+  },
+  "racialBonusChoiceCardOneOneOnePatternLabel": "+1 / +1 / +1",
+  "@racialBonusChoiceCardOneOneOnePatternLabel": {
+    "description": "Option du `SegmentedToggle` du motif de bonus flexible (+1 à trois caractéristiques)."
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/app_localizations.dart';
 import '../providers/character_edit_session_provider.dart';
 
 /// Libellé du bandeau bois de chaque étape de l'assistant : « CRÉATION », ou
@@ -13,6 +14,12 @@ class CreationModeTitle extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final editing = ref.watch(characterEditSessionControllerProvider) != null;
-    return Text(editing ? 'MODIFICATION' : 'CRÉATION', style: style);
+    final l10n = AppLocalizations.of(context)!;
+    return Text(
+      editing
+          ? l10n.creationModeTitleModificationLabel
+          : l10n.creationModeTitleCreationLabel,
+      style: style,
+    );
   }
 }

@@ -16,8 +16,12 @@ import 'package:personnages/features/character_creation/domain/character_creatio
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_return_route_provider.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/abandon_creation_flow.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
-Future<ProviderContainer> _pumpAbandonButton(WidgetTester tester) async {
+Future<ProviderContainer> _pumpAbandonButton(
+  WidgetTester tester, {
+  Locale locale = const Locale('fr'),
+}) async {
   final container = ProviderContainer();
   addTearDown(container.dispose);
 
@@ -54,7 +58,12 @@ Future<ProviderContainer> _pumpAbandonButton(WidgetTester tester) async {
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: router,
+      ),
     ),
   );
   return container;
@@ -137,4 +146,49 @@ void main() {
       );
     },
   );
+
+  group('traduction anglaise', () {
+    testWidgets('confirmation, boutons "CONTINUE"/"Abandon" en anglais', (
+      tester,
+    ) async {
+      final container = await _pumpAbandonButton(
+        tester,
+        locale: const Locale('en'),
+      );
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setRace(raceId: 1, subraceId: null, raceCustomText: null);
+
+      await tester.tap(find.text('Abandonner'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Abandon character creation?'), findsOneWidget);
+      expect(
+        find.text(
+          'The choices already made in this draft will be lost. This '
+          'action is final.',
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('CONTINUE'));
+      await tester.pumpAndSettle();
+
+      expect(
+        container.read(characterCreationDraftControllerProvider).raceId,
+        1,
+      );
+      expect(find.text('Liste des personnages'), findsNothing);
+
+      await tester.tap(find.text('Abandonner'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Abandon'));
+      await tester.pumpAndSettle();
+
+      expect(
+        container.read(characterCreationDraftControllerProvider),
+        const CharacterCreationDraft(),
+      );
+    });
+  });
 }

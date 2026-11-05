@@ -4513,4 +4513,63 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get summaryStepScreenCreateButton => 'Créer le personnage';
+
+  @override
+  String get creationModeTitleCreationLabel => 'CRÉATION';
+
+  @override
+  String get creationModeTitleModificationLabel => 'MODIFICATION';
+
+  @override
+  String get draftAutosaveFooterAutosavedPrefix =>
+      '↻ Brouillon sauvegardé automatiquement · ';
+
+  @override
+  String get draftAutosaveFooterModifyingPrefix => 'Modification en cours · ';
+
+  @override
+  String get draftAutosaveFooterAbandonLink => 'Abandonner';
+
+  @override
+  String get draftAutosaveFooterCancelModificationsLink =>
+      'Annuler les modifications';
+
+  @override
+  String get abandonCreationFlowAbandonDialogTitle =>
+      'Abandonner la création ?';
+
+  @override
+  String get abandonCreationFlowCancelEditDialogTitle =>
+      'Annuler les modifications ?';
+
+  @override
+  String get abandonCreationFlowAbandonDialogMessage =>
+      'Les choix déjà faits dans ce brouillon seront perdus. Cette action est définitive.';
+
+  @override
+  String get abandonCreationFlowCancelEditDialogMessage =>
+      'Le personnage reste tel qu\'il était : rien de ce qui a été changé dans cet assistant ne sera enregistré.';
+
+  @override
+  String get abandonCreationFlowContinueButton => 'Continuer';
+
+  @override
+  String get abandonCreationFlowAbandonButton => 'Abandonner';
+
+  @override
+  String get abandonCreationFlowCancelEditButton => 'Annuler';
+
+  @override
+  String get racialBonusChoiceCardTitle => 'Bonus racial au choix';
+
+  @override
+  String racialBonusChoiceCardRuleIncomplete(String ruleLabel) {
+    return '$ruleLabel — à répartir';
+  }
+
+  @override
+  String get racialBonusChoiceCardTwoOnePatternLabel => '+2 / +1';
+
+  @override
+  String get racialBonusChoiceCardOneOneOnePatternLabel => '+1 / +1 / +1';
 }

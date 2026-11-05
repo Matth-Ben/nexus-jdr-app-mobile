@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/segmented_toggle.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/ability_score_definitions.dart';
 import '../../domain/racial_bonus_choice.dart';
 
@@ -47,6 +48,7 @@ class _RacialBonusChoiceCardState extends State<RacialBonusChoiceCard> {
   Widget build(BuildContext context) {
     final spec = widget.spec;
     final complete = spec.isComplete(widget.choices);
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -60,7 +62,7 @@ class _RacialBonusChoiceCardState extends State<RacialBonusChoiceCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Bonus racial au choix',
+            l10n.racialBonusChoiceCardTitle,
             style: AppTypography.body(
               fontSize: 15,
               fontWeight: FontWeight.w700,
@@ -68,7 +70,9 @@ class _RacialBonusChoiceCardState extends State<RacialBonusChoiceCard> {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            complete ? spec.ruleLabel : '${spec.ruleLabel} — à répartir',
+            complete
+                ? spec.ruleLabel
+                : l10n.racialBonusChoiceCardRuleIncomplete(spec.ruleLabel),
             style: AppTypography.body(
               fontSize: 13,
               color: AppColors.textSecondary,
@@ -77,7 +81,7 @@ class _RacialBonusChoiceCardState extends State<RacialBonusChoiceCard> {
           const SizedBox(height: AppSpacing.sm),
           ...switch (spec) {
             OthersRacialBonusSpec() => _buildOthers(spec),
-            FlexibleRacialBonusSpec() => _buildFlexible(),
+            FlexibleRacialBonusSpec() => _buildFlexible(l10n),
           },
         ],
       ),
@@ -109,17 +113,17 @@ class _RacialBonusChoiceCardState extends State<RacialBonusChoiceCard> {
     ];
   }
 
-  List<Widget> _buildFlexible() {
+  List<Widget> _buildFlexible(AppLocalizations l10n) {
     return [
       SegmentedToggle<_FlexiblePattern>(
-        options: const [
+        options: [
           SegmentedToggleOption(
             value: _FlexiblePattern.twoOne,
-            label: '+2 / +1',
+            label: l10n.racialBonusChoiceCardTwoOnePatternLabel,
           ),
           SegmentedToggleOption(
             value: _FlexiblePattern.oneOneOne,
-            label: '+1 / +1 / +1',
+            label: l10n.racialBonusChoiceCardOneOneOnePatternLabel,
           ),
         ],
         value: _pattern,

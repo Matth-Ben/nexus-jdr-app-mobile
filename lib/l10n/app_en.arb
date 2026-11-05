@@ -1247,5 +1247,22 @@
   "summaryStepScreenUnnamedCharacterFallback": "Unnamed character",
   "summaryStepScreenBackLink": "‹ Back",
   "summaryStepScreenSaveEditButton": "Save changes",
-  "summaryStepScreenCreateButton": "Create character"
+  "summaryStepScreenCreateButton": "Create character",
+  "creationModeTitleCreationLabel": "CREATION",
+  "creationModeTitleModificationLabel": "EDITING",
+  "draftAutosaveFooterAutosavedPrefix": "↻ Draft saved automatically · ",
+  "draftAutosaveFooterModifyingPrefix": "Editing in progress · ",
+  "draftAutosaveFooterAbandonLink": "Abandon",
+  "draftAutosaveFooterCancelModificationsLink": "Cancel changes",
+  "abandonCreationFlowAbandonDialogTitle": "Abandon character creation?",
+  "abandonCreationFlowCancelEditDialogTitle": "Cancel changes?",
+  "abandonCreationFlowAbandonDialogMessage": "The choices already made in this draft will be lost. This action is final.",
+  "abandonCreationFlowCancelEditDialogMessage": "The character stays as it was: nothing changed in this assistant will be saved.",
+  "abandonCreationFlowContinueButton": "Continue",
+  "abandonCreationFlowAbandonButton": "Abandon",
+  "abandonCreationFlowCancelEditButton": "Cancel",
+  "racialBonusChoiceCardTitle": "Racial bonus to assign",
+  "racialBonusChoiceCardRuleIncomplete": "{ruleLabel} — to assign",
+  "racialBonusChoiceCardTwoOnePatternLabel": "+2 / +1",
+  "racialBonusChoiceCardOneOneOnePatternLabel": "+1 / +1 / +1"
 }
