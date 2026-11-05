@@ -5287,6 +5287,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get xmlImportReviewScreenStartingPackFieldTitle => 'Starting pack';
 
   @override
+  String xmlImportReviewScreenStartingPackUnrecognizedLabel(String rawValue) {
+    return 'Not recognized (traceability only): $rawValue';
+  }
+
+  @override
   String get xmlImportReviewScreenAlignmentFieldTitle => 'Alignment';
 
   @override

@@ -7072,6 +7072,15 @@
   "@xmlImportReviewScreenStartingPackFieldTitle": {
     "description": "Titre de carte — champ \"Paquetage de départ\" (`pack`), traçabilité uniquement, toujours une carte de résumé."
   },
+  "xmlImportReviewScreenStartingPackUnrecognizedLabel": "Non reconnu (traçabilité uniquement) : {rawValue}",
+  "@xmlImportReviewScreenStartingPackUnrecognizedLabel": {
+    "description": "Valeur affichée dans la carte de résumé \"Paquetage de départ\" quand le jeton `pack` du fichier source ne correspond à aucune entrée de `AideddReferenceTables.packs` — toujours une carte lecture seule, jamais une alerte, `rawValue` est le jeton brut (dynamique).",
+    "placeholders": {
+      "rawValue": {
+        "type": "String"
+      }
+    }
+  },
   "xmlImportReviewScreenAlignmentFieldTitle": "Alignement",
   "@xmlImportReviewScreenAlignmentFieldTitle": {
     "description": "Titre de carte — champ \"Alignement\" (codé)."

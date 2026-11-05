@@ -8715,6 +8715,12 @@ abstract class AppLocalizations {
   /// **'Paquetage de départ'**
   String get xmlImportReviewScreenStartingPackFieldTitle;
 
+  /// Valeur affichée dans la carte de résumé "Paquetage de départ" quand le jeton `pack` du fichier source ne correspond à aucune entrée de `AideddReferenceTables.packs` — toujours une carte lecture seule, jamais une alerte, `rawValue` est le jeton brut (dynamique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Non reconnu (traçabilité uniquement) : {rawValue}'**
+  String xmlImportReviewScreenStartingPackUnrecognizedLabel(String rawValue);
+
   /// Titre de carte — champ "Alignement" (codé).
   ///
   /// In fr, this message translates to:

@@ -839,18 +839,12 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     // libellé non reconnu reste affiché tel quel (jeton brut), jamais perdu
     // silencieusement, mais sans jamais compter dans
     // `XmlImportAlertSummary.countUnresolved`.
-    //
-    // Le libellé "Non reconnu (traçabilité uniquement)" reste un texte
-    // français en dur — ce champ n'est consommé que par 2 fixtures de test
-    // synthétiques (jamais par une capture d'écran réelle vérifiée
-    // `direction-artistique`), pas migré dans ce lot, voir D163 de
-    // `docs/dette-technique.md`.
     final pack = resolved.pack;
     if (pack != null) {
       final packLabel = switch (pack) {
         XmlFieldResolutionRecognized<String>(:final value) => value,
         XmlFieldResolutionUnrecognized<String>(:final rawValue) =>
-          'Non reconnu (traçabilité uniquement) : $rawValue',
+          l10n.xmlImportReviewScreenStartingPackUnrecognizedLabel(rawValue),
         XmlFieldResolutionCustom<String>() => '',
       };
       if (packLabel.isNotEmpty) {

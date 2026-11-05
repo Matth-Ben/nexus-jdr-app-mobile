@@ -672,6 +672,62 @@ const _multipleAlertsXml = '''
 </builder>
 ''';
 
+/// Même base que [_cleanXml], mais avec un seul objet non catalogué (`item`
+/// id 9001, absent de `AideddReferenceTables.items`) — couvre la forme
+/// SINGULIÈRE du pluriel ICU
+/// `xmlImportReviewScreenUncatalogedItemsCountMessage` ("1 élément non
+/// catalogué"), jamais exercée ailleurs dans ce fichier (seule la forme
+/// plurielle l'est, via [_multipleAlertsXml] avec 2 objets).
+const _singleUncatalogedItemXml = '''
+<?xml version="1.0" encoding="UTF-8"?>
+<builder>
+<character>
+<name>Test Héros</name>
+<race>Elfe</race>
+<class>Magicien</class>
+<background>Sage</background>
+<level>1</level>
+<str>10</str><dex>10</dex><con>10</con><int>10</int><wis>10</wis><cha>10</cha>
+<armor>0</armor>
+<shield>0</shield>
+<alignment>4</alignment>
+<sexe>0</sexe>
+<item>9001</item>
+<itemQ>1</itemQ>
+<gp>0</gp><pp>0</pp><ep>0</ep><sp>0</sp><cp>0</cp>
+</character>
+</builder>
+''';
+
+/// Même base que [_cleanXml], mais avec un sort inné non catalogué (compte 1,
+/// forme SINGULIÈRE) et deux sorts connus non catalogués (compte 2, forme
+/// PLURIELLE) — `fakeCharacterCreationRepository.spellCatalogToReturn` reste
+/// vide par défaut dans `setUp`, donc n'importe quel nom de sort devient
+/// `XmlFieldResolutionUnrecognized`. Couvre
+/// `xmlImportReviewScreenUncatalogedSpellsCountMessage`, jamais exercé par
+/// aucun test de ce fichier avant son ajout (ni singulier ni pluriel).
+const _uncatalogedSpellsXml = '''
+<?xml version="1.0" encoding="UTF-8"?>
+<builder>
+<character>
+<name>Test Héros</name>
+<race>Elfe</race>
+<class>Magicien</class>
+<background>Sage</background>
+<level>1</level>
+<str>10</str><dex>10</dex><con>10</con><int>10</int><wis>10</wis><cha>10</cha>
+<armor>0</armor>
+<shield>0</shield>
+<alignment>4</alignment>
+<sexe>0</sexe>
+<innateSpell lvl="0">Sort Inné Inconnu</innateSpell>
+<knownSpell lvl="1">Sort Connu A</knownSpell>
+<knownSpell lvl="1">Sort Connu B</knownSpell>
+<gp>0</gp><pp>0</pp><ep>0</ep><sp>0</sp><cp>0</cp>
+</character>
+</builder>
+''';
+
 /// Même base que [_cleanXml], mais avec une race ET une classe homebrew (non
 /// cataloguées) — seul cas qui doit réellement bloquer "Valider le
 /// personnage" (voir la doc de
@@ -975,6 +1031,45 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'carte consolidée (Objets, 1 élément) : forme SINGULIÈRE du pluriel ICU '
+    '"1 élément non catalogué..."',
+    (WidgetTester tester) async {
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(xmlSource: _singleUncatalogedItemXml),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('1 élément non catalogué — à corriger manuellement.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'cartes consolidées (Sorts innés, Sorts connus) : formes SINGULIÈRE '
+    '("1 sort non catalogué...") et PLURIELLE ("2 sorts non catalogués...") '
+    'du pluriel ICU des sorts',
+    (WidgetTester tester) async {
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(xmlSource: _uncatalogedSpellsXml),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('1 sort non catalogué — à corriger manuellement.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('2 sorts non catalogués — à corriger manuellement.'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('carte d\'alerte : icône d\'avertissement seule à droite, pas de '
       'chevron (correctif de conformité visuelle direction-artistique du '
@@ -1386,6 +1481,51 @@ void main() {
         expect(find.textContaining('Alignment not recognized'), findsOneWidget);
         expect(
           find.text('2 uncataloged items — need manual correction.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'carte consolidée (Objets, 1 élément) en anglais : forme SINGULIÈRE '
+      '"1 uncataloged item needs..."',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(
+          buildTestWidget(
+            xmlSource: _singleUncatalogedItemXml,
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('1 uncataloged item — needs manual correction.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'cartes consolidées (Sorts innés, Sorts connus) en anglais : formes '
+      'SINGULIÈRE "1 uncataloged spell needs..." et PLURIELLE "2 uncataloged '
+      'spells need..."',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(
+          buildTestWidget(
+            xmlSource: _uncatalogedSpellsXml,
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('1 uncataloged spell — needs manual correction.'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('2 uncataloged spells — need manual correction.'),
           findsOneWidget,
         );
       },

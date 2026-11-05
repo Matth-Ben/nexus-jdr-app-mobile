@@ -1480,6 +1480,7 @@
   "xmlImportReviewScreenCustomItemsFieldTitle": "Custom items",
   "xmlImportReviewScreenCustomItemsBadgeLabel": "Custom",
   "xmlImportReviewScreenStartingPackFieldTitle": "Starting pack",
+  "xmlImportReviewScreenStartingPackUnrecognizedLabel": "Not recognized (traceability only): {rawValue}",
   "xmlImportReviewScreenAlignmentFieldTitle": "Alignment",
   "xmlImportReviewScreenSexFieldTitle": "Sex",
   "xmlImportReviewScreenAppearanceFieldTitle": "Appearance",
