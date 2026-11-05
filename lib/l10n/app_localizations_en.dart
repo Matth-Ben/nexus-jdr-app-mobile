@@ -3971,4 +3971,111 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subclassFeatureChoiceBlockRetryButton => 'Retry';
+
+  @override
+  String get abilityScoreStepScreenHelpTooltip => 'Help';
+
+  @override
+  String get abilityScoreStepScreenHeaderTitle => '5. Ability Scores';
+
+  @override
+  String abilityScoreStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Step $currentStep / $totalSteps';
+  }
+
+  @override
+  String get abilityScoreStepScreenGenericErrorMessage =>
+      'Couldn\'t load the racial bonuses. Try again.';
+
+  @override
+  String get abilityScoreStepScreenRetryButton => 'Retry';
+
+  @override
+  String get abilityScoreStepScreenMethodStandardLabel => 'Standard array';
+
+  @override
+  String get abilityScoreStepScreenMethodPointBuyLabel => 'Point buy';
+
+  @override
+  String get abilityScoreStepScreenMethodDiceRollLabel => 'Dice roll';
+
+  @override
+  String abilityScoreStepScreenPointsRemainingLabel(int remaining, int budget) {
+    return 'Points remaining: $remaining/$budget';
+  }
+
+  @override
+  String get abilityScoreStepScreenRerollDiceButton => 'Reroll dice';
+
+  @override
+  String get abilityScoreStepScreenBackButton => 'Back';
+
+  @override
+  String get abilityScoreStepScreenNextButton => 'Next';
+
+  @override
+  String abilityScoreStepScreenModifierLabel(String modifier) {
+    return 'Modifier $modifier';
+  }
+
+  @override
+  String get abilityScoreStepScreenEditIntroMessage =>
+      'Final scores: race bonus and improvements already included. Adjust them freely (1 to 30).';
+
+  @override
+  String abilityScoreStepScreenRaceChangedMessage(String before, String after) {
+    return 'Race changed — carry over the bonus difference yourself:\nbefore: $before\nnow: $after';
+  }
+
+  @override
+  String get abilityScoreStepScreenNoRacialBonusLabel => 'none';
+
+  @override
+  String get skillsAndToolsStepScreenHelpTooltip => 'Help';
+
+  @override
+  String get skillsAndToolsStepScreenHeaderTitle => '6. Skills';
+
+  @override
+  String skillsAndToolsStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Step $currentStep / $totalSteps';
+  }
+
+  @override
+  String get skillsAndToolsStepScreenGenericErrorMessage =>
+      'Couldn\'t load the available skills and tools. Try again.';
+
+  @override
+  String get skillsAndToolsStepScreenRetryButton => 'Retry';
+
+  @override
+  String get skillsAndToolsStepScreenBackButton => 'Back';
+
+  @override
+  String get skillsAndToolsStepScreenNextButton => 'Next';
+
+  @override
+  String get skillsAndToolsStepScreenClassSkillsSectionTitle => 'CLASS SKILLS';
+
+  @override
+  String get skillsAndToolsStepScreenClassToolsSectionTitle => 'TOOLS (CLASS)';
+
+  @override
+  String get skillsAndToolsStepScreenBackgroundToolsSectionTitle =>
+      'TOOLS (BACKGROUND)';
+
+  @override
+  String get skillsAndToolsStepScreenLanguagesSectionTitle =>
+      'LANGUAGES (BACKGROUND)';
+
+  @override
+  String get skillsAndToolsStepScreenRaceSkillsSectionTitle => 'SKILLS (RACE)';
+
+  @override
+  String get skillsAndToolsStepScreenRaceToolsSectionTitle => 'TOOLS (RACE)';
+
+  @override
+  String skillsAndToolsStepScreenQuotaBadge(int selectedCount, int quota) {
+    return '$selectedCount / $quota chosen';
+  }
 }

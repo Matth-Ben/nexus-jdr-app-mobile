@@ -48,6 +48,7 @@ import 'package:personnages/features/character_creation/domain/subclass_catalog.
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/domain/race_option.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:personnages/features/character_creation/presentation/ability_score_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
@@ -171,10 +172,15 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
@@ -193,13 +199,16 @@ void main() {
   /// Monte l'écran (poussé depuis l'étape "Historique", voir plus haut) sur
   /// une surface assez grande pour afficher les 6 lignes de
   /// caractéristiques sans défilement.
-  Future<void> pumpAbilityScoreStep(WidgetTester tester) async {
+  Future<void> pumpAbilityScoreStep(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     tester.view.physicalSize = const Size(800, 1300);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     router.push('/characters/new/step-4');
     await tester.pumpAndSettle();
@@ -743,6 +752,63 @@ void main() {
 
       expect(find.textContaining('Race modifiée'), findsOneWidget);
       expect(find.textContaining('avant : +2 Dex'), findsOneWidget);
+    });
+  });
+
+  group('traduction anglaise', () {
+    testWidgets(
+      'en-tête, compteur, méthodes, points restants, relance et boutons en '
+      'anglais, "NEXT" écrit toujours le brouillon',
+      (WidgetTester tester) async {
+        await pumpAbilityScoreStep(tester, locale: const Locale('en'));
+
+        expect(find.text('5. Ability Scores'), findsOneWidget);
+        expect(find.text('Step 5 / 10'), findsOneWidget);
+        expect(find.byTooltip('Help'), findsOneWidget);
+        expect(find.text('STANDARD ARRAY'), findsOneWidget);
+        expect(find.text('POINT BUY'), findsOneWidget);
+        expect(find.text('DICE ROLL'), findsOneWidget);
+        expect(find.text('BACK'), findsOneWidget);
+        expect(find.text('NEXT'), findsOneWidget);
+
+        await tester.tap(find.text('POINT BUY'));
+        await tester.pumpAndSettle();
+        expect(find.text('Points remaining: 27/27'), findsOneWidget);
+
+        await tester.tap(find.text('DICE ROLL'));
+        await tester.pumpAndSettle();
+        expect(find.text('Reroll dice'), findsOneWidget);
+
+        await tester.tap(find.text('NEXT'));
+        await tester.pumpAndSettle();
+
+        expect(readDraft().abilityScoreMethod, AbilityScoreMethod.diceRoll);
+      },
+    );
+
+    testWidgets('message d\'erreur de repli (erreur générique, pas une '
+        '`CharacterCreationFailure`) et bouton "RETRY" en anglais', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.catalogErrorToThrow = Exception('boom');
+
+      await pumpAbilityScoreStep(tester, locale: const Locale('en'));
+
+      expect(
+        find.text("Couldn't load the racial bonuses. Try again."),
+        findsOneWidget,
+      );
+
+      fakeRepository.catalogErrorToThrow = null;
+      fakeRepository.catalogToReturn = const RaceCatalog(
+        races: [_elfe],
+        subraces: [],
+      );
+
+      await tester.tap(find.text('RETRY'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('STANDARD ARRAY'), findsOneWidget);
     });
   });
 }

@@ -799,6 +799,17 @@ qu'au module entier).
 |---|---|---|---|---|
 | D149 | Deux classes `domain/` sans `BuildContext` produisent toujours leur texte en dur en français, consommées respectivement par `class_choice_step_screen.dart` et `subclass_choice_block.dart` (tous deux migrés dans ce lot, tout le texte UI fixe qui les entoure l'est désormais) : `ClassChoiceRules.titleFor`/`.announcementFor` (`domain/class_choice_rules.dart`) donnent les 3 libellés fixes "Style de combat"/"Ennemi juré"/"Expertise" (titre de bandeau, voir `classChoiceStepScreenHeaderTitle` qui les injecte tels quels dans son placeholder `{title}`) et les 3 phrases annoncées aux lecteurs d'écran quand les options apparaissent ; `SubclassChoiceRules.titleFor`/`.announcementFor` (`domain/subclass_choice_rules.dart`) font de même pour les libellés de sous-classe ("Domaine divin"/"Patron protecteur"/"Origine magique"/repli "Sous-classe") consommés par `SubclassChoiceBlock` (`subclassChoiceBlockRequiredSemanticsLabel` reprend `title` tel quel dans son placeholder). Un personnage en anglais verra donc toujours ces titres/annonces en français, contrairement au texte fixe qui les entoure (boutons, messages d'erreur, intro). | basse (texte secondaire, pas une donnée fausse — juste une langue qui ne suit pas le réglage de l'app) | Migrer `ClassChoiceRules`/`SubclassChoiceRules` vers le pattern "fonction `(l10n) => ...`" déjà établi (voir D142/D143/D146/D148) — changement de signature qui touche aussi les call sites non couverts par ce lot (`skills_and_tools_step_screen.dart` pour `ClassChoiceKind.expertise`, résolu directement sans passer par `kindFor`) | Ouvert, non traité |
 
+## Ajouts liés au lot "Character creation — caractéristiques/compétences" de la Phase B traduction (04/11/2026)
+
+Troisième sous-lot de la fonctionnalité `character_creation` (`ability_score_step_screen.dart`/
+`skills_and_tools_step_screen.dart`) : pas de nouvelle classe `domain/` non traduite à tracer
+(constat D148/D149 des deux lots précédents), mais un défaut de copie française pré-existant
+mis en lumière en migrant le libellé partagé `skillsAndToolsStepScreenQuotaBadge`.
+
+| ID | Constat | Gravité | Correction | État |
+|---|---|---|---|---|
+| D150 | Le badge de quota partagé des sections à choix interactif de `skills_and_tools_step_screen.dart` ("`{selectedCount} / {quota} choisies`", clé `skillsAndToolsStepScreenQuotaBadge`) accorde toujours "choisies" au féminin, y compris pour les 2 sections "OUTILS (CLASSE)"/"OUTILS (RACE)" où l'accord implicite porte sur "outils" (masculin) et devrait donner "choisis". Défaut de copie FR pré-existant à la migration — le texte français était déjà `'$n / $m choisies'` en dur avant ce lot (`_classToolSection`/`_raceToolSection`), simplement reporté tel quel dans la clé `.arb` ; jamais tracé en dette technique jusqu'ici. Repéré par `qa-testeur` en relisant ce lot. | basse (texte secondaire, grammaticalement faux mais sans ambiguïté de sens pour le joueur) | Scinder `skillsAndToolsStepScreenQuotaBadge` en deux clés (une par genre) ou ajouter un paramètre de genre, et corriger les 2 call sites "Outils" en consultant d'abord `direction-artistique`/un relecteur FR natif si le gabarit de scission doit aussi s'appliquer à `classChoiceStepScreenQuotaBadge` (même convention, hors périmètre de ce lot) | Ouvert, non traité |
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont

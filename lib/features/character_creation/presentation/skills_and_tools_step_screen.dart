@@ -9,6 +9,7 @@ import '../../../core/widgets/checkable_option_tile.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/background_option.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/class_option.dart';
@@ -191,15 +192,17 @@ class _SkillsAndToolsStepScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dataAsync = ref.watch(skillsAndToolsStepDataProvider);
 
     return Scaffold(
       body: dataAsync.when(
-        data: _buildContent,
+        data: (data) => _buildContent(data, l10n),
         loading: () => Column(
           children: [
             _MinimalHeader(
               onBack: _goBack,
+              helpTooltip: l10n.skillsAndToolsStepScreenHelpTooltip,
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.skillsAndTools),
             ),
@@ -220,6 +223,7 @@ class _SkillsAndToolsStepScreenState
           children: [
             _MinimalHeader(
               onBack: _goBack,
+              helpTooltip: l10n.skillsAndToolsStepScreenHelpTooltip,
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.skillsAndTools),
             ),
@@ -227,8 +231,8 @@ class _SkillsAndToolsStepScreenState
               child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
-                    : 'Impossible de charger les compétences et outils '
-                          'disponibles. Réessayez.',
+                    : l10n.skillsAndToolsStepScreenGenericErrorMessage,
+                retryLabel: l10n.skillsAndToolsStepScreenRetryButton,
                 // Invalide les 4 providers *feuilles* plutôt que le seul
                 // `skillsAndToolsStepDataProvider` : bug corrigé en écrivant
                 // les tests de cet écran (reproduit isolément avec un
@@ -265,7 +269,7 @@ class _SkillsAndToolsStepScreenState
     );
   }
 
-  Widget _buildContent(SkillsAndToolsStepData data) {
+  Widget _buildContent(SkillsAndToolsStepData data, AppLocalizations l10n) {
     final classOption = data.classOption;
     final backgroundOption = data.backgroundOption;
     // Mode modification : les 2 sections "(RACE)" restent masquées, quelle
@@ -316,6 +320,12 @@ class _SkillsAndToolsStepScreenState
           onBack: _goBack,
           currentStep: 6,
           totalSteps: _totalSteps,
+          headerTitle: l10n.skillsAndToolsStepScreenHeaderTitle,
+          stepCounterLabel: l10n.skillsAndToolsStepScreenStepCounter(
+            6,
+            _totalSteps,
+          ),
+          helpTooltip: l10n.skillsAndToolsStepScreenHelpTooltip,
           onHelp: () =>
               showStepHelpSheet(context, CreationStepHelp.skillsAndTools),
         ),
@@ -336,10 +346,12 @@ class _SkillsAndToolsStepScreenState
                       // Section 1 : "COMPÉTENCES DE CLASSE" — toujours
                       // affichée.
                       _SectionHeader(
-                        title: 'COMPÉTENCES DE CLASSE',
-                        badge:
-                            '${_selectedClassSkills.length} / '
-                            '${classOption.skillChoices.count} choisies',
+                        title: l10n
+                            .skillsAndToolsStepScreenClassSkillsSectionTitle,
+                        badge: l10n.skillsAndToolsStepScreenQuotaBadge(
+                          _selectedClassSkills.length,
+                          classOption.skillChoices.count,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       for (
@@ -357,14 +369,17 @@ class _SkillsAndToolsStepScreenState
                       // Section 2 : "OUTILS (CLASSE)" — si applicable.
                       if (showClassTools) ...[
                         const SizedBox(height: AppSpacing.md),
-                        ..._classToolSection(classOption, data),
+                        ..._classToolSection(classOption, data, l10n),
                       ],
 
                       // Section 3 : "OUTILS (HISTORIQUE)" — si applicable,
                       // jamais interactive.
                       if (showBackgroundTools) ...[
                         const SizedBox(height: AppSpacing.md),
-                        const _SectionHeader(title: 'OUTILS (HISTORIQUE)'),
+                        _SectionHeader(
+                          title: l10n
+                              .skillsAndToolsStepScreenBackgroundToolsSectionTitle,
+                        ),
                         const SizedBox(height: AppSpacing.sm),
                         for (
                           var i = 0;
@@ -387,7 +402,7 @@ class _SkillsAndToolsStepScreenState
                       // Section 4 : "LANGUES (HISTORIQUE)" — si applicable.
                       if (showLanguages) ...[
                         const SizedBox(height: AppSpacing.md),
-                        ..._languageSection(backgroundOption, data),
+                        ..._languageSection(backgroundOption, data, l10n),
                       ],
 
                       // Section 5 : "COMPÉTENCES (RACE)" — si applicable
@@ -395,13 +410,13 @@ class _SkillsAndToolsStepScreenState
                       // `SkillsAndToolsStepSelection.isRaceSkillSectionVisible`).
                       if (showRaceSkills) ...[
                         const SizedBox(height: AppSpacing.md),
-                        ..._raceSkillSection(raceOption!),
+                        ..._raceSkillSection(raceOption!, l10n),
                       ],
 
                       // Section 6 : "OUTILS (RACE)" — si applicable.
                       if (showRaceTools) ...[
                         const SizedBox(height: AppSpacing.md),
-                        ..._raceToolSection(raceOption!),
+                        ..._raceToolSection(raceOption!, l10n),
                       ],
                     ],
                   ),
@@ -414,7 +429,7 @@ class _SkillsAndToolsStepScreenState
                         children: [
                           Expanded(
                             child: SecondaryButton(
-                              label: 'Retour',
+                              label: l10n.skillsAndToolsStepScreenBackButton,
                               surface: SecondaryButtonSurface.parchment,
                               onPressed: _goBack,
                             ),
@@ -422,7 +437,7 @@ class _SkillsAndToolsStepScreenState
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Suivant',
+                              label: l10n.skillsAndToolsStepScreenNextButton,
                               onPressed: canProceed
                                   ? () => _submit(classOption)
                                   : null,
@@ -470,6 +485,7 @@ class _SkillsAndToolsStepScreenState
   List<Widget> _classToolSection(
     ClassOption classOption,
     SkillsAndToolsStepData data,
+    AppLocalizations l10n,
   ) {
     final toolChoice = classOption.toolChoice;
     if (toolChoice != null) {
@@ -479,8 +495,11 @@ class _SkillsAndToolsStepScreenState
           .toList();
       return [
         _SectionHeader(
-          title: 'OUTILS (CLASSE)',
-          badge: '${_selectedClassTools.length} / ${toolChoice.count} choisies',
+          title: l10n.skillsAndToolsStepScreenClassToolsSectionTitle,
+          badge: l10n.skillsAndToolsStepScreenQuotaBadge(
+            _selectedClassTools.length,
+            toolChoice.count,
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         for (var i = 0; i < candidates.length; i++) ...[
@@ -491,7 +510,9 @@ class _SkillsAndToolsStepScreenState
     }
 
     return [
-      const _SectionHeader(title: 'OUTILS (CLASSE)'),
+      _SectionHeader(
+        title: l10n.skillsAndToolsStepScreenClassToolsSectionTitle,
+      ),
       const SizedBox(height: AppSpacing.sm),
       for (var i = 0; i < classOption.grantedToolNames.length; i++) ...[
         if (i > 0) const SizedBox(height: AppSpacing.xs),
@@ -521,6 +542,7 @@ class _SkillsAndToolsStepScreenState
   List<Widget> _languageSection(
     BackgroundOption backgroundOption,
     SkillsAndToolsStepData data,
+    AppLocalizations l10n,
   ) {
     final quota = backgroundOption.languageChoiceCount ?? 0;
     // Commun est toujours connue (règle 5e, jamais un choix) : exclue du
@@ -534,8 +556,11 @@ class _SkillsAndToolsStepScreenState
         .toList();
     return [
       _SectionHeader(
-        title: 'LANGUES (HISTORIQUE)',
-        badge: '${_selectedBackgroundLanguages.length} / $quota choisies',
+        title: l10n.skillsAndToolsStepScreenLanguagesSectionTitle,
+        badge: l10n.skillsAndToolsStepScreenQuotaBadge(
+          _selectedBackgroundLanguages.length,
+          quota,
+        ),
       ),
       const SizedBox(height: AppSpacing.sm),
       const CheckableOptionTile(
@@ -572,15 +597,18 @@ class _SkillsAndToolsStepScreenState
   /// interactives, même convention que "OUTILS (HISTORIQUE)"), ou les deux
   /// dans le même bloc de section (générique, même si aucune des 10 races
   /// actuelles n'a les deux en même temps — voir la consigne d'origine).
-  List<Widget> _raceSkillSection(RaceOption raceOption) {
+  List<Widget> _raceSkillSection(RaceOption raceOption, AppLocalizations l10n) {
     final skillChoice = raceOption.skillChoice;
     final automaticSkills = raceOption.skillProficiencies;
     return [
       _SectionHeader(
-        title: 'COMPÉTENCES (RACE)',
+        title: l10n.skillsAndToolsStepScreenRaceSkillsSectionTitle,
         badge: skillChoice == null
             ? null
-            : '${_selectedRaceSkills.length} / ${skillChoice.count} choisies',
+            : l10n.skillsAndToolsStepScreenQuotaBadge(
+                _selectedRaceSkills.length,
+                skillChoice.count,
+              ),
       ),
       const SizedBox(height: AppSpacing.sm),
       if (skillChoice != null)
@@ -621,12 +649,15 @@ class _SkillsAndToolsStepScreenState
   /// [SkillsAndToolsStepSelection.isRaceToolSectionVisible] avant d'appeler
   /// cette méthode) — aucune race n'octroie d'outil automatiquement à ce
   /// jour, contrairement aux compétences (voir [_raceSkillSection]).
-  List<Widget> _raceToolSection(RaceOption raceOption) {
+  List<Widget> _raceToolSection(RaceOption raceOption, AppLocalizations l10n) {
     final toolChoice = raceOption.toolChoice!;
     return [
       _SectionHeader(
-        title: 'OUTILS (RACE)',
-        badge: '${_selectedRaceTools.length} / ${toolChoice.count} choisies',
+        title: l10n.skillsAndToolsStepScreenRaceToolsSectionTitle,
+        badge: l10n.skillsAndToolsStepScreenQuotaBadge(
+          _selectedRaceTools.length,
+          toolChoice.count,
+        ),
       ),
       const SizedBox(height: AppSpacing.sm),
       for (var i = 0; i < toolChoice.choices.length; i++) ...[
@@ -729,12 +760,18 @@ class _Header extends StatelessWidget {
     required this.onBack,
     required this.currentStep,
     required this.totalSteps,
+    required this.headerTitle,
+    required this.stepCounterLabel,
+    required this.helpTooltip,
     required this.onHelp,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
+  final String headerTitle;
+  final String stepCounterLabel;
+  final String helpTooltip;
   final VoidCallback onHelp;
 
   @override
@@ -771,7 +808,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
-                      tooltip: 'Aide',
+                      tooltip: helpTooltip,
                       icon: const Icon(
                         Icons.help_outline,
                         color: AppColors.textOnWood,
@@ -789,7 +826,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '6. Compétences',
+                          headerTitle,
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -797,7 +834,7 @@ class _Header extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          stepCounterLabel,
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,
@@ -824,9 +861,14 @@ class _Header extends StatelessWidget {
 /// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
 /// chargement/l'erreur — copie exacte du pattern des étapes 6/7/9.
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({required this.onBack, required this.onHelp});
+  const _MinimalHeader({
+    required this.onBack,
+    required this.helpTooltip,
+    required this.onHelp,
+  });
 
   final VoidCallback onBack;
+  final String helpTooltip;
   final VoidCallback onHelp;
 
   @override
@@ -858,7 +900,7 @@ class _MinimalHeader extends StatelessWidget {
               const Spacer(),
               IconButton(
                 onPressed: onHelp,
-                tooltip: 'Aide',
+                tooltip: helpTooltip,
                 icon: const Icon(
                   Icons.help_outline,
                   color: AppColors.textOnWood,
@@ -873,9 +915,14 @@ class _MinimalHeader extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
+  const _ErrorState({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
 
   final String message;
+  final String retryLabel;
   final VoidCallback onRetry;
 
   @override
@@ -898,7 +945,7 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(label: retryLabel, onPressed: onRetry),
           ],
         ),
       ),

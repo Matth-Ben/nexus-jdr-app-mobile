@@ -6545,6 +6545,186 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Réessayer'**
   String get subclassFeatureChoiceBlockRetryButton;
+
+  /// Tooltip de l'icône "?" du bandeau, ouvrant l'aide contextuelle de l'étape.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get abilityScoreStepScreenHelpTooltip;
+
+  /// Titre d'étape affiché sur le bandeau bois.
+  ///
+  /// In fr, this message translates to:
+  /// **'5. Caractéristiques'**
+  String get abilityScoreStepScreenHeaderTitle;
+
+  /// Compteur d'étape affiché sur le bandeau bois.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String abilityScoreStepScreenStepCounter(int currentStep, int totalSteps);
+
+  /// Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les bonus raciaux. Réessayez.'**
+  String get abilityScoreStepScreenGenericErrorMessage;
+
+  /// `SecondaryButton` "Réessayer" de `_ErrorState` (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get abilityScoreStepScreenRetryButton;
+
+  /// Libellé du segment "Tableau standard" de la bascule de méthode (`SegmentedToggle`, met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tableau'**
+  String get abilityScoreStepScreenMethodStandardLabel;
+
+  /// Libellé du segment "Achat par points" de la bascule de méthode (`SegmentedToggle`, met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Points'**
+  String get abilityScoreStepScreenMethodPointBuyLabel;
+
+  /// Libellé du segment "Dés" de la bascule de méthode (`SegmentedToggle`, met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Dés'**
+  String get abilityScoreStepScreenMethodDiceRollLabel;
+
+  /// Points restants affichés pour la méthode "Achat par points" — pas de forme plurielle : "Points" reste invariable quel que soit le nombre restant (0 à 27), même convention que `classChoiceStepScreenQuotaBadge`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Points restants : {remaining}/{budget}'**
+  String abilityScoreStepScreenPointsRemainingLabel(int remaining, int budget);
+
+  /// Bouton texte affiché pour la méthode "Dés", relance les 6 dés.
+  ///
+  /// In fr, this message translates to:
+  /// **'Relancer les dés'**
+  String get abilityScoreStepScreenRerollDiceButton;
+
+  /// `SecondaryButton` "Retour" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get abilityScoreStepScreenBackButton;
+
+  /// `PrimaryButton` "Suivant" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get abilityScoreStepScreenNextButton;
+
+  /// Modificateur affiché sous le nom de chaque caractéristique (`_AbilityRow`), {modifier} déjà formaté avec son signe (ex. "+2", "-1") par l'écran.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modificateur {modifier}'**
+  String abilityScoreStepScreenModifierLabel(String modifier);
+
+  /// Message de `InfoBanner` affiché en mode modification (saisie directe des 6 scores finaux).
+  ///
+  /// In fr, this message translates to:
+  /// **'Scores finaux : bonus de race et améliorations déjà inclus. Ajuste-les librement (1 à 30).'**
+  String get abilityScoreStepScreenEditIntroMessage;
+
+  /// Rappel affiché en mode modification quand la race a changé depuis l'original, {before}/{after} viennent de `_racialBonusesLabel` (bonus de race/sous-race formatés par `RaceSummaryFormatter.formatAbilityBonuses`, domaine, non traduit — D148/D149 de docs/dette-technique.md).
+  ///
+  /// In fr, this message translates to:
+  /// **'Race modifiée — reporte toi-même la différence de bonus :\navant : {before}\nmaintenant : {after}'**
+  String abilityScoreStepScreenRaceChangedMessage(String before, String after);
+
+  /// Valeur de repli de `_racialBonusesLabel` quand la race/sous-race ne porte aucun bonus de caractéristique fixe (ex. race 2024).
+  ///
+  /// In fr, this message translates to:
+  /// **'aucun'**
+  String get abilityScoreStepScreenNoRacialBonusLabel;
+
+  /// Tooltip de l'icône "?" du bandeau, ouvrant l'aide contextuelle de l'étape.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get skillsAndToolsStepScreenHelpTooltip;
+
+  /// Titre d'étape affiché sur le bandeau bois.
+  ///
+  /// In fr, this message translates to:
+  /// **'6. Compétences'**
+  String get skillsAndToolsStepScreenHeaderTitle;
+
+  /// Compteur d'étape affiché sur le bandeau bois.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String skillsAndToolsStepScreenStepCounter(int currentStep, int totalSteps);
+
+  /// Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les compétences et outils disponibles. Réessayez.'**
+  String get skillsAndToolsStepScreenGenericErrorMessage;
+
+  /// `SecondaryButton` "Réessayer" de `_ErrorState` (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get skillsAndToolsStepScreenRetryButton;
+
+  /// `SecondaryButton` "Retour" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get skillsAndToolsStepScreenBackButton;
+
+  /// `PrimaryButton` "Suivant" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get skillsAndToolsStepScreenNextButton;
+
+  /// Titre de la section 1 (toujours affichée), déjà en majuscules dans le code (pas de transformation automatique).
+  ///
+  /// In fr, this message translates to:
+  /// **'COMPÉTENCES DE CLASSE'**
+  String get skillsAndToolsStepScreenClassSkillsSectionTitle;
+
+  /// Titre de la section 2, affichée si la classe propose un choix ou un octroi automatique d'outils, déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'OUTILS (CLASSE)'**
+  String get skillsAndToolsStepScreenClassToolsSectionTitle;
+
+  /// Titre de la section 3 (jamais interactive, octroi automatique), déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'OUTILS (HISTORIQUE)'**
+  String get skillsAndToolsStepScreenBackgroundToolsSectionTitle;
+
+  /// Titre de la section 4, affichée si l'historique propose un choix de langues, déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'LANGUES (HISTORIQUE)'**
+  String get skillsAndToolsStepScreenLanguagesSectionTitle;
+
+  /// Titre de la section 5, affichée si la race propose un choix et/ou un octroi automatique de compétences, déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'COMPÉTENCES (RACE)'**
+  String get skillsAndToolsStepScreenRaceSkillsSectionTitle;
+
+  /// Titre de la section 6, affichée si la race propose un choix d'outils, déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'OUTILS (RACE)'**
+  String get skillsAndToolsStepScreenRaceToolsSectionTitle;
+
+  /// Badge de quota partagé par les 5 sections à choix interactif (compétences de classe, outils de classe, langues, compétences de race, outils de race) — pas de forme plurielle : "choisies" reste invariable quel que soit le quota (accord implicite avec "compétences"/"outils"/"langues", jamais énoncé littéralement), même convention que `classChoiceStepScreenQuotaBadge`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{selectedCount} / {quota} choisies'**
+  String skillsAndToolsStepScreenQuotaBadge(int selectedCount, int quota);
 }
 
 class _AppLocalizationsDelegate

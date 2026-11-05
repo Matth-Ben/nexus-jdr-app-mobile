@@ -45,6 +45,7 @@ import 'package:personnages/features/character_creation/presentation/providers/c
 import 'package:personnages/features/character_creation/presentation/providers/character_edit_session_provider.dart';
 import 'package:personnages/features/character_creation/presentation/skills_and_tools_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   ClassCatalog? classCatalogToReturn;
@@ -368,10 +369,15 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
@@ -398,13 +404,16 @@ void main() {
   // la hauteur disponible pour la liste défilante, ce qui faisait manquer
   // certaines sections (`ListView` ne construit que les éléments visibles)
   // à la hauteur par défaut (~600).
-  Future<void> pumpSkillsAndToolsStep(WidgetTester tester) async {
+  Future<void> pumpSkillsAndToolsStep(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     tester.view.physicalSize = const Size(800, 1300);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     router.push('/characters/new/step-5');
     await tester.pumpAndSettle();
@@ -1653,5 +1662,73 @@ void main() {
         expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
       },
     );
+  });
+
+  group('traduction anglaise', () {
+    testWidgets(
+      'en-tête, compteur, titres de section, badge de quota et boutons en '
+      'anglais, "NEXT" écrit toujours le brouillon',
+      (WidgetTester tester) async {
+        fakeRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [_guerrier],
+        );
+        fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+          backgrounds: [_ermite],
+        );
+        selectClassAndBackground(classId: 1, backgroundId: 10);
+
+        await pumpSkillsAndToolsStep(tester, locale: const Locale('en'));
+
+        expect(find.text('6. Skills'), findsOneWidget);
+        expect(find.text('Step 6 / 10'), findsOneWidget);
+        expect(find.byTooltip('Help'), findsOneWidget);
+        expect(find.text('CLASS SKILLS'), findsOneWidget);
+        expect(find.text('0 / 2 chosen'), findsOneWidget);
+        expect(find.text('BACK'), findsOneWidget);
+        expect(find.text('NEXT'), findsOneWidget);
+
+        await tester.tap(find.text('Athlétisme'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 2 chosen'), findsOneWidget);
+
+        await tester.tap(find.text('Intimidation'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('NEXT'));
+        await tester.pumpAndSettle();
+
+        expect(
+          readDraft().classSkillChoices,
+          containsAll(['Athlétisme', 'Intimidation']),
+        );
+      },
+    );
+
+    testWidgets('message d\'erreur de repli (erreur générique, pas une '
+        '`CharacterCreationFailure`) et bouton "RETRY" en anglais', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.classCatalogErrorToThrow = Exception('boom');
+      selectClassAndBackground(classId: 1, backgroundId: 10);
+
+      await pumpSkillsAndToolsStep(tester, locale: const Locale('en'));
+
+      expect(
+        find.text("Couldn't load the available skills and tools. Try again."),
+        findsOneWidget,
+      );
+
+      fakeRepository.classCatalogErrorToThrow = null;
+      fakeRepository.classCatalogToReturn = const ClassCatalog(
+        classes: [_guerrier],
+      );
+      fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+        backgrounds: [_ermite],
+      );
+
+      await tester.tap(find.text('RETRY'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('CLASS SKILLS'), findsOneWidget);
+    });
   });
 }
