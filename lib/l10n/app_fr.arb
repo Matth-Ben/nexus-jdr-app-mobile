@@ -5721,5 +5721,340 @@
         "type": "String"
       }
     }
+  },
+  "appearanceAndBackstoryStepScreenHelpTooltip": "Aide",
+  "@appearanceAndBackstoryStepScreenHelpTooltip": {
+    "description": "Infobulle de l'icône \"?\" du bandeau de l'étape 9/10 \"Histoire\"."
+  },
+  "appearanceAndBackstoryStepScreenHeaderTitle": "9. Histoire",
+  "@appearanceAndBackstoryStepScreenHeaderTitle": {
+    "description": "Titre d'étape affiché sur le bandeau bois, en-tête de `AppearanceAndBackstoryStepScreen`."
+  },
+  "appearanceAndBackstoryStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@appearanceAndBackstoryStepScreenStepCounter": {
+    "description": "Compteur d'étape affiché à droite du titre sur le bandeau bois.",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "appearanceAndBackstoryStepScreenBackButton": "Retour",
+  "@appearanceAndBackstoryStepScreenBackButton": {
+    "description": "Bouton de retour vers l'étape précédente (8/10 \"Équipement\")."
+  },
+  "appearanceAndBackstoryStepScreenNextButton": "Suivant",
+  "@appearanceAndBackstoryStepScreenNextButton": {
+    "description": "Bouton de validation vers l'étape suivante — toujours actif (aucun champ requis à cette étape)."
+  },
+  "appearanceAndBackstoryStepScreenPortraitTitle": "Portrait",
+  "@appearanceAndBackstoryStepScreenPortraitTitle": {
+    "description": "Titre de la tuile \"Portrait\" en tête du corps de l'écran."
+  },
+  "appearanceAndBackstoryStepScreenPortraitHasPhotoSubtitle": "Touchez pour changer ou retirer",
+  "@appearanceAndBackstoryStepScreenPortraitHasPhotoSubtitle": {
+    "description": "Sous-titre de la tuile \"Portrait\" une fois un portrait déjà choisi (brouillon ou personnage existant en mode modification)."
+  },
+  "appearanceAndBackstoryStepScreenPortraitEmptySubtitle": "Optionnel — touchez pour en ajouter un",
+  "@appearanceAndBackstoryStepScreenPortraitEmptySubtitle": {
+    "description": "Sous-titre de la tuile \"Portrait\" tant qu'aucun portrait n'est choisi."
+  },
+  "appearanceAndBackstoryStepScreenAlignmentLabel": "ALIGNEMENT",
+  "@appearanceAndBackstoryStepScreenAlignmentLabel": {
+    "description": "Libellé du champ \"Alignement\" (`_AlignmentField`), déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenAlignmentNoneOption": "Aucun",
+  "@appearanceAndBackstoryStepScreenAlignmentNoneOption": {
+    "description": "Option de repli du menu déroulant \"Alignement\" (aucun alignement choisi, valeur par défaut)."
+  },
+  "appearanceAndBackstoryStepScreenAlignmentErrorMessage": "Impossible de charger les alignements.",
+  "@appearanceAndBackstoryStepScreenAlignmentErrorMessage": {
+    "description": "Message affiché à la place du menu déroulant \"Alignement\" si `alignmentCatalogProvider` échoue."
+  },
+  "appearanceAndBackstoryStepScreenAlignmentRetryButton": "Réessayer",
+  "@appearanceAndBackstoryStepScreenAlignmentRetryButton": {
+    "description": "Bouton texte qui relance `alignmentCatalogProvider` après un échec de chargement."
+  },
+  "appearanceAndBackstoryStepScreenSexeLabel": "SEXE",
+  "@appearanceAndBackstoryStepScreenSexeLabel": {
+    "description": "Libellé du champ court d'identité \"Sexe\" (`characters.sexe`), déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenSexeHint": "Ex. femme",
+  "@appearanceAndBackstoryStepScreenSexeHint": {
+    "description": "Placeholder du champ \"Sexe\"."
+  },
+  "appearanceAndBackstoryStepScreenAgeLabel": "ÂGE",
+  "@appearanceAndBackstoryStepScreenAgeLabel": {
+    "description": "Libellé du champ court d'identité \"Âge\" (`characters.age`), déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenAgeHint": "Ex. 27 ans",
+  "@appearanceAndBackstoryStepScreenAgeHint": {
+    "description": "Placeholder du champ \"Âge\"."
+  },
+  "appearanceAndBackstoryStepScreenHeightLabel": "TAILLE",
+  "@appearanceAndBackstoryStepScreenHeightLabel": {
+    "description": "Libellé du champ court d'identité \"Taille\" (`characters.height`), déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenHeightHint": "Ex. 1,75 m",
+  "@appearanceAndBackstoryStepScreenHeightHint": {
+    "description": "Placeholder du champ \"Taille\" — unité \"m\" volontairement gardée telle quelle en anglais aussi, même rationale que `equipmentStepScreenPurchaseTabLabel`/D145 pour \"po\"."
+  },
+  "appearanceAndBackstoryStepScreenWeightLabel": "POIDS",
+  "@appearanceAndBackstoryStepScreenWeightLabel": {
+    "description": "Libellé du champ court d'identité \"Poids\" (`characters.weight`), déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenWeightHint": "Ex. 70 kg",
+  "@appearanceAndBackstoryStepScreenWeightHint": {
+    "description": "Placeholder du champ \"Poids\" — unité \"kg\" volontairement gardée telle quelle en anglais aussi, même rationale que `equipmentStepScreenPurchaseTabLabel`/D145 pour \"po\"."
+  },
+  "appearanceAndBackstoryStepScreenEyesLabel": "YEUX",
+  "@appearanceAndBackstoryStepScreenEyesLabel": {
+    "description": "Libellé du champ court d'identité \"Yeux\" (`characters.eyes`), déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenEyesHint": "Ex. verts",
+  "@appearanceAndBackstoryStepScreenEyesHint": {
+    "description": "Placeholder du champ \"Yeux\"."
+  },
+  "appearanceAndBackstoryStepScreenSkinLabel": "PEAU",
+  "@appearanceAndBackstoryStepScreenSkinLabel": {
+    "description": "Libellé du champ court d'identité \"Peau\" (`characters.skin`), déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenSkinHint": "Ex. hâlée",
+  "@appearanceAndBackstoryStepScreenSkinHint": {
+    "description": "Placeholder du champ \"Peau\"."
+  },
+  "appearanceAndBackstoryStepScreenHairLabel": "CHEVEUX",
+  "@appearanceAndBackstoryStepScreenHairLabel": {
+    "description": "Libellé du champ court d'identité \"Cheveux\" (`characters.hair`), déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenHairHint": "Ex. bruns, courts",
+  "@appearanceAndBackstoryStepScreenHairHint": {
+    "description": "Placeholder du champ \"Cheveux\"."
+  },
+  "appearanceAndBackstoryStepScreenAppearanceLabel": "APPARENCE PHYSIQUE",
+  "@appearanceAndBackstoryStepScreenAppearanceLabel": {
+    "description": "Libellé du 1er des 9 champs texte libre — même texte que `characterStoryEditSheetAppearanceLabel` (duplication assumée, voir le commentaire de classe de `_fieldSpecsFor`), déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenAppearanceHint": "Décris l'apparence physique de ton personnage…",
+  "@appearanceAndBackstoryStepScreenAppearanceHint": {
+    "description": "Placeholder du champ \"Apparence physique\" — même texte que `characterStoryEditSheetAppearanceHint`."
+  },
+  "appearanceAndBackstoryStepScreenTraitsLabel": "TRAITS DE PERSONNALITÉ",
+  "@appearanceAndBackstoryStepScreenTraitsLabel": {
+    "description": "Libellé du champ \"Traits de personnalité\" — même texte que `characterStoryEditSheetTraitsLabel`, déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenTraitsHint": "Décris les traits de personnalité de ton personnage…",
+  "@appearanceAndBackstoryStepScreenTraitsHint": {
+    "description": "Placeholder du champ \"Traits de personnalité\" — même texte que `characterStoryEditSheetTraitsHint`."
+  },
+  "appearanceAndBackstoryStepScreenIdealsLabel": "IDÉAUX",
+  "@appearanceAndBackstoryStepScreenIdealsLabel": {
+    "description": "Libellé du champ \"Idéaux\" — même texte que `characterStoryEditSheetIdealsLabel`, déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenIdealsHint": "Quels idéaux guident ton personnage ?",
+  "@appearanceAndBackstoryStepScreenIdealsHint": {
+    "description": "Placeholder du champ \"Idéaux\" — même texte que `characterStoryEditSheetIdealsHint`."
+  },
+  "appearanceAndBackstoryStepScreenBondsLabel": "LIENS",
+  "@appearanceAndBackstoryStepScreenBondsLabel": {
+    "description": "Libellé du champ \"Liens\" — même texte que `characterStoryEditSheetBondsLabel`, déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenBondsHint": "Quels liens unissent ton personnage à d'autres ?",
+  "@appearanceAndBackstoryStepScreenBondsHint": {
+    "description": "Placeholder du champ \"Liens\" — même texte que `characterStoryEditSheetBondsHint`."
+  },
+  "appearanceAndBackstoryStepScreenFlawsLabel": "DÉFAUTS",
+  "@appearanceAndBackstoryStepScreenFlawsLabel": {
+    "description": "Libellé du champ \"Défauts\" — même texte que `characterStoryEditSheetFlawsLabel`, déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenFlawsHint": "Quels défauts ou faiblesses a ton personnage ?",
+  "@appearanceAndBackstoryStepScreenFlawsHint": {
+    "description": "Placeholder du champ \"Défauts\" — même texte que `characterStoryEditSheetFlawsHint`."
+  },
+  "appearanceAndBackstoryStepScreenBackstoryLabel": "HISTOIRE PERSONNELLE",
+  "@appearanceAndBackstoryStepScreenBackstoryLabel": {
+    "description": "Libellé du champ \"Histoire personnelle\" — même texte que `characterStoryEditSheetBackstoryLabel`, déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenBackstoryHint": "Raconte l'histoire personnelle de ton personnage…",
+  "@appearanceAndBackstoryStepScreenBackstoryHint": {
+    "description": "Placeholder du champ \"Histoire personnelle\" — même texte que `characterStoryEditSheetBackstoryHint`."
+  },
+  "appearanceAndBackstoryStepScreenAlliesLabel": "ALLIÉS",
+  "@appearanceAndBackstoryStepScreenAlliesLabel": {
+    "description": "Libellé du champ \"Alliés\" — même texte que `characterStoryEditSheetAlliesLabel`, déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenAlliesHint": "Quels alliés ou organisations soutiennent ton personnage ?",
+  "@appearanceAndBackstoryStepScreenAlliesHint": {
+    "description": "Placeholder du champ \"Alliés\" — même texte que `characterStoryEditSheetAlliesHint`."
+  },
+  "appearanceAndBackstoryStepScreenFeaturesLabel": "PARTICULARITÉS",
+  "@appearanceAndBackstoryStepScreenFeaturesLabel": {
+    "description": "Libellé du champ \"Particularités\" — même texte que `characterStoryEditSheetFeaturesLabel`, déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenFeaturesHint": "Décris les particularités de ton personnage…",
+  "@appearanceAndBackstoryStepScreenFeaturesHint": {
+    "description": "Placeholder du champ \"Particularités\" — même texte que `characterStoryEditSheetFeaturesHint`."
+  },
+  "appearanceAndBackstoryStepScreenTreasureLabel": "TRÉSOR",
+  "@appearanceAndBackstoryStepScreenTreasureLabel": {
+    "description": "Libellé du champ \"Trésor\" — même texte que `characterStoryEditSheetTreasureLabel`, déjà en majuscules dans le code."
+  },
+  "appearanceAndBackstoryStepScreenTreasureHint": "Quels trésors ou objets précieux possède ton personnage ?",
+  "@appearanceAndBackstoryStepScreenTreasureHint": {
+    "description": "Placeholder du champ \"Trésor\" — même texte que `characterStoryEditSheetTreasureHint`."
+  },
+  "summaryStepScreenHelpTooltip": "Aide",
+  "@summaryStepScreenHelpTooltip": {
+    "description": "Infobulle de l'icône \"?\" du bandeau de l'étape 10/10 \"Récapitulatif\"."
+  },
+  "summaryStepScreenHeaderTitle": "10. Récapitulatif",
+  "@summaryStepScreenHeaderTitle": {
+    "description": "Titre d'étape affiché sur le bandeau bois, en-tête de `SummaryStepScreen`."
+  },
+  "summaryStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@summaryStepScreenStepCounter": {
+    "description": "Compteur d'étape affiché à droite du titre sur le bandeau bois.",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "summaryStepScreenGenericErrorMessage": "Impossible de charger le récapitulatif. Réessayez.",
+  "@summaryStepScreenGenericErrorMessage": {
+    "description": "Message de repli affiché quand l'erreur n'est pas une `CharacterCreationFailure` (dont le message, lui, reste en français — D148, hors périmètre de ce lot)."
+  },
+  "summaryStepScreenRetryButton": "Réessayer",
+  "@summaryStepScreenRetryButton": {
+    "description": "Bouton de l'état d'erreur, relance tous les providers feuilles consommés par cette étape."
+  },
+  "summaryStepScreenPortraitUploadFailedMessage": "Personnage créé, mais le portrait n'a pas pu être envoyé. Ajoutez-le depuis la fiche.",
+  "@summaryStepScreenPortraitUploadFailedMessage": {
+    "description": "`SnackBar` affiché après une création réussie dont l'envoi du portrait (best-effort, voir `_submit`) a échoué."
+  },
+  "summaryStepScreenGenericSubmitErrorMessage": "Une erreur est survenue. Réessayez.",
+  "@summaryStepScreenGenericSubmitErrorMessage": {
+    "description": "Message de repli affiché quand l'échec de `createCharacter`/`CharacterEditRepository.save` n'est pas une `CharacterCreationFailure` (dont le message, lui, reste en français — D148, hors périmètre de ce lot) — même clé réutilisée pour `_submit` et `_saveEdit`."
+  },
+  "summaryStepScreenEditSavedMessage": "Modifications enregistrées.",
+  "@summaryStepScreenEditSavedMessage": {
+    "description": "`SnackBar` affiché après l'enregistrement réussi d'une modification (mode édition, `_saveEdit`)."
+  },
+  "summaryStepScreenLevelOneSegment": "Niveau 1",
+  "@summaryStepScreenLevelOneSegment": {
+    "description": "Dernier segment du sous-titre de la carte d'en-tête (\"{Race} · {Classe} · Niveau 1\") — toujours \"Niveau 1\", l'assistant de création ne produisant que des personnages de niveau 1."
+  },
+  "summaryStepScreenAbilityScoresRowTitle": "Caractéristiques",
+  "@summaryStepScreenAbilityScoresRowTitle": {
+    "description": "Titre de la ligne de résumé \"Caractéristiques\", renvoie à l'étape 5/10."
+  },
+  "summaryStepScreenSkillsRowTitle": "Compétences",
+  "@summaryStepScreenSkillsRowTitle": {
+    "description": "Titre de la ligne de résumé \"Compétences\", renvoie à l'étape 6/10."
+  },
+  "summaryStepScreenToolsRowTitle": "Outils",
+  "@summaryStepScreenToolsRowTitle": {
+    "description": "Titre de la ligne de résumé \"Outils\" (masquée si aucun outil choisi), renvoie à l'étape 6/10."
+  },
+  "summaryStepScreenLanguagesRowTitle": "Langues",
+  "@summaryStepScreenLanguagesRowTitle": {
+    "description": "Titre de la ligne de résumé \"Langues\" (masquée si aucune langue d'historique choisie), renvoie à l'étape 6/10."
+  },
+  "summaryStepScreenCantripsRowTitle": "Sorts mineurs",
+  "@summaryStepScreenCantripsRowTitle": {
+    "description": "Titre de la ligne de résumé \"Sorts mineurs\" (classe lanceuse de sorts uniquement), renvoie à l'étape 7/10."
+  },
+  "summaryStepScreenLevelOneSpellsRowTitle": "Sorts niveau 1",
+  "@summaryStepScreenLevelOneSpellsRowTitle": {
+    "description": "Titre de la ligne de résumé \"Sorts niveau 1\" (classe lanceuse de sorts uniquement), renvoie à l'étape 7/10."
+  },
+  "summaryStepScreenSpellSelectionCount": "{count, plural, =0{Aucun sélectionné} =1{1 sélectionné} other{{count} sélectionnés}}",
+  "@summaryStepScreenSpellSelectionCount": {
+    "description": "Valeur des lignes \"Sorts mineurs\"/\"Sorts niveau 1\" — ancien texte \"{N} sélectionné(s)\" (jamais accordé, qu'il y ait 0, 1 ou plusieurs sorts choisis) remplacé par un pluriel ICU à cette occasion.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "summaryStepScreenEquipmentRowTitle": "Équipement",
+  "@summaryStepScreenEquipmentRowTitle": {
+    "description": "Titre de la ligne de résumé \"Équipement\" (absente en mode modification, l'inventaire se gérant depuis l'onglet Sac), renvoie à l'étape 8/10."
+  },
+  "summaryStepScreenEquipmentBackgroundSummary": "Historique : {backgroundName}",
+  "@summaryStepScreenEquipmentBackgroundSummary": {
+    "description": "Valeur de la ligne \"Équipement\" quand l'onglet \"Historique\" de l'étape 8/10 est actif.",
+    "placeholders": {
+      "backgroundName": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryStepScreenEquipmentPurchaseSummary": "{count, plural, =0{Achat (0 objet)} =1{Achat (1 objet)} other{Achat ({count} objets)}}",
+  "@summaryStepScreenEquipmentPurchaseSummary": {
+    "description": "Valeur de la ligne \"Équipement\" quand l'onglet \"Acheter\" de l'étape 8/10 est actif — ancien texte \"Achat ({N} objets)\" (jamais accordé, y compris pour 1 objet) remplacé par un pluriel ICU à cette occasion.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "summaryStepScreenEquipmentClassOptionPrefix": "Classe : option {label} · {base}",
+  "@summaryStepScreenEquipmentClassOptionPrefix": {
+    "description": "Préfixe ajouté devant `summaryStepScreenEquipmentBackgroundSummary`/`summaryStepScreenEquipmentPurchaseSummary` (`base`) quand la classe a une option d'équipement de départ choisie (règles 2024) — `label` est la lettre brute (\"A\"/\"B\"), jamais traduite.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "base": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryStepScreenAppearanceAndBackstoryRowTitle": "Histoire & portrait",
+  "@summaryStepScreenAppearanceAndBackstoryRowTitle": {
+    "description": "Titre de la ligne de résumé \"Histoire & portrait\", renvoie à l'étape 9/10."
+  },
+  "summaryStepScreenAppearanceFilledValue": "Renseignés",
+  "@summaryStepScreenAppearanceFilledValue": {
+    "description": "Valeur de la ligne \"Histoire & portrait\" si au moins un des 9 champs texte de l'étape 9/10 est renseigné."
+  },
+  "summaryStepScreenAppearanceEmptyValue": "Non renseignés",
+  "@summaryStepScreenAppearanceEmptyValue": {
+    "description": "Valeur de la ligne \"Histoire & portrait\" si les 9 champs texte de l'étape 9/10 sont tous vides."
+  },
+  "summaryStepScreenNameFieldLabel": "NOM DU PERSONNAGE",
+  "@summaryStepScreenNameFieldLabel": {
+    "description": "Libellé du champ \"Nom du personnage\", déjà en majuscules dans le code."
+  },
+  "summaryStepScreenNameFieldHint": "Ex. Halltesse Ambrelune",
+  "@summaryStepScreenNameFieldHint": {
+    "description": "Placeholder du champ \"Nom du personnage\"."
+  },
+  "summaryStepScreenNameFieldHelperText": "Requis pour retrouver facilement ton personnage",
+  "@summaryStepScreenNameFieldHelperText": {
+    "description": "Texte d'aide discret sous le champ \"Nom du personnage\" (jamais un style d'erreur, voir la documentation de classe de `SummaryStepScreen`)."
+  },
+  "summaryStepScreenUnnamedCharacterFallback": "Personnage sans nom",
+  "@summaryStepScreenUnnamedCharacterFallback": {
+    "description": "Repli affiché par la carte d'en-tête tant qu'aucun nom n'est saisi."
+  },
+  "summaryStepScreenBackLink": "‹ Retour",
+  "@summaryStepScreenBackLink": {
+    "description": "Lien \"Retour\" sous la liste de résumé (style lien souligné, pas un `SecondaryButton`)."
+  },
+  "summaryStepScreenSaveEditButton": "Enregistrer les modifications",
+  "@summaryStepScreenSaveEditButton": {
+    "description": "Libellé du bouton primaire en mode modification."
+  },
+  "summaryStepScreenCreateButton": "Créer le personnage",
+  "@summaryStepScreenCreateButton": {
+    "description": "Libellé du bouton primaire en mode création — désactivé tant que le nom (trim) est vide."
   }
 }

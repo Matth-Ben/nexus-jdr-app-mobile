@@ -48,6 +48,78 @@ const _labels = [
   'TRÉSOR',
 ];
 
+// PNG 1×1 transparent — seule image valide nécessaire pour exercer le rendu
+// `Image.memory` de `_PortraitTile` sans dépendre d'un vrai fichier.
+const _transparentPngBytes = [
+  0x89,
+  0x50,
+  0x4E,
+  0x47,
+  0x0D,
+  0x0A,
+  0x1A,
+  0x0A,
+  0x00,
+  0x00,
+  0x00,
+  0x0D,
+  0x49,
+  0x48,
+  0x44,
+  0x52,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x08,
+  0x06,
+  0x00,
+  0x00,
+  0x00,
+  0x1F,
+  0x15,
+  0xC4,
+  0x89,
+  0x00,
+  0x00,
+  0x00,
+  0x0D,
+  0x49,
+  0x44,
+  0x41,
+  0x54,
+  0x78,
+  0x9C,
+  0x63,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x05,
+  0x00,
+  0x01,
+  0x0D,
+  0x0A,
+  0x2D,
+  0xB4,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x49,
+  0x45,
+  0x4E,
+  0x44,
+  0xAE,
+  0x42,
+  0x60,
+  0x82,
+];
+
 void main() {
   late ProviderContainer container;
   late GoRouter router;
@@ -87,7 +159,7 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
       child: MaterialApp.router(
@@ -98,7 +170,7 @@ void main() {
         // renverrait `null` et le `!` planterait.
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('fr'),
+        locale: locale,
         routerConfig: buildTestRouter(),
       ),
     );
@@ -107,7 +179,10 @@ void main() {
   CharacterCreationDraft readDraft() =>
       container.read(characterCreationDraftControllerProvider);
 
-  Future<void> pumpStep(WidgetTester tester) async {
+  Future<void> pumpStep(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     // Le corps de l'écran est un `ListView` avec 9 champs texte : la taille
     // de surface de test par défaut (800x600) n'en affiche que 2-3 à la
     // fois, donc les widgets restants ne sont ni construits ni trouvables
@@ -120,7 +195,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     router.push('/characters/new/step-8');
     await tester.pumpAndSettle();
@@ -426,76 +501,7 @@ void main() {
     "un portrait déjà dans le brouillon s'affiche en miniature et peut être "
     'retiré',
     (WidgetTester tester) async {
-      // PNG 1×1 transparent.
-      final png = Uint8List.fromList(const [
-        0x89,
-        0x50,
-        0x4E,
-        0x47,
-        0x0D,
-        0x0A,
-        0x1A,
-        0x0A,
-        0x00,
-        0x00,
-        0x00,
-        0x0D,
-        0x49,
-        0x48,
-        0x44,
-        0x52,
-        0x00,
-        0x00,
-        0x00,
-        0x01,
-        0x00,
-        0x00,
-        0x00,
-        0x01,
-        0x08,
-        0x06,
-        0x00,
-        0x00,
-        0x00,
-        0x1F,
-        0x15,
-        0xC4,
-        0x89,
-        0x00,
-        0x00,
-        0x00,
-        0x0D,
-        0x49,
-        0x44,
-        0x41,
-        0x54,
-        0x78,
-        0x9C,
-        0x63,
-        0x00,
-        0x01,
-        0x00,
-        0x00,
-        0x05,
-        0x00,
-        0x01,
-        0x0D,
-        0x0A,
-        0x2D,
-        0xB4,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x49,
-        0x45,
-        0x4E,
-        0x44,
-        0xAE,
-        0x42,
-        0x60,
-        0x82,
-      ]);
+      final png = Uint8List.fromList(_transparentPngBytes);
       container
           .read(characterCreationDraftControllerProvider.notifier)
           .setPortraitBytes(png);
@@ -562,6 +568,80 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
+  });
+
+  group('locale anglaise (en) : texte UI fixe traduit — contrairement aux '
+      'autres étapes catalogue, cet écran n\'a pas d\'état de chargement '
+      'propre (voir la documentation de classe), seul le champ "Alignement" '
+      '(`alignmentCatalogProvider`) a ses propres états data/loading/erreur', () {
+    testWidgets('écran nominal (16 champs, tuile Portrait, boutons) traduit', (
+      WidgetTester tester,
+    ) async {
+      await pumpStep(tester, locale: const Locale('en'));
+
+      expect(find.text('9. Story'), findsOneWidget);
+      expect(find.text('Step 9 / 10'), findsOneWidget);
+      expect(find.text('Portrait'), findsOneWidget);
+      expect(find.text('Optional — tap to add one'), findsOneWidget);
+      expect(find.text('ALIGNMENT'), findsOneWidget);
+      // Libellés affichés en majuscules par `SecondaryButton`/`PrimaryButton`
+      // (voir leur documentation), même si la clé `.arb` porte le texte en
+      // casse normale ("Back"/"Next").
+      expect(find.text('BACK'), findsOneWidget);
+      expect(find.text('NEXT'), findsOneWidget);
+
+      const identityLabelsEn = [
+        'SEX',
+        'AGE',
+        'HEIGHT',
+        'WEIGHT',
+        'EYES',
+        'SKIN',
+        'HAIR',
+      ];
+      const labelsEn = [
+        'PHYSICAL APPEARANCE',
+        'PERSONALITY TRAITS',
+        'IDEALS',
+        'BONDS',
+        'FLAWS',
+        'BACKSTORY',
+        'ALLIES',
+        'FEATURES',
+        'TREASURE',
+      ];
+      for (final label in [...identityLabelsEn, ...labelsEn]) {
+        expect(find.text(label), findsOneWidget);
+      }
+    });
+
+    testWidgets(
+      'un portrait déjà choisi affiche le sous-titre "Tap to change or '
+      'remove" traduit',
+      (WidgetTester tester) async {
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setPortraitBytes(Uint8List.fromList(_transparentPngBytes));
+
+        await pumpStep(tester, locale: const Locale('en'));
+
+        expect(find.text('Tap to change or remove'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'le champ "Alignement" affiche le message d\'erreur de repli et le '
+      'bouton "Retry" traduits (`alignmentCatalogProvider` échoue sans '
+      'Supabase initialisé dans l\'environnement de test — même mécanique '
+      'que les autres écrans de ce module, aucun dépôt factice n\'est '
+      'injecté ici, voir la documentation de classe de ce fichier)',
+      (WidgetTester tester) async {
+        await pumpStep(tester, locale: const Locale('en'));
+
+        expect(find.text("Couldn't load the alignments."), findsOneWidget);
+        expect(find.text('Retry'), findsOneWidget);
       },
     );
   });
