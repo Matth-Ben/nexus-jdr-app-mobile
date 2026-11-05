@@ -5708,4 +5708,122 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sharedCharacterViewScreenErrorRetryButtonLabel => 'Retry';
+
+  @override
+  String get forceUpdateScreenTitleLine1 => 'UPDATE';
+
+  @override
+  String get forceUpdateScreenTitleLine2 => 'REQUIRED';
+
+  @override
+  String get forceUpdateScreenBody =>
+      'This version of Nexus JDR is no longer supported. Update the app to keep managing your characters safely.';
+
+  @override
+  String get forceUpdateScreenUpdateButton => '↓ Update';
+
+  @override
+  String forceUpdateScreenVersionInfo(
+    String installedVersion,
+    String minimumVersion,
+  ) {
+    return 'Installed version: $installedVersion · minimum required: $minimumVersion';
+  }
+
+  @override
+  String get updateSuggestedBannerMessage => 'New version available';
+
+  @override
+  String get updateSuggestedBannerUpdateAction => 'Update';
+
+  @override
+  String get updateSuggestedBannerCloseTooltip => 'Close';
+
+  @override
+  String get appStoreLauncherCannotOpenMessage =>
+      'Couldn\'t open the app\'s store page. Please try again.';
+
+  @override
+  String get splashScreenBrandLine1 => 'NEXUS JDR';
+
+  @override
+  String get splashScreenBrandLine2 => 'CHARACTERS';
+
+  @override
+  String get splashScreenLoadingText => 'Preparing the tavern…';
+
+  @override
+  String get onboardingScreenSkipAction => 'Skip';
+
+  @override
+  String onboardingScreenStepIndicator(int currentStep, int totalSteps) {
+    return '$currentStep / $totalSteps';
+  }
+
+  @override
+  String get onboardingScreenNextAction => 'Next';
+
+  @override
+  String get onboardingScreenBackAction => 'Back';
+
+  @override
+  String get onboardingScreenFinishAction => 'Let\'s go!';
+
+  @override
+  String get onboardingPage1Title => 'WELCOME, ADVENTURER';
+
+  @override
+  String get onboardingPage1Body =>
+      'Nexus JDR helps you create, track and play your D&D characters, at the table or solo. Let\'s see how it works together.';
+
+  @override
+  String get onboardingPage2Title => 'YOUR CHARACTERS';
+
+  @override
+  String get onboardingPage2Body =>
+      'Find all your adventurers on a single screen. Create a new one step by step, or import a sheet directly from aidedd.org.';
+
+  @override
+  String get onboardingPage3Title => 'YOUR CHARACTER\'S SHEET';
+
+  @override
+  String get onboardingPage3Body =>
+      'Five tabs bring together everything you need in play: your sheet, your abilities, your spells, your bag... and the story you\'re writing with them.';
+
+  @override
+  String get onboardingPage4Title => 'JOIN A STORY';
+
+  @override
+  String get onboardingPage4Body =>
+      'Has a GM sent you an invite code? Join their group to link your character to their story and stay in sync with the table.';
+
+  @override
+  String get onboardingPage5Title => 'LET\'S GO!';
+
+  @override
+  String get onboardingPage5Body =>
+      'Everything is ready. Step into the tavern and start writing your legends.';
+
+  @override
+  String get characterXmlExportGenericErrorMessage =>
+      'Couldn\'t generate the XML export. Please try again.';
+
+  @override
+  String get characterXmlExportMulticlassWarningTitle =>
+      'Multiclassed character';
+
+  @override
+  String characterXmlExportMulticlassWarningBody(String className) {
+    return 'The aidedd.org-compatible XML format only supports one class per character. Only the $className class will be exported — this character\'s other classes will be missing from the generated file.';
+  }
+
+  @override
+  String get characterXmlExportMulticlassWarningDefaultClassName => 'primary';
+
+  @override
+  String get characterXmlExportMulticlassWarningCancelButton => 'Cancel';
+
+  @override
+  String get characterXmlExportMulticlassWarningConfirmButton =>
+      'Export anyway';
 }

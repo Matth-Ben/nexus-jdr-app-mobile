@@ -20,6 +20,7 @@ import 'package:personnages/features/app_update/presentation/force_update_screen
 import 'package:personnages/features/app_update/presentation/providers/app_version_providers.dart';
 import 'package:personnages/features/splash/presentation/splash_screen.dart';
 import 'package:personnages/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Construit un [BootstrapResult] "tout va bien" par défaut pour les tests
 /// qui n'ont pas besoin de faire varier la disponibilité des SDK d'analytics
@@ -52,6 +53,21 @@ void main() {
       buildNumber: '1',
       buildSignature: '',
     );
+  });
+
+  setUp(() {
+    // `SplashScreen`/`ForceUpdateScreen` lisent désormais `AppLocalizations
+    // .of(context)!` (chantier "traduction de l'app" Phase B, lot "écrans
+    // divers") : `AppBootstrap` résout leur langue via
+    // `localePreferenceControllerProvider` (même mécanisme que
+    // `NexusJdrApp`, voir `main.dart::_resolveLocale`), qui retombe sur la
+    // langue de l'appareil (indéterminée sous `flutter test`) tant
+    // qu'aucune préférence n'est persistée. Préférence forcée au français
+    // ici, pour que les assertions de ce fichier (toutes en français)
+    // restent indépendantes de la locale par défaut de l'environnement de
+    // test — même principe que `locale: const Locale('fr')` déjà explicite
+    // sur les `MaterialApp` des tests de widget migrés par ce lot.
+    SharedPreferences.setMockInitialValues({'locale_preference': 'fr'});
   });
 
   testWidgets(

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/app_version_status.dart';
 import '../app_store_launcher.dart';
 import '../providers/app_version_providers.dart';
@@ -37,6 +38,7 @@ class UpdateSuggestedBanner extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Container(
@@ -59,7 +61,7 @@ class UpdateSuggestedBanner extends ConsumerWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
-                'Nouvelle version disponible',
+                l10n.updateSuggestedBannerMessage,
                 style: AppTypography.body(
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
@@ -71,7 +73,7 @@ class UpdateSuggestedBanner extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                 child: Text(
-                  'Mettre à jour',
+                  l10n.updateSuggestedBannerUpdateAction,
                   style: AppTypography.body(
                     fontWeight: FontWeight.w800,
                     color: AppColors.accentBrick,
@@ -83,7 +85,7 @@ class UpdateSuggestedBanner extends ConsumerWidget {
               width: 44,
               height: 44,
               child: IconButton(
-                tooltip: 'Fermer',
+                tooltip: l10n.updateSuggestedBannerCloseTooltip,
                 icon: const Icon(Icons.close, color: AppColors.textMuted),
                 onPressed: () => ref
                     .read(updateBannerDismissalControllerProvider.notifier)

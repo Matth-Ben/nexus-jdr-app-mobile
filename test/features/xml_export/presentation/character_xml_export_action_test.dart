@@ -157,21 +157,23 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  Widget buildTestWidget(String characterId) {
+  Widget buildTestWidget(
+    String characterId, {
+    Locale locale = const Locale('fr'),
+  }) {
     return ProviderScope(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeRepository),
       ],
       child: MaterialApp.router(
-        // `CharacterDetailScreen` lit désormais `AppLocalizations
-        // .of(context)!` dès son premier `build()` (chantier "traduction de
-        // l'app" Phase B, lot "Characters — fiche
-        // (identité/statistiques)") : sans ces delegates, l'appel renverrait
-        // `null` et le `!` planterait. Ce fichier reste en français, aucune
-        // assertion n'est modifiée par ce lot, hors de son périmètre.
+        // `CharacterDetailScreen`/`character_xml_export_action.dart` lisent
+        // `AppLocalizations.of(context)!` (chantiers "traduction de l'app"
+        // Phase B, lots "Characters — fiche (identité/statistiques)" et
+        // "écrans divers") : sans ces delegates, l'appel renverrait `null`
+        // et le `!` planterait.
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('fr'),
+        locale: locale,
         routerConfig: GoRouter(
           initialLocation: '/characters/$characterId',
           routes: [
@@ -192,10 +194,14 @@ void main() {
     );
   }
 
-  Future<void> pumpDetail(WidgetTester tester, String characterId) async {
+  Future<void> pumpDetail(
+    WidgetTester tester,
+    String characterId, {
+    Locale locale = const Locale('fr'),
+  }) async {
     await tester.binding.setSurfaceSize(const Size(800, 2400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(buildTestWidget(characterId));
+    await tester.pumpWidget(buildTestWidget(characterId, locale: locale));
     await tester.pumpAndSettle();
   }
 
@@ -247,12 +253,16 @@ void main() {
   /// **même** `runAsync` (voir la note d'en-tête de fichier sur l'affinité
   /// de zone) : déclenche une vraie écriture disque, personnage
   /// mono-classe (aucun avertissement intermédiaire).
-  Future<void> openHeaderMenuAndExport(WidgetTester tester) async {
+  Future<void> openHeaderMenuAndExport(
+    WidgetTester tester, {
+    String moreOptionsTooltip = 'Plus d\'options',
+    String exportMenuLabel = 'Exporter en XML',
+  }) async {
     await tester.runAsync(() async {
       await awaitShareCall(() async {
-        await tester.tap(find.byTooltip('Plus d\'options'));
+        await tester.tap(find.byTooltip(moreOptionsTooltip));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Exporter en XML'));
+        await tester.tap(find.text(exportMenuLabel));
       });
     });
     await tester.pumpAndSettle();
@@ -261,8 +271,11 @@ void main() {
   /// Ouvre le menu "…" du bandeau bois de l'onglet "Personnage" (recettage
   /// direction-artistique du 13/09 : "Exporter en XML" y a été relogé
   /// depuis sa propre icône, voir `character_detail_screen.dart`).
-  Future<void> openCharacterHeaderMenu(WidgetTester tester) async {
-    await tester.tap(find.byTooltip('Plus d\'options'));
+  Future<void> openCharacterHeaderMenu(
+    WidgetTester tester, {
+    String moreOptionsTooltip = 'Plus d\'options',
+  }) async {
+    await tester.tap(find.byTooltip(moreOptionsTooltip));
     await tester.pumpAndSettle();
   }
 
@@ -282,13 +295,21 @@ void main() {
   /// finirait par s'écrire bien après la fin du test (constaté par un
   /// verrou de fichier au moment du nettoyage), jamais avant l'assertion —
   /// piège rencontré et diagnostiqué pendant l'écriture de ce fichier.
-  Future<void> openMulticlassDialogAndConfirm(WidgetTester tester) async {
+  Future<void> openMulticlassDialogAndConfirm(
+    WidgetTester tester, {
+    String moreOptionsTooltip = 'Plus d\'options',
+    String exportMenuLabel = 'Exporter en XML',
+    String confirmButtonLabel = 'EXPORTER QUAND MÊME',
+  }) async {
     await tester.runAsync(() async {
       await awaitShareCall(() async {
-        await openCharacterHeaderMenu(tester);
-        await tester.tap(find.text('Exporter en XML'));
+        await openCharacterHeaderMenu(
+          tester,
+          moreOptionsTooltip: moreOptionsTooltip,
+        );
+        await tester.tap(find.text(exportMenuLabel));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('EXPORTER QUAND MÊME'));
+        await tester.tap(find.text(confirmButtonLabel));
       });
     });
     await tester.pumpAndSettle();
@@ -378,4 +399,83 @@ void main() {
       expect(content, isNot(contains('Roublard')));
     },
   );
+
+  group('locale anglaise', () {
+    testWidgets(
+      'onglet "Personnage" : entrée "Export as XML" présente dans le menu '
+      '"…" du bandeau',
+      (tester) async {
+        fakeRepository.detailToReturn = _monoClasseDetail;
+        await pumpDetail(tester, '1', locale: const Locale('en'));
+
+        await openCharacterHeaderMenu(
+          tester,
+          moreOptionsTooltip: 'More options',
+        );
+
+        expect(find.text('Export as XML'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'personnage mono-classe : tap déclenche directement la génération '
+      'puis le partage, sans avertissement (locale anglaise)',
+      (tester) async {
+        fakeRepository.detailToReturn = _monoClasseDetail;
+        await pumpDetail(tester, '1', locale: const Locale('en'));
+
+        await openHeaderMenuAndExport(
+          tester,
+          moreOptionsTooltip: 'More options',
+          exportMenuLabel: 'Export as XML',
+        );
+
+        expect(find.text('Multiclassed character'), findsNothing);
+        expect(shareCalls, hasLength(1));
+      },
+    );
+
+    testWidgets('personnage multiclassé : avertissement traduit avant export, '
+        '"Cancel" n\'exporte rien', (tester) async {
+      fakeRepository.detailToReturn = _multiclasseDetail;
+      await pumpDetail(tester, '2', locale: const Locale('en'));
+
+      await openCharacterHeaderMenu(tester, moreOptionsTooltip: 'More options');
+      await tester.tap(find.text('Export as XML'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Multiclassed character'), findsOneWidget);
+      expect(
+        find.textContaining('only supports one class per character'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('CANCEL'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Multiclassed character'), findsNothing);
+      expect(shareCalls, isEmpty);
+    });
+
+    testWidgets('personnage multiclassé : "Export anyway" exporte seulement la '
+        'classe primaire (locale anglaise)', (tester) async {
+      fakeRepository.detailToReturn = _multiclasseDetail;
+      await pumpDetail(tester, '2', locale: const Locale('en'));
+
+      await openMulticlassDialogAndConfirm(
+        tester,
+        moreOptionsTooltip: 'More options',
+        exportMenuLabel: 'Export as XML',
+        confirmButtonLabel: 'EXPORT ANYWAY',
+      );
+
+      expect(find.text('Multiclassed character'), findsNothing);
+      expect(shareCalls, hasLength(1));
+
+      final sharedPaths = (shareCalls.single.arguments as Map)['paths'] as List;
+      final content = File(sharedPaths.single as String).readAsStringSync();
+      expect(content, contains('<class>Guerrier</class>'));
+      expect(content, isNot(contains('Roublard')));
+    });
+  });
 }

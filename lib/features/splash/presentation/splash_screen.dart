@@ -7,6 +7,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_brand_badge.dart';
 import '../../../core/widgets/scene_scaffold.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Écran de lancement Flutter (par opposition au splash natif statique de
 /// `flutter_native_splash`, voir `pubspec.yaml`, qui reste inchangé et
@@ -28,6 +29,7 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SceneScaffold(
       body: Center(
         child: Padding(
@@ -38,7 +40,7 @@ class SplashScreen extends StatelessWidget {
               const AppBrandBadge(size: 96),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'NEXUS JDR',
+                l10n.splashScreenBrandLine1,
                 style: AppTypography.display(
                   fontSize: 15,
                   color: AppColors.textOnWood,
@@ -46,7 +48,7 @@ class SplashScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'PERSONNAGES',
+                l10n.splashScreenBrandLine2,
                 style: AppTypography.display(
                   fontSize: 10,
                   color: AppColors.goldEnd,
@@ -56,7 +58,7 @@ class SplashScreen extends StatelessWidget {
               const _ThreeDotLoader(),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Préparation de la taverne…',
+                l10n.splashScreenLoadingText,
                 style: AppTypography.body(color: AppColors.textOnWoodMuted),
               ),
             ],

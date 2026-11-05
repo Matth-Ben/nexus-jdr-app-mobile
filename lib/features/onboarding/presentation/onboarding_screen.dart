@@ -11,6 +11,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 
 /// Carousel de bienvenue/onboarding (5 pages), montré après connexion — pour
@@ -100,15 +101,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final pages = _onboardingPages(l10n);
     final isFirstPage = _currentPageIndex == 0;
-    final isLastPage = _currentPageIndex == _onboardingPages.length - 1;
+    final isLastPage = _currentPageIndex == pages.length - 1;
 
     return SceneScaffold(
       body: Column(
         children: [
           _TopBanner(
+            l10n: l10n,
             currentStep: _currentPageIndex + 1,
-            totalSteps: _onboardingPages.length,
+            totalSteps: pages.length,
             onSkip: _finishOnboarding,
           ),
           Expanded(
@@ -116,8 +120,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               controller: _pageController,
               onPageChanged: _handlePageChanged,
               children: [
-                for (final page in _onboardingPages)
-                  _OnboardingPageView(page: page),
+                for (final page in pages) _OnboardingPageView(page: page),
               ],
             ),
           ),
@@ -127,7 +130,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: isFirstPage
                   ? PrimaryButton(
-                      label: 'Suivant',
+                      label: l10n.onboardingScreenNextAction,
                       onPressed: () => _animateToPage(_currentPageIndex + 1),
                     )
                   : Row(
@@ -135,7 +138,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         Expanded(
                           child: SecondaryButton(
                             surface: SecondaryButtonSurface.scene,
-                            label: 'Retour',
+                            label: l10n.onboardingScreenBackAction,
                             onPressed: () =>
                                 _animateToPage(_currentPageIndex - 1),
                           ),
@@ -143,7 +146,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: PrimaryButton(
-                            label: isLastPage ? "C'est parti !" : 'Suivant',
+                            label: isLastPage
+                                ? l10n.onboardingScreenFinishAction
+                                : l10n.onboardingScreenNextAction,
                             onPressed: isLastPage
                                 ? _finishOnboarding
                                 : () => _animateToPage(_currentPageIndex + 1),
@@ -164,10 +169,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 /// tâche.
 class _TopBanner extends StatelessWidget {
   const _TopBanner({
+    required this.l10n,
     required this.currentStep,
     required this.totalSteps,
     required this.onSkip,
   });
+
+  final AppLocalizations l10n;
 
   /// 1-indexé.
   final int currentStep;
@@ -196,7 +204,7 @@ class _TopBanner extends StatelessWidget {
                     vertical: 14,
                   ),
                   child: Text(
-                    'Passer',
+                    l10n.onboardingScreenSkipAction,
                     style: AppTypography.display(
                       fontSize: 11,
                       color: AppColors.textOnWoodMuted,
@@ -222,7 +230,7 @@ class _TopBanner extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
-                    '$currentStep / $totalSteps',
+                    l10n.onboardingScreenStepIndicator(currentStep, totalSteps),
                     style: AppTypography.body(
                       fontSize: 12,
                       color: AppColors.textOnWoodMuted,
@@ -351,46 +359,38 @@ class _OnboardingPage {
 
 /// Les 5 pages du carousel, dans l'ordre d'affichage — voir le tableau de la
 /// section 2 de la spec de la tâche.
-const List<_OnboardingPage> _onboardingPages = [
+///
+/// Fonction plutôt qu'une constante (depuis la migration `.arb`, chantier
+/// "traduction de l'app" Phase B) : le texte dépend désormais de
+/// [AppLocalizations], qui n'est disponible qu'avec un `BuildContext` — même
+/// pattern que `profile_faq_screen.dart::_faqItems`.
+List<_OnboardingPage> _onboardingPages(AppLocalizations l10n) => [
   _OnboardingPage(
-    title: 'BIENVENUE, AVENTURIER',
-    body:
-        "Nexus JDR t'accompagne pour créer, suivre et jouer tes personnages "
-        'D&D, à la table comme en solo. Découvrons ensemble comment ça '
-        'marche.',
+    title: l10n.onboardingPage1Title,
+    body: l10n.onboardingPage1Body,
     icon: null,
   ),
   _OnboardingPage(
-    title: 'TES PERSONNAGES',
-    body:
-        'Retrouve tous tes aventuriers sur un seul écran. Crée-en un nouveau '
-        'pas à pas, ou importe directement une fiche depuis aidedd.org.',
+    title: l10n.onboardingPage2Title,
+    body: l10n.onboardingPage2Body,
     icon: Icons.shield_rounded,
     accentColor: AppColors.goldEnd,
   ),
   _OnboardingPage(
-    title: 'LA FICHE DE TON PERSONNAGE',
-    body:
-        'Cinq onglets réunissent tout ce qu\'il te faut en jeu : ta fiche, '
-        'tes aptitudes, tes sorts, ton sac... et l\'histoire que tu écris '
-        'avec lui.',
+    title: l10n.onboardingPage3Title,
+    body: l10n.onboardingPage3Body,
     icon: Icons.auto_stories_outlined,
     accentColor: AppColors.accentBlue,
   ),
   _OnboardingPage(
-    title: 'REJOINDRE UNE HISTOIRE',
-    body:
-        "Un MJ t'a transmis un code d'invitation ? Rejoins son groupe pour "
-        'lier ton personnage à son histoire et rester synchronisé avec la '
-        'table.',
+    title: l10n.onboardingPage4Title,
+    body: l10n.onboardingPage4Body,
     icon: Icons.group_add_outlined,
     accentColor: AppColors.accentTeal,
   ),
   _OnboardingPage(
-    title: "C'EST PARTI !",
-    body:
-        'Tout est prêt. Entre dans la taverne et commence à écrire tes '
-        'légendes.',
+    title: l10n.onboardingPage5Title,
+    body: l10n.onboardingPage5Body,
     icon: Icons.auto_awesome_outlined,
     accentColor: AppColors.goldEnd,
   ),

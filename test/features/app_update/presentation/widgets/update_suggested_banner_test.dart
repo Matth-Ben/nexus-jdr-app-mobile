@@ -16,6 +16,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:personnages/features/app_update/data/app_version_repository.dart';
 import 'package:personnages/features/app_update/presentation/providers/app_version_providers.dart';
 import 'package:personnages/features/app_update/presentation/widgets/update_suggested_banner.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeAppVersionRepository implements AppVersionRepository {
@@ -45,11 +46,21 @@ void main() {
   Future<void> pumpBanner(
     WidgetTester tester, {
     required AppVersionRepository repository,
+    Locale locale = const Locale('fr'),
   }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [appVersionRepositoryProvider.overrideWithValue(repository)],
-        child: const MaterialApp(home: Scaffold(body: UpdateSuggestedBanner())),
+        child: MaterialApp(
+          // `UpdateSuggestedBanner` lit `AppLocalizations.of(context)!`
+          // (chantier "traduction de l'app" Phase B, lot "écrans divers") :
+          // sans ces delegates, l'appel renverrait `null` et le `!`
+          // planterait.
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: locale,
+          home: const Scaffold(body: UpdateSuggestedBanner()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -158,5 +169,61 @@ void main() {
         expect(find.text('Nouvelle version disponible'), findsOneWidget);
       },
     );
+  });
+
+  group('locale anglaise', () {
+    testWidgets('statut upToDate : rien affiché', (tester) async {
+      await pumpBanner(
+        tester,
+        repository: _FakeAppVersionRepository(
+          const AppVersionRow(
+            minimumSupportedVersion: '0.1.0',
+            latestVersion: '0.1.0',
+          ),
+        ),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('New version available'), findsNothing);
+    });
+
+    testWidgets(
+      'statut updateSuggested : affiche "New version available"/"Update"',
+      (tester) async {
+        await pumpBanner(
+          tester,
+          repository: _FakeAppVersionRepository(
+            const AppVersionRow(
+              minimumSupportedVersion: '0.1.0',
+              latestVersion: '0.5.0',
+            ),
+          ),
+          locale: const Locale('en'),
+        );
+
+        expect(find.text('New version available'), findsOneWidget);
+        expect(find.text('Update'), findsOneWidget);
+      },
+    );
+
+    testWidgets('taper "×" referme la bannière traduite', (tester) async {
+      final repository = _FakeAppVersionRepository(
+        const AppVersionRow(
+          minimumSupportedVersion: '0.1.0',
+          latestVersion: '0.5.0',
+        ),
+      );
+      await pumpBanner(
+        tester,
+        repository: repository,
+        locale: const Locale('en'),
+      );
+      expect(find.text('New version available'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New version available'), findsNothing);
+    });
   });
 }
