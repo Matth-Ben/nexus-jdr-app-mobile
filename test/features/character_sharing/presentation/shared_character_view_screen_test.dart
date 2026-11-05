@@ -755,6 +755,50 @@ void main() {
     },
   );
 
+  testWidgets(
+    'CharacterFailure code accessDenied : résolu via AppLocalizations, pas '
+    'le message brut du dépôt (couverture du trou signalé par qa-testeur, '
+    'chantier "traduction de l\'app" Phase B, lot "Character sharing")',
+    (tester) async {
+      fakeRepository.errorToThrow = const CharacterFailure(
+        'message brut non affiché',
+        code: CharacterErrorCode.accessDenied,
+      );
+
+      await pumpSharedView(tester);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text("Vous n'avez pas accès à ces personnages."),
+        findsOneWidget,
+      );
+      expect(find.text('message brut non affiché'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'CharacterFailure code network : résolu via AppLocalizations (couverture '
+    'du trou signalé par qa-testeur, chantier "traduction de l\'app" Phase '
+    'B, lot "Character sharing")',
+    (tester) async {
+      fakeRepository.errorToThrow = const CharacterFailure(
+        'message brut non affiché',
+        code: CharacterErrorCode.network,
+      );
+
+      await pumpSharedView(tester);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Impossible de contacter le serveur. Vérifiez votre connexion '
+          'internet et réessayez.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
   group('locale anglaise', () {
     testWidgets('affiche un indicateur de chargement pendant la récupération', (
       tester,
@@ -836,6 +880,28 @@ void main() {
 
       expect(find.text('Halltesse Ambrelune'), findsOneWidget);
     });
+
+    testWidgets(
+      'CharacterFailure code accessDenied : résolu via AppLocalizations en '
+      'anglais (couverture du trou signalé par qa-testeur — aucun test de '
+      'ce dépôt ne vérifiait jusqu\'ici characterAccessDeniedErrorMessage '
+      'en anglais)',
+      (tester) async {
+        fakeRepository.errorToThrow = const CharacterFailure(
+          'raw message not displayed',
+          code: CharacterErrorCode.accessDenied,
+        );
+
+        await pumpSharedView(tester, locale: const Locale('en'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text("You don't have access to these characters."),
+          findsOneWidget,
+        );
+        expect(find.text('raw message not displayed'), findsNothing);
+      },
+    );
   });
 
   group(

@@ -608,6 +608,58 @@ void main() {
     },
   );
 
+  testWidgets(
+    'CharacterFailure code accessDenied : résolu via AppLocalizations, pas '
+    'le message brut du dépôt (couverture du trou signalé par qa-testeur, '
+    'chantier "traduction de l\'app" Phase B, lot "Character sharing")',
+    (tester) async {
+      fakeCharacterRepository.detailToReturn = _baseDetail;
+      fakeSharingRepository.regenerateErrorToThrow = const CharacterFailure(
+        'message brut non affiché',
+        code: CharacterErrorCode.accessDenied,
+      );
+
+      await pumpShareScreen(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('ACTIVER LE PARTAGE'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text("Vous n'avez pas accès à ces personnages."),
+        findsOneWidget,
+      );
+      expect(find.text('message brut non affiché'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'CharacterFailure code network : résolu via AppLocalizations (couverture '
+    'du trou signalé par qa-testeur, chantier "traduction de l\'app" Phase '
+    'B, lot "Character sharing")',
+    (tester) async {
+      fakeCharacterRepository.detailToReturn = _baseDetail;
+      fakeSharingRepository.regenerateErrorToThrow = const CharacterFailure(
+        'message brut non affiché',
+        code: CharacterErrorCode.network,
+      );
+
+      await pumpShareScreen(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('ACTIVER LE PARTAGE'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Impossible de contacter le serveur. Vérifiez votre connexion '
+          'internet et réessayez.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
   group('locale anglaise', () {
     testWidgets(
       'partage inactif : affiche "ENABLE SHARING", pas de bannière ni de '
@@ -682,6 +734,35 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Something went wrong. Try again.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'CharacterFailure code network : résolu via AppLocalizations en '
+      'anglais (couverture du trou signalé par qa-testeur — aucun test de '
+      'ce dépôt ne vérifiait jusqu\'ici characterNetworkErrorMessage en '
+      'anglais)',
+      (tester) async {
+        fakeCharacterRepository.detailToReturn = _baseDetail;
+        fakeSharingRepository.regenerateErrorToThrow = const CharacterFailure(
+          'raw message not displayed',
+          code: CharacterErrorCode.network,
+        );
+
+        await pumpShareScreen(tester, locale: const Locale('en'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('ENABLE SHARING'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            "Couldn't reach the server. Check your internet connection "
+            'and try again.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('raw message not displayed'), findsNothing);
       },
     );
   });
