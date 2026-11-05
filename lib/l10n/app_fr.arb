@@ -7319,5 +7319,150 @@
   "xmlImportReviewScreenParseErrorMissingRequiredFields": "Ce fichier ne contient pas les informations minimales d'un personnage (nom, race, classe, historique).",
   "@xmlImportReviewScreenParseErrorMissingRequiredFields": {
     "description": "Message détaillé de `_InvalidFileErrorState` pour `XmlImportParseErrorCode.missingRequiredFields`."
+  },
+
+  "joinStepHeaderTitle": "REJOINDRE",
+  "@joinStepHeaderTitle": {
+    "description": "Titre fixe du bandeau bois, affiché par `JoinStepHeader` et `JoinStepMinimalHeader` sur les 3 écrans du flux \"Rejoindre une histoire\"."
+  },
+  "joinStepHeaderStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@joinStepHeaderStepCounter": {
+    "description": "Compteur d'étape du bandeau bois (`JoinStepHeader`) — même patron que `raceStepScreenStepCounter`.",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+
+  "joinCodeStepScreenStepTitle": "Code",
+  "@joinCodeStepScreenStepTitle": {
+    "description": "`stepTitle` transmis à `JoinStepHeader` par l'étape 1/4 (saisie du code)."
+  },
+  "joinCodeStepScreenTitle": "As-tu un code d'invitation ?",
+  "@joinCodeStepScreenTitle": {
+    "description": "Titre principal de l'étape 1/4."
+  },
+  "joinCodeStepScreenSubtitle": "Ton MJ te l'a partagé depuis l'app Histoires pour rejoindre sa campagne.",
+  "@joinCodeStepScreenSubtitle": {
+    "description": "Sous-titre de l'étape 1/4."
+  },
+  "joinCodeStepScreenFieldLabel": "Code d'invitation",
+  "@joinCodeStepScreenFieldLabel": {
+    "description": "Libellé au-dessus du champ de saisie du code."
+  },
+  "joinCodeStepScreenFieldHint": "AB3F7K",
+  "@joinCodeStepScreenFieldHint": {
+    "description": "`hintText` du champ de saisie du code — exemple illustratif, jamais un vrai code."
+  },
+  "joinCodeStepScreenFieldHelper": "Code fourni par ton MJ (lettres et chiffres).",
+  "@joinCodeStepScreenFieldHelper": {
+    "description": "Texte d'aide sous le champ de saisie du code."
+  },
+  "joinCodeStepScreenNextButton": "Suivant",
+  "@joinCodeStepScreenNextButton": {
+    "description": "`PrimaryButton` de l'étape 1/4."
+  },
+
+  "joinConfirmationStepScreenStepTitle": "Confirmation",
+  "@joinConfirmationStepScreenStepTitle": {
+    "description": "`stepTitle` transmis à `JoinStepHeader` par l'étape 2/4 (confirmation)."
+  },
+  "joinConfirmationStepScreenGmLabel": "MJ : {gmDisplayName}",
+  "@joinConfirmationStepScreenGmLabel": {
+    "description": "Ligne affichée sous le titre de l'histoire quand `StoryPreview.gmDisplayName` est renseigné — `gmDisplayName` reste dynamique (nom choisi par le MJ, jamais traduit).",
+    "placeholders": {
+      "gmDisplayName": {
+        "type": "String"
+      }
+    }
+  },
+  "joinConfirmationStepScreenDisclaimer": "En rejoignant, ton personnage sera visible par le MJ (lecture seule). Tu pourras quitter l'histoire à tout moment depuis sa fiche.",
+  "@joinConfirmationStepScreenDisclaimer": {
+    "description": "Texte d'information sous le nom du MJ, avant le bouton \"Rejoindre\"."
+  },
+  "joinConfirmationStepScreenJoinButton": "Rejoindre",
+  "@joinConfirmationStepScreenJoinButton": {
+    "description": "`PrimaryButton` de l'étape 2/4, pousse l'étape 3/4."
+  },
+  "joinConfirmationStepScreenInvalidCodeMessage": "Ce code d'invitation n'est pas valide.",
+  "@joinConfirmationStepScreenInvalidCodeMessage": {
+    "description": "Message principal de `_CodeErrorState` pour `StoryInviteFailureKind.invalidCode`."
+  },
+  "joinConfirmationStepScreenInvalidCodeSecondaryMessage": "Vérifie le code transmis par ton MJ et réessaye.",
+  "@joinConfirmationStepScreenInvalidCodeSecondaryMessage": {
+    "description": "Message secondaire de `_CodeErrorState` pour `StoryInviteFailureKind.invalidCode`."
+  },
+  "joinConfirmationStepScreenInviteDisabledMessage": "Cette invitation a été désactivée.",
+  "@joinConfirmationStepScreenInviteDisabledMessage": {
+    "description": "Message principal de `_CodeErrorState` pour `StoryInviteFailureKind.inviteDisabled`."
+  },
+  "joinConfirmationStepScreenInviteDisabledSecondaryMessage": "Demande à ton MJ de générer un nouveau lien.",
+  "@joinConfirmationStepScreenInviteDisabledSecondaryMessage": {
+    "description": "Message secondaire de `_CodeErrorState` pour `StoryInviteFailureKind.inviteDisabled`."
+  },
+  "joinConfirmationStepScreenEditCodeButton": "Modifier le code",
+  "@joinConfirmationStepScreenEditCodeButton": {
+    "description": "`SecondaryButton` de `_CodeErrorState`."
+  },
+  "joinConfirmationStepScreenGenericErrorMessage": "Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.",
+  "@joinConfirmationStepScreenGenericErrorMessage": {
+    "description": "Message de `_NetworkErrorState`, pour `StoryInviteFailureKind.characterNotOwned`/`alreadyJoined`/`generic` et toute exception qui n'est pas une `StoryInviteFailure` — même texte que `characters/data/character_error_mapper.dart::_networkErrorMessage`, dupliqué ici (voir la documentation de classe du fichier)."
+  },
+  "joinConfirmationStepScreenRetryButton": "Réessayer",
+  "@joinConfirmationStepScreenRetryButton": {
+    "description": "`SecondaryButton` de `_NetworkErrorState`."
+  },
+
+  "joinCharacterStepScreenStepTitle": "Choix du personnage",
+  "@joinCharacterStepScreenStepTitle": {
+    "description": "`stepTitle` transmis à `JoinStepHeader` par l'étape 3/4 (choix du personnage)."
+  },
+  "joinCharacterStepScreenJoinedSnackbar": "Histoire rejointe !",
+  "@joinCharacterStepScreenJoinedSnackbar": {
+    "description": "`SnackBar` affiché après un rattachement réussi (étape 4/4)."
+  },
+  "joinCharacterStepScreenAlreadyJoinedErrorMessage": "Ce personnage est déjà rattaché à cette histoire.",
+  "@joinCharacterStepScreenAlreadyJoinedErrorMessage": {
+    "description": "Bandeau d'alerte inline pour `StoryInviteFailureKind.alreadyJoined`."
+  },
+  "joinCharacterStepScreenInvalidCodeErrorMessage": "Ce code d'invitation n'est pas valide.",
+  "@joinCharacterStepScreenInvalidCodeErrorMessage": {
+    "description": "Bandeau d'alerte inline pour `StoryInviteFailureKind.invalidCode` (cas de course improbable, voir la documentation de `_bannerMessageFor`)."
+  },
+  "joinCharacterStepScreenInviteDisabledErrorMessage": "Cette invitation a été désactivée.",
+  "@joinCharacterStepScreenInviteDisabledErrorMessage": {
+    "description": "Bandeau d'alerte inline pour `StoryInviteFailureKind.inviteDisabled` (cas de course improbable, voir la documentation de `_bannerMessageFor`)."
+  },
+  "joinCharacterStepScreenGenericErrorMessage": "Impossible de rejoindre cette histoire. Réessayez.",
+  "@joinCharacterStepScreenGenericErrorMessage": {
+    "description": "Bandeau d'alerte inline pour `StoryInviteFailureKind.characterNotOwned`/`generic` et toute exception qui n'est pas une `StoryInviteFailure`."
+  },
+  "joinCharacterStepScreenCharactersLoadErrorMessage": "Impossible de charger vos personnages. Réessayez.",
+  "@joinCharacterStepScreenCharactersLoadErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur de `charactersProvider` n'est pas une `CharacterFailure`."
+  },
+  "joinCharacterStepScreenQuestionLabel": "Quel personnage rejoint l'aventure ?",
+  "@joinCharacterStepScreenQuestionLabel": {
+    "description": "Libellé au-dessus de la liste de personnages, affiché uniquement quand la liste n'est pas vide."
+  },
+  "joinCharacterStepScreenEmptyStateMessage": "Tu n'as pas encore de personnage à rattacher.",
+  "@joinCharacterStepScreenEmptyStateMessage": {
+    "description": "Message de `_EmptyState`."
+  },
+  "joinCharacterStepScreenCreateCharacterButton": "+ Créer un nouveau personnage",
+  "@joinCharacterStepScreenCreateCharacterButton": {
+    "description": "`SecondaryButton` lançant l'assistant de création, toujours affiché même dans `_EmptyState`."
+  },
+  "joinCharacterStepScreenJoiningOverlayMessage": "Rattachement à l'histoire...",
+  "@joinCharacterStepScreenJoiningOverlayMessage": {
+    "description": "Message de `_JoinSavingOverlay`, pendant l'appel `joinStory`."
+  },
+  "joinCharacterStepScreenRetryButton": "Réessayer",
+  "@joinCharacterStepScreenRetryButton": {
+    "description": "`SecondaryButton` de `_ErrorState`."
   }
 }

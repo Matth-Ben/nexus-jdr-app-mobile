@@ -507,6 +507,7 @@ GoRouter _buildTestRouter() {
 Widget _buildTestWidget({
   required _FakeCharacterRepository characterRepository,
   required _FakeStoryInviteRepository storyInviteRepository,
+  Locale locale = const Locale('fr'),
 }) {
   return ProviderScope(
     overrides: [
@@ -520,7 +521,7 @@ Widget _buildTestWidget({
       // renverrait `null` et le `!` planterait.
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('fr'),
+      locale: locale,
       routerConfig: _buildTestRouter(),
     ),
   );
@@ -827,6 +828,36 @@ void main() {
         container.read(characterCreationReturnRouteControllerProvider),
         '/join/step-3?code=AB3F7K',
       );
+    },
+  );
+
+  testWidgets(
+    'locale anglaise : titre d\'étape, question et bouton "créer" traduits',
+    (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(
+          id: '1',
+          name: 'Halltesse Ambrelune',
+          level: 5,
+          xp: 7000,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          storyInviteRepository: fakeStoryInviteRepository,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Step 3 / 4'), findsOneWidget);
+      expect(
+        find.text('Which character is joining the adventure?'),
+        findsOneWidget,
+      );
+      expect(find.text('+ CREATE A NEW CHARACTER'), findsOneWidget);
     },
   );
 }

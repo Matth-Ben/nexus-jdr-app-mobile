@@ -7,6 +7,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/alert_banner.dart';
 import '../../../core/widgets/secondary_button.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
 import '../../character_creation/presentation/providers/character_creation_return_route_provider.dart';
 import '../../characters/domain/character_failure.dart';
@@ -66,6 +67,7 @@ class _JoinCharacterStepScreenState
   /// (étape 4/4, `join-story`) — overlay de chargement par-dessus cet écran
   /// pendant l'appel réseau, voir [_JoinSavingOverlay].
   Future<void> _join(CharacterSummary character) async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isJoining = true;
       _bannerMessage = null;
@@ -76,20 +78,21 @@ class _JoinCharacterStepScreenState
           .read(storyInviteRepositoryProvider)
           .joinStory(code: widget.code, characterId: character.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Histoire rejointe !')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.joinCharacterStepScreenJoinedSnackbar)),
+      );
       context.go('/characters/${result.characterId}');
     } on StoryInviteFailure catch (failure) {
       if (!mounted) return;
       setState(() {
         _isJoining = false;
-        _bannerMessage = _bannerMessageFor(failure.kind);
+        _bannerMessage = _bannerMessageFor(l10n, failure.kind);
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _isJoining = false;
-        _bannerMessage = 'Impossible de rejoindre cette histoire. Réessayez.';
+        _bannerMessage = l10n.joinCharacterStepScreenGenericErrorMessage;
       });
     }
   }
@@ -99,22 +102,23 @@ class _JoinCharacterStepScreenState
   /// reprennent le même libellé principal que l'étape 2/4 (cas de course
   /// improbable — le code a été validé à l'étape 2/4, mais peut avoir été
   /// invalidé/désactivé entre-temps par le MJ).
-  String _bannerMessageFor(StoryInviteFailureKind kind) {
+  String _bannerMessageFor(AppLocalizations l10n, StoryInviteFailureKind kind) {
     return switch (kind) {
       StoryInviteFailureKind.alreadyJoined =>
-        'Ce personnage est déjà rattaché à cette histoire.',
+        l10n.joinCharacterStepScreenAlreadyJoinedErrorMessage,
       StoryInviteFailureKind.invalidCode =>
-        'Ce code d\'invitation n\'est pas valide.',
+        l10n.joinCharacterStepScreenInvalidCodeErrorMessage,
       StoryInviteFailureKind.inviteDisabled =>
-        'Cette invitation a été désactivée.',
+        l10n.joinCharacterStepScreenInviteDisabledErrorMessage,
       StoryInviteFailureKind.characterNotOwned ||
       StoryInviteFailureKind.generic =>
-        'Impossible de rejoindre cette histoire. Réessayez.',
+        l10n.joinCharacterStepScreenGenericErrorMessage,
     };
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final charactersAsync = ref.watch(charactersProvider);
 
     return Scaffold(
@@ -123,7 +127,7 @@ class _JoinCharacterStepScreenState
           Column(
             children: [
               JoinStepHeader(
-                stepTitle: 'Choix du personnage',
+                stepTitle: l10n.joinCharacterStepScreenStepTitle,
                 currentStep: 3,
                 onBack: _goBack,
               ),
@@ -131,7 +135,7 @@ class _JoinCharacterStepScreenState
                 child: SafeArea(
                   top: false,
                   child: charactersAsync.when(
-                    data: (characters) => _buildContent(characters),
+                    data: (characters) => _buildContent(l10n, characters),
                     loading: () => const Center(
                       child: CircularProgressIndicator(
                         color: AppColors.woodMedium,
@@ -140,8 +144,7 @@ class _JoinCharacterStepScreenState
                     error: (error, stackTrace) => _ErrorState(
                       message: error is CharacterFailure
                           ? error.message
-                          : 'Impossible de charger vos personnages. '
-                                'Réessayez.',
+                          : l10n.joinCharacterStepScreenCharactersLoadErrorMessage,
                       onRetry: () => ref.invalidate(charactersProvider),
                     ),
                   ),
@@ -155,7 +158,10 @@ class _JoinCharacterStepScreenState
     );
   }
 
-  Widget _buildContent(List<CharacterSummary> characters) {
+  Widget _buildContent(
+    AppLocalizations l10n,
+    List<CharacterSummary> characters,
+  ) {
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
@@ -164,7 +170,7 @@ class _JoinCharacterStepScreenState
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                "Quel personnage rejoint l'aventure ?",
+                l10n.joinCharacterStepScreenQuestionLabel,
                 style: AppTypography.body(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -195,7 +201,7 @@ class _JoinCharacterStepScreenState
           ),
           const SizedBox(height: AppSpacing.md),
           SecondaryButton(
-            label: '+ Créer un nouveau personnage',
+            label: l10n.joinCharacterStepScreenCreateCharacterButton,
             surface: SecondaryButtonSurface.parchment,
             onPressed: _isJoining ? null : _startCharacterCreation,
           ),
@@ -214,6 +220,7 @@ class _JoinSavingOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ColoredBox(
       color: AppColors.woodDark.withValues(alpha: 0.6),
       child: Center(
@@ -233,7 +240,7 @@ class _JoinSavingOverlay extends StatelessWidget {
               const CircularProgressIndicator(color: AppColors.woodMedium),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'Rattachement à l\'histoire...',
+                l10n.joinCharacterStepScreenJoiningOverlayMessage,
                 style: AppTypography.body(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -257,6 +264,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -270,7 +278,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Tu n\'as pas encore de personnage à rattacher.',
+              l10n.joinCharacterStepScreenEmptyStateMessage,
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textSecondary),
             ),
@@ -289,6 +297,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -308,7 +317,7 @@ class _ErrorState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             SecondaryButton(
-              label: 'Réessayer',
+              label: l10n.joinCharacterStepScreenRetryButton,
               surface: SecondaryButtonSurface.parchment,
               onPressed: onRetry,
             ),

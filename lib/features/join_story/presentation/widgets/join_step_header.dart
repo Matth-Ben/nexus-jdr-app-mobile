@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/step_progress_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Gabarit commun aux 4 étapes du flux "Rejoindre une histoire" (spec
 /// visuelle de la tâche) : bandeau bois plein, titre fixe "REJOINDRE",
@@ -34,6 +35,7 @@ class JoinStepHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ColoredBox(
       color: AppColors.woodMedium,
       child: SafeArea(
@@ -58,7 +60,7 @@ class JoinStepHeader extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'REJOINDRE',
+                      l10n.joinStepHeaderTitle,
                       style: AppTypography.display(
                         fontSize: 11,
                         color: AppColors.textOnWood,
@@ -84,7 +86,10 @@ class JoinStepHeader extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          l10n.joinStepHeaderStepCounter(
+                            currentStep,
+                            totalSteps,
+                          ),
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,
@@ -119,6 +124,7 @@ class JoinStepMinimalHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ColoredBox(
       color: AppColors.woodMedium,
       child: SafeArea(
@@ -138,7 +144,7 @@ class JoinStepMinimalHeader extends StatelessWidget {
                 ),
               ),
               Text(
-                'REJOINDRE',
+                l10n.joinStepHeaderTitle,
                 style: AppTypography.display(
                   fontSize: 11,
                   color: AppColors.textOnWood,

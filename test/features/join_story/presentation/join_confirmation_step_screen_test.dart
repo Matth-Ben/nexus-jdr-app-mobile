@@ -17,6 +17,7 @@ import 'package:personnages/features/join_story/domain/story_invite_failure.dart
 import 'package:personnages/features/join_story/domain/story_preview.dart';
 import 'package:personnages/features/join_story/presentation/join_confirmation_step_screen.dart';
 import 'package:personnages/features/join_story/presentation/providers/join_story_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeStoryInviteRepository implements StoryInviteRepository {
   StoryPreview? previewToReturn;
@@ -76,10 +77,18 @@ GoRouter _buildTestRouter() {
   );
 }
 
-Widget _buildTestWidget(_FakeStoryInviteRepository repository) {
+Widget _buildTestWidget(
+  _FakeStoryInviteRepository repository, {
+  Locale locale = const Locale('fr'),
+}) {
   return ProviderScope(
     overrides: [storyInviteRepositoryProvider.overrideWithValue(repository)],
-    child: MaterialApp.router(routerConfig: _buildTestRouter()),
+    child: MaterialApp.router(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
+      routerConfig: _buildTestRouter(),
+    ),
   );
 }
 
@@ -237,6 +246,36 @@ void main() {
         find.text(
           'Impossible de contacter le serveur. Vérifiez votre connexion '
           'internet et réessayez.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'locale anglaise : titre d\'étape, mention du MJ et bouton traduits',
+    (tester) async {
+      fakeRepository.previewToReturn = const StoryPreview(
+        title: 'La Malédiction du Nord',
+        gmDisplayName: 'Alarik',
+      );
+
+      await tester.pumpWidget(
+        _buildTestWidget(fakeRepository, locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Confirmation'), findsOneWidget);
+      expect(find.text('GM: Alarik'), findsOneWidget);
+      // "JOIN" apparaît aussi bien dans le bandeau bois partagé
+      // (`JoinStepHeader`, `joinStepHeaderTitle` = "Join" en anglais) que
+      // dans le `PrimaryButton` de cet écran (`joinConfirmationStepScreenJoinButton`
+      // = "Join" également) — coïncidence de traduction, vérifiée ici
+      // spécifiquement sur le bouton.
+      expect(
+        find.descendant(
+          of: find.byType(PrimaryButton),
+          matching: find.text('JOIN'),
         ),
         findsOneWidget,
       );

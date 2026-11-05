@@ -8987,6 +8987,198 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ce fichier ne contient pas les informations minimales d\'un personnage (nom, race, classe, historique).'**
   String get xmlImportReviewScreenParseErrorMissingRequiredFields;
+
+  /// Titre fixe du bandeau bois, affiché par `JoinStepHeader` et `JoinStepMinimalHeader` sur les 3 écrans du flux "Rejoindre une histoire".
+  ///
+  /// In fr, this message translates to:
+  /// **'REJOINDRE'**
+  String get joinStepHeaderTitle;
+
+  /// Compteur d'étape du bandeau bois (`JoinStepHeader`) — même patron que `raceStepScreenStepCounter`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String joinStepHeaderStepCounter(int currentStep, int totalSteps);
+
+  /// `stepTitle` transmis à `JoinStepHeader` par l'étape 1/4 (saisie du code).
+  ///
+  /// In fr, this message translates to:
+  /// **'Code'**
+  String get joinCodeStepScreenStepTitle;
+
+  /// Titre principal de l'étape 1/4.
+  ///
+  /// In fr, this message translates to:
+  /// **'As-tu un code d\'invitation ?'**
+  String get joinCodeStepScreenTitle;
+
+  /// Sous-titre de l'étape 1/4.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton MJ te l\'a partagé depuis l\'app Histoires pour rejoindre sa campagne.'**
+  String get joinCodeStepScreenSubtitle;
+
+  /// Libellé au-dessus du champ de saisie du code.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code d\'invitation'**
+  String get joinCodeStepScreenFieldLabel;
+
+  /// `hintText` du champ de saisie du code — exemple illustratif, jamais un vrai code.
+  ///
+  /// In fr, this message translates to:
+  /// **'AB3F7K'**
+  String get joinCodeStepScreenFieldHint;
+
+  /// Texte d'aide sous le champ de saisie du code.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code fourni par ton MJ (lettres et chiffres).'**
+  String get joinCodeStepScreenFieldHelper;
+
+  /// `PrimaryButton` de l'étape 1/4.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get joinCodeStepScreenNextButton;
+
+  /// `stepTitle` transmis à `JoinStepHeader` par l'étape 2/4 (confirmation).
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmation'**
+  String get joinConfirmationStepScreenStepTitle;
+
+  /// Ligne affichée sous le titre de l'histoire quand `StoryPreview.gmDisplayName` est renseigné — `gmDisplayName` reste dynamique (nom choisi par le MJ, jamais traduit).
+  ///
+  /// In fr, this message translates to:
+  /// **'MJ : {gmDisplayName}'**
+  String joinConfirmationStepScreenGmLabel(String gmDisplayName);
+
+  /// Texte d'information sous le nom du MJ, avant le bouton "Rejoindre".
+  ///
+  /// In fr, this message translates to:
+  /// **'En rejoignant, ton personnage sera visible par le MJ (lecture seule). Tu pourras quitter l\'histoire à tout moment depuis sa fiche.'**
+  String get joinConfirmationStepScreenDisclaimer;
+
+  /// `PrimaryButton` de l'étape 2/4, pousse l'étape 3/4.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rejoindre'**
+  String get joinConfirmationStepScreenJoinButton;
+
+  /// Message principal de `_CodeErrorState` pour `StoryInviteFailureKind.invalidCode`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code d\'invitation n\'est pas valide.'**
+  String get joinConfirmationStepScreenInvalidCodeMessage;
+
+  /// Message secondaire de `_CodeErrorState` pour `StoryInviteFailureKind.invalidCode`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifie le code transmis par ton MJ et réessaye.'**
+  String get joinConfirmationStepScreenInvalidCodeSecondaryMessage;
+
+  /// Message principal de `_CodeErrorState` pour `StoryInviteFailureKind.inviteDisabled`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette invitation a été désactivée.'**
+  String get joinConfirmationStepScreenInviteDisabledMessage;
+
+  /// Message secondaire de `_CodeErrorState` pour `StoryInviteFailureKind.inviteDisabled`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande à ton MJ de générer un nouveau lien.'**
+  String get joinConfirmationStepScreenInviteDisabledSecondaryMessage;
+
+  /// `SecondaryButton` de `_CodeErrorState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier le code'**
+  String get joinConfirmationStepScreenEditCodeButton;
+
+  /// Message de `_NetworkErrorState`, pour `StoryInviteFailureKind.characterNotOwned`/`alreadyJoined`/`generic` et toute exception qui n'est pas une `StoryInviteFailure` — même texte que `characters/data/character_error_mapper.dart::_networkErrorMessage`, dupliqué ici (voir la documentation de classe du fichier).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.'**
+  String get joinConfirmationStepScreenGenericErrorMessage;
+
+  /// `SecondaryButton` de `_NetworkErrorState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get joinConfirmationStepScreenRetryButton;
+
+  /// `stepTitle` transmis à `JoinStepHeader` par l'étape 3/4 (choix du personnage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Choix du personnage'**
+  String get joinCharacterStepScreenStepTitle;
+
+  /// `SnackBar` affiché après un rattachement réussi (étape 4/4).
+  ///
+  /// In fr, this message translates to:
+  /// **'Histoire rejointe !'**
+  String get joinCharacterStepScreenJoinedSnackbar;
+
+  /// Bandeau d'alerte inline pour `StoryInviteFailureKind.alreadyJoined`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce personnage est déjà rattaché à cette histoire.'**
+  String get joinCharacterStepScreenAlreadyJoinedErrorMessage;
+
+  /// Bandeau d'alerte inline pour `StoryInviteFailureKind.invalidCode` (cas de course improbable, voir la documentation de `_bannerMessageFor`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code d\'invitation n\'est pas valide.'**
+  String get joinCharacterStepScreenInvalidCodeErrorMessage;
+
+  /// Bandeau d'alerte inline pour `StoryInviteFailureKind.inviteDisabled` (cas de course improbable, voir la documentation de `_bannerMessageFor`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette invitation a été désactivée.'**
+  String get joinCharacterStepScreenInviteDisabledErrorMessage;
+
+  /// Bandeau d'alerte inline pour `StoryInviteFailureKind.characterNotOwned`/`generic` et toute exception qui n'est pas une `StoryInviteFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de rejoindre cette histoire. Réessayez.'**
+  String get joinCharacterStepScreenGenericErrorMessage;
+
+  /// Message de repli de `_ErrorState` quand l'erreur de `charactersProvider` n'est pas une `CharacterFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger vos personnages. Réessayez.'**
+  String get joinCharacterStepScreenCharactersLoadErrorMessage;
+
+  /// Libellé au-dessus de la liste de personnages, affiché uniquement quand la liste n'est pas vide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quel personnage rejoint l\'aventure ?'**
+  String get joinCharacterStepScreenQuestionLabel;
+
+  /// Message de `_EmptyState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu n\'as pas encore de personnage à rattacher.'**
+  String get joinCharacterStepScreenEmptyStateMessage;
+
+  /// `SecondaryButton` lançant l'assistant de création, toujours affiché même dans `_EmptyState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'+ Créer un nouveau personnage'**
+  String get joinCharacterStepScreenCreateCharacterButton;
+
+  /// Message de `_JoinSavingOverlay`, pendant l'appel `joinStory`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rattachement à l\'histoire...'**
+  String get joinCharacterStepScreenJoiningOverlayMessage;
+
+  /// `SecondaryButton` de `_ErrorState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get joinCharacterStepScreenRetryButton;
 }
 
 class _AppLocalizationsDelegate
