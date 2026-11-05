@@ -273,7 +273,10 @@ GoRouter _buildTestRouter() {
   );
 }
 
-Widget _buildTestWidget(_FakeGroupRepository repository) {
+Widget _buildTestWidget(
+  _FakeGroupRepository repository, {
+  Locale locale = const Locale('fr'),
+}) {
   return ProviderScope(
     overrides: [groupRepositoryProvider.overrideWithValue(repository)],
     child: MaterialApp.router(
@@ -283,7 +286,7 @@ Widget _buildTestWidget(_FakeGroupRepository repository) {
       // l'appel renverrait `null` et le `!` planterait.
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('fr'),
+      locale: locale,
       routerConfig: _buildTestRouter(),
     ),
   );
@@ -1192,6 +1195,139 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Paramètres du groupe group-1'), findsOneWidget);
+      },
+    );
+  });
+
+  group('traduction anglaise', () {
+    testWidgets('titre de repli en anglais tant que le groupe charge', (
+      tester,
+    ) async {
+      fakeRepository.detailCompleter = Completer<GroupDetail>();
+
+      await tester.pumpWidget(
+        _buildTestWidget(fakeRepository, locale: const Locale('en')),
+      );
+      await tester.pump();
+
+      expect(find.text('GROUP'), findsOneWidget);
+    });
+
+    testWidgets('les 3 onglets (Membres/Butin/Notes) en anglais', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+
+      await tester.pumpWidget(
+        _buildTestWidget(fakeRepository, locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('MEMBERS'), findsOneWidget);
+      expect(find.text('LOOT'), findsOneWidget);
+      expect(find.text('NOTES'), findsOneWidget);
+    });
+
+    testWidgets(
+      'quitter le groupe (icône du header) : dialogue + SnackBar en anglais',
+      (tester) async {
+        fakeRepository.detailToReturn = memberViewDetail();
+
+        await tester.pumpWidget(
+          _buildTestWidget(fakeRepository, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(WoodBackHeader),
+            matching: find.byIcon(Icons.logout),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Leave "Les Lames de l\'Aube"?'), findsOneWidget);
+
+        await tester.tap(find.text('Leave'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.leaveGroupCalled, isTrue);
+        expect(find.text('You left the group.'), findsOneWidget);
+      },
+    );
+
+    testWidgets('exclure un membre : dialogue + SnackBar en anglais', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+
+      await tester.pumpWidget(
+        _buildTestWidget(fakeRepository, locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.person_remove_outlined).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Remove Borgan from the group?'), findsOneWidget);
+
+      await tester.tap(find.text('Remove'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.lastRemovedUserId, 'user-2');
+      expect(
+        find.text('Borgan has been removed from the group.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'état d\'erreur (pas une GroupFailure) : message de repli + RETRY en '
+      'anglais',
+      (tester) async {
+        fakeRepository.detailErrorToThrow = Exception('boom');
+
+        await tester.pumpWidget(
+          _buildTestWidget(fakeRepository, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Unable to load this group. Try again.'),
+          findsOneWidget,
+        );
+        expect(find.text('RETRY'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'MJ sans personnage : état désactivé de l\'onglet Notes en anglais',
+      (tester) async {
+        fakeRepository.detailToReturn = GroupDetail(
+          id: 'group-1',
+          name: 'Les Lames de l\'Aube',
+          ownerId: 'user-1',
+          inviteCode: 'AB3F7K2M',
+          currentUserId: 'user-mj',
+          members: [
+            owner,
+            const GroupMember(
+              userId: 'user-mj',
+              role: GroupRole.membre,
+              name: 'Brunhilde',
+              isGameMaster: true,
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          _buildTestWidget(fakeRepository, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('NOTES'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('specific to a character'), findsOneWidget);
       },
     );
   });

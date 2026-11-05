@@ -8,6 +8,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/segmented_tab_bar.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../characters/domain/currency_kind.dart';
 import '../../characters/domain/reward_item_draft.dart';
 import '../domain/group_detail.dart';
@@ -16,6 +17,7 @@ import '../domain/group_member.dart';
 import '../domain/group_treasure.dart';
 import '../domain/group_treasure_item.dart';
 import 'group_character_reassignment_screen.dart';
+import 'group_failure_presenter.dart';
 import 'providers/group_providers.dart';
 import 'widgets/add_to_group_treasure_sheet.dart';
 import 'widgets/claim_group_treasure_currency_sheet.dart';
@@ -78,13 +80,12 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
   }
 
   Future<void> _confirmLeaveGroup(GroupDetail detail) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showGroupConfirmationDialog(
       context,
-      title: 'Quitter « ${detail.name} » ?',
-      message:
-          "Tu perds l'accès au butin commun et au suivi de tes coéquipiers. "
-          'Ton personnage garde toutes ses données.',
-      confirmLabel: 'Quitter',
+      title: l10n.groupScreenLeaveConfirmTitle(detail.name),
+      message: l10n.groupScreenLeaveConfirmMessage,
+      confirmLabel: l10n.groupScreenLeaveConfirmButtonLabel,
     );
     if (confirmed != true || !mounted) return;
 
@@ -92,20 +93,21 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       await ref.read(groupRepositoryProvider).leaveGroup(widget.groupId);
       if (!mounted) return;
       context.go('/');
-      _showSnackBar('Tu as quitté le groupe.');
+      _showSnackBar(l10n.groupScreenLeftGroupSnackbar);
     } on GroupFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(resolveGroupFailureMessage(l10n, failure));
     } catch (_) {
-      _showSnackBar('Impossible de quitter le groupe. Réessayez.');
+      _showSnackBar(l10n.groupScreenLeaveGroupGenericErrorMessage);
     }
   }
 
   Future<void> _confirmRemoveMember(GroupMember member) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showGroupConfirmationDialog(
       context,
-      title: 'Exclure ${member.name} du groupe ?',
-      message: _removeMemberMessage(member),
-      confirmLabel: 'Exclure',
+      title: l10n.groupScreenRemoveMemberConfirmTitle(member.name),
+      message: _removeMemberMessage(l10n, member),
+      confirmLabel: l10n.groupScreenRemoveMemberConfirmButtonLabel,
     );
     if (confirmed != true || !mounted) return;
 
@@ -115,11 +117,11 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
           .removeMember(groupId: widget.groupId, userId: member.userId);
       ref.invalidate(groupDetailProvider(widget.groupId));
       if (!mounted) return;
-      _showSnackBar('${member.name} a été exclu du groupe.');
+      _showSnackBar(l10n.groupScreenMemberRemovedSnackbar(member.name));
     } on GroupFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(resolveGroupFailureMessage(l10n, failure));
     } catch (_) {
-      _showSnackBar("Impossible d'exclure ce membre. Réessayez.");
+      _showSnackBar(l10n.groupScreenRemoveMemberGenericErrorMessage);
     }
   }
 
@@ -128,16 +130,14 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
   /// membre orphelin (`GroupMember.isAwaitingCharacter`, personnage supprimé
   /// entre-temps) : les deux ont `characterId == null`, mais la situation
   /// n'est pas la même (voir la doc de classe de `GroupMember`).
-  String _removeMemberMessage(GroupMember member) {
+  String _removeMemberMessage(AppLocalizations l10n, GroupMember member) {
     if (member.isGameMaster) {
-      return 'Il/elle quitte immédiatement le groupe.';
+      return l10n.groupScreenRemoveMemberGameMasterMessage;
     }
     if (member.isAwaitingCharacter) {
-      return "Son personnage a déjà été supprimé ; il/elle quitte "
-          'immédiatement le groupe.';
+      return l10n.groupScreenRemoveMemberOrphanMessage;
     }
-    return 'Son personnage garde toutes ses données, mais quitte '
-        'immédiatement le groupe.';
+    return l10n.groupScreenRemoveMemberDefaultMessage;
   }
 
   int _treasureAmountOf(GroupTreasure treasure, CurrencyKind currency) =>
@@ -173,6 +173,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     Map<CurrencyKind, int> amounts,
   ) async {
     if (amounts.isEmpty || _isWritingTreasure) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isWritingTreasure = true);
 
     final failed = <CurrencyKind>[];
@@ -197,15 +198,12 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     setState(() => _isWritingTreasure = false);
 
     if (failed.isEmpty) {
-      _showSnackBar('Monnaie récupérée.');
+      _showSnackBar(l10n.groupScreenCurrencyClaimedSnackbar);
     } else if (failed.length == amounts.length) {
-      _showSnackBar('Un autre membre vient de modifier le butin. Réessaie.');
+      _showSnackBar(l10n.groupScreenTreasureConflictAllFailedSnackbar);
     } else {
       final labels = failed.map((currency) => currency.unitLabel).join(', ');
-      _showSnackBar(
-        'Butin modifié entretemps : $labels non récupérées, le reste a été '
-        'ajouté à ton inventaire.',
-      );
+      _showSnackBar(l10n.groupScreenTreasureConflictPartialSnackbar(labels));
     }
   }
 
@@ -226,6 +224,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     int quantity,
   ) async {
     if (_isWritingTreasure) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isWritingTreasure = true);
     try {
       await ref
@@ -238,11 +237,11 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
           );
       ref.invalidate(groupTreasureProvider(widget.groupId));
       if (!mounted) return;
-      _showSnackBar('Objet ajouté à ton inventaire.');
+      _showSnackBar(l10n.groupScreenItemClaimedSnackbar);
     } on GroupFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(resolveGroupFailureMessage(l10n, failure));
     } catch (_) {
-      _showSnackBar('Impossible de réclamer cet objet. Réessayez.');
+      _showSnackBar(l10n.groupScreenClaimItemGenericErrorMessage);
     } finally {
       if (mounted) setState(() => _isWritingTreasure = false);
     }
@@ -261,6 +260,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     List<RewardItemDraft> items,
   ) async {
     if (_isWritingTreasure) return;
+    final l10n = AppLocalizations.of(context)!;
 
     final newTotals = <CurrencyKind, int>{
       for (final entry in deltas.entries)
@@ -298,11 +298,11 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
           );
       ref.invalidate(groupTreasureProvider(widget.groupId));
       if (!mounted) return;
-      _showSnackBar('Butin mis à jour.');
+      _showSnackBar(l10n.groupScreenTreasureUpdatedSnackbar);
     } on GroupFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(resolveGroupFailureMessage(l10n, failure));
     } catch (_) {
-      _showSnackBar('Impossible de mettre à jour le butin. Réessayez.');
+      _showSnackBar(l10n.groupScreenUpdateTreasureGenericErrorMessage);
     } finally {
       if (mounted) setState(() => _isWritingTreasure = false);
     }
@@ -310,6 +310,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
 
   Future<void> _saveNote(String characterId, String body) async {
     if (_isSavingNote) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isSavingNote = true);
     try {
       await ref
@@ -323,11 +324,11 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         groupNoteProvider(groupId: widget.groupId, characterId: characterId),
       );
       if (!mounted) return;
-      _showSnackBar('Notes enregistrées.');
+      _showSnackBar(l10n.groupScreenNoteSavedSnackbar);
     } on GroupFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(resolveGroupFailureMessage(l10n, failure));
     } catch (_) {
-      _showSnackBar('Impossible d\'enregistrer tes notes. Réessayez.');
+      _showSnackBar(l10n.groupScreenSaveNoteGenericErrorMessage);
     } finally {
       if (mounted) setState(() => _isSavingNote = false);
     }
@@ -335,6 +336,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Abonnement Realtime silencieux aux membres du groupe — voir
     // `groupMembersRealtimeWatcherProvider` : souscrit tant que cet écran
     // est monté, désabonné proprement à sa fermeture.
@@ -357,7 +359,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       body: Column(
         children: [
           WoodBackHeader(
-            title: detail?.name.toUpperCase() ?? 'GROUPE',
+            title: detail?.name.toUpperCase() ?? l10n.groupScreenDefaultTitle,
             onBack: _goBack,
             trailing: detail == null
                 ? null
@@ -381,7 +383,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             data: (_) => SegmentedTabBar<GroupTab>(
               options: [
                 for (final tab in GroupTab.values)
-                  SegmentedTabBarOption(value: tab, label: tab.label),
+                  SegmentedTabBarOption(value: tab, label: tab.label(l10n)),
               ],
               value: _tab,
               onChanged: (tab) => setState(() => _tab = tab),
@@ -396,8 +398,8 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
               ),
               error: (error, stackTrace) => _ErrorState(
                 message: error is GroupFailure
-                    ? error.message
-                    : 'Impossible de charger ce groupe. Réessayez.',
+                    ? resolveGroupFailureMessage(l10n, error)
+                    : l10n.groupScreenLoadErrorMessage,
                 onRetry: () =>
                     ref.invalidate(groupDetailProvider(widget.groupId)),
               ),
@@ -421,6 +423,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
   }
 
   Widget _buildTreasureTab(GroupDetail detail) {
+    final l10n = AppLocalizations.of(context)!;
     final treasureAsync = ref.watch(groupTreasureProvider(widget.groupId));
     return treasureAsync.when(
       data: (treasure) => GroupTreasureTabBody(
@@ -439,14 +442,15 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       ),
       error: (error, stackTrace) => _ErrorState(
         message: error is GroupFailure
-            ? error.message
-            : 'Impossible de charger le butin commun. Réessayez.',
+            ? resolveGroupFailureMessage(l10n, error)
+            : l10n.groupScreenTreasureLoadErrorMessage,
         onRetry: () => ref.invalidate(groupTreasureProvider(widget.groupId)),
       ),
     );
   }
 
   Widget _buildNotesTab(GroupDetail detail) {
+    final l10n = AppLocalizations.of(context)!;
     final characterId = detail.currentMember?.characterId;
     // Le carnet de notes est propre à un personnage — un MJ sans personnage
     // (voir `GroupMember.isGameMaster`) n'en a pas ici (`group_notes` est
@@ -471,8 +475,8 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       ),
       error: (error, stackTrace) => _ErrorState(
         message: error is GroupFailure
-            ? error.message
-            : 'Impossible de charger tes notes. Réessayez.',
+            ? resolveGroupFailureMessage(l10n, error)
+            : l10n.groupScreenNoteLoadErrorMessage,
         onRetry: () => ref.invalidate(
           groupNoteProvider(groupId: widget.groupId, characterId: characterId),
         ),
@@ -490,6 +494,7 @@ class _NoNotesForGameMasterState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Center(
@@ -499,8 +504,7 @@ class _NoNotesForGameMasterState extends StatelessWidget {
             const Icon(Icons.edit_note, size: 56, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Le carnet de notes est propre à un personnage : en tant que '
-              'MJ sans personnage, tu n\'en as pas ici.',
+              l10n.groupScreenNoNotesForGameMasterMessage,
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textMuted),
             ),
@@ -519,6 +523,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -538,7 +543,7 @@ class _ErrorState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             SecondaryButton(
-              label: 'Réessayer',
+              label: l10n.groupScreenRetryButtonLabel,
               surface: SecondaryButtonSurface.parchment,
               onPressed: onRetry,
             ),

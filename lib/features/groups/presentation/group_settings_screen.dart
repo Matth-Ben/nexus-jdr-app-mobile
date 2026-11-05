@@ -10,15 +10,14 @@ import '../../../core/widgets/destructive_button.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/group_detail.dart';
 import '../domain/group_failure.dart';
+import 'group_failure_presenter.dart';
 import 'providers/group_providers.dart';
 import 'widgets/group_confirmation_dialog.dart';
 import 'widgets/group_dissolve_sheet.dart';
 import 'widgets/group_invite_code_chip.dart';
-
-const String _genericRenameErrorMessage =
-    "Impossible d'enregistrer les modifications. Réessayez.";
 
 /// Écran dédié "Paramètres du groupe", route `/groups/:id/settings` —
 /// recettage direction-artistique du 13/09/2026 (`docs/cahier-des-charges/
@@ -104,6 +103,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
   /// modification — même patron que `ProfileEditScreen._submit`.
   Future<void> _submitRename() async {
     if (!_canSave) return;
+    final l10n = AppLocalizations.of(context)!;
     final name = _nameController.text.trim();
 
     setState(() {
@@ -121,18 +121,18 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
         _isSaving = false;
         _initialName = name;
       });
-      _showSnackBar('Groupe renommé.');
+      _showSnackBar(l10n.groupSettingsScreenRenamedSnackbar);
     } on GroupFailure catch (failure) {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = failure.message;
+        _errorMessage = resolveGroupFailureMessage(l10n, failure);
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _genericRenameErrorMessage;
+        _errorMessage = l10n.groupSettingsScreenGenericRenameErrorMessage;
       });
     }
   }
@@ -143,13 +143,12 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
   /// `group_screen.dart` par une tâche parallèle à celle-ci — voir sa doc de
   /// classe).
   Future<void> _confirmRegenerateInviteCode() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showGroupConfirmationDialog(
       context,
-      title: "Régénérer le code d'invitation ?",
-      message:
-          "L'ancien code cessera de fonctionner immédiatement. Les membres "
-          'déjà présents ne sont pas affectés.',
-      confirmLabel: 'Régénérer',
+      title: l10n.groupSettingsScreenRegenerateConfirmTitle,
+      message: l10n.groupSettingsScreenRegenerateConfirmMessage,
+      confirmLabel: l10n.groupSettingsScreenRegenerateConfirmButtonLabel,
       destructive: false,
     );
     if (confirmed != true || !mounted) return;
@@ -160,16 +159,17 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
           .regenerateInviteCode(widget.groupId);
       ref.invalidate(groupDetailProvider(widget.groupId));
       if (!mounted) return;
-      _showSnackBar('Code régénéré.');
+      _showSnackBar(l10n.groupSettingsScreenRegeneratedSnackbar);
     } on GroupFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(resolveGroupFailureMessage(l10n, failure));
     } catch (_) {
-      _showSnackBar('Impossible de régénérer le code. Réessayez.');
+      _showSnackBar(l10n.groupSettingsScreenRegenerateGenericErrorMessage);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final detailAsync = ref.watch(groupDetailProvider(widget.groupId));
     // Initialise le contrôleur de nom une seule fois, dès que
     // `groupDetailProvider` résout une première valeur — pas de
@@ -192,7 +192,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
       backgroundColor: AppColors.parchmentBg,
       body: Column(
         children: [
-          WoodBackHeader(title: 'PARAMÈTRES DU GROUPE', onBack: _goBack),
+          WoodBackHeader(title: l10n.groupSettingsScreenTitle, onBack: _goBack),
           Expanded(
             child: detailAsync.when(
               data: _buildBody,
@@ -201,8 +201,8 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
               ),
               error: (error, stackTrace) => _ErrorState(
                 message: error is GroupFailure
-                    ? error.message
-                    : 'Impossible de charger ce groupe. Réessayez.',
+                    ? resolveGroupFailureMessage(l10n, error)
+                    : l10n.groupSettingsScreenLoadErrorMessage,
                 onRetry: () =>
                     ref.invalidate(groupDetailProvider(widget.groupId)),
               ),
@@ -214,6 +214,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
   }
 
   Widget _buildBody(GroupDetail detail) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Expanded(
@@ -226,7 +227,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
                   AlertBanner(message: _errorMessage!),
                   const SizedBox(height: AppSpacing.md),
                 ],
-                const _SectionLabel('Nom du groupe'),
+                _SectionLabel(l10n.groupSettingsScreenNameLabel),
                 const SizedBox(height: AppSpacing.xs),
                 TextFormField(
                   controller: _nameController,
@@ -234,13 +235,13 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
                   minLines: 1,
                   maxLines: 1,
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    hintText: 'Ex. Les Lames de l\'Aube',
+                  decoration: InputDecoration(
+                    hintText: l10n.groupSettingsScreenNameHint,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Text(
-                  "CODE D'INVITATION",
+                  l10n.groupSettingsScreenInviteCodeSectionLabel,
                   style: AppTypography.body(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
@@ -255,7 +256,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     SecondaryButton(
-                      label: 'Régénérer',
+                      label: l10n.groupSettingsScreenRegenerateButtonLabel,
                       surface: SecondaryButtonSurface.parchment,
                       onPressed: _confirmRegenerateInviteCode,
                     ),
@@ -263,8 +264,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  "Régénérer invalide l'ancien code : les membres déjà "
-                  'rattachés ne sont pas affectés.',
+                  l10n.groupSettingsScreenRegenerateHint,
                   style: AppTypography.body(
                     fontSize: 12,
                     color: AppColors.textMuted,
@@ -274,7 +274,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
                 const Divider(color: AppColors.woodLight, thickness: 1),
                 const SizedBox(height: AppSpacing.lg),
                 Text(
-                  'ZONE DANGEREUSE',
+                  l10n.groupSettingsScreenDangerZoneLabel,
                   style: AppTypography.body(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
@@ -283,7 +283,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 DestructiveButton(
-                  label: 'Dissoudre le groupe',
+                  label: l10n.groupSettingsScreenDissolveButtonLabel,
                   icon: Icons.delete_outline,
                   onPressed: () => showGroupDissolveSheet(
                     context,
@@ -293,9 +293,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Réservé au créateur du groupe. Retire tous les membres et '
-                  'supprime le butin commun ; les personnages et leurs '
-                  'données restent intacts.',
+                  l10n.groupSettingsScreenDissolveHint,
                   style: AppTypography.body(
                     fontSize: 12,
                     color: AppColors.textMuted,
@@ -314,7 +312,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
             AppSpacing.lg,
           ),
           child: PrimaryButton(
-            label: 'Enregistrer',
+            label: l10n.groupSettingsScreenSaveButtonLabel,
             isLoading: _isSaving,
             onPressed: _canSave ? _submitRename : null,
           ),
@@ -357,6 +355,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -376,7 +375,7 @@ class _ErrorState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             SecondaryButton(
-              label: 'Réessayer',
+              label: l10n.groupSettingsScreenRetryButtonLabel,
               surface: SecondaryButtonSurface.parchment,
               onPressed: onRetry,
             ),
