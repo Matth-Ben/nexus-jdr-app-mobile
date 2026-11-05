@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/dashed_button.dart';
 import '../../../../core/widgets/info_banner.dart';
 import '../../../../core/widgets/secondary_button.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../characters/presentation/widgets/character_inventory_stat_boxes_row.dart';
 import '../../domain/group_treasure.dart';
 import '../../domain/group_treasure_item.dart';
@@ -48,6 +49,7 @@ class GroupTreasureTabBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final boxes = GroupTreasureStatBoxesResolver.resolve(treasure);
 
     return Column(
@@ -57,28 +59,25 @@ class GroupTreasureTabBody extends StatelessWidget {
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
               if (!canClaim) ...[
-                const InfoBanner(
+                InfoBanner(
                   icon: Icons.visibility_outlined,
-                  message:
-                      'En tant que MJ sans personnage, tu peux gérer le '
-                      "butin commun mais pas t'attribuer une part — seuls "
-                      'les membres avec un personnage le peuvent.',
+                  message: l10n.groupTreasureTabBodyGameMasterBannerMessage,
                 ),
                 const SizedBox(height: AppSpacing.md),
               ],
-              const _SectionLabel('MONNAIE COMMUNE'),
+              _SectionLabel(l10n.groupTreasureTabBodyCurrencySectionLabel),
               const SizedBox(height: AppSpacing.sm),
               CharacterInventoryStatBoxesRow(boxes: boxes),
               const SizedBox(height: AppSpacing.sm),
               DashedButton(
                 icon: Icons.savings_outlined,
-                label: 'Répartir vers mon inventaire',
+                label: l10n.groupTreasureTabBodyClaimCurrencyButtonLabel,
                 onPressed: (canClaim && !isBusy && !treasure.hasNoCurrency)
                     ? onClaimCurrency
                     : null,
               ),
               const SizedBox(height: AppSpacing.md),
-              const _SectionLabel('OBJETS EN ATTENTE'),
+              _SectionLabel(l10n.groupTreasureTabBodyPendingItemsSectionLabel),
               const SizedBox(height: AppSpacing.sm),
               if (treasure.items.isEmpty)
                 const _EmptyTreasureItemsState()
@@ -98,7 +97,7 @@ class GroupTreasureTabBody extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: SecondaryButton(
-            label: 'Ajouter au butin du groupe',
+            label: l10n.groupTreasureTabBodyAddToTreasureButtonLabel,
             icon: Icons.card_giftcard,
             surface: SecondaryButtonSurface.parchment,
             borderColor: AppColors.goldEnd,
@@ -146,6 +145,7 @@ class _TreasureItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final disabled = onClaim == null;
 
     return Container(
@@ -182,7 +182,7 @@ class _TreasureItemRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '× ${item.quantity}',
+                  l10n.groupTreasureTabBodyItemQuantityLabel(item.quantity),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.body(
@@ -204,7 +204,7 @@ class _TreasureItemRow extends StatelessWidget {
                       horizontal: AppSpacing.sm,
                     ),
                     child: Text(
-                      "S'attribuer",
+                      l10n.groupTreasureTabBodyClaimItemLinkLabel,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.body(
@@ -233,6 +233,7 @@ class _EmptyTreasureItemsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Center(
@@ -246,7 +247,7 @@ class _EmptyTreasureItemsState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Aucun objet en attente.',
+              l10n.groupTreasureTabBodyEmptyItemsMessage,
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textMuted),
             ),

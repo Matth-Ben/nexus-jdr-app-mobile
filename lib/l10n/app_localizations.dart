@@ -8234,6 +8234,240 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Mise à jour du groupe...'**
   String get groupCharacterReassignmentScreenSavingOverlayMessage;
+
+  /// `InfoBanner` affiché quand le joueur est seul dans le groupe (`showBanner`), au-dessus du `GroupInviteCodeChip`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partage ce code pour inviter d\'autres joueurs (touche-le pour le copier) :'**
+  String get groupMembersTabBodyShareCodeBannerMessage;
+
+  /// `_LiveUpdateIndicator`, en tête de liste — rend visible la mise à jour Realtime silencieuse de cet onglet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mis à jour en direct'**
+  String get groupMembersTabBodyLiveUpdateLabel;
+
+  /// `tooltip` du bouton `_RemoveMemberButton` (icône `person_remove_outlined`) — `memberName` est le nom du membre, dynamique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure {memberName}'**
+  String groupMembersTabBodyRemoveMemberTooltip(String memberName);
+
+  /// Préfixe du `TextSpan` "MJ - {nom}" de la carte MJ volontaire (`_MemberCard._buildGameMasterCard`) — le nom qui suit reste dynamique.
+  ///
+  /// In fr, this message translates to:
+  /// **'MJ - '**
+  String get groupMembersTabBodyGameMasterPrefix;
+
+  /// Suffixe affiché après le nom du joueur connecté sur sa propre carte (personnage, MJ volontaire ou orpheline) — 3 points d'appel identiques dans `_MemberCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **' (toi)'**
+  String get groupMembersTabBodySelfSuffix;
+
+  /// Texte neutre affiché à la place de la ligne PV sur la carte MJ volontaire — ne JAMAIS afficher une valeur factice (0/0 serait lu comme "en train de mourir").
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne suit pas ses PV ici.'**
+  String get groupMembersTabBodyGameMasterHpNote;
+
+  /// Nom de repli du membre orphelin (`GroupMember.isAwaitingCharacter`, voir les fixtures de test) ET texte d'état affiché à la place de la ligne PV sur sa carte (`_MemberCard._buildAwaitingCharacterCard`).
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente d\'un personnage'**
+  String get groupMembersTabBodyAwaitingCharacterLabel;
+
+  /// `_StatusBadge` pour `CharacterVitalStatus.dead`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'MORT'**
+  String get groupMembersTabBodyDeadStatusLabel;
+
+  /// `_StatusBadge` pour `CharacterVitalStatus.unconscious`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'INCONSCIENT'**
+  String get groupMembersTabBodyUnconsciousStatusLabel;
+
+  /// `_ArmorClassLine` — "CA {valeur}", avec ou sans suffixe signé du bonus manuel (ajouté séparément par l'appelant).
+  ///
+  /// In fr, this message translates to:
+  /// **'CA {armorClass}'**
+  String groupMembersTabBodyArmorClassLabel(int armorClass);
+
+  /// `_TemporaryHpChip` — même texte que `characterVitalsCardTemporaryHpChip`, dupliqué volontairement (pas de dépendance entre ces deux widgets).
+  ///
+  /// In fr, this message translates to:
+  /// **'+{amount} PV temp.'**
+  String groupMembersTabBodyTemporaryHpChipLabel(int amount);
+
+  /// `_PrivacyExplanation`, en pied de liste — rappelle ce que la RLS de groupe autorise déjà à lire côté serveur.
+  ///
+  /// In fr, this message translates to:
+  /// **'Touche un membre pour voir sa fiche complète, en lecture seule. Personne ne peut modifier le personnage d\'un autre.'**
+  String get groupMembersTabBodyPrivacyExplanation;
+
+  /// `_LeaveGroupLinkLabel`, affiché en pied d'onglet pour les membres non-fondateurs uniquement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter le groupe'**
+  String get groupMembersTabBodyLeaveGroupLinkLabel;
+
+  /// `InfoBanner` affiché quand `canClaim` est faux (MJ sans personnage, voir `group_screen.dart::_buildTreasureTab`).
+  ///
+  /// In fr, this message translates to:
+  /// **'En tant que MJ sans personnage, tu peux gérer le butin commun mais pas t\'attribuer une part — seuls les membres avec un personnage le peuvent.'**
+  String get groupTreasureTabBodyGameMasterBannerMessage;
+
+  /// `_SectionLabel`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'MONNAIE COMMUNE'**
+  String get groupTreasureTabBodyCurrencySectionLabel;
+
+  /// `_SectionLabel`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'OBJETS EN ATTENTE'**
+  String get groupTreasureTabBodyPendingItemsSectionLabel;
+
+  /// `DashedButton` qui ouvre `claim_group_treasure_currency_sheet.dart` — `PrimaryButton`/`SecondaryButton`/`DashedButton` mettent déjà leur libellé en majuscules à l'affichage, ce texte reste en casse normale.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répartir vers mon inventaire'**
+  String get groupTreasureTabBodyClaimCurrencyButtonLabel;
+
+  /// `SecondaryButton` qui ouvre `add_to_group_treasure_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter au butin du groupe'**
+  String get groupTreasureTabBodyAddToTreasureButtonLabel;
+
+  /// Sous-titre de `_TreasureItemRow` — `item.displayName` (ligne 1, dynamique) reste séparé de cette quantité (ligne 2).
+  ///
+  /// In fr, this message translates to:
+  /// **'× {quantity}'**
+  String groupTreasureTabBodyItemQuantityLabel(int quantity);
+
+  /// Lien texte de `_TreasureItemRow`, ouvre `claim_group_treasure_item_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'attribuer'**
+  String get groupTreasureTabBodyClaimItemLinkLabel;
+
+  /// `_EmptyTreasureItemsState`, affiché quand `treasure.items` est vide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun objet en attente.'**
+  String get groupTreasureTabBodyEmptyItemsMessage;
+
+  /// `hintText` du `TextField` principal de l'onglet Notes.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prends tes notes pendant la partie : événements, indices, rebondissements…'**
+  String get groupNotesTabBodyHintText;
+
+  /// `PrimaryButton` "Enregistrer", actif seulement si le texte a changé (`_isDirty`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get groupNotesTabBodySaveButtonLabel;
+
+  /// Transmis à `onDictationError` quand `SpeechToText.initialize` échoue (appareil ou permission).
+  ///
+  /// In fr, this message translates to:
+  /// **'Reconnaissance vocale indisponible sur cet appareil ou accès micro refusé.'**
+  String get groupNotesTabBodyDictationUnavailableMessage;
+
+  /// Transmis à `onDictationError` sur `SpeechRecognitionError` — `errorMsg` vient du moteur système (`speech_to_text`), jamais traduit (texte déjà fourni par la plateforme, pas une chaîne du dépôt).
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur de reconnaissance vocale : {errorMsg}'**
+  String groupNotesTabBodyDictationErrorMessage(String errorMsg);
+
+  /// Titre de `SheetHeaderBar`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'AJOUTER AU BUTIN DU GROUPE'**
+  String get addToGroupTreasureSheetTitle;
+
+  /// Même libellé que `addRewardSheetCurrencyLabel`, dupliqué volontairement (sheet distincte).
+  ///
+  /// In fr, this message translates to:
+  /// **'MONNAIE'**
+  String get addToGroupTreasureSheetCurrencySectionLabel;
+
+  /// Même libellé que `addRewardSheetItemsLabel`, dupliqué volontairement (sheet distincte).
+  ///
+  /// In fr, this message translates to:
+  /// **'OBJETS'**
+  String get addToGroupTreasureSheetItemsSectionLabel;
+
+  /// `DashedAddTile` — au pluriel, contrairement à `addRewardSheetAddItemLabel` ("Ajouter un objet") : `pickInventoryAdditions` permet une sélection multiple ici.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter des objets'**
+  String get addToGroupTreasureSheetAddItemsButtonLabel;
+
+  /// `SecondaryButton` "Annuler", ferme la sheet sans appliquer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get addToGroupTreasureSheetCancelButtonLabel;
+
+  /// `PrimaryButton`, actif seulement si `_canApply` (au moins une monnaie ou un objet saisi).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter au butin'**
+  String get addToGroupTreasureSheetApplyButtonLabel;
+
+  /// `_TreasureDraftItemRow` — même format que `addRewardSheetItemQuantityLabel` (`name` déjà résolu, catalogue ou objet personnalisé).
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} × {quantity}'**
+  String addToGroupTreasureSheetItemQuantityLabel(String name, int quantity);
+
+  /// Titre de `SheetHeaderBar`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'ATTRIBUER DE LA MONNAIE'**
+  String get claimGroupTreasureCurrencySheetTitle;
+
+  /// `SecondaryButton` "Annuler", ferme la sheet sans appliquer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get claimGroupTreasureCurrencySheetCancelButtonLabel;
+
+  /// `PrimaryButton`, actif seulement si `_canApply` (au moins un montant saisi).
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'attribuer'**
+  String get claimGroupTreasureCurrencySheetApplyButtonLabel;
+
+  /// `_ClaimCurrencyField` — solde maximum disponible dans le butin, affiché sous le champ.
+  ///
+  /// In fr, this message translates to:
+  /// **'/ {max}'**
+  String claimGroupTreasureCurrencySheetMaxLabel(int max);
+
+  /// Titre de la sheet légère — `itemName` est `GroupTreasureItem.displayName`, dynamique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réclamer {itemName}'**
+  String claimGroupTreasureItemSheetTitle(String itemName);
+
+  /// Sous-titre "{quantité} disponible(s)" — ancien texte en dur toujours au pluriel ("1 disponible(s)"), corrigé en ICU plural par cette migration.
+  ///
+  /// In fr, this message translates to:
+  /// **'{quantity, plural, =1{1 disponible} other{{quantity} disponibles}}'**
+  String claimGroupTreasureItemSheetAvailableLabel(int quantity);
+
+  /// `PrimaryButton`, actif seulement si la quantité choisie est non nulle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réclamer'**
+  String get claimGroupTreasureItemSheetSubmitButtonLabel;
 }
 
 class _AppLocalizationsDelegate

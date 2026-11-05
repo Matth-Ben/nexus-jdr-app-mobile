@@ -8,6 +8,7 @@ import '../../../../core/widgets/dashed_add_tile.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../characters/domain/currency_kind.dart';
 import '../../../characters/domain/reward_item_draft.dart';
 import '../../../characters/presentation/widgets/add_item_flow.dart';
@@ -131,6 +132,7 @@ class _AddToGroupTreasureSheetContentState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: FractionallySizedBox(
@@ -139,7 +141,7 @@ class _AddToGroupTreasureSheetContentState
           decoration: const BoxDecoration(color: AppColors.parchmentBg),
           child: Column(
             children: [
-              const SheetHeaderBar(title: 'AJOUTER AU BUTIN DU GROUPE'),
+              SheetHeaderBar(title: l10n.addToGroupTreasureSheetTitle),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(AppSpacing.lg),
@@ -147,7 +149,7 @@ class _AddToGroupTreasureSheetContentState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'MONNAIE',
+                        l10n.addToGroupTreasureSheetCurrencySectionLabel,
                         style: AppTypography.display(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -185,7 +187,7 @@ class _AddToGroupTreasureSheetContentState
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
-                        'OBJETS',
+                        l10n.addToGroupTreasureSheetItemsSectionLabel,
                         style: AppTypography.display(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -200,7 +202,7 @@ class _AddToGroupTreasureSheetContentState
                         const SizedBox(height: AppSpacing.xs),
                       ],
                       DashedAddTile(
-                        label: 'Ajouter des objets',
+                        label: l10n.addToGroupTreasureSheetAddItemsButtonLabel,
                         onTap: _addItems,
                       ),
                     ],
@@ -218,7 +220,7 @@ class _AddToGroupTreasureSheetContentState
                   children: [
                     Expanded(
                       child: SecondaryButton(
-                        label: 'Annuler',
+                        label: l10n.addToGroupTreasureSheetCancelButtonLabel,
                         surface: SecondaryButtonSurface.parchment,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
@@ -226,7 +228,7 @@ class _AddToGroupTreasureSheetContentState
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: PrimaryButton(
-                        label: 'Ajouter au butin',
+                        label: l10n.addToGroupTreasureSheetApplyButtonLabel,
                         onPressed: _canApply ? _submit : null,
                       ),
                     ),
@@ -281,6 +283,7 @@ class _TreasureDraftItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.only(left: AppSpacing.sm),
       decoration: BoxDecoration(
@@ -292,7 +295,10 @@ class _TreasureDraftItemRow extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              '${item.displayName} × ${item.quantity}',
+              l10n.addToGroupTreasureSheetItemQuantityLabel(
+                item.displayName,
+                item.quantity,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.body(

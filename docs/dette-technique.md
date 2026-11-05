@@ -900,7 +900,22 @@ plus large que les 5 fichiers demandés) — voir D159.
 
 | ID | Constat | Gravité | Correction | État |
 |---|---|---|---|---|
-| D159 | 6 fichiers de `presentation/widgets/` propres à `group_screen.dart` (voir la liste ci-dessus) sont encore entièrement en français en dur (aucun import `AppLocalizations`) : libellés de section, boutons, hints de champs, messages d'état vide/erreur des 3 onglets Membres/Butin/Notes et des 3 sheets de gestion du butin commun (ajouter/réclamer monnaie/réclamer objet). | moyenne (surface utilisateur large — ce sont les 3 onglets réels de l'écran "Groupe" une fois un groupe ouvert, pas des cas limites) | Un futur lot dédié ("Groups — onglets du groupe", ou fusionné avec un lot "Groups — butin") migre ces 6 fichiers vers `.arb` suivant le même pattern que `group_screen.dart`/`group_settings_screen.dart` (ce lot) | Ouvert, non traité |
+| D159 | 6 fichiers de `presentation/widgets/` propres à `group_screen.dart` (voir la liste ci-dessus) sont encore entièrement en français en dur (aucun import `AppLocalizations`) : libellés de section, boutons, hints de champs, messages d'état vide/erreur des 3 onglets Membres/Butin/Notes et des 3 sheets de gestion du butin commun (ajouter/réclamer monnaie/réclamer objet). | moyenne (surface utilisateur large — ce sont les 3 onglets réels de l'écran "Groupe" une fois un groupe ouvert, pas des cas limites) | Un futur lot dédié ("Groups — onglets du groupe", ou fusionné avec un lot "Groups — butin") migre ces 6 fichiers vers `.arb` suivant le même pattern que `group_screen.dart`/`group_settings_screen.dart` (ce lot) | **Fermé (lot 5c, commit à venir)** — les 6 fichiers migrent vers `.arb` (39 nouvelles clés), même pattern que les lots 5a/5b. Les textes dynamiques (nom d'objet/personnage/membre, quantités/montants saisis, `CurrencyKind.unitLabel`) restent non capturés, conformément à la règle déjà établie. Un pluriel ICU corrige au passage `claimGroupTreasureItemSheetAvailableLabel` (ancien texte en dur toujours au pluriel, "1 disponible(s)"), même défaut que celui déjà corrigé par `groupListScreenMemberCountLabel` (lot 5a). Voir D160 pour un défaut similaire trouvé incidemment hors périmètre de ce lot. |
+
+## Ajouts liés au lot "Groups — onglets/butin" de la Phase B traduction (lot 5c, 05/11/2026)
+
+Ferme D159 : les 6 fichiers `widgets/group_members_tab_body.dart`, `widgets/group_treasure_tab_body.dart`,
+`widgets/group_notes_tab_body.dart`, `widgets/add_to_group_treasure_sheet.dart`,
+`widgets/claim_group_treasure_currency_sheet.dart` et `widgets/claim_group_treasure_item_sheet.dart`
+migrent vers `.arb` (39 clés). En cherchant les derniers textes en dur de ces fichiers (compteur
+"+/-" partagé, `core/widgets/stepper_counter.dart`, utilisé par `claim_group_treasure_item_sheet.dart`),
+2 `Semantics`/`semanticLabel` en français en dur se sont révélés hors périmètre de ce lot (composant
+partagé `core/widgets/`, pas propre à `groups`) — signalé plutôt que corrigé silencieusement, voir
+D160.
+
+| ID | Constat | Gravité | Correction | État |
+|---|---|---|---|---|
+| D160 | `core/widgets/stepper_counter.dart::_StepperButton` passe `semanticLabel: 'Diminuer'`/`'Augmenter'` en dur (aucun import `AppLocalizations`) à l'`Icon` des 2 boutons +/- — lu par un lecteur d'écran dans N'IMPORTE QUELLE langue de l'app (ex. `claim_group_treasure_item_sheet.dart`, mais aussi l'étape "Caractéristiques" de l'assistant de création et l'inventaire, tous deux déjà migrés par des lots précédents). Trouvé incidemment en lisant ce composant partagé pour le lot "Groups — onglets/butin", jamais mentionné par un audit ni un lot précédent. | basse (texte non visuel, lecteur d'écran uniquement — mais composant partagé, donc large surface) | Migrer `_StepperButton`/`StepperCounter` vers `.arb` — d'autres widgets de `core/widgets/` consomment déjà `AppLocalizations` sans problème (même dépôt, pas de contrainte d'architecture qui l'empêcherait) | Ouvert, non traité |
 
 ## Ce que l'audit n'a pas couvert
 

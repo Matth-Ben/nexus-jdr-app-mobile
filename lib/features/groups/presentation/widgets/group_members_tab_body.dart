@@ -6,6 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/info_banner.dart';
 import '../../../../core/widgets/portrait_frame.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../characters/domain/signed_modifier_formatter.dart';
 import '../../domain/character_vital_status.dart';
 import '../../domain/group_detail.dart';
@@ -78,6 +79,7 @@ class GroupMembersTabBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final members = _orderedMembers(detail.members);
     final showBanner = detail.members.length == 1;
 
@@ -87,11 +89,9 @@ class GroupMembersTabBody extends StatelessWidget {
         const _LiveUpdateIndicator(),
         const SizedBox(height: AppSpacing.md),
         if (showBanner) ...[
-          const InfoBanner(
+          InfoBanner(
             icon: Icons.share_outlined,
-            message:
-                "Partage ce code pour inviter d'autres joueurs (touche-le "
-                'pour le copier) :',
+            message: l10n.groupMembersTabBodyShareCodeBannerMessage,
           ),
           const SizedBox(height: AppSpacing.sm),
           GroupInviteCodeChip(code: detail.inviteCode),
@@ -150,6 +150,7 @@ class _LiveUpdateIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -157,7 +158,7 @@ class _LiveUpdateIndicator extends StatelessWidget {
         const SizedBox(width: AppSpacing.xs),
         Flexible(
           child: Text(
-            'Mis à jour en direct',
+            l10n.groupMembersTabBodyLiveUpdateLabel,
             style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
           ),
         ),
@@ -190,17 +191,19 @@ class _MemberCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     // Carte MJ volontaire : jamais de `Material`/`InkWell` (pas de zone de
     // tap morte, rien à ouvrir), jamais le fond/la bordure "MORT", jamais de
     // jauge PV factice (voir [_buildGameMasterCard]).
-    if (member.isGameMaster) return _buildGameMasterCard();
+    if (member.isGameMaster) return _buildGameMasterCard(l10n);
 
     // Carte "en attente d'un personnage" (voir
     // [GroupMember.isAwaitingCharacter]) : même discipline que la carte MJ
     // (jamais le fond/la bordure "MORT", jamais de jauge PV factice) — mais
     // SA PROPRE ligne reste tappable ([onOpen] non `null` dans ce cas
     // uniquement, voir `GroupMembersTabBody.build`).
-    if (member.isAwaitingCharacter) return _buildAwaitingCharacterCard();
+    if (member.isAwaitingCharacter) return _buildAwaitingCharacterCard(l10n);
 
     final isDead = member.vitalStatus == CharacterVitalStatus.dead;
     final nameColor = isDead ? AppColors.textMuted : AppColors.textPrimary;
@@ -213,6 +216,7 @@ class _MemberCard extends StatelessWidget {
         onTap: onOpen,
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: _buildCard(
+          l10n: l10n,
           isDead: isDead,
           nameColor: nameColor,
           portrait: portrait,
@@ -222,6 +226,7 @@ class _MemberCard extends StatelessWidget {
   }
 
   Widget _buildCard({
+    required AppLocalizations l10n,
     required bool isDead,
     required Color nameColor,
     required Widget portrait,
@@ -275,7 +280,7 @@ class _MemberCard extends StatelessWidget {
                             ),
                             if (isSelf)
                               TextSpan(
-                                text: ' (toi)',
+                                text: l10n.groupMembersTabBodySelfSuffix,
                                 style: AppTypography.body(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -290,7 +295,7 @@ class _MemberCard extends StatelessWidget {
                     ),
                     if (member.vitalStatus != CharacterVitalStatus.alive) ...[
                       const SizedBox(width: AppSpacing.xs),
-                      _StatusBadge(status: member.vitalStatus!),
+                      _StatusBadge(status: member.vitalStatus!, l10n: l10n),
                     ],
                   ],
                 ),
@@ -312,7 +317,7 @@ class _MemberCard extends StatelessWidget {
                     ),
                     if ((member.temporaryHp ?? 0) > 0) ...[
                       const SizedBox(width: AppSpacing.xs),
-                      _TemporaryHpChip(amount: member.temporaryHp!),
+                      _TemporaryHpChip(amount: member.temporaryHp!, l10n: l10n),
                     ],
                   ],
                 ),
@@ -328,13 +333,18 @@ class _MemberCard extends StatelessWidget {
                   _ArmorClassLine(
                     armorClass: member.armorClass!,
                     armorClassBonus: member.armorClassBonus ?? 0,
+                    l10n: l10n,
                   ),
                 ],
               ],
             ),
           ),
           if (canRemove)
-            _RemoveMemberButton(memberName: member.name, onRemove: onRemove),
+            _RemoveMemberButton(
+              memberName: member.name,
+              onRemove: onRemove,
+              l10n: l10n,
+            ),
         ],
       ),
     );
@@ -352,7 +362,7 @@ class _MemberCard extends StatelessWidget {
   /// `deadCardBackground`. Pas de `Material`/`InkWell` : aucune zone de tap,
   /// rien à ouvrir pour un MJ volontaire. Le bouton "Exclure" (logique de
   /// permission inchangée) reste affiché à l'identique.
-  Widget _buildGameMasterCard() {
+  Widget _buildGameMasterCard(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -379,7 +389,7 @@ class _MemberCard extends StatelessWidget {
                   TextSpan(
                     children: [
                       TextSpan(
-                        text: 'MJ - ',
+                        text: l10n.groupMembersTabBodyGameMasterPrefix,
                         style: AppTypography.body(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -396,7 +406,7 @@ class _MemberCard extends StatelessWidget {
                       ),
                       if (isSelf)
                         TextSpan(
-                          text: ' (toi)',
+                          text: l10n.groupMembersTabBodySelfSuffix,
                           style: AppTypography.body(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -410,7 +420,7 @@ class _MemberCard extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Ne suit pas ses PV ici.',
+                  l10n.groupMembersTabBodyGameMasterHpNote,
                   style: AppTypography.body(
                     fontSize: 13,
                     color: AppColors.textMuted,
@@ -420,7 +430,11 @@ class _MemberCard extends StatelessWidget {
             ),
           ),
           if (canRemove)
-            _RemoveMemberButton(memberName: member.name, onRemove: onRemove),
+            _RemoveMemberButton(
+              memberName: member.name,
+              onRemove: onRemove,
+              l10n: l10n,
+            ),
         ],
       ),
     );
@@ -439,7 +453,7 @@ class _MemberCard extends StatelessWidget {
   /// (voir `GroupMembersTabBody.build`), géré ici de la même façon que
   /// [_buildGameMasterCard] gère son absence de zone de tap : si [onOpen]
   /// est fourni, la carte entière devient tappable.
-  Widget _buildAwaitingCharacterCard() {
+  Widget _buildAwaitingCharacterCard(AppLocalizations l10n) {
     final card = Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -475,7 +489,7 @@ class _MemberCard extends StatelessWidget {
                       ),
                       if (isSelf)
                         TextSpan(
-                          text: ' (toi)',
+                          text: l10n.groupMembersTabBodySelfSuffix,
                           style: AppTypography.body(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -497,7 +511,7 @@ class _MemberCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     Text(
-                      "En attente d'un personnage",
+                      l10n.groupMembersTabBodyAwaitingCharacterLabel,
                       style: AppTypography.body(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -510,7 +524,11 @@ class _MemberCard extends StatelessWidget {
             ),
           ),
           if (canRemove)
-            _RemoveMemberButton(memberName: member.name, onRemove: onRemove),
+            _RemoveMemberButton(
+              memberName: member.name,
+              onRemove: onRemove,
+              l10n: l10n,
+            ),
         ],
       ),
     );
@@ -531,10 +549,15 @@ class _MemberCard extends StatelessWidget {
 /// par l'appelant ([_MemberCard]), extrait pour être partagé à l'identique
 /// entre la carte personnage et la carte MJ sans personnage.
 class _RemoveMemberButton extends StatelessWidget {
-  const _RemoveMemberButton({required this.memberName, required this.onRemove});
+  const _RemoveMemberButton({
+    required this.memberName,
+    required this.onRemove,
+    required this.l10n,
+  });
 
   final String memberName;
   final VoidCallback onRemove;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -542,7 +565,7 @@ class _RemoveMemberButton extends StatelessWidget {
       width: 44,
       height: 44,
       child: IconButton(
-        tooltip: 'Exclure $memberName',
+        tooltip: l10n.groupMembersTabBodyRemoveMemberTooltip(memberName),
         onPressed: onRemove,
         icon: const Icon(
           Icons.person_remove_outlined,
@@ -574,9 +597,10 @@ const List<double> _greyscaleMatrix = <double>[
 /// "MORT" ([AppColors.alertBannerBackground]/[AppColors.accentBrick],
 /// inchangés) — jugés insuffisamment distinctifs entre les deux statuts.
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
+  const _StatusBadge({required this.status, required this.l10n});
 
   final CharacterVitalStatus status;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -606,7 +630,9 @@ class _StatusBadge extends StatelessWidget {
             const SizedBox(width: 4),
           ],
           Text(
-            isDead ? 'MORT' : 'INCONSCIENT',
+            isDead
+                ? l10n.groupMembersTabBodyDeadStatusLabel
+                : l10n.groupMembersTabBodyUnconsciousStatusLabel,
             style: AppTypography.display(fontSize: 11, color: accent),
           ),
         ],
@@ -681,16 +707,19 @@ class _ArmorClassLine extends StatelessWidget {
   const _ArmorClassLine({
     required this.armorClass,
     required this.armorClassBonus,
+    required this.l10n,
   });
 
   final int armorClass;
   final int armorClassBonus;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
+    final armorClassLabel = l10n.groupMembersTabBodyArmorClassLabel(armorClass);
     if (armorClassBonus == 0) {
       return Text(
-        'CA $armorClass',
+        armorClassLabel,
         style: AppTypography.body(fontSize: 13, color: AppColors.textSecondary),
       );
     }
@@ -699,7 +728,7 @@ class _ArmorClassLine extends StatelessWidget {
       TextSpan(
         children: [
           TextSpan(
-            text: 'CA $armorClass ',
+            text: '$armorClassLabel ',
             style: AppTypography.body(
               fontSize: 13,
               color: AppColors.textSecondary,
@@ -720,9 +749,10 @@ class _ArmorClassLine extends StatelessWidget {
 }
 
 class _TemporaryHpChip extends StatelessWidget {
-  const _TemporaryHpChip({required this.amount});
+  const _TemporaryHpChip({required this.amount, required this.l10n});
 
   final int amount;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -737,7 +767,7 @@ class _TemporaryHpChip extends StatelessWidget {
         border: Border.all(color: AppColors.accentTeal, width: 1),
       ),
       child: Text(
-        '+$amount PV temp.',
+        l10n.groupMembersTabBodyTemporaryHpChipLabel(amount),
         style: AppTypography.body(
           fontSize: 11,
           fontWeight: FontWeight.w700,
@@ -758,9 +788,9 @@ class _PrivacyExplanation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Text(
-      'Touche un membre pour voir sa fiche complète, en lecture seule. '
-      'Personne ne peut modifier le personnage d\u2019un autre.',
+      l10n.groupMembersTabBodyPrivacyExplanation,
       textAlign: TextAlign.center,
       style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
     );
@@ -807,13 +837,14 @@ class _LeaveGroupLinkLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(Icons.logout, size: 14, color: AppColors.accentBrick),
         const SizedBox(width: 4),
         Text(
-          'Quitter le groupe',
+          l10n.groupMembersTabBodyLeaveGroupLinkLabel,
           style: AppTypography.body(
             fontSize: 13,
             fontWeight: FontWeight.w700,

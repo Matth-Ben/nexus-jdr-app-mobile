@@ -1392,5 +1392,50 @@
   "groupCharacterReassignmentScreenCharactersLoadErrorMessage": "Unable to load your characters. Try again.",
   "groupCharacterReassignmentScreenNoCharacterNote": "You don't have a character yet to attach.",
   "groupCharacterReassignmentScreenRetryButtonLabel": "Retry",
-  "groupCharacterReassignmentScreenSavingOverlayMessage": "Updating the group..."
+  "groupCharacterReassignmentScreenSavingOverlayMessage": "Updating the group...",
+
+  "groupMembersTabBodyShareCodeBannerMessage": "Share this code to invite other players (tap it to copy it):",
+  "groupMembersTabBodyLiveUpdateLabel": "Live update",
+  "groupMembersTabBodyRemoveMemberTooltip": "Remove {memberName}",
+  "groupMembersTabBodyGameMasterPrefix": "GM - ",
+  "groupMembersTabBodySelfSuffix": " (you)",
+  "groupMembersTabBodyGameMasterHpNote": "Doesn't track HP here.",
+  "groupMembersTabBodyAwaitingCharacterLabel": "Awaiting a character",
+  "groupMembersTabBodyDeadStatusLabel": "DEAD",
+  "groupMembersTabBodyUnconsciousStatusLabel": "UNCONSCIOUS",
+  "groupMembersTabBodyArmorClassLabel": "AC {armorClass}",
+  "groupMembersTabBodyTemporaryHpChipLabel": "+{amount} temp. HP",
+  "groupMembersTabBodyPrivacyExplanation": "Tap a member to see their full character sheet, read-only. No one can edit another player's character.",
+  "groupMembersTabBodyLeaveGroupLinkLabel": "Leave the group",
+
+  "groupTreasureTabBodyGameMasterBannerMessage": "As a GM without a character, you can manage the shared loot but can't claim a share — only members with a character can.",
+  "groupTreasureTabBodyCurrencySectionLabel": "SHARED CURRENCY",
+  "groupTreasureTabBodyPendingItemsSectionLabel": "PENDING ITEMS",
+  "groupTreasureTabBodyClaimCurrencyButtonLabel": "Claim to my inventory",
+  "groupTreasureTabBodyAddToTreasureButtonLabel": "Add to the group's loot",
+  "groupTreasureTabBodyItemQuantityLabel": "× {quantity}",
+  "groupTreasureTabBodyClaimItemLinkLabel": "Claim",
+  "groupTreasureTabBodyEmptyItemsMessage": "No pending items.",
+
+  "groupNotesTabBodyHintText": "Take notes during the session: events, clues, twists…",
+  "groupNotesTabBodySaveButtonLabel": "Save",
+  "groupNotesTabBodyDictationUnavailableMessage": "Voice recognition unavailable on this device, or microphone access refused.",
+  "groupNotesTabBodyDictationErrorMessage": "Voice recognition error: {errorMsg}",
+
+  "addToGroupTreasureSheetTitle": "ADD TO THE GROUP'S LOOT",
+  "addToGroupTreasureSheetCurrencySectionLabel": "CURRENCY",
+  "addToGroupTreasureSheetItemsSectionLabel": "ITEMS",
+  "addToGroupTreasureSheetAddItemsButtonLabel": "Add items",
+  "addToGroupTreasureSheetCancelButtonLabel": "Cancel",
+  "addToGroupTreasureSheetApplyButtonLabel": "Add to the loot",
+  "addToGroupTreasureSheetItemQuantityLabel": "{name} × {quantity}",
+
+  "claimGroupTreasureCurrencySheetTitle": "CLAIM CURRENCY",
+  "claimGroupTreasureCurrencySheetCancelButtonLabel": "Cancel",
+  "claimGroupTreasureCurrencySheetApplyButtonLabel": "Claim",
+  "claimGroupTreasureCurrencySheetMaxLabel": "/ {max}",
+
+  "claimGroupTreasureItemSheetTitle": "Claim {itemName}",
+  "claimGroupTreasureItemSheetAvailableLabel": "{quantity, plural, =1{1 available} other{{quantity} available}}",
+  "claimGroupTreasureItemSheetSubmitButtonLabel": "Claim"
 }

@@ -53,7 +53,11 @@ GroupDetail _detail(
   members: members,
 );
 
-Future<void> _pump(WidgetTester tester, GroupDetail detail) async {
+Future<void> _pump(
+  WidgetTester tester,
+  GroupDetail detail, {
+  Locale locale = const Locale('fr'),
+}) async {
   final router = GoRouter(
     initialLocation: '/group',
     routes: [
@@ -93,7 +97,7 @@ Future<void> _pump(WidgetTester tester, GroupDetail detail) async {
       // sans ces delegates, l'appel renverrait `null` et le `!` planterait.
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('fr'),
+      locale: locale,
       routerConfig: router,
     ),
   );
@@ -426,6 +430,114 @@ void main() {
       await _pump(tester, _detail([_me, orphan]));
 
       expect(find.textContaining('CA '), findsNothing);
+    });
+  });
+
+  group('traduction anglaise', () {
+    testWidgets('indicateur "Live update", explication de confidentialité '
+        'et lien "Leave the group" en anglais', (tester) async {
+      await _pump(
+        tester,
+        _detail(const [_me, _friend], currentUserId: 'user-friend'),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('Live update'), findsOneWidget);
+      expect(
+        find.textContaining('see their full character sheet, read-only'),
+        findsOneWidget,
+      );
+      expect(find.text('Leave the group'), findsOneWidget);
+    });
+
+    testWidgets('suffixe " (you)" sur sa propre ligne', (tester) async {
+      await _pump(
+        tester,
+        _detail(const [_me, _friend]),
+        locale: const Locale('en'),
+      );
+
+      expect(find.textContaining('(you)', findRichText: true), findsOneWidget);
+    });
+
+    testWidgets('tooltip "Remove {name}" en anglais', (tester) async {
+      await _pump(
+        tester,
+        _detail(const [_me, _friend]),
+        locale: const Locale('en'),
+      );
+
+      final tooltipFinder = find.byWidgetPredicate(
+        (widget) => widget is Tooltip && widget.message == 'Remove Eldrin',
+      );
+      expect(tooltipFinder, findsOneWidget);
+    });
+
+    testWidgets('MJ volontaire : préfixe "GM - " et note PV neutre en '
+        'anglais', (tester) async {
+      const gameMaster = GroupMember(
+        userId: 'user-mj',
+        role: GroupRole.membre,
+        name: 'Oswald',
+        isGameMaster: true,
+      );
+      await _pump(
+        tester,
+        _detail(const [_me, gameMaster]),
+        locale: const Locale('en'),
+      );
+
+      expect(
+        find.textContaining('GM - Oswald', findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.text("Doesn't track HP here."), findsOneWidget);
+    });
+
+    testWidgets('membre orphelin : texte d\'état "Awaiting a character" en '
+        'anglais', (tester) async {
+      const orphanMember = GroupMember(
+        userId: 'user-orphan',
+        role: GroupRole.membre,
+        name: 'En attente d\'un personnage',
+        isGameMaster: false,
+      );
+      await _pump(
+        tester,
+        _detail(const [_me, orphanMember]),
+        locale: const Locale('en'),
+      );
+
+      expect(
+        find.textContaining('Awaiting a character', findRichText: true),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('badges "DEAD"/"UNCONSCIOUS" en anglais', (tester) async {
+      final deadMember = _friend.copyWith(isDead: true);
+      await _pump(
+        tester,
+        _detail([_me.copyWith(currentHp: 0), deadMember]),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('DEAD'), findsOneWidget);
+      expect(find.text('UNCONSCIOUS'), findsOneWidget);
+    });
+
+    testWidgets('ligne "AC {valeur}" en anglais', (tester) async {
+      final member = _me.copyWith(armorClass: 16, armorClassBonus: 0);
+      await _pump(tester, _detail([member]), locale: const Locale('en'));
+
+      expect(find.text('AC 16'), findsOneWidget);
+    });
+
+    testWidgets('chip "+{amount} temp. HP" en anglais', (tester) async {
+      final member = _me.copyWith(temporaryHp: 5);
+      await _pump(tester, _detail([member]), locale: const Locale('en'));
+
+      expect(find.text('+5 temp. HP'), findsOneWidget);
     });
   });
 }

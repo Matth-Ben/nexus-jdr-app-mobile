@@ -7,6 +7,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../characters/domain/currency_kind.dart';
 import '../../domain/group_treasure.dart';
 
@@ -117,6 +118,7 @@ class _ClaimGroupTreasureCurrencySheetContentState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: FractionallySizedBox(
@@ -125,7 +127,7 @@ class _ClaimGroupTreasureCurrencySheetContentState
           decoration: const BoxDecoration(color: AppColors.parchmentBg),
           child: Column(
             children: [
-              const SheetHeaderBar(title: "S'ATTRIBUER DE LA MONNAIE"),
+              SheetHeaderBar(title: l10n.claimGroupTreasureCurrencySheetTitle),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(AppSpacing.lg),
@@ -142,6 +144,7 @@ class _ClaimGroupTreasureCurrencySheetContentState
                                 controller:
                                     _controllers[_currencyFieldsOrder[i]]!,
                                 max: _maxFor(_currencyFieldsOrder[i]),
+                                l10n: l10n,
                               ),
                             ),
                           ],
@@ -158,6 +161,7 @@ class _ClaimGroupTreasureCurrencySheetContentState
                                 controller:
                                     _controllers[_currencyFieldsOrder[i]]!,
                                 max: _maxFor(_currencyFieldsOrder[i]),
+                                l10n: l10n,
                               ),
                             ),
                           ],
@@ -178,7 +182,8 @@ class _ClaimGroupTreasureCurrencySheetContentState
                   children: [
                     Expanded(
                       child: SecondaryButton(
-                        label: 'Annuler',
+                        label: l10n
+                            .claimGroupTreasureCurrencySheetCancelButtonLabel,
                         surface: SecondaryButtonSurface.parchment,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
@@ -186,7 +191,8 @@ class _ClaimGroupTreasureCurrencySheetContentState
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: PrimaryButton(
-                        label: "S'attribuer",
+                        label: l10n
+                            .claimGroupTreasureCurrencySheetApplyButtonLabel,
                         onPressed: _canApply ? _submit : null,
                       ),
                     ),
@@ -209,11 +215,13 @@ class _ClaimCurrencyField extends StatefulWidget {
     required this.currency,
     required this.controller,
     required this.max,
+    required this.l10n,
   });
 
   final CurrencyKind currency;
   final TextEditingController controller;
   final int max;
+  final AppLocalizations l10n;
 
   @override
   State<_ClaimCurrencyField> createState() => _ClaimCurrencyFieldState();
@@ -265,7 +273,7 @@ class _ClaimCurrencyFieldState extends State<_ClaimCurrencyField> {
         // `Expanded` (retour utilisateur).
         Center(
           child: Text(
-            '/ ${widget.max}',
+            widget.l10n.claimGroupTreasureCurrencySheetMaxLabel(widget.max),
             style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
           ),
         ),

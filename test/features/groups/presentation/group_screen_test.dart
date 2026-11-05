@@ -2,6 +2,7 @@
 // `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -270,6 +271,56 @@ GoRouter _buildTestRouter() {
         ),
       ),
     ],
+  );
+}
+
+const _speechChannel = MethodChannel('plugin.csdcorp.com/speech_to_text');
+
+/// Simule le moteur natif `speech_to_text` déclenchant son callback
+/// `onError` pendant une écoute active — même technique que
+/// `group_notes_tab_body_test.dart::_simulateNativeDictationError` (voir sa
+/// doc pour le détail : rejoue l'appel de méthode `notifyError` tel que
+/// `MethodChannelSpeechToText._handleCallbacks` le reçoit depuis la
+/// plateforme).
+Future<void> _simulateNativeDictationError(
+  WidgetTester tester, {
+  required String errorMsg,
+}) async {
+  final call = MethodCall(
+    'notifyError',
+    jsonEncode({'errorMsg': errorMsg, 'permanent': false}),
+  );
+  final data = _speechChannel.codec.encodeMethodCall(call);
+  await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+    _speechChannel.name,
+    data,
+    (_) {},
+  );
+}
+
+/// Simule le moteur natif annonçant la fin naturelle d'une écoute (ex.
+/// `notListening`), sans jamais passer par `SpeechToText.stop()`/`cancel()`
+/// côté Dart — c'est le seul moyen de reproduire fidèlement le scénario de
+/// régression : `speech_to_text` (voir son code source,
+/// `_onNotifyError`) ignore volontairement toute erreur reçue après que
+/// `stop()`/`cancel()` a été appelé explicitement (`_userEnded = true`
+/// combiné à l'absence d'écoute active) — un appel à `_speech.stop()` dans
+/// `dispose()` « empoisonnerait » donc le scénario avant même d'atteindre
+/// notre correctif. En envoyant `notifyStatus` directement (comme le ferait
+/// le moteur natif qui s'arrête tout seul, ex. timeout), seul le champ
+/// `_isListening` du widget passe à `false` (via son callback `onStatus`,
+/// voir `_DictationButtonState._toggle`) — jamais `SpeechToText.stop()` —
+/// ce qui laisse `_DictationButtonState.dispose()` ne RIEN appeler côté
+/// plugin au changement d'onglet, et donc laisse la voie libre à une
+/// erreur `notifyError` ultérieure pour atteindre `_handleError` alors que
+/// le widget est déjà démonté.
+Future<void> _simulateNativeDictationNotListening(WidgetTester tester) async {
+  final call = MethodCall('notifyStatus', 'notListening');
+  final data = _speechChannel.codec.encodeMethodCall(call);
+  await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+    _speechChannel.name,
+    data,
+    (_) {},
   );
 }
 
@@ -1052,6 +1103,72 @@ void main() {
       final button = tester.widget<PrimaryButton>(find.byType(PrimaryButton));
       expect(button.onPressed, isNull);
     });
+
+    testWidgets(
+      'une erreur de dictée arrivant après avoir quitté l\'onglet Notes '
+      "affiche quand même le SnackBar d'erreur (régression corrigée : "
+      '`_DictationButtonState` est démonté par `_buildNotesTab`, mais '
+      '`_GroupScreenState` reste monté, voir '
+      '`group_notes_tab_body.dart::_handleError`)',
+      (tester) async {
+        // Même principe que `group_notes_tab_body_test.dart` (voir sa doc en
+        // tête de fichier) : `initialize` doit réussir pour atteindre
+        // `_speech.listen(...)` et donc enregistrer le callback `onError`.
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          _speechChannel,
+          (call) async => call.method == 'initialize' ? true : null,
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            _speechChannel,
+            null,
+          ),
+        );
+
+        fakeRepository.detailToReturn = ownerViewDetail();
+        fakeRepository.noteToReturn = const GroupNote(
+          groupId: 'group-1',
+          characterId: 'char-1',
+        );
+
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('NOTES'));
+        await tester.pumpAndSettle();
+
+        // Démarre la dictée dans l'onglet Notes.
+        await tester.tap(find.byIcon(Icons.mic_none));
+        await tester.pumpAndSettle();
+        expect(find.byIcon(Icons.mic), findsOneWidget);
+
+        // Le moteur natif annonce lui-même la fin de l'écoute (ex. timeout
+        // interne), sans jamais passer par `stop()`/`cancel()` côté Dart —
+        // voir la doc de `_simulateNativeDictationNotListening` : c'est la
+        // seule façon de laisser la voie libre à l'erreur simulée plus bas,
+        // `speech_to_text` supprimant lui-même toute erreur reçue après un
+        // `stop()`/`cancel()` explicite.
+        await _simulateNativeDictationNotListening(tester);
+        await tester.pumpAndSettle();
+        expect(find.byIcon(Icons.mic_none), findsOneWidget);
+
+        // Change d'onglet : `_buildTabBody` reconstruit entièrement le
+        // corps (pas de `TabBarView`/`IndexedStack`), donc `GroupNotesTabBody`
+        // — et son `_DictationButton`, qui n'écoute plus mais reste
+        // enregistré comme `errorListener` du plugin — est démonté ici,
+        // alors que `_GroupScreenState` reste monté.
+        await tester.tap(find.text('MEMBRES'));
+        await tester.pumpAndSettle();
+
+        // Le moteur natif renvoie une erreur après ce changement d'onglet.
+        await _simulateNativeDictationError(tester, errorMsg: 'error_timeout');
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Erreur de reconnaissance vocale : error_timeout'),
+          findsOneWidget,
+        );
+      },
+    );
   });
 
   group('MJ sans personnage (décision du 12-13/10/2026)', () {

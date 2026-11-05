@@ -8,6 +8,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Callback "Enregistrer" de l'onglet "Notes" — voir
 /// `GroupRepository.saveGroupNote`. Reçoit le texte intégral du champ, pas un
@@ -82,6 +83,7 @@ class _GroupNotesTabBodyState extends State<GroupNotesTabBody> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Expanded(
@@ -92,10 +94,8 @@ class _GroupNotesTabBodyState extends State<GroupNotesTabBody> {
               maxLines: null,
               expands: true,
               textAlignVertical: TextAlignVertical.top,
-              decoration: const InputDecoration(
-                hintText:
-                    'Prends tes notes pendant la partie : événements, '
-                    'indices, rebondissements…',
+              decoration: InputDecoration(
+                hintText: l10n.groupNotesTabBodyHintText,
                 alignLabelWithHint: true,
               ),
             ),
@@ -118,7 +118,7 @@ class _GroupNotesTabBodyState extends State<GroupNotesTabBody> {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: PrimaryButton(
-                  label: 'Enregistrer',
+                  label: l10n.groupNotesTabBodySaveButtonLabel,
                   isLoading: widget.isSaving,
                   onPressed: (_isDirty && !widget.isSaving) ? _save : null,
                 ),
@@ -163,6 +163,14 @@ class _DictationButtonState extends State<_DictationButton> {
   bool _isBusy = false;
   String _baseText = '';
 
+  // Capturé à chaque `build()` (donc toujours à jour avec la locale
+  // courante) tant que ce widget est monté. `_handleError` peut être
+  // déclenché par le moteur système après démontage (ex. l'utilisateur
+  // quitte l'onglet Notes pendant l'écoute) : relire
+  // `AppLocalizations.of(context)` à cet instant planterait (context
+  // démonté), d'où ce champ plutôt qu'une relecture à la volée.
+  AppLocalizations? _l10n;
+
   @override
   void dispose() {
     if (_isListening) unawaited(_speech.stop());
@@ -177,6 +185,7 @@ class _DictationButtonState extends State<_DictationButton> {
       return;
     }
 
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isBusy = true);
     final available = await _speech.initialize(
       onError: (error) => _handleError(error),
@@ -189,10 +198,7 @@ class _DictationButtonState extends State<_DictationButton> {
     if (!mounted) return;
     if (!available) {
       setState(() => _isBusy = false);
-      widget.onError(
-        'Reconnaissance vocale indisponible sur cet appareil ou accès '
-        'micro refusé.',
-      );
+      widget.onError(l10n.groupNotesTabBodyDictationUnavailableMessage);
       return;
     }
 
@@ -204,9 +210,32 @@ class _DictationButtonState extends State<_DictationButton> {
     await _speech.listen(onResult: _handleResult);
   }
 
+  // `widget.onError` (= `GroupNotesTabBody.onDictationError`, relayé par
+  // l'écran "Groupe" vers son propre `ScaffoldMessenger`) doit rester
+  // appelé même après démontage de CE widget : `group_screen.dart`
+  // reconstruit/détruit `GroupNotesTabBody` à chaque changement d'onglet
+  // (pas de `TabBarView`/`IndexedStack`), alors que l'écran hôte, lui,
+  // reste monté. Cas réel où cela arrive : le moteur natif annonce lui-même
+  // la fin de l'écoute (`onStatus` 'done'/'notListening', ex. timeout
+  // interne) pendant que l'onglet Notes est encore affiché — `_isListening`
+  // repasse à `false` sans jamais appeler `_speech.stop()` — puis
+  // l'utilisateur change d'onglet (`dispose()` ne rappelle donc pas
+  // `stop()` non plus, `_isListening` étant déjà `false`), et seulement
+  // ensuite le moteur notifie une erreur de queue. (Si `dispose()` avait
+  // appelé `_speech.stop()`/`cancel()`, le plugin `speech_to_text`
+  // supprimerait lui-même cette erreur tardive — voir
+  // `SpeechToText._onNotifyError`, `_userEnded` — ce qui ne couvre donc pas
+  // ce cas précis mais rend ce garde ci-dessous nécessaire pour les autres.)
+  // Seul `setState` reste gardé par `mounted` (appeler `setState` sur un
+  // widget démonté est une vraie erreur Flutter) ; le texte, lui, utilise
+  // `_l10n` (capturé dans `build()`) plutôt que de relire
+  // `AppLocalizations.of(context)` ici, qui planterait si `context` est
+  // démonté.
   void _handleError(SpeechRecognitionError error) {
     if (mounted) setState(() => _isListening = false);
-    widget.onError('Erreur de reconnaissance vocale : ${error.errorMsg}');
+    final l10n = _l10n;
+    if (l10n == null) return;
+    widget.onError(l10n.groupNotesTabBodyDictationErrorMessage(error.errorMsg));
   }
 
   void _handleResult(SpeechRecognitionResult result) {
@@ -225,6 +254,7 @@ class _DictationButtonState extends State<_DictationButton> {
 
   @override
   Widget build(BuildContext context) {
+    _l10n = AppLocalizations.of(context)!;
     return Material(
       color: _isListening ? AppColors.accentBrick : AppColors.parchmentCard,
       borderRadius: BorderRadius.circular(AppRadius.md),

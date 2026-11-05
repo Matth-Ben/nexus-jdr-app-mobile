@@ -5041,4 +5041,155 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get groupCharacterReassignmentScreenSavingOverlayMessage =>
       'Mise à jour du groupe...';
+
+  @override
+  String get groupMembersTabBodyShareCodeBannerMessage =>
+      'Partage ce code pour inviter d\'autres joueurs (touche-le pour le copier) :';
+
+  @override
+  String get groupMembersTabBodyLiveUpdateLabel => 'Mis à jour en direct';
+
+  @override
+  String groupMembersTabBodyRemoveMemberTooltip(String memberName) {
+    return 'Exclure $memberName';
+  }
+
+  @override
+  String get groupMembersTabBodyGameMasterPrefix => 'MJ - ';
+
+  @override
+  String get groupMembersTabBodySelfSuffix => ' (toi)';
+
+  @override
+  String get groupMembersTabBodyGameMasterHpNote => 'Ne suit pas ses PV ici.';
+
+  @override
+  String get groupMembersTabBodyAwaitingCharacterLabel =>
+      'En attente d\'un personnage';
+
+  @override
+  String get groupMembersTabBodyDeadStatusLabel => 'MORT';
+
+  @override
+  String get groupMembersTabBodyUnconsciousStatusLabel => 'INCONSCIENT';
+
+  @override
+  String groupMembersTabBodyArmorClassLabel(int armorClass) {
+    return 'CA $armorClass';
+  }
+
+  @override
+  String groupMembersTabBodyTemporaryHpChipLabel(int amount) {
+    return '+$amount PV temp.';
+  }
+
+  @override
+  String get groupMembersTabBodyPrivacyExplanation =>
+      'Touche un membre pour voir sa fiche complète, en lecture seule. Personne ne peut modifier le personnage d\'un autre.';
+
+  @override
+  String get groupMembersTabBodyLeaveGroupLinkLabel => 'Quitter le groupe';
+
+  @override
+  String get groupTreasureTabBodyGameMasterBannerMessage =>
+      'En tant que MJ sans personnage, tu peux gérer le butin commun mais pas t\'attribuer une part — seuls les membres avec un personnage le peuvent.';
+
+  @override
+  String get groupTreasureTabBodyCurrencySectionLabel => 'MONNAIE COMMUNE';
+
+  @override
+  String get groupTreasureTabBodyPendingItemsSectionLabel =>
+      'OBJETS EN ATTENTE';
+
+  @override
+  String get groupTreasureTabBodyClaimCurrencyButtonLabel =>
+      'Répartir vers mon inventaire';
+
+  @override
+  String get groupTreasureTabBodyAddToTreasureButtonLabel =>
+      'Ajouter au butin du groupe';
+
+  @override
+  String groupTreasureTabBodyItemQuantityLabel(int quantity) {
+    return '× $quantity';
+  }
+
+  @override
+  String get groupTreasureTabBodyClaimItemLinkLabel => 'S\'attribuer';
+
+  @override
+  String get groupTreasureTabBodyEmptyItemsMessage => 'Aucun objet en attente.';
+
+  @override
+  String get groupNotesTabBodyHintText =>
+      'Prends tes notes pendant la partie : événements, indices, rebondissements…';
+
+  @override
+  String get groupNotesTabBodySaveButtonLabel => 'Enregistrer';
+
+  @override
+  String get groupNotesTabBodyDictationUnavailableMessage =>
+      'Reconnaissance vocale indisponible sur cet appareil ou accès micro refusé.';
+
+  @override
+  String groupNotesTabBodyDictationErrorMessage(String errorMsg) {
+    return 'Erreur de reconnaissance vocale : $errorMsg';
+  }
+
+  @override
+  String get addToGroupTreasureSheetTitle => 'AJOUTER AU BUTIN DU GROUPE';
+
+  @override
+  String get addToGroupTreasureSheetCurrencySectionLabel => 'MONNAIE';
+
+  @override
+  String get addToGroupTreasureSheetItemsSectionLabel => 'OBJETS';
+
+  @override
+  String get addToGroupTreasureSheetAddItemsButtonLabel => 'Ajouter des objets';
+
+  @override
+  String get addToGroupTreasureSheetCancelButtonLabel => 'Annuler';
+
+  @override
+  String get addToGroupTreasureSheetApplyButtonLabel => 'Ajouter au butin';
+
+  @override
+  String addToGroupTreasureSheetItemQuantityLabel(String name, int quantity) {
+    return '$name × $quantity';
+  }
+
+  @override
+  String get claimGroupTreasureCurrencySheetTitle =>
+      'S\'ATTRIBUER DE LA MONNAIE';
+
+  @override
+  String get claimGroupTreasureCurrencySheetCancelButtonLabel => 'Annuler';
+
+  @override
+  String get claimGroupTreasureCurrencySheetApplyButtonLabel => 'S\'attribuer';
+
+  @override
+  String claimGroupTreasureCurrencySheetMaxLabel(int max) {
+    return '/ $max';
+  }
+
+  @override
+  String claimGroupTreasureItemSheetTitle(String itemName) {
+    return 'Réclamer $itemName';
+  }
+
+  @override
+  String claimGroupTreasureItemSheetAvailableLabel(int quantity) {
+    String _temp0 = intl.Intl.pluralLogic(
+      quantity,
+      locale: localeName,
+      other: '$quantity disponibles',
+      one: '1 disponible',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get claimGroupTreasureItemSheetSubmitButtonLabel => 'Réclamer';
 }
