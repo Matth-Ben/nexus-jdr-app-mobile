@@ -120,11 +120,11 @@ return failure(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( XmlCharacterImportRaw character)?  success,TResult Function( String message)?  failure,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( XmlCharacterImportRaw character)?  success,TResult Function( XmlImportParseErrorCode code)?  failure,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case XmlImportParseSuccess() when success != null:
 return success(_that.character);case XmlImportParseFailure() when failure != null:
-return failure(_that.message);case _:
+return failure(_that.code);case _:
   return orElse();
 
 }
@@ -142,11 +142,11 @@ return failure(_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( XmlCharacterImportRaw character)  success,required TResult Function( String message)  failure,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( XmlCharacterImportRaw character)  success,required TResult Function( XmlImportParseErrorCode code)  failure,}) {final _that = this;
 switch (_that) {
 case XmlImportParseSuccess():
 return success(_that.character);case XmlImportParseFailure():
-return failure(_that.message);}
+return failure(_that.code);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -160,11 +160,11 @@ return failure(_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( XmlCharacterImportRaw character)?  success,TResult? Function( String message)?  failure,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( XmlCharacterImportRaw character)?  success,TResult? Function( XmlImportParseErrorCode code)?  failure,}) {final _that = this;
 switch (_that) {
 case XmlImportParseSuccess() when success != null:
 return success(_that.character);case XmlImportParseFailure() when failure != null:
-return failure(_that.message);case _:
+return failure(_that.code);case _:
   return null;
 
 }
@@ -251,10 +251,10 @@ $XmlCharacterImportRawCopyWith<$Res> get character {
 
 
 class XmlImportParseFailure implements XmlImportParseResult {
-  const XmlImportParseFailure(this.message);
+  const XmlImportParseFailure(this.code);
   
 
- final  String message;
+ final  XmlImportParseErrorCode code;
 
 /// Create a copy of XmlImportParseResult
 /// with the given fields replaced by the non-null parameter values.
@@ -266,16 +266,16 @@ $XmlImportParseFailureCopyWith<XmlImportParseFailure> get copyWith => _$XmlImpor
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is XmlImportParseFailure&&(identical(other.message, message) || other.message == message));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is XmlImportParseFailure&&(identical(other.code, code) || other.code == code));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,message);
+int get hashCode => Object.hash(runtimeType,code);
 
 @override
 String toString() {
-  return 'XmlImportParseResult.failure(message: $message)';
+  return 'XmlImportParseResult.failure(code: $code)';
 }
 
 
@@ -286,7 +286,7 @@ abstract mixin class $XmlImportParseFailureCopyWith<$Res> implements $XmlImportP
   factory $XmlImportParseFailureCopyWith(XmlImportParseFailure value, $Res Function(XmlImportParseFailure) _then) = _$XmlImportParseFailureCopyWithImpl;
 @useResult
 $Res call({
- String message
+ XmlImportParseErrorCode code
 });
 
 
@@ -303,10 +303,10 @@ class _$XmlImportParseFailureCopyWithImpl<$Res>
 
 /// Create a copy of XmlImportParseResult
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? message = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? code = null,}) {
   return _then(XmlImportParseFailure(
-null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
-as String,
+null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as XmlImportParseErrorCode,
   ));
 }
 

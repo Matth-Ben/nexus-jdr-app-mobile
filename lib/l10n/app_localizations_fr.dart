@@ -5192,4 +5192,345 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get claimGroupTreasureItemSheetSubmitButtonLabel => 'Réclamer';
+
+  @override
+  String get xmlImportReviewScreenHeaderTitle => 'VÉRIFICATION IMPORT';
+
+  @override
+  String xmlImportReviewScreenHeaderSubtitle(String fileName) {
+    return '$fileName importé depuis aidedd.org';
+  }
+
+  @override
+  String xmlImportReviewScreenLoadingSubtitle(String fileName) {
+    return 'Analyse de $fileName en cours...';
+  }
+
+  @override
+  String get xmlImportReviewScreenInvalidFileHeaderTitle => 'IMPORT XML';
+
+  @override
+  String get xmlImportReviewScreenNetworkErrorMessage =>
+      'Impossible de charger les données de référence. Réessayez.';
+
+  @override
+  String get xmlImportReviewScreenAllFieldsResolvedMessage =>
+      'Tous les champs ont été reconnus automatiquement.';
+
+  @override
+  String xmlImportReviewScreenUnresolvedFieldsCountMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count champs nécessitent une correction manuelle avant validation',
+      one: '1 champ nécessite une correction manuelle avant validation',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get xmlImportReviewScreenValidateButtonLabel =>
+      'Valider le personnage';
+
+  @override
+  String get xmlImportReviewScreenMissingRaceField => 'la race';
+
+  @override
+  String get xmlImportReviewScreenMissingClassField => 'la classe';
+
+  @override
+  String get xmlImportReviewScreenMissingRacialChoicesField =>
+      'les bonus raciaux au choix';
+
+  @override
+  String get xmlImportReviewScreenFieldConjunction => 'et';
+
+  @override
+  String xmlImportReviewScreenMissingFieldsErrorMessage(String missingFields) {
+    return 'Corrigez d\'abord $missingFields avant d\'enregistrer ce personnage.';
+  }
+
+  @override
+  String get xmlImportReviewScreenUnresolvedDialogTitle => 'CHAMPS NON RÉSOLUS';
+
+  @override
+  String get xmlImportReviewScreenUnresolvedDialogMessage =>
+      'Certains éléments importés n\'ont pas pu être reconnus automatiquement. Ils seront enregistrés comme non catalogués et resteront corrigibles plus tard depuis la fiche du personnage.';
+
+  @override
+  String get xmlImportReviewScreenUnresolvedDialogBackButtonLabel =>
+      'Retourner corriger';
+
+  @override
+  String get xmlImportReviewScreenUnresolvedDialogContinueButtonLabel =>
+      'Continuer';
+
+  @override
+  String get xmlImportReviewScreenDefaultCharacterName => 'Personnage importé';
+
+  @override
+  String get xmlImportReviewScreenGenericSaveErrorMessage =>
+      'Une erreur est survenue. Réessayez.';
+
+  @override
+  String get xmlImportReviewScreenNameFieldTitle => 'Nom';
+
+  @override
+  String get xmlImportReviewScreenRaceFieldTitle => 'Race';
+
+  @override
+  String get xmlImportReviewScreenClassFieldTitle => 'Classe';
+
+  @override
+  String get xmlImportReviewScreenSubclassFieldTitle => 'Sous-classe';
+
+  @override
+  String get xmlImportReviewScreenLevelFieldTitle => 'Niveau';
+
+  @override
+  String get xmlImportReviewScreenBackgroundFieldTitle => 'Historique';
+
+  @override
+  String get xmlImportReviewScreenAbilityScoresFieldTitle => 'Caractéristiques';
+
+  @override
+  String get xmlImportReviewScreenHitPointsFieldTitle => 'Points de vie';
+
+  @override
+  String get xmlImportReviewScreenSkillsFieldTitle => 'Compétences';
+
+  @override
+  String get xmlImportReviewScreenToolsFieldTitle => 'Outils';
+
+  @override
+  String get xmlImportReviewScreenLanguagesFieldTitle => 'Langues';
+
+  @override
+  String get xmlImportReviewScreenInnateSpellsFieldTitle => 'Sorts innés';
+
+  @override
+  String get xmlImportReviewScreenKnownSpellsFieldTitle => 'Sorts connus';
+
+  @override
+  String get xmlImportReviewScreenCurrencyFieldTitle => 'Argent';
+
+  @override
+  String get xmlImportReviewScreenArmorFieldTitle => 'Armure';
+
+  @override
+  String get xmlImportReviewScreenShieldFieldTitle => 'Bouclier';
+
+  @override
+  String get xmlImportReviewScreenWeaponsFieldTitle => 'Armes';
+
+  @override
+  String get xmlImportReviewScreenToolEquipmentFieldTitle => 'Outils physiques';
+
+  @override
+  String get xmlImportReviewScreenItemsFieldTitle => 'Objets';
+
+  @override
+  String get xmlImportReviewScreenCustomItemsFieldTitle =>
+      'Objets personnalisés';
+
+  @override
+  String get xmlImportReviewScreenCustomItemsBadgeLabel => 'Personnalisé';
+
+  @override
+  String get xmlImportReviewScreenStartingPackFieldTitle =>
+      'Paquetage de départ';
+
+  @override
+  String xmlImportReviewScreenStartingPackUnrecognizedLabel(String rawValue) {
+    return 'Non reconnu (traçabilité uniquement) : $rawValue';
+  }
+
+  @override
+  String get xmlImportReviewScreenAlignmentFieldTitle => 'Alignement';
+
+  @override
+  String get xmlImportReviewScreenSexFieldTitle => 'Sexe';
+
+  @override
+  String get xmlImportReviewScreenAppearanceFieldTitle => 'Apparence';
+
+  @override
+  String get xmlImportReviewScreenHistoryFieldTitle => 'Histoire';
+
+  @override
+  String get xmlImportReviewScreenExperienceFieldTitle => 'Expérience';
+
+  @override
+  String get xmlImportReviewScreenNoNameValue => 'Sans nom';
+
+  @override
+  String get xmlImportReviewScreenFilledValueLabel => 'Renseignée';
+
+  @override
+  String get xmlImportReviewScreenNotFilledValueLabel => 'Non renseignée';
+
+  @override
+  String get xmlImportReviewScreenIncompleteDataBadgeLabel =>
+      'Donnée incomplète';
+
+  @override
+  String xmlImportReviewScreenExperienceValue(int xp) {
+    return '$xp XP';
+  }
+
+  @override
+  String xmlImportReviewScreenHitPointsValue(int hp) {
+    return '$hp PV';
+  }
+
+  @override
+  String get xmlImportReviewScreenNoCurrencyValue => 'Aucune';
+
+  @override
+  String xmlImportReviewScreenGoldAmount(int amount) {
+    return '$amount po';
+  }
+
+  @override
+  String xmlImportReviewScreenPlatinumAmount(int amount) {
+    return '$amount pp';
+  }
+
+  @override
+  String xmlImportReviewScreenElectrumAmount(int amount) {
+    return '$amount pe';
+  }
+
+  @override
+  String xmlImportReviewScreenSilverAmount(int amount) {
+    return '$amount pa';
+  }
+
+  @override
+  String xmlImportReviewScreenCopperAmount(int amount) {
+    return '$amount pc';
+  }
+
+  @override
+  String xmlImportReviewScreenFieldUnrecognizedMessage(
+    String title,
+    String rawValue,
+  ) {
+    return '$title non reconnu(e) : \"$rawValue\"';
+  }
+
+  @override
+  String xmlImportReviewScreenUncatalogedItemsCountMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count éléments non catalogués — à corriger manuellement.',
+      one: '1 élément non catalogué — à corriger manuellement.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String xmlImportReviewScreenUncatalogedSpellsCountMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sorts non catalogués — à corriger manuellement.',
+      one: '1 sort non catalogué — à corriger manuellement.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String xmlImportReviewScreenCorrectionSheetTitle(String title) {
+    return 'CORRIGER : $title';
+  }
+
+  @override
+  String get xmlImportReviewScreenCorrectEntryButtonLabel => 'Corriger';
+
+  @override
+  String get xmlImportReviewScreenKeepAllAsCustomButtonLabel =>
+      'Tout garder comme éléments personnalisés';
+
+  @override
+  String get xmlImportReviewScreenSearchFieldHint => 'Rechercher...';
+
+  @override
+  String get xmlImportReviewScreenNoMatchMessage =>
+      'Aucune correspondance trouvée.';
+
+  @override
+  String get xmlImportReviewScreenKeepAsCustomButtonLabel =>
+      'Garder comme élément personnalisé';
+
+  @override
+  String get xmlImportReviewScreenConfirmButtonLabel => 'Confirmer';
+
+  @override
+  String get xmlImportReviewScreenPlaceholderSaveErrorMessage =>
+      'Impossible d\'enregistrer cet élément. Réessayez.';
+
+  @override
+  String get xmlImportReviewScreenPlaceholderSavingInProgressMessage =>
+      'Enregistrement en cours...';
+
+  @override
+  String get xmlImportReviewScreenSavingOverlayMessage =>
+      'Enregistrement du personnage...';
+
+  @override
+  String get xmlImportReviewScreenInvalidFileTitle => 'Fichier illisible';
+
+  @override
+  String get xmlImportReviewScreenInvalidFileSubtitle =>
+      'Ce fichier ne semble pas être un export aidedd.org valide.';
+
+  @override
+  String get xmlImportReviewScreenInvalidFilePickAnotherButtonLabel =>
+      'Choisir un autre fichier';
+
+  @override
+  String get xmlImportReviewScreenInvalidFileCancelButtonLabel => 'Annuler';
+
+  @override
+  String get xmlImportReviewScreenRetryButtonLabel => 'Réessayer';
+
+  @override
+  String get xmlImportReviewScreenUnhandledStyleCombatFieldLabel =>
+      'Style de combat';
+
+  @override
+  String get xmlImportReviewScreenUnhandledKnownInvocationFieldLabel =>
+      'Invocation connue';
+
+  @override
+  String get xmlImportReviewScreenUnhandledFavoredEnemyFieldLabel =>
+      'Ennemi juré';
+
+  @override
+  String xmlImportReviewScreenUnhandledFieldsMessage(String fields) {
+    return 'Non importé automatiquement dans cette version : $fields.';
+  }
+
+  @override
+  String get xmlImportReviewScreenAbilityIncreasesPresentMessage =>
+      'Augmentations de caractéristiques : présentes dans le fichier mais non interprétées automatiquement.';
+
+  @override
+  String get xmlImportReviewScreenParseErrorInvalidXml =>
+      'Ce fichier n\'est pas un XML valide.';
+
+  @override
+  String get xmlImportReviewScreenParseErrorMissingBuilderRoot =>
+      'Ce fichier ne semble pas être un export aidedd.org (racine <builder> introuvable).';
+
+  @override
+  String get xmlImportReviewScreenParseErrorMissingCharacterElement =>
+      'Ce fichier ne semble pas être un export aidedd.org (balise <character> introuvable).';
+
+  @override
+  String get xmlImportReviewScreenParseErrorMissingRequiredFields =>
+      'Ce fichier ne contient pas les informations minimales d\'un personnage (nom, race, classe, historique).';
 }

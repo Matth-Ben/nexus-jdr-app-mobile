@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/xml_import/data/xml_character_import_parser.dart';
+import 'package:personnages/features/xml_import/domain/xml_import_parse_error_code.dart';
 import 'package:personnages/features/xml_import/domain/xml_import_parse_result.dart';
 
 String _readFixture(String fileName) =>
@@ -205,37 +206,65 @@ void main() {
   });
 
   group('cas malformés / non reconnus', () {
-    test('XML illisible -> failure explicite', () {
+    // `.code` (`XmlImportParseErrorCode`, pas un message déjà construit,
+    // chantier de traduction Phase B, lot "XML import") vérifié valeur par
+    // valeur pour chacun des 4 cas distincts du parseur — la résolution en
+    // texte affichable vit désormais côté présentation
+    // (`xml_import_review_screen_test.dart`), ce fichier reste domain/data.
+    test('XML illisible -> failure explicite (invalidXml)', () {
       final result = XmlCharacterImportParser.parse(
         'ceci n\'est pas du xml <<<',
       );
       expect(result, isA<XmlImportParseFailure>());
+      expect(
+        (result as XmlImportParseFailure).code,
+        XmlImportParseErrorCode.invalidXml,
+      );
     });
 
-    test('chaîne vide -> failure explicite', () {
+    test('chaîne vide -> failure explicite (invalidXml)', () {
       final result = XmlCharacterImportParser.parse('');
       expect(result, isA<XmlImportParseFailure>());
+      expect(
+        (result as XmlImportParseFailure).code,
+        XmlImportParseErrorCode.invalidXml,
+      );
     });
 
-    test('XML valide mais racine inattendue -> failure explicite', () {
+    test('XML valide mais racine inattendue -> failure explicite '
+        '(missingBuilderRoot)', () {
       final result = XmlCharacterImportParser.parse(
         '<?xml version="1.0"?><notBuilder></notBuilder>',
       );
       expect(result, isA<XmlImportParseFailure>());
+      expect(
+        (result as XmlImportParseFailure).code,
+        XmlImportParseErrorCode.missingBuilderRoot,
+      );
     });
 
-    test('<builder> sans <character> -> failure explicite', () {
+    test('<builder> sans <character> -> failure explicite '
+        '(missingCharacterElement)', () {
       final result = XmlCharacterImportParser.parse(
         '<?xml version="1.0"?><builder></builder>',
       );
       expect(result, isA<XmlImportParseFailure>());
+      expect(
+        (result as XmlImportParseFailure).code,
+        XmlImportParseErrorCode.missingCharacterElement,
+      );
     });
 
-    test('<character> sans les champs minimaux -> failure explicite', () {
+    test('<character> sans les champs minimaux -> failure explicite '
+        '(missingRequiredFields)', () {
       final result = XmlCharacterImportParser.parse(
         '<?xml version="1.0"?><builder><character></character></builder>',
       );
       expect(result, isA<XmlImportParseFailure>());
+      expect(
+        (result as XmlImportParseFailure).code,
+        XmlImportParseErrorCode.missingRequiredFields,
+      );
     });
   });
 

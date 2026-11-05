@@ -672,6 +672,62 @@ const _multipleAlertsXml = '''
 </builder>
 ''';
 
+/// Même base que [_cleanXml], mais avec un seul objet non catalogué (`item`
+/// id 9001, absent de `AideddReferenceTables.items`) — couvre la forme
+/// SINGULIÈRE du pluriel ICU
+/// `xmlImportReviewScreenUncatalogedItemsCountMessage` ("1 élément non
+/// catalogué"), jamais exercée ailleurs dans ce fichier (seule la forme
+/// plurielle l'est, via [_multipleAlertsXml] avec 2 objets).
+const _singleUncatalogedItemXml = '''
+<?xml version="1.0" encoding="UTF-8"?>
+<builder>
+<character>
+<name>Test Héros</name>
+<race>Elfe</race>
+<class>Magicien</class>
+<background>Sage</background>
+<level>1</level>
+<str>10</str><dex>10</dex><con>10</con><int>10</int><wis>10</wis><cha>10</cha>
+<armor>0</armor>
+<shield>0</shield>
+<alignment>4</alignment>
+<sexe>0</sexe>
+<item>9001</item>
+<itemQ>1</itemQ>
+<gp>0</gp><pp>0</pp><ep>0</ep><sp>0</sp><cp>0</cp>
+</character>
+</builder>
+''';
+
+/// Même base que [_cleanXml], mais avec un sort inné non catalogué (compte 1,
+/// forme SINGULIÈRE) et deux sorts connus non catalogués (compte 2, forme
+/// PLURIELLE) — `fakeCharacterCreationRepository.spellCatalogToReturn` reste
+/// vide par défaut dans `setUp`, donc n'importe quel nom de sort devient
+/// `XmlFieldResolutionUnrecognized`. Couvre
+/// `xmlImportReviewScreenUncatalogedSpellsCountMessage`, jamais exercé par
+/// aucun test de ce fichier avant son ajout (ni singulier ni pluriel).
+const _uncatalogedSpellsXml = '''
+<?xml version="1.0" encoding="UTF-8"?>
+<builder>
+<character>
+<name>Test Héros</name>
+<race>Elfe</race>
+<class>Magicien</class>
+<background>Sage</background>
+<level>1</level>
+<str>10</str><dex>10</dex><con>10</con><int>10</int><wis>10</wis><cha>10</cha>
+<armor>0</armor>
+<shield>0</shield>
+<alignment>4</alignment>
+<sexe>0</sexe>
+<innateSpell lvl="0">Sort Inné Inconnu</innateSpell>
+<knownSpell lvl="1">Sort Connu A</knownSpell>
+<knownSpell lvl="1">Sort Connu B</knownSpell>
+<gp>0</gp><pp>0</pp><ep>0</ep><sp>0</sp><cp>0</cp>
+</character>
+</builder>
+''';
+
 /// Même base que [_cleanXml], mais avec une race ET une classe homebrew (non
 /// cataloguées) — seul cas qui doit réellement bloquer "Valider le
 /// personnage" (voir la doc de
@@ -835,10 +891,12 @@ void main() {
   Widget buildTestWidget({
     required String xmlSource,
     String fileName = 'test.xml',
+    Locale locale = const Locale('fr'),
   }) {
     return UncontrolledProviderScope(
       container: container,
       child: MaterialApp.router(
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: GoRouter(
@@ -973,6 +1031,45 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'carte consolidée (Objets, 1 élément) : forme SINGULIÈRE du pluriel ICU '
+    '"1 élément non catalogué..."',
+    (WidgetTester tester) async {
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(xmlSource: _singleUncatalogedItemXml),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('1 élément non catalogué — à corriger manuellement.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'cartes consolidées (Sorts innés, Sorts connus) : formes SINGULIÈRE '
+    '("1 sort non catalogué...") et PLURIELLE ("2 sorts non catalogués...") '
+    'du pluriel ICU des sorts',
+    (WidgetTester tester) async {
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(xmlSource: _uncatalogedSpellsXml),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('1 sort non catalogué — à corriger manuellement.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('2 sorts non catalogués — à corriger manuellement.'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('carte d\'alerte : icône d\'avertissement seule à droite, pas de '
       'chevron (correctif de conformité visuelle direction-artistique du '
@@ -1325,4 +1422,178 @@ void main() {
       expect(fakePlaceholderCatalogRepository.findOrCreateRaceCallCount, 1);
     },
   );
+
+  group('traduction anglaise', () {
+    testWidgets('état "Chargement" : bandeau et sous-titre en anglais', (
+      WidgetTester tester,
+    ) async {
+      fakeCharacterCreationRepository.raceCatalogCompleter = Completer();
+
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(xmlSource: _cleanXml, locale: const Locale('en')),
+      );
+      await tester.pump();
+
+      expect(find.text('IMPORT REVIEW'), findsOneWidget);
+      expect(find.textContaining('Analyzing test.xml'), findsOneWidget);
+    });
+
+    testWidgets('happy path (0 alerte) : bandeau, texte de statut et bouton '
+        '"VALIDATE CHARACTER" en anglais, sauvegarde toujours fonctionnelle', (
+      WidgetTester tester,
+    ) async {
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(xmlSource: _cleanXml, locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('test.xml imported from aidedd.org'), findsOneWidget);
+      expect(
+        find.text('All fields were recognized automatically.'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('VALIDATE CHARACTER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeXmlImportRepository.saveCallCount, 1);
+    });
+
+    testWidgets(
+      'alertes multiples : décompte pluriel ICU "3 fields need..." en '
+      'anglais, carte consolidée "2 uncataloged items..."',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(
+          buildTestWidget(
+            xmlSource: _multipleAlertsXml,
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('3 fields need a manual correction before validation'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Alignment not recognized'), findsOneWidget);
+        expect(
+          find.text('2 uncataloged items — need manual correction.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'carte consolidée (Objets, 1 élément) en anglais : forme SINGULIÈRE '
+      '"1 uncataloged item needs..."',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(
+          buildTestWidget(
+            xmlSource: _singleUncatalogedItemXml,
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('1 uncataloged item — needs manual correction.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'cartes consolidées (Sorts innés, Sorts connus) en anglais : formes '
+      'SINGULIÈRE "1 uncataloged spell needs..." et PLURIELLE "2 uncataloged '
+      'spells need..."',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(
+          buildTestWidget(
+            xmlSource: _uncatalogedSpellsXml,
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('1 uncataloged spell — needs manual correction.'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('2 uncataloged spells — need manual correction.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'alerte unique : décompte singulier ICU "1 field needs..." en anglais',
+      (WidgetTester tester) async {
+        fakeCharacterCreationRepository.subclassCatalogToReturn =
+            const SubclassCatalog(subclasses: [_evocation]);
+
+        growTestViewport(tester);
+        await tester.pumpWidget(
+          buildTestWidget(
+            xmlSource: _unrecognizedSubclassXml,
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('1 field needs a manual correction before validation'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('race et classe non reconnues : message bloquant en anglais', (
+      WidgetTester tester,
+    ) async {
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(
+          xmlSource: _raceAndClassUnresolvedXml,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('VALIDATE CHARACTER'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Fix race and class first before saving this character.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'état "Erreur" (XML invalide) : bandeau, titre, sous-titre, message '
+      'détaillé et boutons en anglais',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(
+          buildTestWidget(xmlSource: _invalidXml, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('XML IMPORT'), findsOneWidget);
+        expect(find.text('Unreadable file'), findsOneWidget);
+        expect(
+          find.text("This file doesn't look like a valid aidedd.org export."),
+          findsOneWidget,
+        );
+        expect(find.text('This file is not valid XML.'), findsOneWidget);
+        expect(find.text('CHOOSE ANOTHER FILE'), findsOneWidget);
+        expect(find.text('Cancel'), findsOneWidget);
+      },
+    );
+  });
 }

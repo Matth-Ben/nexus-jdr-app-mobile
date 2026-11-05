@@ -5141,4 +5141,338 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get claimGroupTreasureItemSheetSubmitButtonLabel => 'Claim';
+
+  @override
+  String get xmlImportReviewScreenHeaderTitle => 'IMPORT REVIEW';
+
+  @override
+  String xmlImportReviewScreenHeaderSubtitle(String fileName) {
+    return '$fileName imported from aidedd.org';
+  }
+
+  @override
+  String xmlImportReviewScreenLoadingSubtitle(String fileName) {
+    return 'Analyzing $fileName...';
+  }
+
+  @override
+  String get xmlImportReviewScreenInvalidFileHeaderTitle => 'XML IMPORT';
+
+  @override
+  String get xmlImportReviewScreenNetworkErrorMessage =>
+      'Couldn\'t load the reference data. Try again.';
+
+  @override
+  String get xmlImportReviewScreenAllFieldsResolvedMessage =>
+      'All fields were recognized automatically.';
+
+  @override
+  String xmlImportReviewScreenUnresolvedFieldsCountMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fields need a manual correction before validation',
+      one: '1 field needs a manual correction before validation',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get xmlImportReviewScreenValidateButtonLabel => 'Validate character';
+
+  @override
+  String get xmlImportReviewScreenMissingRaceField => 'race';
+
+  @override
+  String get xmlImportReviewScreenMissingClassField => 'class';
+
+  @override
+  String get xmlImportReviewScreenMissingRacialChoicesField =>
+      'the racial bonuses to assign';
+
+  @override
+  String get xmlImportReviewScreenFieldConjunction => 'and';
+
+  @override
+  String xmlImportReviewScreenMissingFieldsErrorMessage(String missingFields) {
+    return 'Fix $missingFields first before saving this character.';
+  }
+
+  @override
+  String get xmlImportReviewScreenUnresolvedDialogTitle => 'UNRESOLVED FIELDS';
+
+  @override
+  String get xmlImportReviewScreenUnresolvedDialogMessage =>
+      'Some imported elements couldn\'t be recognized automatically. They will be saved as uncataloged and will remain correctable later from the character sheet.';
+
+  @override
+  String get xmlImportReviewScreenUnresolvedDialogBackButtonLabel =>
+      'Go back and fix';
+
+  @override
+  String get xmlImportReviewScreenUnresolvedDialogContinueButtonLabel =>
+      'Continue';
+
+  @override
+  String get xmlImportReviewScreenDefaultCharacterName => 'Imported character';
+
+  @override
+  String get xmlImportReviewScreenGenericSaveErrorMessage =>
+      'Something went wrong. Try again.';
+
+  @override
+  String get xmlImportReviewScreenNameFieldTitle => 'Name';
+
+  @override
+  String get xmlImportReviewScreenRaceFieldTitle => 'Race';
+
+  @override
+  String get xmlImportReviewScreenClassFieldTitle => 'Class';
+
+  @override
+  String get xmlImportReviewScreenSubclassFieldTitle => 'Subclass';
+
+  @override
+  String get xmlImportReviewScreenLevelFieldTitle => 'Level';
+
+  @override
+  String get xmlImportReviewScreenBackgroundFieldTitle => 'Background';
+
+  @override
+  String get xmlImportReviewScreenAbilityScoresFieldTitle => 'Ability scores';
+
+  @override
+  String get xmlImportReviewScreenHitPointsFieldTitle => 'Hit points';
+
+  @override
+  String get xmlImportReviewScreenSkillsFieldTitle => 'Skills';
+
+  @override
+  String get xmlImportReviewScreenToolsFieldTitle => 'Tools';
+
+  @override
+  String get xmlImportReviewScreenLanguagesFieldTitle => 'Languages';
+
+  @override
+  String get xmlImportReviewScreenInnateSpellsFieldTitle => 'Innate spells';
+
+  @override
+  String get xmlImportReviewScreenKnownSpellsFieldTitle => 'Known spells';
+
+  @override
+  String get xmlImportReviewScreenCurrencyFieldTitle => 'Currency';
+
+  @override
+  String get xmlImportReviewScreenArmorFieldTitle => 'Armor';
+
+  @override
+  String get xmlImportReviewScreenShieldFieldTitle => 'Shield';
+
+  @override
+  String get xmlImportReviewScreenWeaponsFieldTitle => 'Weapons';
+
+  @override
+  String get xmlImportReviewScreenToolEquipmentFieldTitle => 'Tool equipment';
+
+  @override
+  String get xmlImportReviewScreenItemsFieldTitle => 'Items';
+
+  @override
+  String get xmlImportReviewScreenCustomItemsFieldTitle => 'Custom items';
+
+  @override
+  String get xmlImportReviewScreenCustomItemsBadgeLabel => 'Custom';
+
+  @override
+  String get xmlImportReviewScreenStartingPackFieldTitle => 'Starting pack';
+
+  @override
+  String xmlImportReviewScreenStartingPackUnrecognizedLabel(String rawValue) {
+    return 'Not recognized (traceability only): $rawValue';
+  }
+
+  @override
+  String get xmlImportReviewScreenAlignmentFieldTitle => 'Alignment';
+
+  @override
+  String get xmlImportReviewScreenSexFieldTitle => 'Sex';
+
+  @override
+  String get xmlImportReviewScreenAppearanceFieldTitle => 'Appearance';
+
+  @override
+  String get xmlImportReviewScreenHistoryFieldTitle => 'Backstory';
+
+  @override
+  String get xmlImportReviewScreenExperienceFieldTitle => 'Experience';
+
+  @override
+  String get xmlImportReviewScreenNoNameValue => 'No name';
+
+  @override
+  String get xmlImportReviewScreenFilledValueLabel => 'Filled in';
+
+  @override
+  String get xmlImportReviewScreenNotFilledValueLabel => 'Not filled in';
+
+  @override
+  String get xmlImportReviewScreenIncompleteDataBadgeLabel => 'Incomplete data';
+
+  @override
+  String xmlImportReviewScreenExperienceValue(int xp) {
+    return '$xp XP';
+  }
+
+  @override
+  String xmlImportReviewScreenHitPointsValue(int hp) {
+    return '$hp HP';
+  }
+
+  @override
+  String get xmlImportReviewScreenNoCurrencyValue => 'None';
+
+  @override
+  String xmlImportReviewScreenGoldAmount(int amount) {
+    return '$amount gp';
+  }
+
+  @override
+  String xmlImportReviewScreenPlatinumAmount(int amount) {
+    return '$amount pp';
+  }
+
+  @override
+  String xmlImportReviewScreenElectrumAmount(int amount) {
+    return '$amount ep';
+  }
+
+  @override
+  String xmlImportReviewScreenSilverAmount(int amount) {
+    return '$amount sp';
+  }
+
+  @override
+  String xmlImportReviewScreenCopperAmount(int amount) {
+    return '$amount cp';
+  }
+
+  @override
+  String xmlImportReviewScreenFieldUnrecognizedMessage(
+    String title,
+    String rawValue,
+  ) {
+    return '$title not recognized: \"$rawValue\"';
+  }
+
+  @override
+  String xmlImportReviewScreenUncatalogedItemsCountMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count uncataloged items — need manual correction.',
+      one: '1 uncataloged item — needs manual correction.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String xmlImportReviewScreenUncatalogedSpellsCountMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count uncataloged spells — need manual correction.',
+      one: '1 uncataloged spell — needs manual correction.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String xmlImportReviewScreenCorrectionSheetTitle(String title) {
+    return 'FIX: $title';
+  }
+
+  @override
+  String get xmlImportReviewScreenCorrectEntryButtonLabel => 'Fix';
+
+  @override
+  String get xmlImportReviewScreenKeepAllAsCustomButtonLabel =>
+      'Keep all as custom items';
+
+  @override
+  String get xmlImportReviewScreenSearchFieldHint => 'Search...';
+
+  @override
+  String get xmlImportReviewScreenNoMatchMessage => 'No match found.';
+
+  @override
+  String get xmlImportReviewScreenKeepAsCustomButtonLabel =>
+      'Keep as custom item';
+
+  @override
+  String get xmlImportReviewScreenConfirmButtonLabel => 'Confirm';
+
+  @override
+  String get xmlImportReviewScreenPlaceholderSaveErrorMessage =>
+      'Couldn\'t save this item. Try again.';
+
+  @override
+  String get xmlImportReviewScreenPlaceholderSavingInProgressMessage =>
+      'Saving...';
+
+  @override
+  String get xmlImportReviewScreenSavingOverlayMessage => 'Saving character...';
+
+  @override
+  String get xmlImportReviewScreenInvalidFileTitle => 'Unreadable file';
+
+  @override
+  String get xmlImportReviewScreenInvalidFileSubtitle =>
+      'This file doesn\'t look like a valid aidedd.org export.';
+
+  @override
+  String get xmlImportReviewScreenInvalidFilePickAnotherButtonLabel =>
+      'Choose another file';
+
+  @override
+  String get xmlImportReviewScreenInvalidFileCancelButtonLabel => 'Cancel';
+
+  @override
+  String get xmlImportReviewScreenRetryButtonLabel => 'Retry';
+
+  @override
+  String get xmlImportReviewScreenUnhandledStyleCombatFieldLabel =>
+      'Fighting style';
+
+  @override
+  String get xmlImportReviewScreenUnhandledKnownInvocationFieldLabel =>
+      'Known invocation';
+
+  @override
+  String get xmlImportReviewScreenUnhandledFavoredEnemyFieldLabel =>
+      'Favored enemy';
+
+  @override
+  String xmlImportReviewScreenUnhandledFieldsMessage(String fields) {
+    return 'Not imported automatically in this version: $fields.';
+  }
+
+  @override
+  String get xmlImportReviewScreenAbilityIncreasesPresentMessage =>
+      'Ability score increases: present in the file but not interpreted automatically.';
+
+  @override
+  String get xmlImportReviewScreenParseErrorInvalidXml =>
+      'This file is not valid XML.';
+
+  @override
+  String get xmlImportReviewScreenParseErrorMissingBuilderRoot =>
+      'This file doesn\'t look like an aidedd.org export (missing <builder> root).';
+
+  @override
+  String get xmlImportReviewScreenParseErrorMissingCharacterElement =>
+      'This file doesn\'t look like an aidedd.org export (missing <character> tag).';
+
+  @override
+  String get xmlImportReviewScreenParseErrorMissingRequiredFields =>
+      'This file doesn\'t contain the minimum information for a character (name, race, class, background).';
 }

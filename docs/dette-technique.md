@@ -917,6 +917,28 @@ D160.
 |---|---|---|---|---|
 | D160 | `core/widgets/stepper_counter.dart::_StepperButton` passe `semanticLabel: 'Diminuer'`/`'Augmenter'` en dur (aucun import `AppLocalizations`) à l'`Icon` des 2 boutons +/- — lu par un lecteur d'écran dans N'IMPORTE QUELLE langue de l'app (ex. `claim_group_treasure_item_sheet.dart`, mais aussi l'étape "Caractéristiques" de l'assistant de création et l'inventaire, tous deux déjà migrés par des lots précédents). Trouvé incidemment en lisant ce composant partagé pour le lot "Groups — onglets/butin", jamais mentionné par un audit ni un lot précédent. | basse (texte non visuel, lecteur d'écran uniquement — mais composant partagé, donc large surface) | Migrer `_StepperButton`/`StepperCounter` vers `.arb` — d'autres widgets de `core/widgets/` consomment déjà `AppLocalizations` sans problème (même dépôt, pas de contrainte d'architecture qui l'empêcherait) | Ouvert, non traité |
 
+## Ajouts liés au lot "XML import" de la Phase B traduction (05/11/2026)
+
+`xml_import_review_screen.dart` (et son contrôleur `xml_import_providers.dart`) migrent vers
+`.arb` (86 clés). Le texte de résolution d'échec de parsing (`XmlCharacterImportParser.parse`,
+4 cas distincts) est sorti de `domain/` vers un nouvel enum stable
+(`domain/xml_import_parse_error_code.dart::XmlImportParseErrorCode`), résolu en texte affichable
+uniquement côté `presentation/` — même principe que `CharacterErrorCode`/`GroupErrorCode`, mais
+sans champ `message` de repli transitoire (un seul consommateur existant). Restent explicitement
+dynamiques, jamais capturés en `.arb` : tous les noms de race/classe/sous-classe/historique/sort/
+objet/compétence/outil/langue résolus depuis le catalogue D&D (`XmlCharacterImportResolved` et les
+catalogues `character_creation/domain/`), le texte libre du fichier XML importé (nom, historique
+rédigé), et les tables de correspondance `domain/aidedd_reference_tables.dart` (libellés aidedd.org
+pour les champs "codés" sans catalogue Supabase propre — compétences/armure/armes/outils/objets/
+alignement/sexe — utilisées pour matcher le catalogue interne par nom à la sauvegarde, jamais du
+texte d'écran). Deux cas trouvés en cours de lot, documentés ci-dessous plutôt que corrigés
+silencieusement.
+
+| ID | Constat | Gravité | Correction | État |
+|---|---|---|---|---|
+| D161 | Même mécanique transitoire que `CharacterFailure`/`GroupFailure` (D141/D158) autour de `CharacterCreationFailure.message` (D148) : `xml_import_review_screen.dart::_buildError`/`_save` lisent `error.message`/`failure.message` directement sur une `CharacterCreationFailure` (erreur réseau de chargement des catalogues côté `_NetworkErrorState`, et échec de `XmlImportRepository.saveImportedCharacter` qui réutilise volontairement ce même type — voir la documentation de classe de `data/xml_import_repository.dart` — y compris pour son propre message "Session expirée. Reconnectez-vous pour importer un personnage." et son fallback `_saveImportedCharacterErrorMessage`). D148 ne comptait que "13 écrans de tout le module `character_creation`" : cet écran vit dans `xml_import`, donc hors de ce compte, mais souffre exactement du même défaut (un échec réseau réel reste affiché en français quelle que soit la langue de l'app) — signalé comme une extension de D148 plutôt qu'une nouvelle entrée isolée. | basse (texte secondaire, chemin d'erreur réseau peu fréquent — pas une donnée fausse) | Même correction que D148 : introduire un code d'erreur stable sur `CharacterCreationFailure` (même principe que `CharacterErrorCode`/D141), à résoudre côté `presentation/` — chantier transverse qui dépasse ce seul lot, vu le nombre d'écrans déjà concernés par D148 | Ouvert, non traité |
+| D162 | `XmlImportSaveDataResolver.resolve` (`domain/xml_import_save_data_resolver.dart`) écrit le littéral français `'Non renseigné'` dans `XmlImportSaveData.sexe` (donc dans la colonne `characters.sexe`, texte libre sans FK — voir la documentation de classe du fichier) quand le champ `<sexe>` du fichier source est absent ou vide (`_labelOf` retombe sur `null`). C'est un défaut DATA, pas seulement d'affichage : `character_appearance_card.dart` (déjà migré, fiche personnage) traite au contraire l'absence de donnée par une chaîne vide (`detail.sexe.trim().isNotEmpty`), jamais par une phrase explicite — un personnage importé sans `<sexe>` se retrouve donc avec un "Non renseigné" figé en français en base, qui ne suit jamais la langue de l'app (contrairement à l'affichage habituel de ce même champ pour un personnage créé manuellement, qui reste vide tant que rien n'est saisi). Repéré en auditant ce fichier pour confirmer qu'aucun texte destiné à l'affichage ne s'y cachait (point 1 de la consigne de ce lot) — `domain/` reste sans `BuildContext`, aucune correction n'a donc été tentée dans ce lot. | moyenne (persiste une valeur de donnée figée en français dans `characters.sexe`, pas seulement un texte d'écran — un personnage importé sans sexe renseigné affichera "Non renseigné" même pour un joueur anglophone, et cette valeur est écrite une fois pour toutes à l'import) | Écrire une chaîne vide (`''`) plutôt que `'Non renseigné'` quand `_labelOf` retombe sur `null` — aligne `XmlImportSaveDataResolver` sur la convention déjà appliquée par `character_appearance_card.dart` pour ce même champ ; changement de comportement (pas une simple traduction), à valider par le chef de projet avant d'être appliqué | Ouvert, non traité |
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont
