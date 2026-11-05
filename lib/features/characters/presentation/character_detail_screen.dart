@@ -2272,7 +2272,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                             tooltip: l10n.characterDetailHelpTooltip,
                             onPressed: () => showStepHelpSheet(
                               context,
-                              CharacterSheetHelp.personnage,
+                              CharacterSheetHelp.personnage(l10n),
                             ),
                             icon: const Icon(
                               Icons.info_outline,

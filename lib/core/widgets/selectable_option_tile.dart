@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
@@ -24,7 +25,7 @@ class SelectableOptionTile extends StatelessWidget {
     this.selectedDetail,
     this.subtitleMaxLines = 1,
     this.onInfo,
-    this.infoTooltip = 'Informations',
+    this.infoTooltip,
     this.enabled = true,
     super.key,
   });
@@ -58,8 +59,10 @@ class SelectableOptionTile extends StatelessWidget {
   /// utilisateur, 2026-09-24). `null` : pas de bouton.
   final VoidCallback? onInfo;
 
-  /// Libellé d'accessibilité du bouton ⓘ.
-  final String infoTooltip;
+  /// Libellé d'accessibilité du bouton ⓘ. `null` retombe sur
+  /// [AppLocalizations.selectableOptionTileInfoTooltip] — aucun appelant ne
+  /// le surcharge à ce jour.
+  final String? infoTooltip;
 
   /// `false` estompe la tuile (`Opacity` à 0.45, même valeur que
   /// `CheckableOptionTile.enabled`) et désactive l'interaction ([onTap]/
@@ -75,6 +78,8 @@ class SelectableOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Opacity(
       opacity: enabled ? 1 : 0.45,
       child: Material(
@@ -139,7 +144,8 @@ class SelectableOptionTile extends StatelessWidget {
                 ),
                 if (onInfo != null)
                   IconButton(
-                    tooltip: infoTooltip,
+                    tooltip:
+                        infoTooltip ?? l10n.selectableOptionTileInfoTooltip,
                     onPressed: enabled ? onInfo : null,
                     icon: const Icon(
                       Icons.info_outline_rounded,

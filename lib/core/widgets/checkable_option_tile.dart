@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
@@ -46,7 +47,7 @@ class CheckableOptionTile extends StatelessWidget {
     this.showIndicator = true,
     this.titleTrailing,
     this.onInfo,
-    this.infoTooltip = 'Informations',
+    this.infoTooltip,
     super.key,
   });
 
@@ -116,8 +117,10 @@ class CheckableOptionTile extends StatelessWidget {
   /// existants.
   final VoidCallback? onInfo;
 
-  /// Libellé d'accessibilité du bouton ⓘ.
-  final String infoTooltip;
+  /// Libellé d'accessibilité du bouton ⓘ. `null` retombe sur
+  /// [AppLocalizations.checkableOptionTileInfoTooltip] — aucun appelant ne le
+  /// surcharge à ce jour.
+  final String? infoTooltip;
 
   /// Zone de tap minimale imposée par le design système (section 7,
   /// Accessibilité : "Zones de tap ≥ 44×44px sur tous les éléments
@@ -131,6 +134,8 @@ class CheckableOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     // Estompé seulement pour une option non cochée et désactivée (quota
     // atteint) — jamais pour un octroi automatique déjà coché, voir la
     // documentation de la classe.
@@ -228,7 +233,7 @@ class CheckableOptionTile extends StatelessWidget {
                 ],
                 if (onInfo != null)
                   IconButton(
-                    tooltip: infoTooltip,
+                    tooltip: infoTooltip ?? l10n.checkableOptionTileInfoTooltip,
                     onPressed: enabled ? onInfo : null,
                     icon: const Icon(
                       Icons.info_outline_rounded,

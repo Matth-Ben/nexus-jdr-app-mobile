@@ -2342,6 +2342,18 @@ abstract class AppLocalizations {
   /// **'Aide'**
   String get characterDetailHelpTooltip;
 
+  /// Titre de la sheet d'aide contextuelle ouverte par l'icône "?" (`characterDetailHelpTooltip`) de l'onglet "Personnage" — voir `CharacterSheetHelp.personnage` (`features/characters/domain/character_sheet_help.dart`), consommée par `showStepHelpSheet` (même panneau que `CreationStepHelp`).
+  ///
+  /// In fr, this message translates to:
+  /// **'La fiche personnage'**
+  String get characterSheetHelpTitle;
+
+  /// Corps de la sheet d'aide ci-dessus — abréviations de caractéristiques (FOR, DEX, CON, INT, SAG, CHA) volontairement gardées telles quelles en anglais aussi, `ability_score_definitions.dart` n'étant pas encore traduit (D157 de docs/dette-technique.md, non résolu) ; les autres abréviations/libellés (VIT./CA/INIT./INSP., onglets Aptitudes/Sorts/Sac/Histoire) suivent au contraire leur traduction réelle déjà en place (`characterStatPills*Label`/`characterDetailTab*Label`).
+  ///
+  /// In fr, this message translates to:
+  /// **'VIT. (vitesse) : distance que ton personnage parcourt en un tour.\nCA (classe d\'armure) : le score qu\'un ennemi doit atteindre pour te toucher, calculé depuis ton armure, ton bouclier et ta Dextérité.\nINIT. (initiative) : ton bonus au jet qui fixe l\'ordre de jeu en combat — touche la tuile pour le lancer.\nINSP. (inspiration) : accordée par le MJ, touche la tuile pour l\'activer ou la dépenser.\n\nPoints de vie : utilise les boutons de la carte pour encaisser des dégâts, te soigner ou prendre un repos.\n\nCaractéristiques (FOR, DEX, CON, INT, SAG, CHA) : score et modificateur — touche une tuile pour lancer un jet.\n\nOnglets du bas : Aptitudes, Sorts, Sac et Histoire regroupent le reste de ta fiche ; dans les listes, touche un élément pour voir son détail.\n\nPartager (icône lien) : crée un lien de lecture seule vers cette fiche, par exemple pour ton MJ. Le menu ⋮ permet d\'exporter en XML, archiver ou supprimer le personnage.'**
+  String get characterSheetHelpBody;
+
   /// `tooltip` de l'icône "⋮" du bandeau bois (menu "Modifier"/"Exporter en XML"/"Archiver"/"Marquer comme mort"/"Supprimer"), onglet "Personnage" uniquement.
   ///
   /// In fr, this message translates to:
@@ -9584,6 +9596,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Exporter quand même'**
   String get characterXmlExportMulticlassWarningConfirmButton;
+
+  /// Libellé d'accessibilité par défaut du bouton ⓘ de `core/widgets/checkable_option_tile.dart::CheckableOptionTile.infoTooltip`. Aucun appelant ne le surcharge à ce jour.
+  ///
+  /// In fr, this message translates to:
+  /// **'Informations'**
+  String get checkableOptionTileInfoTooltip;
+
+  /// Libellé d'accessibilité par défaut du bouton ⓘ de `core/widgets/selectable_option_tile.dart::SelectableOptionTile.infoTooltip`. Aucun appelant ne le surcharge à ce jour.
+  ///
+  /// In fr, this message translates to:
+  /// **'Informations'**
+  String get selectableOptionTileInfoTooltip;
+
+  /// Libellé d'accessibilité de `core/widgets/dice_type_badge.dart::DiceTypeBadge` (pastille "icône de dé + notation" affichée à côté d'un sort ou d'un objet d'inventaire).
+  ///
+  /// In fr, this message translates to:
+  /// **'dé à {sides} faces, {label}'**
+  String diceTypeBadgeSemanticLabel(int sides, String label);
+
+  /// `SecondaryButton` "Réessayer" de `core/widgets/error_retry_state.dart::ErrorRetryState`, état d'erreur centré partagé par les feuilles qui chargent une liste.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get errorRetryStateRetryButton;
+
+  /// Libellé d'accessibilité (`semanticLabel`) du bouton "-" de `core/widgets/stepper_counter.dart::StepperCounter` — ferme D160 (`docs/dette-technique.md`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Diminuer'**
+  String get stepperCounterDecreaseLabel;
+
+  /// Libellé d'accessibilité (`semanticLabel`) du bouton "+" de `core/widgets/stepper_counter.dart::StepperCounter` — ferme D160 (`docs/dette-technique.md`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Augmenter'**
+  String get stepperCounterIncreaseLabel;
 }
 
 class _AppLocalizationsDelegate

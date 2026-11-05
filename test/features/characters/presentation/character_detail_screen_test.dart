@@ -1210,6 +1210,26 @@ void main() {
     },
   );
 
+  testWidgets(
+    'le bouton ⓘ du bandeau bois (onglet "Personnage") ouvre la sheet '
+    "d'aide contextuelle de la fiche",
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Aide'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('LA FICHE PERSONNAGE'), findsOneWidget);
+      expect(
+        find.textContaining("distance que ton personnage parcourt en un tour"),
+        findsOneWidget,
+      );
+    },
+  );
+
   group('Marquer comme mort / Ressusciter (menu "…" du bandeau bois)', () {
     testWidgets(
       'affiche "Marquer comme mort" pour un personnage vivant, appelle '
@@ -3265,5 +3285,26 @@ void main() {
 
       expect(find.text('Bouclier cast (level 1 slot).'), findsOneWidget);
     });
+
+    testWidgets(
+      'le bouton ⓘ du bandeau bois ouvre la sheet d\'aide en anglais',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester, locale: const Locale('en'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byTooltip('Help'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('THE CHARACTER SHEET'), findsOneWidget);
+        expect(
+          find.textContaining(
+            'the distance your character can move in one turn',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }

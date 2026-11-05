@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
@@ -27,8 +28,10 @@ class DiceTypeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Semantics(
-      label: 'dé à $sides faces, $label',
+      label: l10n.diceTypeBadgeSemanticLabel(sides, label),
       container: true,
       excludeSemantics: true,
       child: Row(

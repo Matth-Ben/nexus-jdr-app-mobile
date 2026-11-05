@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
@@ -33,13 +34,15 @@ class StepperCounter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         _StepperButton(
           icon: Icons.remove,
           onPressed: onDecrement,
-          semanticLabel: 'Diminuer',
+          semanticLabel: l10n.stepperCounterDecreaseLabel,
         ),
         SizedBox(
           width: 32,
@@ -55,7 +58,7 @@ class StepperCounter extends StatelessWidget {
         _StepperButton(
           icon: Icons.add,
           onPressed: onIncrement,
-          semanticLabel: 'Augmenter',
+          semanticLabel: l10n.stepperCounterIncreaseLabel,
         ),
       ],
     );
