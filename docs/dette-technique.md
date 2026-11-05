@@ -865,6 +865,25 @@ que vers D148/D149.
 |---|---|---|---|---|
 | D157 | Le motif d'abréviation de caractéristique ("For"/"Dex"/"Con"/"Int"/"Sag"/"Cha") est codé en dur en français dans 3 fichiers `domain/` distincts, tous les trois réellement affichés à l'écran (en anglais comme en français) : `ability_score_definitions.dart` (champs `label`/`abbreviation` des 6 `AbilityScoreDefinition`), consommé par `racial_bonus_choice_card.dart`, `skills_and_tools_step_screen.dart`, `class_choice_step_screen.dart` et `character_ability_score_grid.dart` (fiche personnage, hors `character_creation`) ; `race_summary_formatter.dart` (map `_abilityAbbreviations` + le littéral `'+1 à toutes les caractéristiques'`), consommé par `ability_score_step_screen.dart` ; `skill_ability_mapping.dart` (`abilityAbbreviationBySkill`), consommé par `skills_and_tools_step_screen.dart`/`class_choice_step_screen.dart`. Même famille de défaut que D142/D143/D146/D148/D149/D151/D154 (classe `domain/` sans `BuildContext`). | basse (texte secondaire, pas une donnée fausse — juste une langue qui ne suit pas le réglage de l'app) | Migrer ces 3 fichiers vers le pattern "fonction `(l10n) => ...`" déjà établi (voir D142/D143/D146/D148/D149/D151/D154) — chantier à part, qui touche aussi `character_ability_score_grid.dart` déjà mergé dans le chantier Characters, hors `character_creation` | Ouvert, non traité |
 
+## Ajouts liés au lot "Groups — rejoindre/créer" de la Phase B traduction (05/11/2026)
+
+Premier sous-lot de la fonctionnalité `groups` (`group_list_screen.dart`/`group_create_screen.dart`/
+`group_join_screen.dart`, ainsi que les 3 widgets partagés `group_confirmation_dialog.dart`/
+`group_invite_code_chip.dart`/`member_color_chips_row.dart`, ce dernier sans aucun texte à migrer —
+seul `'+$count'`, un format numérique sans mot, déjà laissé tel quel ailleurs dans le dépôt, ex.
+`ability_score_step_screen.dart`/`racial_bonus_choice_card.dart`). Introduit `GroupErrorCode`
+(même rationale qu'`AuthErrorCode`/`CharacterErrorCode`/`ProfileErrorCode`/D141), puisque les 2
+écrans de ce lot affichent directement `GroupFailure.message`, contrairement au lot "Characters —
+liste" qui n'avait migré qu'un seul appelant (`character_card_action_sheet.dart`). `GroupInviteFailure`
+(`group_join_screen.dart`) n'a en revanche nécessité aucun nouveau mécanisme : son enum
+`GroupInviteFailureKind` existait déjà et l'écran résolvait déjà chaque valeur vers un texte fixe
+construit en présentation (jamais `failure.serverMessage`), donc une migration directe vers `.arb`
+sans toucher au domaine.
+
+| ID | Constat | Gravité | Correction | État |
+|---|---|---|---|---|
+| D158 | `GroupFailure.message` reste un texte français en dur, dupliqué manuellement par rapport aux clés `.arb` équivalentes (`groupAccessDeniedErrorMessage`/`groupNetworkErrorMessage`, nouvel enum `GroupErrorCode` posé par ce lot), pour que les appelants pas encore migrés continuent de fonctionner sans modification — même mécanique transitoire que `CharacterFailure`/D141. Seuls `group_list_screen.dart` (`myGroupsProvider`) et `group_create_screen.dart` (`createGroup`) lisent désormais `.code`. Tous les autres consommateurs de ce dépôt (`group_screen.dart` — 5 points d'appel, `group_settings_screen.dart` — 3 points d'appel, `group_character_reassignment_screen.dart` — 1 point d'appel) continuent de lire `failure.message` directement, hors périmètre de ce lot (ils seront couverts par de futurs sous-lots `groups`). | basse pendant la transition (comportement voulu), mais risque de dérive texte dupliqué à mesure que les lots suivants s'accumulent | Chaque futur lot qui migre un nouvel écran consommant `GroupFailure` doit lire `.code` plutôt que `.message` (en complétant `GroupErrorCode` si besoin), vérifier que le texte français en dur de `group_error_mapper.dart`/`group_repository.dart::_mapEdgeFunctionError` reste identique aux clés `.arb` correspondantes tant qu'un appelant non migré en dépend encore. Une fois tous les appelants migrés, retirer `GroupFailure.message` | Ouvert, non traité |
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont

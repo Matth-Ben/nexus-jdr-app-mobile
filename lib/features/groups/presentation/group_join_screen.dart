@@ -11,6 +11,7 @@ import '../../../core/widgets/portrait_frame.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/sheet_header_bar.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../characters/domain/character_failure.dart';
 import '../../characters/domain/character_summary.dart';
 import '../../characters/presentation/providers/character_providers.dart';
@@ -26,9 +27,6 @@ const int _rawCodeLength = 8;
 /// cette tâche), gardé pour ne pas durcir la validation au-delà de ce qui
 /// existait déjà.
 const int _rawCodeMinLength = 6;
-
-const String _genericJoinErrorMessage =
-    'Impossible de rejoindre ce groupe. Réessayez.';
 
 /// Écran unique "REJOINDRE UN GROUPE", route `/groups/join` — recettage
 /// direction-artistique du 13/09/2026 (`docs/cahier-des-charges/
@@ -150,6 +148,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
   Future<void> _openRolePicker(
     AsyncValue<List<CharacterSummary>> charactersAsync,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     final selected = _selectedCharacter(charactersAsync.value ?? const []);
     return showModalBottomSheet<void>(
       context: context,
@@ -163,7 +162,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
             decoration: const BoxDecoration(color: AppColors.parchmentBg),
             child: Column(
               children: [
-                const SheetHeaderBar(title: 'CHOISIR TON RÔLE'),
+                SheetHeaderBar(title: l10n.groupJoinScreenRolePickerTitle),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.all(AppSpacing.lg),
@@ -209,8 +208,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
                         error: (error, stackTrace) => _CharacterTileError(
                           message: error is CharacterFailure
                               ? error.message
-                              : 'Impossible de charger vos personnages. '
-                                    'Réessayez.',
+                              : l10n.groupJoinScreenCharactersLoadErrorMessage,
                           onRetry: () => ref.invalidate(charactersProvider),
                         ),
                       ),
@@ -240,6 +238,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
   /// `joinGroup` (rattachement) — voir la documentation de classe pour le
   /// détail de la migration et le routage des 2 canaux d'erreur.
   Future<void> _submit(List<CharacterSummary> characters) async {
+    final l10n = AppLocalizations.of(context)!;
     final code = _rawCurrentCode;
     final character = _joinAsGameMaster ? null : _selectedCharacter(characters);
     final hasRole = _joinAsGameMaster || character != null;
@@ -260,9 +259,9 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
       setState(() {
         _isJoining = false;
         if (failure.kind == GroupInviteFailureKind.invalidCode) {
-          _codeErrorMessage = "Ce code d'invitation n'est pas valide.";
+          _codeErrorMessage = l10n.groupJoinScreenInvalidCodeErrorMessage;
         } else {
-          _bannerMessage = _genericJoinErrorMessage;
+          _bannerMessage = l10n.groupJoinScreenGenericErrorMessage;
         }
       });
       return;
@@ -270,7 +269,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
       if (!mounted) return;
       setState(() {
         _isJoining = false;
-        _bannerMessage = _genericJoinErrorMessage;
+        _bannerMessage = l10n.groupJoinScreenGenericErrorMessage;
       });
       return;
     }
@@ -280,8 +279,9 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
           .read(groupRepositoryProvider)
           .joinGroup(code: code, characterId: character?.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Groupe rejoint !')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.groupJoinScreenSuccessSnackbar)),
+      );
       context.go('/groups/${result.groupId}');
     } on GroupInviteFailure catch (failure) {
       if (!mounted) return;
@@ -289,26 +289,27 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
         _isJoining = false;
         switch (failure.kind) {
           case GroupInviteFailureKind.invalidCode:
-            _codeErrorMessage = "Ce code d'invitation n'est pas valide.";
+            _codeErrorMessage = l10n.groupJoinScreenInvalidCodeErrorMessage;
           case GroupInviteFailureKind.alreadyInGroup:
-            _bannerMessage = 'Ce personnage est déjà membre de ce groupe.';
+            _bannerMessage = l10n.groupJoinScreenAlreadyInGroupErrorMessage;
           case GroupInviteFailureKind.mjAlreadyAssigned:
-            _bannerMessage = 'Ce groupe a déjà un MJ sans personnage.';
+            _bannerMessage = l10n.groupJoinScreenMjAlreadyAssignedErrorMessage;
           case GroupInviteFailureKind.generic:
-            _bannerMessage = _genericJoinErrorMessage;
+            _bannerMessage = l10n.groupJoinScreenGenericErrorMessage;
         }
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _isJoining = false;
-        _bannerMessage = _genericJoinErrorMessage;
+        _bannerMessage = l10n.groupJoinScreenGenericErrorMessage;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final charactersAsync = ref.watch(charactersProvider);
     final characters = charactersAsync.value;
     final selectedCharacter = _joinAsGameMaster
@@ -321,7 +322,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
         children: [
           Column(
             children: [
-              WoodBackHeader(title: 'REJOINDRE UN GROUPE', onBack: _goBack),
+              WoodBackHeader(title: l10n.groupJoinScreenTitle, onBack: _goBack),
               Expanded(
                 child: SafeArea(
                   top: false,
@@ -335,16 +336,14 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
                           const SizedBox(height: AppSpacing.md),
                         ],
                         Text(
-                          'Demande le code d\'invitation à un membre du '
-                          'groupe, puis choisis le personnage qui vous '
-                          'rejoindra.',
+                          l10n.groupJoinScreenIntro,
                           style: AppTypography.body(
                             fontSize: 14,
                             color: AppColors.textSecondary,
                           ),
                         ),
                         const SizedBox(height: AppSpacing.lg),
-                        const _SectionLabel('Code d\'invitation'),
+                        _SectionLabel(l10n.groupJoinScreenCodeFieldLabel),
                         const SizedBox(height: AppSpacing.xs),
                         _CodeField(
                           controller: _codeController,
@@ -356,9 +355,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
                           _CodeErrorHint(message: _codeErrorMessage!),
                         ],
                         const SizedBox(height: AppSpacing.lg),
-                        const _SectionLabel(
-                          'Qui te représente dans ce groupe ?',
-                        ),
+                        _SectionLabel(l10n.groupJoinScreenRoleQuestionLabel),
                         const SizedBox(height: AppSpacing.xs),
                         _RoleSelectorTile(
                           character: selectedCharacter,
@@ -382,7 +379,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
                     AppSpacing.lg,
                   ),
                   child: PrimaryButton(
-                    label: 'Rejoindre',
+                    label: l10n.groupJoinScreenSubmitButtonLabel,
                     isLoading: _isJoining,
                     onPressed: _canSubmit(charactersAsync)
                         ? () =>
@@ -443,6 +440,7 @@ class _CodeField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         color: AppColors.parchmentCard,
@@ -461,13 +459,13 @@ class _CodeField extends StatelessWidget {
           fontSize: 22,
           fontWeight: FontWeight.w700,
         ).copyWith(letterSpacing: 4),
-        decoration: const InputDecoration(
-          hintText: 'AB3F - 7K2M',
+        decoration: InputDecoration(
+          hintText: l10n.groupJoinScreenCodeFieldHint,
           border: InputBorder.none,
           focusedBorder: InputBorder.none,
           enabledBorder: InputBorder.none,
           disabledBorder: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(
+          contentPadding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: AppSpacing.md,
           ),
@@ -537,6 +535,7 @@ class _RoleSelectorTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final summary = character;
 
     return Material(
@@ -569,7 +568,7 @@ class _RoleSelectorTile extends StatelessWidget {
                       classThemeColor: _classThemeColor(summary?.className),
                     ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(child: _buildLabel(summary)),
+              Expanded(child: _buildLabel(l10n, summary)),
               if (enabled)
                 const Icon(
                   Icons.chevron_right,
@@ -583,14 +582,14 @@ class _RoleSelectorTile extends StatelessWidget {
     );
   }
 
-  Widget _buildLabel(CharacterSummary? summary) {
+  Widget _buildLabel(AppLocalizations l10n, CharacterSummary? summary) {
     if (isGameMaster) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'MJ — sans personnage',
+            l10n.groupJoinScreenGameMasterRoleLabel,
             style: AppTypography.body(
               fontSize: 16,
               fontWeight: FontWeight.w800,
@@ -598,7 +597,7 @@ class _RoleSelectorTile extends StatelessWidget {
             ),
           ),
           Text(
-            'Suit le groupe sans fiche de personnage.',
+            l10n.groupJoinScreenGameMasterRoleSubtitle,
             style: AppTypography.body(
               fontSize: 12,
               color: AppColors.textSecondary,
@@ -620,7 +619,7 @@ class _RoleSelectorTile extends StatelessWidget {
             ),
           ),
           Text(
-            _summaryLine(summary),
+            _summaryLine(l10n, summary),
             style: AppTypography.body(
               fontSize: 13,
               color: AppColors.textSecondary,
@@ -630,8 +629,8 @@ class _RoleSelectorTile extends StatelessWidget {
       );
     }
     final text = hasResolvedEmptyList
-        ? "Tu n'as pas encore de personnage à rattacher."
-        : 'Choisir un personnage ou un rôle';
+        ? l10n.groupJoinScreenNoCharacterMessage
+        : l10n.groupJoinScreenRoleSelectorPlaceholder;
     return Text(
       text,
       style: AppTypography.body(fontSize: 13, color: AppColors.textSecondary),
@@ -640,12 +639,12 @@ class _RoleSelectorTile extends StatelessWidget {
 
   /// "Race · Classe · Niv. X" — même omission des segments non résolus que
   /// `CharacterCard._summaryLine`, dupliqué ici (classe privée à son
-  /// fichier).
-  String _summaryLine(CharacterSummary character) {
+  /// fichier), y compris la clé `.arb` partagée `characterLevelAbbreviation`.
+  String _summaryLine(AppLocalizations l10n, CharacterSummary character) {
     final segments = [
       if (character.raceName != null) character.raceName!,
       if (character.className != null) character.className!,
-      'Niv. ${character.level}',
+      l10n.characterLevelAbbreviation(character.level),
     ];
     return segments.join(' · ');
   }
@@ -672,6 +671,7 @@ class _NoCharacterNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
@@ -690,7 +690,7 @@ class _NoCharacterNote extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              "Tu n'as pas encore de personnage à rattacher.",
+              l10n.groupJoinScreenNoCharacterMessage,
               style: AppTypography.body(
                 fontSize: 12,
                 color: AppColors.textSecondary,
@@ -711,6 +711,7 @@ class _CharacterTileError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -729,7 +730,10 @@ class _CharacterTileError extends StatelessWidget {
               ),
             ),
           ),
-          TextButton(onPressed: onRetry, child: const Text('Réessayer')),
+          TextButton(
+            onPressed: onRetry,
+            child: Text(l10n.groupJoinScreenCharactersRetryButtonLabel),
+          ),
         ],
       ),
     );
@@ -812,6 +816,7 @@ class _GmOptionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -842,7 +847,7 @@ class _GmOptionRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'MJ — sans personnage',
+                      l10n.groupJoinScreenGameMasterRoleLabel,
                       style: AppTypography.body(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -850,7 +855,7 @@ class _GmOptionRow extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Suit le groupe sans fiche de personnage.',
+                      l10n.groupJoinScreenGameMasterRoleSubtitle,
                       style: AppTypography.body(
                         fontSize: 12,
                         color: AppColors.textSecondary,
@@ -906,6 +911,7 @@ class _JoinSavingOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ColoredBox(
       color: AppColors.woodDark.withValues(alpha: 0.6),
       child: Center(
@@ -925,7 +931,7 @@ class _JoinSavingOverlay extends StatelessWidget {
               const CircularProgressIndicator(color: AppColors.woodMedium),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'Rattachement au groupe...',
+                l10n.groupJoinScreenJoiningOverlayMessage,
                 style: AppTypography.body(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,

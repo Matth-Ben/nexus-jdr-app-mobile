@@ -7466,6 +7466,306 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'+1 / +1 / +1'**
   String get racialBonusChoiceCardOneOneOnePatternLabel;
+
+  /// Titre du bandeau de `group_list_screen.dart` (`_Header`), déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'GROUPES'**
+  String get groupListScreenTitle;
+
+  /// Bouton primaire en pied d'écran, navigue vers `/groups/new`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer un groupe'**
+  String get groupListScreenCreateButtonLabel;
+
+  /// Bouton secondaire en pied d'écran, navigue vers `/groups/join`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rejoindre un groupe'**
+  String get groupListScreenJoinButtonLabel;
+
+  /// Message de repli de `_ErrorState` quand l'erreur de `myGroupsProvider` n'est pas une `GroupFailure` (voir `groupAccessDeniedErrorMessage`/`groupNetworkErrorMessage` sinon).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger vos groupes. Réessayez.'**
+  String get groupListScreenLoadErrorMessage;
+
+  /// Titre de `_EmptyState` (aucun groupe rejoint), déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'AUCUN GROUPE POUR L\'INSTANT'**
+  String get groupListScreenEmptyTitle;
+
+  /// Corps de `_EmptyState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Crée un groupe pour ton équipe, ou rejoins celui de tes coéquipiers avec un code d\'invitation.'**
+  String get groupListScreenEmptyBody;
+
+  /// Nombre de membres affiché sous le nom d'un groupe (`_GroupRow`) — ancien texte en dur toujours au pluriel ("1 membres"), corrigé en ICU plural par cette migration.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 membre} other{{count} membres}}'**
+  String groupListScreenMemberCountLabel(int count);
+
+  /// Badge affiché à côté du nom d'un groupe fondé par le joueur connecté (`_FounderBadge`), déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'TOI'**
+  String get groupListScreenFounderBadgeLabel;
+
+  /// `SecondaryButton` "Réessayer" de `_ErrorState` (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get groupListScreenRetryButtonLabel;
+
+  /// Résolution de `GroupFailure.code == GroupErrorCode.accessDenied` — même rationale que `characterAccessDeniedErrorMessage` (clé partagée par tous les écrans qui consomment `GroupFailure`, pas propre à un seul écran).
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous n\'avez pas accès à ce groupe.'**
+  String get groupAccessDeniedErrorMessage;
+
+  /// Résolution de `GroupFailure.code == GroupErrorCode.network` — même rationale que `characterNetworkErrorMessage`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.'**
+  String get groupNetworkErrorMessage;
+
+  /// `SheetHeaderBar.title` de la sheet de sélection de rôle ouverte par `_RoleSelectorTile`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'CHOISIR TON RÔLE'**
+  String get groupCreateScreenRolePickerTitle;
+
+  /// Message de repli de l'état d'erreur de la sheet de rôle quand l'erreur de `charactersProvider` n'est pas une `CharacterFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger vos personnages. Réessayez.'**
+  String get groupCreateScreenCharactersLoadErrorMessage;
+
+  /// Titre du `WoodBackHeader` de `group_create_screen.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'CRÉER UN GROUPE'**
+  String get groupCreateScreenTitle;
+
+  /// Texte d'intro affiché en tête du corps parchemin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un groupe permet de suivre les PV de ton équipe en direct et de gérer un butin commun, indépendamment des histoires du MJ.'**
+  String get groupCreateScreenIntro;
+
+  /// Libellé au-dessus du `TextFormField` du nom du groupe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du groupe'**
+  String get groupCreateScreenNameLabel;
+
+  /// `hintText` du `TextFormField` du nom du groupe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. Les Lames de l\'Aube'**
+  String get groupCreateScreenNameHint;
+
+  /// Libellé au-dessus de `_RoleSelectorTile`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Qui te représente dans ce groupe ?'**
+  String get groupCreateScreenRoleQuestionLabel;
+
+  /// Sous-texte sous `groupCreateScreenRoleQuestionLabel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce personnage représentera ta présence dans le tableau de bord du groupe.'**
+  String get groupCreateScreenRoleQuestionHint;
+
+  /// Bouton primaire en pied d'écran, soumet `createGroup`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer le groupe'**
+  String get groupCreateScreenSubmitButtonLabel;
+
+  /// `SnackBar` affiché après la création réussie, juste avant de naviguer vers `/groups/:id`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Groupe créé !'**
+  String get groupCreateScreenSuccessSnackbar;
+
+  /// Message de repli de `_errorMessage` quand l'erreur de `createGroup` n'est pas une `GroupFailure` (voir `groupAccessDeniedErrorMessage`/`groupNetworkErrorMessage` sinon).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de créer le groupe. Réessayez.'**
+  String get groupCreateScreenGenericErrorMessage;
+
+  /// Libellé du rôle "MJ sans personnage", affiché par `_GmOptionRow` (sheet) et `_RoleSelectorTile` (tuile) une fois ce rôle choisi.
+  ///
+  /// In fr, this message translates to:
+  /// **'MJ — sans personnage'**
+  String get groupCreateScreenGameMasterRoleLabel;
+
+  /// Texte de `_CreatingGroupOverlay`, affiché pendant `createGroup`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Création du groupe...'**
+  String get groupCreateScreenCreatingOverlayMessage;
+
+  /// Note de `_NoCharacterNote`, affichée sous la ligne MJ de la sheet quand `charactersProvider` résout une liste vide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu n\'as pas encore de personnage à inscrire dans ce groupe.'**
+  String get groupCreateScreenNoCharacterNote;
+
+  /// Note de `_InviteCodeNote`, affichée sous `_RoleSelectorTile`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un code d\'invitation sera généré automatiquement à la création.'**
+  String get groupCreateScreenInviteCodeNote;
+
+  /// Texte de `_RoleSelectorTile` tant qu'aucun personnage/rôle n'est choisi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un personnage ou un rôle'**
+  String get groupCreateScreenRoleSelectorPlaceholder;
+
+  /// `SecondaryButton` "Réessayer" de l'état d'erreur de la sheet de rôle (surface parchemin).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get groupCreateScreenCharactersRetryButtonLabel;
+
+  /// Bandeau générique (`AlertBanner`) affiché pour `GroupInviteFailureKind.generic` et toute erreur inattendue de `previewGroupInvite`/`joinGroup`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de rejoindre ce groupe. Réessayez.'**
+  String get groupJoinScreenGenericErrorMessage;
+
+  /// `SheetHeaderBar.title` de la sheet de sélection de rôle ouverte par `_RoleSelectorTile`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'CHOISIR TON RÔLE'**
+  String get groupJoinScreenRolePickerTitle;
+
+  /// Message de repli de `_CharacterTileError` quand l'erreur de `charactersProvider` n'est pas une `CharacterFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger vos personnages. Réessayez.'**
+  String get groupJoinScreenCharactersLoadErrorMessage;
+
+  /// Titre du `WoodBackHeader` de `group_join_screen.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'REJOINDRE UN GROUPE'**
+  String get groupJoinScreenTitle;
+
+  /// `SnackBar` affiché après le rattachement réussi, juste avant de naviguer vers `/groups/:id`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Groupe rejoint !'**
+  String get groupJoinScreenSuccessSnackbar;
+
+  /// Texte d'aide discret sous le champ code (`_CodeErrorHint`), pour `GroupInviteFailureKind.invalidCode` (aperçu ou rattachement).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code d\'invitation n\'est pas valide.'**
+  String get groupJoinScreenInvalidCodeErrorMessage;
+
+  /// Bandeau (`AlertBanner`) pour `GroupInviteFailureKind.alreadyInGroup`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce personnage est déjà membre de ce groupe.'**
+  String get groupJoinScreenAlreadyInGroupErrorMessage;
+
+  /// Bandeau (`AlertBanner`) pour `GroupInviteFailureKind.mjAlreadyAssigned`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce groupe a déjà un MJ sans personnage.'**
+  String get groupJoinScreenMjAlreadyAssignedErrorMessage;
+
+  /// Texte d'intro affiché en tête du corps scrollable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande le code d\'invitation à un membre du groupe, puis choisis le personnage qui vous rejoindra.'**
+  String get groupJoinScreenIntro;
+
+  /// `_SectionLabel` au-dessus du champ code.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code d\'invitation'**
+  String get groupJoinScreenCodeFieldLabel;
+
+  /// `hintText` du champ code (`_CodeField`) — exemple de code, alphanumérique, identique dans toutes les langues.
+  ///
+  /// In fr, this message translates to:
+  /// **'AB3F - 7K2M'**
+  String get groupJoinScreenCodeFieldHint;
+
+  /// `_SectionLabel` au-dessus de `_RoleSelectorTile`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Qui te représente dans ce groupe ?'**
+  String get groupJoinScreenRoleQuestionLabel;
+
+  /// Bouton primaire en pied d'écran, soumet `previewGroupInvite` puis `joinGroup`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rejoindre'**
+  String get groupJoinScreenSubmitButtonLabel;
+
+  /// Libellé du rôle "MJ sans personnage", affiché par `_GmOptionRow` (sheet) et `_RoleSelectorTile` (tuile) une fois ce rôle choisi.
+  ///
+  /// In fr, this message translates to:
+  /// **'MJ — sans personnage'**
+  String get groupJoinScreenGameMasterRoleLabel;
+
+  /// Sous-titre du rôle "MJ sans personnage", affiché par `_GmOptionRow` et `_RoleSelectorTile`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suit le groupe sans fiche de personnage.'**
+  String get groupJoinScreenGameMasterRoleSubtitle;
+
+  /// Texte partagé par `_RoleSelectorTile` (liste résolue vide, aucune sélection) et `_NoCharacterNote` (sheet, sous la ligne MJ).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu n\'as pas encore de personnage à rattacher.'**
+  String get groupJoinScreenNoCharacterMessage;
+
+  /// Texte de `_RoleSelectorTile` tant que rien n'est encore résolu (ni personnage, ni liste vide confirmée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un personnage ou un rôle'**
+  String get groupJoinScreenRoleSelectorPlaceholder;
+
+  /// `TextButton` "Réessayer" de `_CharacterTileError`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get groupJoinScreenCharactersRetryButtonLabel;
+
+  /// Texte de `_JoinSavingOverlay`, affiché pendant `previewGroupInvite` ET `joinGroup`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rattachement au groupe...'**
+  String get groupJoinScreenJoiningOverlayMessage;
+
+  /// `SecondaryButton` "Annuler" de `showGroupConfirmationDialog` — le titre/message/libellé de confirmation restent fournis par l'appelant (hors périmètre de ce lot, voir `group_screen.dart`/`group_settings_screen.dart`/`group_character_reassignment_screen.dart`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get groupConfirmationDialogCancelButtonLabel;
+
+  /// `Semantics.label` de la pastille de code d'invitation copiable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copier le code d\'invitation {code}'**
+  String groupInviteCodeChipSemanticLabel(String code);
+
+  /// `SnackBar` de confirmation après la copie du code d'invitation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code {code} copié.'**
+  String groupInviteCodeChipCopiedSnackbar(String code);
 }
 
 class _AppLocalizationsDelegate

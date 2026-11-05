@@ -4527,4 +4527,188 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get racialBonusChoiceCardOneOneOnePatternLabel => '+1 / +1 / +1';
+
+  @override
+  String get groupListScreenTitle => 'GROUPS';
+
+  @override
+  String get groupListScreenCreateButtonLabel => 'Create a group';
+
+  @override
+  String get groupListScreenJoinButtonLabel => 'Join a group';
+
+  @override
+  String get groupListScreenLoadErrorMessage =>
+      'Unable to load your groups. Try again.';
+
+  @override
+  String get groupListScreenEmptyTitle => 'NO GROUPS YET';
+
+  @override
+  String get groupListScreenEmptyBody =>
+      'Create a group for your team, or join a teammate\'s group with an invite code.';
+
+  @override
+  String groupListScreenMemberCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '1 member',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get groupListScreenFounderBadgeLabel => 'YOU';
+
+  @override
+  String get groupListScreenRetryButtonLabel => 'Retry';
+
+  @override
+  String get groupAccessDeniedErrorMessage =>
+      'You don\'t have access to this group.';
+
+  @override
+  String get groupNetworkErrorMessage =>
+      'Unable to reach the server. Check your internet connection and try again.';
+
+  @override
+  String get groupCreateScreenRolePickerTitle => 'CHOOSE YOUR ROLE';
+
+  @override
+  String get groupCreateScreenCharactersLoadErrorMessage =>
+      'Unable to load your characters. Try again.';
+
+  @override
+  String get groupCreateScreenTitle => 'CREATE A GROUP';
+
+  @override
+  String get groupCreateScreenIntro =>
+      'A group lets you track your team\'s HP live and manage shared loot, independently of the GM\'s stories.';
+
+  @override
+  String get groupCreateScreenNameLabel => 'Group name';
+
+  @override
+  String get groupCreateScreenNameHint => 'E.g. The Dawnblades';
+
+  @override
+  String get groupCreateScreenRoleQuestionLabel =>
+      'Who represents you in this group?';
+
+  @override
+  String get groupCreateScreenRoleQuestionHint =>
+      'This character will represent your presence on the group\'s dashboard.';
+
+  @override
+  String get groupCreateScreenSubmitButtonLabel => 'Create the group';
+
+  @override
+  String get groupCreateScreenSuccessSnackbar => 'Group created!';
+
+  @override
+  String get groupCreateScreenGenericErrorMessage =>
+      'Unable to create the group. Try again.';
+
+  @override
+  String get groupCreateScreenGameMasterRoleLabel => 'GM — no character';
+
+  @override
+  String get groupCreateScreenCreatingOverlayMessage => 'Creating the group...';
+
+  @override
+  String get groupCreateScreenNoCharacterNote =>
+      'You don\'t have a character yet to enroll in this group.';
+
+  @override
+  String get groupCreateScreenInviteCodeNote =>
+      'An invite code will be generated automatically upon creation.';
+
+  @override
+  String get groupCreateScreenRoleSelectorPlaceholder =>
+      'Choose a character or a role';
+
+  @override
+  String get groupCreateScreenCharactersRetryButtonLabel => 'Retry';
+
+  @override
+  String get groupJoinScreenGenericErrorMessage =>
+      'Unable to join this group. Try again.';
+
+  @override
+  String get groupJoinScreenRolePickerTitle => 'CHOOSE YOUR ROLE';
+
+  @override
+  String get groupJoinScreenCharactersLoadErrorMessage =>
+      'Unable to load your characters. Try again.';
+
+  @override
+  String get groupJoinScreenTitle => 'JOIN A GROUP';
+
+  @override
+  String get groupJoinScreenSuccessSnackbar => 'Group joined!';
+
+  @override
+  String get groupJoinScreenInvalidCodeErrorMessage =>
+      'This invite code isn\'t valid.';
+
+  @override
+  String get groupJoinScreenAlreadyInGroupErrorMessage =>
+      'This character is already a member of this group.';
+
+  @override
+  String get groupJoinScreenMjAlreadyAssignedErrorMessage =>
+      'This group already has a GM without a character.';
+
+  @override
+  String get groupJoinScreenIntro =>
+      'Ask a group member for the invite code, then choose the character that will join.';
+
+  @override
+  String get groupJoinScreenCodeFieldLabel => 'Invite code';
+
+  @override
+  String get groupJoinScreenCodeFieldHint => 'AB3F - 7K2M';
+
+  @override
+  String get groupJoinScreenRoleQuestionLabel =>
+      'Who represents you in this group?';
+
+  @override
+  String get groupJoinScreenSubmitButtonLabel => 'Join';
+
+  @override
+  String get groupJoinScreenGameMasterRoleLabel => 'GM — no character';
+
+  @override
+  String get groupJoinScreenGameMasterRoleSubtitle =>
+      'Follows the group without a character sheet.';
+
+  @override
+  String get groupJoinScreenNoCharacterMessage =>
+      'You don\'t have a character yet to attach.';
+
+  @override
+  String get groupJoinScreenRoleSelectorPlaceholder =>
+      'Choose a character or a role';
+
+  @override
+  String get groupJoinScreenCharactersRetryButtonLabel => 'Retry';
+
+  @override
+  String get groupJoinScreenJoiningOverlayMessage => 'Joining the group...';
+
+  @override
+  String get groupConfirmationDialogCancelButtonLabel => 'Cancel';
+
+  @override
+  String groupInviteCodeChipSemanticLabel(String code) {
+    return 'Copy invite code $code';
+  }
+
+  @override
+  String groupInviteCodeChipCopiedSnackbar(String code) {
+    return 'Code $code copied.';
+  }
 }

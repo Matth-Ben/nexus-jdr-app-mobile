@@ -50,6 +50,7 @@ import 'package:personnages/features/groups/domain/group_treasure_item.dart';
 import 'package:personnages/features/groups/domain/joined_group.dart';
 import 'package:personnages/features/groups/presentation/group_character_reassignment_screen.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   List<CharacterSummary>? charactersToReturn;
@@ -551,7 +552,16 @@ Widget _buildTestWidget({
       characterRepositoryProvider.overrideWithValue(characterRepository),
       groupRepositoryProvider.overrideWithValue(groupRepository),
     ],
-    child: MaterialApp.router(routerConfig: _buildTestRouter()),
+    child: MaterialApp.router(
+      // `showGroupConfirmationDialog` lit `AppLocalizations.of(context)!`
+      // (chantier "traduction de l'app" Phase B, lot "Groups — rejoindre/
+      // créer") : sans ces delegates, l'appel renverrait `null` et le `!`
+      // planterait.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('fr'),
+      routerConfig: _buildTestRouter(),
+    ),
   );
 }
 
