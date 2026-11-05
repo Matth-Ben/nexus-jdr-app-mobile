@@ -137,14 +137,17 @@ void main() {
   /// Pousse `OnboardingScreen` comme route initiale (donc jamais
   /// "poppable") — couvre le cas "forcé par le routeur à la première
   /// connexion" de la doc de classe de `OnboardingScreen`.
-  Future<void> pumpInitialScreen(WidgetTester tester) async {
+  Future<void> pumpInitialScreen(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [authRepositoryProvider.overrideWithValue(fakeRepository)],
         child: MaterialApp.router(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('fr'),
+          locale: locale,
           routerConfig: GoRouter(
             initialLocation: '/onboarding',
             routes: [
@@ -463,6 +466,23 @@ void main() {
         expect(fakeRepository.markOnboardingSeenCallCount, 1);
         expect(find.text('Ouvrir'), findsOneWidget);
         expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'écran atteint comme route initiale (non poppable, "forcé par le '
+      'routeur"), locale anglaise : "Skip" navigue vers "/" plutôt que de '
+      'pop (équivalent anglais du même cas français ci-dessus, hors '
+      'groupe "locale anglaise")',
+      (tester) async {
+        await pumpInitialScreen(tester, locale: const Locale('en'));
+
+        await tester.tap(find.text('Skip'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.markOnboardingSeenCallCount, 1);
+        expect(find.text('Liste'), findsOneWidget);
+        expect(find.byType(OnboardingScreen), findsNothing);
       },
     );
   });

@@ -985,7 +985,7 @@ silencieusement.
 
 ## Ajouts liés au lot "écrans divers" de la Phase B traduction (05/11/2026)
 
-4 petites features isolées migrent vers `.arb` (26 clés) : `app_update` (`force_update_screen.dart`,
+4 petites features isolées migrent vers `.arb` (33 clés) : `app_update` (`force_update_screen.dart`,
 `widgets/update_suggested_banner.dart`, `app_store_launcher.dart`), `splash` (`splash_screen.dart`),
 `onboarding` (`onboarding_screen.dart`) et `xml_export` (`character_xml_export_action.dart`
 uniquement). Chaque fichier `domain`/`data` de ces 4 features a été vérifié par lecture directe avant

@@ -45,6 +45,20 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
   Future<String?> getTemporaryPath() async => tempPath;
 }
 
+/// Simule un échec inattendu avant toute écriture disque réelle (ex.
+/// répertoire temporaire inaccessible) — déclenche le `catch` générique
+/// d'`exportCharacterAsXml` (SnackBar `characterXmlExportGenericErrorMessage`,
+/// jamais exercé jusqu'ici, voir `docs/dette-technique.md`). Lève avant tout
+/// accès réel à `dart:io` : contrairement aux taps qui réussissent, ces tests
+/// n'ont donc pas besoin de `tester.runAsync` (voir la note d'en-tête de ce
+/// fichier).
+class _ThrowingPathProviderPlatform extends PathProviderPlatform {
+  @override
+  Future<String?> getTemporaryPath() async {
+    throw Exception('Répertoire temporaire inaccessible (double de test).');
+  }
+}
+
 /// Double minimal — seul `fetchCharacterDetail` est exercé par ces tests
 /// (voir `providers/character_detail_provider.dart`), le reste lève
 /// `UnimplementedError` (jamais atteint : ces tests n'interagissent avec
@@ -354,6 +368,27 @@ void main() {
     },
   );
 
+  testWidgets(
+    'échec inattendu avant toute écriture disque (ex. répertoire temporaire '
+    'inaccessible) : affiche la SnackBar d\'erreur générique, pas de '
+    'partage demandé',
+    (tester) async {
+      fakeRepository.detailToReturn = _monoClasseDetail;
+      await pumpDetail(tester, '1');
+      PathProviderPlatform.instance = _ThrowingPathProviderPlatform();
+
+      await openCharacterHeaderMenu(tester);
+      await tester.tap(find.text('Exporter en XML'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text("Impossible de générer l'export XML. Réessayez."),
+        findsOneWidget,
+      );
+      expect(shareCalls, isEmpty);
+    },
+  );
+
   testWidgets('personnage multiclassé : avertissement avant export, "Annuler" '
       'n\'exporte rien', (tester) async {
     fakeRepository.detailToReturn = _multiclasseDetail;
@@ -456,6 +491,30 @@ void main() {
       expect(find.text('Multiclassed character'), findsNothing);
       expect(shareCalls, isEmpty);
     });
+
+    testWidgets(
+      'échec inattendu avant toute écriture disque : affiche la SnackBar '
+      'd\'erreur générique traduite, pas de partage demandé (locale '
+      'anglaise)',
+      (tester) async {
+        fakeRepository.detailToReturn = _monoClasseDetail;
+        await pumpDetail(tester, '1', locale: const Locale('en'));
+        PathProviderPlatform.instance = _ThrowingPathProviderPlatform();
+
+        await openCharacterHeaderMenu(
+          tester,
+          moreOptionsTooltip: 'More options',
+        );
+        await tester.tap(find.text('Export as XML'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text("Couldn't generate the XML export. Please try again."),
+          findsOneWidget,
+        );
+        expect(shareCalls, isEmpty);
+      },
+    );
 
     testWidgets('personnage multiclassé : "Export anyway" exporte seulement la '
         'classe primaire (locale anglaise)', (tester) async {
