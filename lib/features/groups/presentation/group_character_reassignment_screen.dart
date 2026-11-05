@@ -11,6 +11,7 @@ import '../../../core/widgets/portrait_frame.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
 import '../../character_creation/presentation/providers/character_creation_return_route_provider.dart';
 import '../../characters/domain/character_failure.dart';
@@ -18,11 +19,9 @@ import '../../characters/domain/character_summary.dart';
 import '../../characters/presentation/providers/character_providers.dart';
 import '../domain/group_character_reassignment_failure.dart';
 import '../domain/group_failure.dart';
+import 'group_failure_presenter.dart';
 import 'providers/group_providers.dart';
 import 'widgets/group_confirmation_dialog.dart';
-
-const String _genericReassignmentErrorMessage =
-    'Impossible de mettre à jour le groupe. Réessayez.';
 
 /// Écran "CHOISIR UN NOUVEAU PERSONNAGE" — affiché à un membre ORPHELIN
 /// (voir `GroupMember.isAwaitingCharacter`) dont le précédent personnage a
@@ -77,13 +76,13 @@ class _GroupCharacterReassignmentScreenState
 
   Future<void> _confirmLeaveGroup() async {
     if (_isSaving) return;
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showGroupConfirmationDialog(
       context,
-      title: 'Quitter ce groupe ?',
-      message:
-          "Tu perds l'accès au butin commun et au suivi de tes "
-          'coéquipiers.',
-      confirmLabel: 'Quitter',
+      title: l10n.groupCharacterReassignmentScreenLeaveConfirmTitle,
+      message: l10n.groupCharacterReassignmentScreenLeaveConfirmMessage,
+      confirmLabel:
+          l10n.groupCharacterReassignmentScreenLeaveConfirmButtonLabel,
     );
     if (confirmed != true || !mounted) return;
 
@@ -93,11 +92,14 @@ class _GroupCharacterReassignmentScreenState
       context.go('/groups');
     } on GroupFailure catch (failure) {
       if (!mounted) return;
-      setState(() => _bannerMessage = failure.message);
+      setState(
+        () => _bannerMessage = resolveGroupFailureMessage(l10n, failure),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(
-        () => _bannerMessage = 'Impossible de quitter le groupe. Réessayez.',
+        () => _bannerMessage =
+            l10n.groupCharacterReassignmentScreenLeaveGenericErrorMessage,
       );
     }
   }
@@ -105,6 +107,7 @@ class _GroupCharacterReassignmentScreenState
   Future<void> _submit() async {
     final characterId = _selectedCharacterId;
     if (characterId == null || _isSaving) return;
+    final l10n = AppLocalizations.of(context)!;
 
     setState(() {
       _isSaving = true;
@@ -122,34 +125,39 @@ class _GroupCharacterReassignmentScreenState
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _bannerMessage = _messageFor(failure.kind);
+        _bannerMessage = _messageFor(l10n, failure.kind);
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _bannerMessage = _genericReassignmentErrorMessage;
+        _bannerMessage =
+            l10n.groupCharacterReassignmentScreenGenericErrorMessage;
       });
     }
   }
 
-  String _messageFor(GroupCharacterReassignmentFailureKind kind) {
+  String _messageFor(
+    AppLocalizations l10n,
+    GroupCharacterReassignmentFailureKind kind,
+  ) {
     return switch (kind) {
       GroupCharacterReassignmentFailureKind.characterNotOwned =>
-        "Ce personnage ne t'appartient pas.",
+        l10n.groupCharacterReassignmentScreenCharacterNotOwnedMessage,
       GroupCharacterReassignmentFailureKind.notMember =>
-        "Tu n'es plus membre de ce groupe.",
+        l10n.groupCharacterReassignmentScreenNotMemberMessage,
       GroupCharacterReassignmentFailureKind.notEligible =>
-        'Cette action ne te concerne plus.',
+        l10n.groupCharacterReassignmentScreenNotEligibleMessage,
       GroupCharacterReassignmentFailureKind.alreadyInGroup =>
-        'Ce personnage est déjà membre de ce groupe.',
+        l10n.groupCharacterReassignmentScreenAlreadyInGroupMessage,
       GroupCharacterReassignmentFailureKind.generic =>
-        _genericReassignmentErrorMessage,
+        l10n.groupCharacterReassignmentScreenGenericErrorMessage,
     };
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final charactersAsync = ref.watch(charactersProvider);
 
     return Scaffold(
@@ -159,7 +167,7 @@ class _GroupCharacterReassignmentScreenState
           Column(
             children: [
               WoodBackHeader(
-                title: 'CHOISIR UN NOUVEAU PERSONNAGE',
+                title: l10n.groupCharacterReassignmentScreenTitle,
                 onBack: _goBack,
               ),
               Expanded(
@@ -175,20 +183,18 @@ class _GroupCharacterReassignmentScreenState
                           const SizedBox(height: AppSpacing.md),
                         ],
                         Text(
-                          'Ton précédent personnage a été supprimé. Choisis '
-                          'celui qui te représentera désormais dans ce '
-                          'groupe.',
+                          l10n.groupCharacterReassignmentScreenIntro,
                           style: AppTypography.body(
                             fontSize: 14,
                             color: AppColors.textSecondary,
                           ),
                         ),
                         const SizedBox(height: AppSpacing.lg),
-                        const _SectionLabel(
-                          'Qui te représente dans ce groupe ?',
+                        _SectionLabel(
+                          l10n.groupCharacterReassignmentScreenRoleQuestionLabel,
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        _buildCharacterSection(charactersAsync),
+                        _buildCharacterSection(l10n, charactersAsync),
                       ],
                     ),
                   ),
@@ -204,7 +210,8 @@ class _GroupCharacterReassignmentScreenState
                     AppSpacing.lg,
                   ),
                   child: PrimaryButton(
-                    label: 'Confirmer',
+                    label:
+                        l10n.groupCharacterReassignmentScreenConfirmButtonLabel,
                     isLoading: _isSaving,
                     onPressed: (!_isSaving && _selectedCharacterId != null)
                         ? _submit
@@ -221,6 +228,7 @@ class _GroupCharacterReassignmentScreenState
   }
 
   Widget _buildCharacterSection(
+    AppLocalizations l10n,
     AsyncValue<List<CharacterSummary>> charactersAsync,
   ) {
     return charactersAsync.when(
@@ -231,13 +239,15 @@ class _GroupCharacterReassignmentScreenState
                 const _NoCharacterNote(),
                 const SizedBox(height: AppSpacing.md),
                 SecondaryButton(
-                  label: 'Créer un personnage',
+                  label: l10n
+                      .groupCharacterReassignmentScreenCreateCharacterButtonLabel,
                   surface: SecondaryButtonSurface.parchment,
                   onPressed: _isSaving ? null : _createCharacter,
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 DestructiveButton(
-                  label: 'Quitter le groupe',
+                  label: l10n
+                      .groupCharacterReassignmentScreenLeaveGroupButtonLabel,
                   onPressed: _isSaving ? null : _confirmLeaveGroup,
                 ),
               ],
@@ -263,7 +273,7 @@ class _GroupCharacterReassignmentScreenState
       error: (error, stackTrace) => _CharacterSectionError(
         message: error is CharacterFailure
             ? error.message
-            : 'Impossible de charger vos personnages. Réessayez.',
+            : l10n.groupCharacterReassignmentScreenCharactersLoadErrorMessage,
         onRetry: () => ref.invalidate(charactersProvider),
       ),
     );
@@ -382,6 +392,7 @@ class _NoCharacterNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
@@ -400,7 +411,7 @@ class _NoCharacterNote extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              "Tu n'as pas encore de personnage à rattacher.",
+              l10n.groupCharacterReassignmentScreenNoCharacterNote,
               style: AppTypography.body(
                 fontSize: 12,
                 color: AppColors.textSecondary,
@@ -421,6 +432,7 @@ class _CharacterSectionError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -439,7 +451,10 @@ class _CharacterSectionError extends StatelessWidget {
               ),
             ),
           ),
-          TextButton(onPressed: onRetry, child: const Text('Réessayer')),
+          TextButton(
+            onPressed: onRetry,
+            child: Text(l10n.groupCharacterReassignmentScreenRetryButtonLabel),
+          ),
         ],
       ),
     );
@@ -453,6 +468,7 @@ class _ReassignmentSavingOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ColoredBox(
       color: AppColors.woodDark.withValues(alpha: 0.6),
       child: Center(
@@ -472,7 +488,7 @@ class _ReassignmentSavingOverlay extends StatelessWidget {
               const CircularProgressIndicator(color: AppColors.woodMedium),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'Mise à jour du groupe...',
+                l10n.groupCharacterReassignmentScreenSavingOverlayMessage,
                 style: AppTypography.body(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,

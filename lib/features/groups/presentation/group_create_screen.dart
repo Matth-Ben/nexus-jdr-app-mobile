@@ -17,6 +17,7 @@ import '../../characters/domain/character_summary.dart';
 import '../../characters/presentation/providers/character_providers.dart';
 import '../../characters/presentation/widgets/character_card.dart';
 import '../domain/group_failure.dart';
+import 'group_failure_presenter.dart';
 import 'providers/group_providers.dart';
 
 /// Écran "Créer un groupe", route `/groups/new` —
@@ -214,7 +215,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _resolveGroupFailureMessage(l10n, failure);
+        _errorMessage = resolveGroupFailureMessage(l10n, failure);
       });
     } catch (_) {
       if (!mounted) return;
@@ -728,30 +729,5 @@ class _ErrorState extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// Résout le texte final d'une [GroupFailure] à afficher à l'écran.
-///
-/// Voir la doc de classe d'[GroupErrorCode] (`domain/group_failure.dart`)
-/// pour le choix architectural : [GroupFailure.code] est résolu ici via
-/// [AppLocalizations] pour les codes connus, [GroupFailure.message] (déjà
-/// construit par `data/group_error_mapper.dart`, ou fourni directement par
-/// `GroupRepository`/les tests) reste utilisé tel quel pour
-/// [GroupErrorCode.generic]. Duplication volontaire de
-/// `group_list_screen.dart::_resolveGroupFailureMessage` (classe/fonction
-/// privée à son fichier, même convention de duplication que le reste de ce
-/// dépôt, voir `GroupMemberRowMapper`).
-String _resolveGroupFailureMessage(
-  AppLocalizations l10n,
-  GroupFailure failure,
-) {
-  switch (failure.code) {
-    case GroupErrorCode.accessDenied:
-      return l10n.groupAccessDeniedErrorMessage;
-    case GroupErrorCode.network:
-      return l10n.groupNetworkErrorMessage;
-    case GroupErrorCode.generic:
-      return failure.message;
   }
 }

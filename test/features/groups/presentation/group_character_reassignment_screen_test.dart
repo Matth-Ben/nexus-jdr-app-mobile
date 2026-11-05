@@ -546,6 +546,7 @@ GoRouter _buildTestRouter() {
 Widget _buildTestWidget({
   required _FakeCharacterRepository characterRepository,
   required _FakeGroupRepository groupRepository,
+  Locale locale = const Locale('fr'),
 }) {
   return ProviderScope(
     overrides: [
@@ -559,7 +560,7 @@ Widget _buildTestWidget({
       // planterait.
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('fr'),
+      locale: locale,
       routerConfig: _buildTestRouter(),
     ),
   );
@@ -582,9 +583,10 @@ void main() {
     fakeGroupRepository = _FakeGroupRepository();
   });
 
-  Widget buildWidget() => _buildTestWidget(
+  Widget buildWidget({Locale locale = const Locale('fr')}) => _buildTestWidget(
     characterRepository: fakeCharacterRepository,
     groupRepository: fakeGroupRepository,
+    locale: locale,
   );
 
   testWidgets('affiche le titre et le texte d\'intro', (tester) async {
@@ -857,6 +859,114 @@ void main() {
 
       expect(find.text('Erreur réseau.'), findsOneWidget);
       expect(find.text('Réessayer'), findsOneWidget);
+    });
+  });
+
+  group('traduction anglaise', () {
+    testWidgets('titre et texte d\'intro en anglais', (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+
+      await tester.pumpWidget(buildWidget(locale: const Locale('en')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('CHOOSE A NEW CHARACTER'), findsOneWidget);
+      expect(
+        find.textContaining('Your previous character has been deleted'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'confirmer appelle setGroupCharacter puis navigue (bouton CONFIRM)',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [_sylvi, _bob];
+
+        await tester.pumpWidget(buildWidget(locale: const Locale('en')));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Bob'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONFIRM'));
+        await tester.pumpAndSettle();
+
+        expect(fakeGroupRepository.setGroupCharacterCallCount, 1);
+        expect(find.text('Écran Groupe group-1'), findsOneWidget);
+      },
+    );
+
+    testWidgets('erreur typée (already_in_group) -> bandeau en anglais', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = const [_sylvi];
+      fakeGroupRepository.setGroupCharacterError =
+          const GroupCharacterReassignmentFailure(
+            GroupCharacterReassignmentFailureKind.alreadyInGroup,
+          );
+
+      await tester.pumpWidget(buildWidget(locale: const Locale('en')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Sylvi'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONFIRM'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('This character is already a member of this group.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'état vide : note + actions "Create a character"/"Leave the group" '
+      'en anglais',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [];
+
+        await tester.pumpWidget(buildWidget(locale: const Locale('en')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text("You don't have a character yet to attach."),
+          findsOneWidget,
+        );
+        expect(
+          find.widgetWithText(SecondaryButton, 'CREATE A CHARACTER'),
+          findsOneWidget,
+        );
+        expect(
+          find.widgetWithText(DestructiveButton, 'Leave the group'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Leave the group'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Leave this group?'), findsOneWidget);
+        await tester.tap(find.widgetWithText(DestructiveButton, 'Leave'));
+        await tester.pumpAndSettle();
+
+        expect(fakeGroupRepository.leaveGroupCalled, isTrue);
+      },
+    );
+
+    testWidgets('overlay de sauvegarde traduit en anglais', (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [_sylvi];
+      final completer = Completer<void>();
+      fakeGroupRepository.setGroupCharacterCompleter = completer;
+
+      await tester.pumpWidget(buildWidget(locale: const Locale('en')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Sylvi'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONFIRM'));
+      await tester.pump();
+
+      expect(find.text('Updating the group...'), findsOneWidget);
+
+      completer.complete();
+      await tester.pumpAndSettle();
     });
   });
 }

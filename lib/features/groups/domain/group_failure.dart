@@ -11,17 +11,21 @@
 /// texte final affiché, via `AppLocalizations` (elle, a accès à `context`).
 /// [message] reste produit en parallèle (texte français déjà construit,
 /// comportement inchangé) pour que tous les appelants qui n'ont pas encore
-/// été migrés continuent de fonctionner sans aucune modification : seuls
-/// `group_list_screen.dart` et `group_create_screen.dart` lisent [code] à ce
-/// stade, tous les autres appelants de ce dépôt (`group_screen.dart`,
+/// été migrés continuent de fonctionner sans aucune modification. Depuis le
+/// lot "Groups — écran principal" (Phase B), tous les écrans de ce dépôt
+/// (`group_list_screen.dart`, `group_create_screen.dart`, `group_screen.dart`,
 /// `group_settings_screen.dart`, `group_character_reassignment_screen.dart`)
-/// continuent de lire [message] directement — voir D158 du registre de dette
-/// technique (`docs/dette-technique.md`).
+/// lisent [code] via la fonction partagée `resolveGroupFailureMessage`
+/// (`presentation/group_failure_presenter.dart`) plutôt que [message]
+/// directement — voir D158 (fermé) du registre de dette technique
+/// (`docs/dette-technique.md`). [message] reste néanmoins résolu pour
+/// [GroupErrorCode.generic] et par les tests qui construisent une
+/// `GroupFailure` ad hoc.
 ///
 /// **Précédent pour les prochains lots** : chaque futur lot qui migre un
-/// écran consommant une [GroupFailure] doit lire [code] (en complétant cet
-/// enum si besoin) plutôt que [message], jusqu'à ce que plus aucun appelant
-/// ne dépende de [message] — qui pourra alors être retiré.
+/// écran consommant une [GroupFailure] doit lire [code] via
+/// `resolveGroupFailureMessage` (en complétant cet enum si besoin) plutôt que
+/// [message] directement.
 enum GroupErrorCode {
   /// Code Postgres générique de refus RLS (`42501`) — voir
   /// `data/group_error_mapper.dart::mapGroupError`.

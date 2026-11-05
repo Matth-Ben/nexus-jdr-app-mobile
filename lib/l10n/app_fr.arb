@@ -6344,5 +6344,337 @@
         "type": "String"
       }
     }
+  },
+  "groupTabMembersLabel": "Membres",
+  "@groupTabMembersLabel": {
+    "description": "Libellé de l'onglet `GroupTab.members` de `group_screen.dart` (`SegmentedTabBar`, mis en majuscules à l'affichage par ce composant)."
+  },
+  "groupTabTreasureLabel": "Butin",
+  "@groupTabTreasureLabel": {
+    "description": "Libellé de l'onglet `GroupTab.treasure`."
+  },
+  "groupTabNotesLabel": "Notes",
+  "@groupTabNotesLabel": {
+    "description": "Libellé de l'onglet `GroupTab.notes` (ajouté le 16/09/2026, hors cahier des charges)."
+  },
+  "groupScreenDefaultTitle": "GROUPE",
+  "@groupScreenDefaultTitle": {
+    "description": "Titre de repli du `WoodBackHeader` de `group_screen.dart` tant que `groupDetailProvider` n'a pas résolu de nom de groupe."
+  },
+  "groupScreenLeaveConfirmTitle": "Quitter « {name} » ?",
+  "@groupScreenLeaveConfirmTitle": {
+    "description": "Titre de `showGroupConfirmationDialog` déclenché par l'icône déconnexion du header (membre, pas fondateur).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupScreenLeaveConfirmMessage": "Tu perds l'accès au butin commun et au suivi de tes coéquipiers. Ton personnage garde toutes ses données.",
+  "@groupScreenLeaveConfirmMessage": {
+    "description": "Message de `showGroupConfirmationDialog` pour quitter le groupe, partagé par l'icône du header et le lien en pied de l'onglet Membres."
+  },
+  "groupScreenLeaveConfirmButtonLabel": "Quitter",
+  "@groupScreenLeaveConfirmButtonLabel": {
+    "description": "`confirmLabel` du dialogue de confirmation pour quitter le groupe."
+  },
+  "groupScreenLeftGroupSnackbar": "Tu as quitté le groupe.",
+  "@groupScreenLeftGroupSnackbar": {
+    "description": "`SnackBar` affiché après `leaveGroup` réussi, juste avant de naviguer vers `/`."
+  },
+  "groupScreenLeaveGroupGenericErrorMessage": "Impossible de quitter le groupe. Réessayez.",
+  "@groupScreenLeaveGroupGenericErrorMessage": {
+    "description": "`SnackBar` de repli quand `leaveGroup` échoue avec une erreur qui n'est pas une `GroupFailure`."
+  },
+  "groupScreenRemoveMemberConfirmTitle": "Exclure {name} du groupe ?",
+  "@groupScreenRemoveMemberConfirmTitle": {
+    "description": "Titre de `showGroupConfirmationDialog` déclenché par le bouton exclure (owner uniquement) d'une ligne de l'onglet Membres.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupScreenRemoveMemberConfirmButtonLabel": "Exclure",
+  "@groupScreenRemoveMemberConfirmButtonLabel": {
+    "description": "`confirmLabel` du dialogue de confirmation d'exclusion."
+  },
+  "groupScreenRemoveMemberGameMasterMessage": "Il/elle quitte immédiatement le groupe.",
+  "@groupScreenRemoveMemberGameMasterMessage": {
+    "description": "Message de confirmation d'exclusion pour un MJ volontaire sans personnage (`GroupMember.isGameMaster`) — voir `_GroupScreenState._removeMemberMessage`."
+  },
+  "groupScreenRemoveMemberOrphanMessage": "Son personnage a déjà été supprimé ; il/elle quitte immédiatement le groupe.",
+  "@groupScreenRemoveMemberOrphanMessage": {
+    "description": "Message de confirmation d'exclusion pour un membre orphelin (`GroupMember.isAwaitingCharacter`, personnage supprimé entre-temps) — jamais confondu avec le MJ volontaire malgré `characterId == null` dans les deux cas."
+  },
+  "groupScreenRemoveMemberDefaultMessage": "Son personnage garde toutes ses données, mais quitte immédiatement le groupe.",
+  "@groupScreenRemoveMemberDefaultMessage": {
+    "description": "Message de confirmation d'exclusion pour un membre avec personnage (cas par défaut)."
+  },
+  "groupScreenMemberRemovedSnackbar": "{name} a été exclu du groupe.",
+  "@groupScreenMemberRemovedSnackbar": {
+    "description": "`SnackBar` affiché après `removeMember` réussi.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupScreenRemoveMemberGenericErrorMessage": "Impossible d'exclure ce membre. Réessayez.",
+  "@groupScreenRemoveMemberGenericErrorMessage": {
+    "description": "`SnackBar` de repli quand `removeMember` échoue avec une erreur qui n'est pas une `GroupFailure`."
+  },
+  "groupScreenCurrencyClaimedSnackbar": "Monnaie récupérée.",
+  "@groupScreenCurrencyClaimedSnackbar": {
+    "description": "`SnackBar` affiché après un succès total de `_claimCurrency` (toutes les dénominations saisies récupérées)."
+  },
+  "groupScreenTreasureConflictAllFailedSnackbar": "Un autre membre vient de modifier le butin. Réessaie.",
+  "@groupScreenTreasureConflictAllFailedSnackbar": {
+    "description": "`SnackBar` affiché quand `_claimCurrency` échoue sur TOUTES les dénominations saisies (conflit, un autre membre a déjà modifié le butin)."
+  },
+  "groupScreenTreasureConflictPartialSnackbar": "Butin modifié entretemps : {labels} non récupérées, le reste a été ajouté à ton inventaire.",
+  "@groupScreenTreasureConflictPartialSnackbar": {
+    "description": "`SnackBar` récapitulatif pour un échec PARTIEL de `_claimCurrency` (certaines dénominations acceptées, d'autres refusées) — `{labels}` est la liste des unités refusées (`CurrencyKind.unitLabel`, non traduites : \"PO\"/\"PA\"/etc., abréviations de jeu).",
+    "placeholders": {
+      "labels": {
+        "type": "String"
+      }
+    }
+  },
+  "groupScreenItemClaimedSnackbar": "Objet ajouté à ton inventaire.",
+  "@groupScreenItemClaimedSnackbar": {
+    "description": "`SnackBar` affiché après `claimTreasureItem` réussi."
+  },
+  "groupScreenClaimItemGenericErrorMessage": "Impossible de réclamer cet objet. Réessayez.",
+  "@groupScreenClaimItemGenericErrorMessage": {
+    "description": "`SnackBar` de repli quand `claimTreasureItem` échoue avec une erreur qui n'est pas une `GroupFailure`."
+  },
+  "groupScreenTreasureUpdatedSnackbar": "Butin mis à jour.",
+  "@groupScreenTreasureUpdatedSnackbar": {
+    "description": "`SnackBar` affiché après `addToTreasure` réussi."
+  },
+  "groupScreenUpdateTreasureGenericErrorMessage": "Impossible de mettre à jour le butin. Réessayez.",
+  "@groupScreenUpdateTreasureGenericErrorMessage": {
+    "description": "`SnackBar` de repli quand `addToTreasure` échoue avec une erreur qui n'est pas une `GroupFailure`."
+  },
+  "groupScreenNoteSavedSnackbar": "Notes enregistrées.",
+  "@groupScreenNoteSavedSnackbar": {
+    "description": "`SnackBar` affiché après `saveGroupNote` réussi."
+  },
+  "groupScreenSaveNoteGenericErrorMessage": "Impossible d'enregistrer tes notes. Réessayez.",
+  "@groupScreenSaveNoteGenericErrorMessage": {
+    "description": "`SnackBar` de repli quand `saveGroupNote` échoue avec une erreur qui n'est pas une `GroupFailure`."
+  },
+  "groupScreenLoadErrorMessage": "Impossible de charger ce groupe. Réessayez.",
+  "@groupScreenLoadErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur de `groupDetailProvider` n'est pas une `GroupFailure`."
+  },
+  "groupScreenTreasureLoadErrorMessage": "Impossible de charger le butin commun. Réessayez.",
+  "@groupScreenTreasureLoadErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur de `groupTreasureProvider` n'est pas une `GroupFailure`."
+  },
+  "groupScreenNoteLoadErrorMessage": "Impossible de charger tes notes. Réessayez.",
+  "@groupScreenNoteLoadErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur de `groupNoteProvider` n'est pas une `GroupFailure`."
+  },
+  "groupScreenNoNotesForGameMasterMessage": "Le carnet de notes est propre à un personnage : en tant que MJ sans personnage, tu n'en as pas ici.",
+  "@groupScreenNoNotesForGameMasterMessage": {
+    "description": "Texte de `_NoNotesForGameMasterState` (onglet Notes désactivé pour un MJ sans personnage)."
+  },
+  "groupScreenRetryButtonLabel": "Réessayer",
+  "@groupScreenRetryButtonLabel": {
+    "description": "`SecondaryButton` \"Réessayer\" de `_ErrorState`, partagé par les 3 onglets (Membres/Butin/Notes)."
+  },
+  "groupSettingsScreenTitle": "PARAMÈTRES DU GROUPE",
+  "@groupSettingsScreenTitle": {
+    "description": "Titre du `WoodBackHeader` de `group_settings_screen.dart`, déjà en majuscules."
+  },
+  "groupSettingsScreenLoadErrorMessage": "Impossible de charger ce groupe. Réessayez.",
+  "@groupSettingsScreenLoadErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur de `groupDetailProvider` n'est pas une `GroupFailure`."
+  },
+  "groupSettingsScreenRenamedSnackbar": "Groupe renommé.",
+  "@groupSettingsScreenRenamedSnackbar": {
+    "description": "`SnackBar` affiché après `renameGroup` réussi."
+  },
+  "groupSettingsScreenGenericRenameErrorMessage": "Impossible d'enregistrer les modifications. Réessayez.",
+  "@groupSettingsScreenGenericRenameErrorMessage": {
+    "description": "Bandeau d'erreur (`AlertBanner`) affiché quand `renameGroup` échoue avec une erreur qui n'est pas une `GroupFailure`."
+  },
+  "groupSettingsScreenRegenerateConfirmTitle": "Régénérer le code d'invitation ?",
+  "@groupSettingsScreenRegenerateConfirmTitle": {
+    "description": "Titre de `showGroupConfirmationDialog` déclenché par le bouton \"Régénérer\"."
+  },
+  "groupSettingsScreenRegenerateConfirmMessage": "L'ancien code cessera de fonctionner immédiatement. Les membres déjà présents ne sont pas affectés.",
+  "@groupSettingsScreenRegenerateConfirmMessage": {
+    "description": "Message de `showGroupConfirmationDialog` pour la régénération du code d'invitation."
+  },
+  "groupSettingsScreenRegenerateConfirmButtonLabel": "Régénérer",
+  "@groupSettingsScreenRegenerateConfirmButtonLabel": {
+    "description": "`confirmLabel` (`PrimaryButton`, `destructive: false`) du dialogue de confirmation de régénération."
+  },
+  "groupSettingsScreenRegeneratedSnackbar": "Code régénéré.",
+  "@groupSettingsScreenRegeneratedSnackbar": {
+    "description": "`SnackBar` affiché après `regenerateInviteCode` réussi."
+  },
+  "groupSettingsScreenRegenerateGenericErrorMessage": "Impossible de régénérer le code. Réessayez.",
+  "@groupSettingsScreenRegenerateGenericErrorMessage": {
+    "description": "`SnackBar` de repli quand `regenerateInviteCode` échoue avec une erreur qui n'est pas une `GroupFailure`."
+  },
+  "groupSettingsScreenNameLabel": "Nom du groupe",
+  "@groupSettingsScreenNameLabel": {
+    "description": "`_SectionLabel` au-dessus du `TextFormField` du nom du groupe."
+  },
+  "groupSettingsScreenNameHint": "Ex. Les Lames de l'Aube",
+  "@groupSettingsScreenNameHint": {
+    "description": "`hintText` du `TextFormField` du nom du groupe."
+  },
+  "groupSettingsScreenInviteCodeSectionLabel": "CODE D'INVITATION",
+  "@groupSettingsScreenInviteCodeSectionLabel": {
+    "description": "Libellé de section au-dessus de `GroupInviteCodeChip`, déjà en majuscules."
+  },
+  "groupSettingsScreenRegenerateButtonLabel": "Régénérer",
+  "@groupSettingsScreenRegenerateButtonLabel": {
+    "description": "`SecondaryButton` \"Régénérer\" à côté de `GroupInviteCodeChip` (ouvre le dialogue de confirmation, voir `groupSettingsScreenRegenerateConfirmButtonLabel`)."
+  },
+  "groupSettingsScreenRegenerateHint": "Régénérer invalide l'ancien code : les membres déjà rattachés ne sont pas affectés.",
+  "@groupSettingsScreenRegenerateHint": {
+    "description": "Sous-texte sous la ligne code d'invitation/bouton Régénérer."
+  },
+  "groupSettingsScreenDangerZoneLabel": "ZONE DANGEREUSE",
+  "@groupSettingsScreenDangerZoneLabel": {
+    "description": "Libellé de section au-dessus du bouton \"Dissoudre le groupe\", déjà en majuscules."
+  },
+  "groupSettingsScreenDissolveButtonLabel": "Dissoudre le groupe",
+  "@groupSettingsScreenDissolveButtonLabel": {
+    "description": "`DestructiveButton` qui ouvre `showGroupDissolveSheet`."
+  },
+  "groupSettingsScreenDissolveHint": "Réservé au créateur du groupe. Retire tous les membres et supprime le butin commun ; les personnages et leurs données restent intacts.",
+  "@groupSettingsScreenDissolveHint": {
+    "description": "Sous-texte sous le bouton \"Dissoudre le groupe\"."
+  },
+  "groupSettingsScreenSaveButtonLabel": "Enregistrer",
+  "@groupSettingsScreenSaveButtonLabel": {
+    "description": "`PrimaryButton` fixé en pied d'écran, soumet `renameGroup`."
+  },
+  "groupSettingsScreenRetryButtonLabel": "Réessayer",
+  "@groupSettingsScreenRetryButtonLabel": {
+    "description": "`SecondaryButton` \"Réessayer\" de `_ErrorState`."
+  },
+  "groupDissolveSheetTitle": "DISSOUDRE LE GROUPE",
+  "@groupDissolveSheetTitle": {
+    "description": "`SheetHeaderBar.title` de `group_dissolve_sheet.dart`, déjà en majuscules."
+  },
+  "groupDissolveSheetWarningMessage": "Cette action est irréversible. Elle supprimera définitivement le groupe, son butin commun et l'accès de tous ses membres — leurs personnages gardent toutes leurs données.\n\nCette action ne peut pas être annulée.",
+  "@groupDissolveSheetWarningMessage": {
+    "description": "`AlertBanner` de l'étape `_DissolveStep.warning`."
+  },
+  "groupDissolveSheetGenericErrorMessage": "Impossible de dissoudre le groupe. Réessayez.",
+  "@groupDissolveSheetGenericErrorMessage": {
+    "description": "`AlertBanner` d'erreur de l'étape `_DissolveStep.confirm` quand `dissolveGroup` échoue."
+  },
+  "groupDissolveSheetDissolvedSnackbar": "Groupe dissous.",
+  "@groupDissolveSheetDissolvedSnackbar": {
+    "description": "`SnackBar` affiché après `dissolveGroup` réussi, juste avant de naviguer vers `/`."
+  },
+  "groupDissolveSheetCancelButtonLabel": "Annuler",
+  "@groupDissolveSheetCancelButtonLabel": {
+    "description": "`SecondaryButton` \"Annuler\" partagé par les 2 étapes (`warning`/`confirm`) de la sheet."
+  },
+  "groupDissolveSheetContinueButtonLabel": "Continuer",
+  "@groupDissolveSheetContinueButtonLabel": {
+    "description": "`DestructiveButton` de l'étape `_DissolveStep.warning`, passe à l'étape de confirmation."
+  },
+  "groupDissolveSheetConfirmButtonLabel": "Dissoudre définitivement",
+  "@groupDissolveSheetConfirmButtonLabel": {
+    "description": "`DestructiveButton` de l'étape `_DissolveStep.confirm` quand `!_isDissolving` (voir `groupDissolveSheetConfirmInProgressLabel` sinon)."
+  },
+  "groupDissolveSheetConfirmInProgressLabel": "Dissolution en cours…",
+  "@groupDissolveSheetConfirmInProgressLabel": {
+    "description": "Libellé du même `DestructiveButton` pendant l'appel réseau (`_isDissolving`)."
+  },
+  "groupDissolveSheetConfirmInstructionLabel": "RETAPE LE NOM DU GROUPE POUR CONFIRMER",
+  "@groupDissolveSheetConfirmInstructionLabel": {
+    "description": "Libellé au-dessus du `TextFormField` de retape du nom, déjà en majuscules."
+  },
+  "groupDissolveSheetNameFieldHint": "Nom du groupe",
+  "@groupDissolveSheetNameFieldHint": {
+    "description": "`hintText` du `TextFormField` de retape du nom."
+  },
+  "groupCharacterReassignmentScreenTitle": "CHOISIR UN NOUVEAU PERSONNAGE",
+  "@groupCharacterReassignmentScreenTitle": {
+    "description": "Titre du `WoodBackHeader` de `group_character_reassignment_screen.dart`, déjà en majuscules."
+  },
+  "groupCharacterReassignmentScreenLeaveConfirmTitle": "Quitter ce groupe ?",
+  "@groupCharacterReassignmentScreenLeaveConfirmTitle": {
+    "description": "Titre de `showGroupConfirmationDialog` déclenché par \"Quitter le groupe\" (état vide, aucun personnage à rattacher)."
+  },
+  "groupCharacterReassignmentScreenLeaveConfirmMessage": "Tu perds l'accès au butin commun et au suivi de tes coéquipiers.",
+  "@groupCharacterReassignmentScreenLeaveConfirmMessage": {
+    "description": "Message de `showGroupConfirmationDialog` pour quitter le groupe depuis cet écran."
+  },
+  "groupCharacterReassignmentScreenLeaveConfirmButtonLabel": "Quitter",
+  "@groupCharacterReassignmentScreenLeaveConfirmButtonLabel": {
+    "description": "`confirmLabel` du dialogue de confirmation pour quitter le groupe depuis cet écran."
+  },
+  "groupCharacterReassignmentScreenLeaveGenericErrorMessage": "Impossible de quitter le groupe. Réessayez.",
+  "@groupCharacterReassignmentScreenLeaveGenericErrorMessage": {
+    "description": "Bandeau (`AlertBanner`, `_bannerMessage`) de repli quand `leaveGroup` échoue avec une erreur qui n'est pas une `GroupFailure`."
+  },
+  "groupCharacterReassignmentScreenGenericErrorMessage": "Impossible de mettre à jour le groupe. Réessayez.",
+  "@groupCharacterReassignmentScreenGenericErrorMessage": {
+    "description": "Bandeau de repli quand `setGroupCharacter` échoue avec une erreur inattendue (pas une `GroupCharacterReassignmentFailure` reconnue), ET résolution de `GroupCharacterReassignmentFailureKind.generic`."
+  },
+  "groupCharacterReassignmentScreenCharacterNotOwnedMessage": "Ce personnage ne t'appartient pas.",
+  "@groupCharacterReassignmentScreenCharacterNotOwnedMessage": {
+    "description": "Bandeau pour `GroupCharacterReassignmentFailureKind.characterNotOwned`."
+  },
+  "groupCharacterReassignmentScreenNotMemberMessage": "Tu n'es plus membre de ce groupe.",
+  "@groupCharacterReassignmentScreenNotMemberMessage": {
+    "description": "Bandeau pour `GroupCharacterReassignmentFailureKind.notMember`."
+  },
+  "groupCharacterReassignmentScreenNotEligibleMessage": "Cette action ne te concerne plus.",
+  "@groupCharacterReassignmentScreenNotEligibleMessage": {
+    "description": "Bandeau pour `GroupCharacterReassignmentFailureKind.notEligible`."
+  },
+  "groupCharacterReassignmentScreenAlreadyInGroupMessage": "Ce personnage est déjà membre de ce groupe.",
+  "@groupCharacterReassignmentScreenAlreadyInGroupMessage": {
+    "description": "Bandeau pour `GroupCharacterReassignmentFailureKind.alreadyInGroup`."
+  },
+  "groupCharacterReassignmentScreenIntro": "Ton précédent personnage a été supprimé. Choisis celui qui te représentera désormais dans ce groupe.",
+  "@groupCharacterReassignmentScreenIntro": {
+    "description": "Texte d'intro affiché en tête du corps scrollable."
+  },
+  "groupCharacterReassignmentScreenRoleQuestionLabel": "Qui te représente dans ce groupe ?",
+  "@groupCharacterReassignmentScreenRoleQuestionLabel": {
+    "description": "`_SectionLabel` au-dessus de la liste de personnages sélectionnables."
+  },
+  "groupCharacterReassignmentScreenConfirmButtonLabel": "Confirmer",
+  "@groupCharacterReassignmentScreenConfirmButtonLabel": {
+    "description": "`PrimaryButton` fixé en pied d'écran, soumet `setGroupCharacter`."
+  },
+  "groupCharacterReassignmentScreenCreateCharacterButtonLabel": "Créer un personnage",
+  "@groupCharacterReassignmentScreenCreateCharacterButtonLabel": {
+    "description": "`SecondaryButton` affiché dans l'état vide (aucun personnage), lance l'assistant de création."
+  },
+  "groupCharacterReassignmentScreenLeaveGroupButtonLabel": "Quitter le groupe",
+  "@groupCharacterReassignmentScreenLeaveGroupButtonLabel": {
+    "description": "`DestructiveButton` affiché dans l'état vide (aucun personnage)."
+  },
+  "groupCharacterReassignmentScreenCharactersLoadErrorMessage": "Impossible de charger vos personnages. Réessayez.",
+  "@groupCharacterReassignmentScreenCharactersLoadErrorMessage": {
+    "description": "Message de repli de `_CharacterSectionError` quand l'erreur de `charactersProvider` n'est pas une `CharacterFailure`."
+  },
+  "groupCharacterReassignmentScreenNoCharacterNote": "Tu n'as pas encore de personnage à rattacher.",
+  "@groupCharacterReassignmentScreenNoCharacterNote": {
+    "description": "Note de `_NoCharacterNote`, affichée dans l'état vide (aucun personnage)."
+  },
+  "groupCharacterReassignmentScreenRetryButtonLabel": "Réessayer",
+  "@groupCharacterReassignmentScreenRetryButtonLabel": {
+    "description": "`TextButton` \"Réessayer\" de `_CharacterSectionError`."
+  },
+  "groupCharacterReassignmentScreenSavingOverlayMessage": "Mise à jour du groupe...",
+  "@groupCharacterReassignmentScreenSavingOverlayMessage": {
+    "description": "Texte de `_ReassignmentSavingOverlay`, affiché pendant `setGroupCharacter`."
   }
 }

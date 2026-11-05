@@ -7766,6 +7766,474 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Code {code} copié.'**
   String groupInviteCodeChipCopiedSnackbar(String code);
+
+  /// Libellé de l'onglet `GroupTab.members` de `group_screen.dart` (`SegmentedTabBar`, mis en majuscules à l'affichage par ce composant).
+  ///
+  /// In fr, this message translates to:
+  /// **'Membres'**
+  String get groupTabMembersLabel;
+
+  /// Libellé de l'onglet `GroupTab.treasure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Butin'**
+  String get groupTabTreasureLabel;
+
+  /// Libellé de l'onglet `GroupTab.notes` (ajouté le 16/09/2026, hors cahier des charges).
+  ///
+  /// In fr, this message translates to:
+  /// **'Notes'**
+  String get groupTabNotesLabel;
+
+  /// Titre de repli du `WoodBackHeader` de `group_screen.dart` tant que `groupDetailProvider` n'a pas résolu de nom de groupe.
+  ///
+  /// In fr, this message translates to:
+  /// **'GROUPE'**
+  String get groupScreenDefaultTitle;
+
+  /// Titre de `showGroupConfirmationDialog` déclenché par l'icône déconnexion du header (membre, pas fondateur).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter « {name} » ?'**
+  String groupScreenLeaveConfirmTitle(String name);
+
+  /// Message de `showGroupConfirmationDialog` pour quitter le groupe, partagé par l'icône du header et le lien en pied de l'onglet Membres.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu perds l\'accès au butin commun et au suivi de tes coéquipiers. Ton personnage garde toutes ses données.'**
+  String get groupScreenLeaveConfirmMessage;
+
+  /// `confirmLabel` du dialogue de confirmation pour quitter le groupe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter'**
+  String get groupScreenLeaveConfirmButtonLabel;
+
+  /// `SnackBar` affiché après `leaveGroup` réussi, juste avant de naviguer vers `/`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as quitté le groupe.'**
+  String get groupScreenLeftGroupSnackbar;
+
+  /// `SnackBar` de repli quand `leaveGroup` échoue avec une erreur qui n'est pas une `GroupFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de quitter le groupe. Réessayez.'**
+  String get groupScreenLeaveGroupGenericErrorMessage;
+
+  /// Titre de `showGroupConfirmationDialog` déclenché par le bouton exclure (owner uniquement) d'une ligne de l'onglet Membres.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure {name} du groupe ?'**
+  String groupScreenRemoveMemberConfirmTitle(String name);
+
+  /// `confirmLabel` du dialogue de confirmation d'exclusion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure'**
+  String get groupScreenRemoveMemberConfirmButtonLabel;
+
+  /// Message de confirmation d'exclusion pour un MJ volontaire sans personnage (`GroupMember.isGameMaster`) — voir `_GroupScreenState._removeMemberMessage`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il/elle quitte immédiatement le groupe.'**
+  String get groupScreenRemoveMemberGameMasterMessage;
+
+  /// Message de confirmation d'exclusion pour un membre orphelin (`GroupMember.isAwaitingCharacter`, personnage supprimé entre-temps) — jamais confondu avec le MJ volontaire malgré `characterId == null` dans les deux cas.
+  ///
+  /// In fr, this message translates to:
+  /// **'Son personnage a déjà été supprimé ; il/elle quitte immédiatement le groupe.'**
+  String get groupScreenRemoveMemberOrphanMessage;
+
+  /// Message de confirmation d'exclusion pour un membre avec personnage (cas par défaut).
+  ///
+  /// In fr, this message translates to:
+  /// **'Son personnage garde toutes ses données, mais quitte immédiatement le groupe.'**
+  String get groupScreenRemoveMemberDefaultMessage;
+
+  /// `SnackBar` affiché après `removeMember` réussi.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a été exclu du groupe.'**
+  String groupScreenMemberRemovedSnackbar(String name);
+
+  /// `SnackBar` de repli quand `removeMember` échoue avec une erreur qui n'est pas une `GroupFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'exclure ce membre. Réessayez.'**
+  String get groupScreenRemoveMemberGenericErrorMessage;
+
+  /// `SnackBar` affiché après un succès total de `_claimCurrency` (toutes les dénominations saisies récupérées).
+  ///
+  /// In fr, this message translates to:
+  /// **'Monnaie récupérée.'**
+  String get groupScreenCurrencyClaimedSnackbar;
+
+  /// `SnackBar` affiché quand `_claimCurrency` échoue sur TOUTES les dénominations saisies (conflit, un autre membre a déjà modifié le butin).
+  ///
+  /// In fr, this message translates to:
+  /// **'Un autre membre vient de modifier le butin. Réessaie.'**
+  String get groupScreenTreasureConflictAllFailedSnackbar;
+
+  /// `SnackBar` récapitulatif pour un échec PARTIEL de `_claimCurrency` (certaines dénominations acceptées, d'autres refusées) — `{labels}` est la liste des unités refusées (`CurrencyKind.unitLabel`, non traduites : "PO"/"PA"/etc., abréviations de jeu).
+  ///
+  /// In fr, this message translates to:
+  /// **'Butin modifié entretemps : {labels} non récupérées, le reste a été ajouté à ton inventaire.'**
+  String groupScreenTreasureConflictPartialSnackbar(String labels);
+
+  /// `SnackBar` affiché après `claimTreasureItem` réussi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet ajouté à ton inventaire.'**
+  String get groupScreenItemClaimedSnackbar;
+
+  /// `SnackBar` de repli quand `claimTreasureItem` échoue avec une erreur qui n'est pas une `GroupFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de réclamer cet objet. Réessayez.'**
+  String get groupScreenClaimItemGenericErrorMessage;
+
+  /// `SnackBar` affiché après `addToTreasure` réussi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Butin mis à jour.'**
+  String get groupScreenTreasureUpdatedSnackbar;
+
+  /// `SnackBar` de repli quand `addToTreasure` échoue avec une erreur qui n'est pas une `GroupFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de mettre à jour le butin. Réessayez.'**
+  String get groupScreenUpdateTreasureGenericErrorMessage;
+
+  /// `SnackBar` affiché après `saveGroupNote` réussi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notes enregistrées.'**
+  String get groupScreenNoteSavedSnackbar;
+
+  /// `SnackBar` de repli quand `saveGroupNote` échoue avec une erreur qui n'est pas une `GroupFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer tes notes. Réessayez.'**
+  String get groupScreenSaveNoteGenericErrorMessage;
+
+  /// Message de repli de `_ErrorState` quand l'erreur de `groupDetailProvider` n'est pas une `GroupFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger ce groupe. Réessayez.'**
+  String get groupScreenLoadErrorMessage;
+
+  /// Message de repli de `_ErrorState` quand l'erreur de `groupTreasureProvider` n'est pas une `GroupFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger le butin commun. Réessayez.'**
+  String get groupScreenTreasureLoadErrorMessage;
+
+  /// Message de repli de `_ErrorState` quand l'erreur de `groupNoteProvider` n'est pas une `GroupFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger tes notes. Réessayez.'**
+  String get groupScreenNoteLoadErrorMessage;
+
+  /// Texte de `_NoNotesForGameMasterState` (onglet Notes désactivé pour un MJ sans personnage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Le carnet de notes est propre à un personnage : en tant que MJ sans personnage, tu n\'en as pas ici.'**
+  String get groupScreenNoNotesForGameMasterMessage;
+
+  /// `SecondaryButton` "Réessayer" de `_ErrorState`, partagé par les 3 onglets (Membres/Butin/Notes).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get groupScreenRetryButtonLabel;
+
+  /// Titre du `WoodBackHeader` de `group_settings_screen.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'PARAMÈTRES DU GROUPE'**
+  String get groupSettingsScreenTitle;
+
+  /// Message de repli de `_ErrorState` quand l'erreur de `groupDetailProvider` n'est pas une `GroupFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger ce groupe. Réessayez.'**
+  String get groupSettingsScreenLoadErrorMessage;
+
+  /// `SnackBar` affiché après `renameGroup` réussi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Groupe renommé.'**
+  String get groupSettingsScreenRenamedSnackbar;
+
+  /// Bandeau d'erreur (`AlertBanner`) affiché quand `renameGroup` échoue avec une erreur qui n'est pas une `GroupFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer les modifications. Réessayez.'**
+  String get groupSettingsScreenGenericRenameErrorMessage;
+
+  /// Titre de `showGroupConfirmationDialog` déclenché par le bouton "Régénérer".
+  ///
+  /// In fr, this message translates to:
+  /// **'Régénérer le code d\'invitation ?'**
+  String get groupSettingsScreenRegenerateConfirmTitle;
+
+  /// Message de `showGroupConfirmationDialog` pour la régénération du code d'invitation.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'ancien code cessera de fonctionner immédiatement. Les membres déjà présents ne sont pas affectés.'**
+  String get groupSettingsScreenRegenerateConfirmMessage;
+
+  /// `confirmLabel` (`PrimaryButton`, `destructive: false`) du dialogue de confirmation de régénération.
+  ///
+  /// In fr, this message translates to:
+  /// **'Régénérer'**
+  String get groupSettingsScreenRegenerateConfirmButtonLabel;
+
+  /// `SnackBar` affiché après `regenerateInviteCode` réussi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code régénéré.'**
+  String get groupSettingsScreenRegeneratedSnackbar;
+
+  /// `SnackBar` de repli quand `regenerateInviteCode` échoue avec une erreur qui n'est pas une `GroupFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de régénérer le code. Réessayez.'**
+  String get groupSettingsScreenRegenerateGenericErrorMessage;
+
+  /// `_SectionLabel` au-dessus du `TextFormField` du nom du groupe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du groupe'**
+  String get groupSettingsScreenNameLabel;
+
+  /// `hintText` du `TextFormField` du nom du groupe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. Les Lames de l\'Aube'**
+  String get groupSettingsScreenNameHint;
+
+  /// Libellé de section au-dessus de `GroupInviteCodeChip`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'CODE D\'INVITATION'**
+  String get groupSettingsScreenInviteCodeSectionLabel;
+
+  /// `SecondaryButton` "Régénérer" à côté de `GroupInviteCodeChip` (ouvre le dialogue de confirmation, voir `groupSettingsScreenRegenerateConfirmButtonLabel`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Régénérer'**
+  String get groupSettingsScreenRegenerateButtonLabel;
+
+  /// Sous-texte sous la ligne code d'invitation/bouton Régénérer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Régénérer invalide l\'ancien code : les membres déjà rattachés ne sont pas affectés.'**
+  String get groupSettingsScreenRegenerateHint;
+
+  /// Libellé de section au-dessus du bouton "Dissoudre le groupe", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'ZONE DANGEREUSE'**
+  String get groupSettingsScreenDangerZoneLabel;
+
+  /// `DestructiveButton` qui ouvre `showGroupDissolveSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dissoudre le groupe'**
+  String get groupSettingsScreenDissolveButtonLabel;
+
+  /// Sous-texte sous le bouton "Dissoudre le groupe".
+  ///
+  /// In fr, this message translates to:
+  /// **'Réservé au créateur du groupe. Retire tous les membres et supprime le butin commun ; les personnages et leurs données restent intacts.'**
+  String get groupSettingsScreenDissolveHint;
+
+  /// `PrimaryButton` fixé en pied d'écran, soumet `renameGroup`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get groupSettingsScreenSaveButtonLabel;
+
+  /// `SecondaryButton` "Réessayer" de `_ErrorState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get groupSettingsScreenRetryButtonLabel;
+
+  /// `SheetHeaderBar.title` de `group_dissolve_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'DISSOUDRE LE GROUPE'**
+  String get groupDissolveSheetTitle;
+
+  /// `AlertBanner` de l'étape `_DissolveStep.warning`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action est irréversible. Elle supprimera définitivement le groupe, son butin commun et l\'accès de tous ses membres — leurs personnages gardent toutes leurs données.\n\nCette action ne peut pas être annulée.'**
+  String get groupDissolveSheetWarningMessage;
+
+  /// `AlertBanner` d'erreur de l'étape `_DissolveStep.confirm` quand `dissolveGroup` échoue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de dissoudre le groupe. Réessayez.'**
+  String get groupDissolveSheetGenericErrorMessage;
+
+  /// `SnackBar` affiché après `dissolveGroup` réussi, juste avant de naviguer vers `/`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Groupe dissous.'**
+  String get groupDissolveSheetDissolvedSnackbar;
+
+  /// `SecondaryButton` "Annuler" partagé par les 2 étapes (`warning`/`confirm`) de la sheet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get groupDissolveSheetCancelButtonLabel;
+
+  /// `DestructiveButton` de l'étape `_DissolveStep.warning`, passe à l'étape de confirmation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get groupDissolveSheetContinueButtonLabel;
+
+  /// `DestructiveButton` de l'étape `_DissolveStep.confirm` quand `!_isDissolving` (voir `groupDissolveSheetConfirmInProgressLabel` sinon).
+  ///
+  /// In fr, this message translates to:
+  /// **'Dissoudre définitivement'**
+  String get groupDissolveSheetConfirmButtonLabel;
+
+  /// Libellé du même `DestructiveButton` pendant l'appel réseau (`_isDissolving`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Dissolution en cours…'**
+  String get groupDissolveSheetConfirmInProgressLabel;
+
+  /// Libellé au-dessus du `TextFormField` de retape du nom, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'RETAPE LE NOM DU GROUPE POUR CONFIRMER'**
+  String get groupDissolveSheetConfirmInstructionLabel;
+
+  /// `hintText` du `TextFormField` de retape du nom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du groupe'**
+  String get groupDissolveSheetNameFieldHint;
+
+  /// Titre du `WoodBackHeader` de `group_character_reassignment_screen.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'CHOISIR UN NOUVEAU PERSONNAGE'**
+  String get groupCharacterReassignmentScreenTitle;
+
+  /// Titre de `showGroupConfirmationDialog` déclenché par "Quitter le groupe" (état vide, aucun personnage à rattacher).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter ce groupe ?'**
+  String get groupCharacterReassignmentScreenLeaveConfirmTitle;
+
+  /// Message de `showGroupConfirmationDialog` pour quitter le groupe depuis cet écran.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu perds l\'accès au butin commun et au suivi de tes coéquipiers.'**
+  String get groupCharacterReassignmentScreenLeaveConfirmMessage;
+
+  /// `confirmLabel` du dialogue de confirmation pour quitter le groupe depuis cet écran.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter'**
+  String get groupCharacterReassignmentScreenLeaveConfirmButtonLabel;
+
+  /// Bandeau (`AlertBanner`, `_bannerMessage`) de repli quand `leaveGroup` échoue avec une erreur qui n'est pas une `GroupFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de quitter le groupe. Réessayez.'**
+  String get groupCharacterReassignmentScreenLeaveGenericErrorMessage;
+
+  /// Bandeau de repli quand `setGroupCharacter` échoue avec une erreur inattendue (pas une `GroupCharacterReassignmentFailure` reconnue), ET résolution de `GroupCharacterReassignmentFailureKind.generic`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de mettre à jour le groupe. Réessayez.'**
+  String get groupCharacterReassignmentScreenGenericErrorMessage;
+
+  /// Bandeau pour `GroupCharacterReassignmentFailureKind.characterNotOwned`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce personnage ne t\'appartient pas.'**
+  String get groupCharacterReassignmentScreenCharacterNotOwnedMessage;
+
+  /// Bandeau pour `GroupCharacterReassignmentFailureKind.notMember`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu n\'es plus membre de ce groupe.'**
+  String get groupCharacterReassignmentScreenNotMemberMessage;
+
+  /// Bandeau pour `GroupCharacterReassignmentFailureKind.notEligible`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action ne te concerne plus.'**
+  String get groupCharacterReassignmentScreenNotEligibleMessage;
+
+  /// Bandeau pour `GroupCharacterReassignmentFailureKind.alreadyInGroup`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce personnage est déjà membre de ce groupe.'**
+  String get groupCharacterReassignmentScreenAlreadyInGroupMessage;
+
+  /// Texte d'intro affiché en tête du corps scrollable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton précédent personnage a été supprimé. Choisis celui qui te représentera désormais dans ce groupe.'**
+  String get groupCharacterReassignmentScreenIntro;
+
+  /// `_SectionLabel` au-dessus de la liste de personnages sélectionnables.
+  ///
+  /// In fr, this message translates to:
+  /// **'Qui te représente dans ce groupe ?'**
+  String get groupCharacterReassignmentScreenRoleQuestionLabel;
+
+  /// `PrimaryButton` fixé en pied d'écran, soumet `setGroupCharacter`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmer'**
+  String get groupCharacterReassignmentScreenConfirmButtonLabel;
+
+  /// `SecondaryButton` affiché dans l'état vide (aucun personnage), lance l'assistant de création.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer un personnage'**
+  String get groupCharacterReassignmentScreenCreateCharacterButtonLabel;
+
+  /// `DestructiveButton` affiché dans l'état vide (aucun personnage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter le groupe'**
+  String get groupCharacterReassignmentScreenLeaveGroupButtonLabel;
+
+  /// Message de repli de `_CharacterSectionError` quand l'erreur de `charactersProvider` n'est pas une `CharacterFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger vos personnages. Réessayez.'**
+  String get groupCharacterReassignmentScreenCharactersLoadErrorMessage;
+
+  /// Note de `_NoCharacterNote`, affichée dans l'état vide (aucun personnage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu n\'as pas encore de personnage à rattacher.'**
+  String get groupCharacterReassignmentScreenNoCharacterNote;
+
+  /// `TextButton` "Réessayer" de `_CharacterSectionError`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get groupCharacterReassignmentScreenRetryButtonLabel;
+
+  /// Texte de `_ReassignmentSavingOverlay`, affiché pendant `setGroupCharacter`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mise à jour du groupe...'**
+  String get groupCharacterReassignmentScreenSavingOverlayMessage;
 }
 
 class _AppLocalizationsDelegate

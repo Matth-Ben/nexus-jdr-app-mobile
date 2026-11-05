@@ -14,6 +14,7 @@ import '../../auth/presentation/providers/auth_providers.dart';
 import '../domain/group_color_assigner.dart';
 import '../domain/group_failure.dart';
 import '../domain/group_summary.dart';
+import 'group_failure_presenter.dart';
 import 'providers/group_providers.dart';
 import 'widgets/member_color_chips_row.dart';
 
@@ -65,7 +66,7 @@ class GroupListScreen extends ConsumerWidget {
                 ),
                 error: (error, stackTrace) => _ErrorState(
                   message: error is GroupFailure
-                      ? _resolveGroupFailureMessage(l10n, error)
+                      ? resolveGroupFailureMessage(l10n, error)
                       : l10n.groupListScreenLoadErrorMessage,
                   onRetry: () => ref.invalidate(myGroupsProvider),
                 ),
@@ -412,27 +413,5 @@ class _ErrorState extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// Résout le texte final d'une [GroupFailure] à afficher à l'écran.
-///
-/// Voir la doc de classe d'[GroupErrorCode] (`domain/group_failure.dart`)
-/// pour le choix architectural : [GroupFailure.code] est résolu ici via
-/// [AppLocalizations] pour les codes connus, [GroupFailure.message] (déjà
-/// construit par `data/group_error_mapper.dart`, ou fourni directement par
-/// `GroupRepository`/les tests) reste utilisé tel quel pour
-/// [GroupErrorCode.generic].
-String _resolveGroupFailureMessage(
-  AppLocalizations l10n,
-  GroupFailure failure,
-) {
-  switch (failure.code) {
-    case GroupErrorCode.accessDenied:
-      return l10n.groupAccessDeniedErrorMessage;
-    case GroupErrorCode.network:
-      return l10n.groupNetworkErrorMessage;
-    case GroupErrorCode.generic:
-      return failure.message;
   }
 }

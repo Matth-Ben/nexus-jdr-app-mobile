@@ -4711,4 +4711,285 @@ class AppLocalizationsEn extends AppLocalizations {
   String groupInviteCodeChipCopiedSnackbar(String code) {
     return 'Code $code copied.';
   }
+
+  @override
+  String get groupTabMembersLabel => 'Members';
+
+  @override
+  String get groupTabTreasureLabel => 'Loot';
+
+  @override
+  String get groupTabNotesLabel => 'Notes';
+
+  @override
+  String get groupScreenDefaultTitle => 'GROUP';
+
+  @override
+  String groupScreenLeaveConfirmTitle(String name) {
+    return 'Leave \"$name\"?';
+  }
+
+  @override
+  String get groupScreenLeaveConfirmMessage =>
+      'You\'ll lose access to the shared loot and your teammates\' tracking. Your character keeps all its data.';
+
+  @override
+  String get groupScreenLeaveConfirmButtonLabel => 'Leave';
+
+  @override
+  String get groupScreenLeftGroupSnackbar => 'You left the group.';
+
+  @override
+  String get groupScreenLeaveGroupGenericErrorMessage =>
+      'Unable to leave the group. Try again.';
+
+  @override
+  String groupScreenRemoveMemberConfirmTitle(String name) {
+    return 'Remove $name from the group?';
+  }
+
+  @override
+  String get groupScreenRemoveMemberConfirmButtonLabel => 'Remove';
+
+  @override
+  String get groupScreenRemoveMemberGameMasterMessage =>
+      'They leave the group immediately.';
+
+  @override
+  String get groupScreenRemoveMemberOrphanMessage =>
+      'Their character has already been deleted; they leave the group immediately.';
+
+  @override
+  String get groupScreenRemoveMemberDefaultMessage =>
+      'Their character keeps all its data, but leaves the group immediately.';
+
+  @override
+  String groupScreenMemberRemovedSnackbar(String name) {
+    return '$name has been removed from the group.';
+  }
+
+  @override
+  String get groupScreenRemoveMemberGenericErrorMessage =>
+      'Unable to remove this member. Try again.';
+
+  @override
+  String get groupScreenCurrencyClaimedSnackbar => 'Currency claimed.';
+
+  @override
+  String get groupScreenTreasureConflictAllFailedSnackbar =>
+      'Another member just updated the loot. Try again.';
+
+  @override
+  String groupScreenTreasureConflictPartialSnackbar(String labels) {
+    return 'Loot changed meanwhile: $labels not claimed, the rest was added to your inventory.';
+  }
+
+  @override
+  String get groupScreenItemClaimedSnackbar => 'Item added to your inventory.';
+
+  @override
+  String get groupScreenClaimItemGenericErrorMessage =>
+      'Unable to claim this item. Try again.';
+
+  @override
+  String get groupScreenTreasureUpdatedSnackbar => 'Loot updated.';
+
+  @override
+  String get groupScreenUpdateTreasureGenericErrorMessage =>
+      'Unable to update the loot. Try again.';
+
+  @override
+  String get groupScreenNoteSavedSnackbar => 'Notes saved.';
+
+  @override
+  String get groupScreenSaveNoteGenericErrorMessage =>
+      'Unable to save your notes. Try again.';
+
+  @override
+  String get groupScreenLoadErrorMessage =>
+      'Unable to load this group. Try again.';
+
+  @override
+  String get groupScreenTreasureLoadErrorMessage =>
+      'Unable to load the shared loot. Try again.';
+
+  @override
+  String get groupScreenNoteLoadErrorMessage =>
+      'Unable to load your notes. Try again.';
+
+  @override
+  String get groupScreenNoNotesForGameMasterMessage =>
+      'The notebook is specific to a character: as a GM without a character, you don\'t have one here.';
+
+  @override
+  String get groupScreenRetryButtonLabel => 'Retry';
+
+  @override
+  String get groupSettingsScreenTitle => 'GROUP SETTINGS';
+
+  @override
+  String get groupSettingsScreenLoadErrorMessage =>
+      'Unable to load this group. Try again.';
+
+  @override
+  String get groupSettingsScreenRenamedSnackbar => 'Group renamed.';
+
+  @override
+  String get groupSettingsScreenGenericRenameErrorMessage =>
+      'Unable to save the changes. Try again.';
+
+  @override
+  String get groupSettingsScreenRegenerateConfirmTitle =>
+      'Regenerate the invite code?';
+
+  @override
+  String get groupSettingsScreenRegenerateConfirmMessage =>
+      'The old code will stop working immediately. Members already in the group aren\'t affected.';
+
+  @override
+  String get groupSettingsScreenRegenerateConfirmButtonLabel => 'Regenerate';
+
+  @override
+  String get groupSettingsScreenRegeneratedSnackbar => 'Code regenerated.';
+
+  @override
+  String get groupSettingsScreenRegenerateGenericErrorMessage =>
+      'Unable to regenerate the code. Try again.';
+
+  @override
+  String get groupSettingsScreenNameLabel => 'Group name';
+
+  @override
+  String get groupSettingsScreenNameHint => 'E.g. The Dawnblades';
+
+  @override
+  String get groupSettingsScreenInviteCodeSectionLabel => 'INVITE CODE';
+
+  @override
+  String get groupSettingsScreenRegenerateButtonLabel => 'Regenerate';
+
+  @override
+  String get groupSettingsScreenRegenerateHint =>
+      'Regenerating invalidates the old code: members already attached aren\'t affected.';
+
+  @override
+  String get groupSettingsScreenDangerZoneLabel => 'DANGER ZONE';
+
+  @override
+  String get groupSettingsScreenDissolveButtonLabel => 'Dissolve the group';
+
+  @override
+  String get groupSettingsScreenDissolveHint =>
+      'Reserved for the group\'s creator. Removes all members and deletes the shared loot; characters and their data remain intact.';
+
+  @override
+  String get groupSettingsScreenSaveButtonLabel => 'Save';
+
+  @override
+  String get groupSettingsScreenRetryButtonLabel => 'Retry';
+
+  @override
+  String get groupDissolveSheetTitle => 'DISSOLVE THE GROUP';
+
+  @override
+  String get groupDissolveSheetWarningMessage =>
+      'This action is irreversible. It will permanently delete the group, its shared loot, and access for all its members — their characters keep all their data.\n\nThis action cannot be undone.';
+
+  @override
+  String get groupDissolveSheetGenericErrorMessage =>
+      'Unable to dissolve the group. Try again.';
+
+  @override
+  String get groupDissolveSheetDissolvedSnackbar => 'Group dissolved.';
+
+  @override
+  String get groupDissolveSheetCancelButtonLabel => 'Cancel';
+
+  @override
+  String get groupDissolveSheetContinueButtonLabel => 'Continue';
+
+  @override
+  String get groupDissolveSheetConfirmButtonLabel => 'Dissolve permanently';
+
+  @override
+  String get groupDissolveSheetConfirmInProgressLabel => 'Dissolving…';
+
+  @override
+  String get groupDissolveSheetConfirmInstructionLabel =>
+      'RETYPE THE GROUP NAME TO CONFIRM';
+
+  @override
+  String get groupDissolveSheetNameFieldHint => 'Group name';
+
+  @override
+  String get groupCharacterReassignmentScreenTitle => 'CHOOSE A NEW CHARACTER';
+
+  @override
+  String get groupCharacterReassignmentScreenLeaveConfirmTitle =>
+      'Leave this group?';
+
+  @override
+  String get groupCharacterReassignmentScreenLeaveConfirmMessage =>
+      'You\'ll lose access to the shared loot and your teammates\' tracking.';
+
+  @override
+  String get groupCharacterReassignmentScreenLeaveConfirmButtonLabel => 'Leave';
+
+  @override
+  String get groupCharacterReassignmentScreenLeaveGenericErrorMessage =>
+      'Unable to leave the group. Try again.';
+
+  @override
+  String get groupCharacterReassignmentScreenGenericErrorMessage =>
+      'Unable to update the group. Try again.';
+
+  @override
+  String get groupCharacterReassignmentScreenCharacterNotOwnedMessage =>
+      'This character doesn\'t belong to you.';
+
+  @override
+  String get groupCharacterReassignmentScreenNotMemberMessage =>
+      'You\'re no longer a member of this group.';
+
+  @override
+  String get groupCharacterReassignmentScreenNotEligibleMessage =>
+      'This action no longer concerns you.';
+
+  @override
+  String get groupCharacterReassignmentScreenAlreadyInGroupMessage =>
+      'This character is already a member of this group.';
+
+  @override
+  String get groupCharacterReassignmentScreenIntro =>
+      'Your previous character has been deleted. Choose the one who will now represent you in this group.';
+
+  @override
+  String get groupCharacterReassignmentScreenRoleQuestionLabel =>
+      'Who represents you in this group?';
+
+  @override
+  String get groupCharacterReassignmentScreenConfirmButtonLabel => 'Confirm';
+
+  @override
+  String get groupCharacterReassignmentScreenCreateCharacterButtonLabel =>
+      'Create a character';
+
+  @override
+  String get groupCharacterReassignmentScreenLeaveGroupButtonLabel =>
+      'Leave the group';
+
+  @override
+  String get groupCharacterReassignmentScreenCharactersLoadErrorMessage =>
+      'Unable to load your characters. Try again.';
+
+  @override
+  String get groupCharacterReassignmentScreenNoCharacterNote =>
+      'You don\'t have a character yet to attach.';
+
+  @override
+  String get groupCharacterReassignmentScreenRetryButtonLabel => 'Retry';
+
+  @override
+  String get groupCharacterReassignmentScreenSavingOverlayMessage =>
+      'Updating the group...';
 }

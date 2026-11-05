@@ -191,7 +191,10 @@ GoRouter _buildTestRouter() {
   );
 }
 
-Widget _buildTestWidget(_FakeGroupRepository repository) {
+Widget _buildTestWidget(
+  _FakeGroupRepository repository, {
+  Locale locale = const Locale('fr'),
+}) {
   return ProviderScope(
     overrides: [groupRepositoryProvider.overrideWithValue(repository)],
     child: MaterialApp.router(
@@ -201,7 +204,7 @@ Widget _buildTestWidget(_FakeGroupRepository repository) {
       // l'appel renverrait `null` et le `!` planterait.
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('fr'),
+      locale: locale,
       routerConfig: _buildTestRouter(),
     ),
   );
@@ -356,5 +359,106 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('DISSOUDRE LE GROUPE'), findsOneWidget);
+  });
+
+  group('traduction anglaise', () {
+    testWidgets('titre + état de chargement en anglais', (tester) async {
+      fakeRepository.detailCompleter = Completer<GroupDetail>();
+
+      await tester.pumpWidget(
+        _buildTestWidget(fakeRepository, locale: const Locale('en')),
+      );
+      await tester.pump();
+
+      expect(find.text('GROUP SETTINGS'), findsOneWidget);
+    });
+
+    testWidgets(
+      'contenu principal (code, zone dangereuse, légendes) en anglais',
+      (tester) async {
+        fakeRepository.detailToReturn = _ownerDetail();
+
+        await tester.pumpWidget(
+          _buildTestWidget(fakeRepository, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('INVITE CODE'), findsOneWidget);
+        expect(
+          find.textContaining('Regenerating invalidates the old code'),
+          findsOneWidget,
+        );
+        expect(find.text('DANGER ZONE'), findsOneWidget);
+        expect(find.text('Dissolve the group'), findsOneWidget);
+        expect(
+          find.textContaining("Reserved for the group's creator"),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('"Save" renomme le groupe et affiche un SnackBar traduit', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _ownerDetail();
+
+      await tester.pumpWidget(
+        _buildTestWidget(fakeRepository, locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField), 'The Midnight Blades');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'SAVE'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.lastRenamedName, 'The Midnight Blades');
+      expect(find.text('Group renamed.'), findsOneWidget);
+    });
+
+    testWidgets('"Regenerate" : dialogue de confirmation en anglais', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _ownerDetail();
+
+      await tester.pumpWidget(
+        _buildTestWidget(fakeRepository, locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) => widget is SecondaryButton && widget.label == 'Regenerate',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Regenerate the invite code?'), findsOneWidget);
+
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) => widget is PrimaryButton && widget.label == 'Regenerate',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Code regenerated.'), findsOneWidget);
+    });
+
+    testWidgets('"Dissolve the group" ouvre le flux de confirmation traduit', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _ownerDetail();
+
+      await tester.pumpWidget(
+        _buildTestWidget(fakeRepository, locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Dissolve the group'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('DISSOLVE THE GROUP'), findsOneWidget);
+    });
   });
 }
