@@ -5888,4 +5888,24 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get characterXmlExportMulticlassWarningConfirmButton =>
       'Exporter quand même';
+
+  @override
+  String get checkableOptionTileInfoTooltip => 'Informations';
+
+  @override
+  String get selectableOptionTileInfoTooltip => 'Informations';
+
+  @override
+  String diceTypeBadgeSemanticLabel(int sides, String label) {
+    return 'dé à $sides faces, $label';
+  }
+
+  @override
+  String get errorRetryStateRetryButton => 'Réessayer';
+
+  @override
+  String get stepperCounterDecreaseLabel => 'Diminuer';
+
+  @override
+  String get stepperCounterIncreaseLabel => 'Augmenter';
 }

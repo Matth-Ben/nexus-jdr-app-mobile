@@ -9584,6 +9584,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Exporter quand même'**
   String get characterXmlExportMulticlassWarningConfirmButton;
+
+  /// Libellé d'accessibilité par défaut du bouton ⓘ de `core/widgets/checkable_option_tile.dart::CheckableOptionTile.infoTooltip`. Aucun appelant ne le surcharge à ce jour.
+  ///
+  /// In fr, this message translates to:
+  /// **'Informations'**
+  String get checkableOptionTileInfoTooltip;
+
+  /// Libellé d'accessibilité par défaut du bouton ⓘ de `core/widgets/selectable_option_tile.dart::SelectableOptionTile.infoTooltip`. Aucun appelant ne le surcharge à ce jour.
+  ///
+  /// In fr, this message translates to:
+  /// **'Informations'**
+  String get selectableOptionTileInfoTooltip;
+
+  /// Libellé d'accessibilité de `core/widgets/dice_type_badge.dart::DiceTypeBadge` (pastille "icône de dé + notation" affichée à côté d'un sort ou d'un objet d'inventaire).
+  ///
+  /// In fr, this message translates to:
+  /// **'dé à {sides} faces, {label}'**
+  String diceTypeBadgeSemanticLabel(int sides, String label);
+
+  /// `SecondaryButton` "Réessayer" de `core/widgets/error_retry_state.dart::ErrorRetryState`, état d'erreur centré partagé par les feuilles qui chargent une liste.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get errorRetryStateRetryButton;
+
+  /// Libellé d'accessibilité (`semanticLabel`) du bouton "-" de `core/widgets/stepper_counter.dart::StepperCounter` — ferme D160 (`docs/dette-technique.md`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Diminuer'**
+  String get stepperCounterDecreaseLabel;
+
+  /// Libellé d'accessibilité (`semanticLabel`) du bouton "+" de `core/widgets/stepper_counter.dart::StepperCounter` — ferme D160 (`docs/dette-technique.md`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Augmenter'**
+  String get stepperCounterIncreaseLabel;
 }
 
 class _AppLocalizationsDelegate

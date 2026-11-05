@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/selectable_option_tile.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
-Widget _wrap(Widget child) => MaterialApp(
+// `SelectableOptionTile` lit `AppLocalizations.of(context)!` (libellé par
+// défaut du bouton ⓘ) — sans ces delegates, le `!` planterait.
+Widget _wrap(Widget child, {Locale locale = const Locale('fr')}) => MaterialApp(
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  locale: locale,
   home: Scaffold(body: SizedBox(width: 300, child: child)),
 );
 
@@ -97,6 +103,42 @@ void main() {
 
     expect(find.byIcon(Icons.info_outline_rounded), findsNothing);
   });
+
+  testWidgets(
+    'le libellé d\'accessibilité par défaut du bouton info suit la locale',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          SelectableOptionTile(
+            title: 'Titre',
+            selected: false,
+            onTap: () {},
+            onInfo: () {},
+          ),
+        ),
+      );
+      expect(
+        tester.widget<Tooltip>(find.byType(Tooltip)).message,
+        'Informations',
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          SelectableOptionTile(
+            title: 'Titre',
+            selected: false,
+            onTap: () {},
+            onInfo: () {},
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      expect(
+        tester.widget<Tooltip>(find.byType(Tooltip)).message,
+        'Information',
+      );
+    },
+  );
 
   group('enabled (chantier différenciation 2014/2024 pour les races, '
       '24/10/2026)', () {

@@ -1633,5 +1633,12 @@
   "characterXmlExportMulticlassWarningBody": "The aidedd.org-compatible XML format only supports one class per character. Only the {className} class will be exported — this character's other classes will be missing from the generated file.",
   "characterXmlExportMulticlassWarningDefaultClassName": "primary",
   "characterXmlExportMulticlassWarningCancelButton": "Cancel",
-  "characterXmlExportMulticlassWarningConfirmButton": "Export anyway"
+  "characterXmlExportMulticlassWarningConfirmButton": "Export anyway",
+
+  "checkableOptionTileInfoTooltip": "Information",
+  "selectableOptionTileInfoTooltip": "Information",
+  "diceTypeBadgeSemanticLabel": "{sides}-sided die, {label}",
+  "errorRetryStateRetryButton": "Retry",
+  "stepperCounterDecreaseLabel": "Decrease",
+  "stepperCounterIncreaseLabel": "Increase"
 }

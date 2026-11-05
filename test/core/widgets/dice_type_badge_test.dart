@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/dice_type_badge.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 void main() {
-  Future<void> pump(WidgetTester tester, int sides, {String label = '1dX'}) {
+  Future<void> pump(
+    WidgetTester tester,
+    int sides, {
+    String label = '1dX',
+    Locale locale = const Locale('fr'),
+  }) {
     return tester.pumpWidget(
       MaterialApp(
+        // `DiceTypeBadge` lit `AppLocalizations.of(context)!` (libellé
+        // d'accessibilité du `Semantics`) — sans ces delegates, le `!`
+        // planterait.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Scaffold(
           body: DiceTypeBadge(sides: sides, label: label),
         ),
@@ -50,6 +62,14 @@ void main() {
     await pump(tester, 100, label: '1d100');
     final semanticsNode = tester.getSemantics(find.byType(DiceTypeBadge));
     expect(semanticsNode.label, 'dé à 100 faces, 1d100');
+  });
+
+  testWidgets('le Semantics porte le libellé anglais en locale en', (
+    tester,
+  ) async {
+    await pump(tester, 8, label: '1d8', locale: const Locale('en'));
+    final semanticsNode = tester.getSemantics(find.byType(DiceTypeBadge));
+    expect(semanticsNode.label, '8-sided die, 1d8');
   });
 
   testWidgets('aucune interactivité propre : pas de GestureDetector/InkWell '

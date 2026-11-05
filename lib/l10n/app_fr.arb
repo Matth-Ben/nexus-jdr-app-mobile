@@ -7767,5 +7767,40 @@
   "characterXmlExportMulticlassWarningConfirmButton": "Exporter quand même",
   "@characterXmlExportMulticlassWarningConfirmButton": {
     "description": "`PrimaryButton` \"Exporter quand même\" du dialogue d'avertissement \"Personnage multiclassé\" — confirme l'export de la classe primaire uniquement."
+  },
+
+  "checkableOptionTileInfoTooltip": "Informations",
+  "@checkableOptionTileInfoTooltip": {
+    "description": "Libellé d'accessibilité par défaut du bouton ⓘ de `core/widgets/checkable_option_tile.dart::CheckableOptionTile.infoTooltip`. Aucun appelant ne le surcharge à ce jour."
+  },
+  "selectableOptionTileInfoTooltip": "Informations",
+  "@selectableOptionTileInfoTooltip": {
+    "description": "Libellé d'accessibilité par défaut du bouton ⓘ de `core/widgets/selectable_option_tile.dart::SelectableOptionTile.infoTooltip`. Aucun appelant ne le surcharge à ce jour."
+  },
+  "diceTypeBadgeSemanticLabel": "dé à {sides} faces, {label}",
+  "@diceTypeBadgeSemanticLabel": {
+    "description": "Libellé d'accessibilité de `core/widgets/dice_type_badge.dart::DiceTypeBadge` (pastille \"icône de dé + notation\" affichée à côté d'un sort ou d'un objet d'inventaire).",
+    "placeholders": {
+      "sides": {
+        "type": "int",
+        "example": "8"
+      },
+      "label": {
+        "type": "String",
+        "example": "1d8"
+      }
+    }
+  },
+  "errorRetryStateRetryButton": "Réessayer",
+  "@errorRetryStateRetryButton": {
+    "description": "`SecondaryButton` \"Réessayer\" de `core/widgets/error_retry_state.dart::ErrorRetryState`, état d'erreur centré partagé par les feuilles qui chargent une liste."
+  },
+  "stepperCounterDecreaseLabel": "Diminuer",
+  "@stepperCounterDecreaseLabel": {
+    "description": "Libellé d'accessibilité (`semanticLabel`) du bouton \"-\" de `core/widgets/stepper_counter.dart::StepperCounter` — ferme D160 (`docs/dette-technique.md`)."
+  },
+  "stepperCounterIncreaseLabel": "Augmenter",
+  "@stepperCounterIncreaseLabel": {
+    "description": "Libellé d'accessibilité (`semanticLabel`) du bouton \"+\" de `core/widgets/stepper_counter.dart::StepperCounter` — ferme D160 (`docs/dette-technique.md`)."
   }
 }

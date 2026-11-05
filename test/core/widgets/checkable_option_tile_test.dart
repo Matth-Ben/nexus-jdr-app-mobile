@@ -6,9 +6,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
-Widget _wrap(Widget child) {
+Widget _wrap(Widget child, {Locale locale = const Locale('fr')}) {
+  // `CheckableOptionTile` lit `AppLocalizations.of(context)!` (libellé par
+  // défaut du bouton ⓘ) — sans ces delegates, le `!` planterait.
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: locale,
     home: Scaffold(body: Center(child: child)),
   );
 }
@@ -333,5 +339,39 @@ void main() {
 
       expect(infoTaps, 0);
     });
+
+    testWidgets(
+      'le libellé d\'accessibilité par défaut du bouton info suit la locale',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            CheckableOptionTile(
+              title: 'Trait de feu',
+              checked: false,
+              onInfo: () {},
+            ),
+          ),
+        );
+        expect(
+          tester.widget<Tooltip>(find.byType(Tooltip)).message,
+          'Informations',
+        );
+
+        await tester.pumpWidget(
+          _wrap(
+            CheckableOptionTile(
+              title: 'Trait de feu',
+              checked: false,
+              onInfo: () {},
+            ),
+            locale: const Locale('en'),
+          ),
+        );
+        expect(
+          tester.widget<Tooltip>(find.byType(Tooltip)).message,
+          'Information',
+        );
+      },
+    );
   });
 }

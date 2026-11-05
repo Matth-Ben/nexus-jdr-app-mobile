@@ -4,9 +4,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/stepper_counter.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
-Widget _wrap(Widget child) {
+Widget _wrap(Widget child, {Locale locale = const Locale('fr')}) {
+  // `StepperCounter` lit `AppLocalizations.of(context)!` (libellés
+  // d'accessibilité "Diminuer"/"Augmenter", D160) — sans ces delegates, le
+  // `!` planterait.
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: locale,
     home: Scaffold(body: Center(child: child)),
   );
 }
@@ -90,6 +97,41 @@ void main() {
         expect(size.width, greaterThanOrEqualTo(44));
         expect(size.height, greaterThanOrEqualTo(44));
       }
+    },
+  );
+
+  testWidgets(
+    'les libellés d\'accessibilité "Diminuer"/"Augmenter" suivent la locale '
+    '(D160, docs/dette-technique.md)',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          StepperCounter(value: 15, onIncrement: () {}, onDecrement: () {}),
+        ),
+      );
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.remove)).semanticLabel,
+        'Diminuer',
+      );
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.add)).semanticLabel,
+        'Augmenter',
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          StepperCounter(value: 15, onIncrement: () {}, onDecrement: () {}),
+          locale: const Locale('en'),
+        ),
+      );
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.remove)).semanticLabel,
+        'Decrease',
+      );
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.add)).semanticLabel,
+        'Increase',
+      );
     },
   );
 }

@@ -915,7 +915,7 @@ D160.
 
 | ID | Constat | Gravité | Correction | État |
 |---|---|---|---|---|
-| D160 | `core/widgets/stepper_counter.dart::_StepperButton` passe `semanticLabel: 'Diminuer'`/`'Augmenter'` en dur (aucun import `AppLocalizations`) à l'`Icon` des 2 boutons +/- — lu par un lecteur d'écran dans N'IMPORTE QUELLE langue de l'app (ex. `claim_group_treasure_item_sheet.dart`, mais aussi l'étape "Caractéristiques" de l'assistant de création et l'inventaire, tous deux déjà migrés par des lots précédents). Trouvé incidemment en lisant ce composant partagé pour le lot "Groups — onglets/butin", jamais mentionné par un audit ni un lot précédent. | basse (texte non visuel, lecteur d'écran uniquement — mais composant partagé, donc large surface) | Migrer `_StepperButton`/`StepperCounter` vers `.arb` — d'autres widgets de `core/widgets/` consomment déjà `AppLocalizations` sans problème (même dépôt, pas de contrainte d'architecture qui l'empêcherait) | Ouvert, non traité |
+| D160 | `core/widgets/stepper_counter.dart::_StepperButton` passe `semanticLabel: 'Diminuer'`/`'Augmenter'` en dur (aucun import `AppLocalizations`) à l'`Icon` des 2 boutons +/- — lu par un lecteur d'écran dans N'IMPORTE QUELLE langue de l'app (ex. `claim_group_treasure_item_sheet.dart`, mais aussi l'étape "Caractéristiques" de l'assistant de création et l'inventaire, tous deux déjà migrés par des lots précédents). Trouvé incidemment en lisant ce composant partagé pour le lot "Groups — onglets/butin", jamais mentionné par un audit ni un lot précédent. | basse (texte non visuel, lecteur d'écran uniquement — mais composant partagé, donc large surface) | Migrer `_StepperButton`/`StepperCounter` vers `.arb` — d'autres widgets de `core/widgets/` consomment déjà `AppLocalizations` sans problème (même dépôt, pas de contrainte d'architecture qui l'empêcherait) | **Fermé (lot "core/widgets", commit à venir)** — `StepperCounter` migre `semanticLabel: 'Diminuer'`/`'Augmenter'` vers `.arb` (`stepperCounterDecreaseLabel`/`stepperCounterIncreaseLabel`), voir la section ci-dessous. |
 
 ## Ajouts liés au lot "XML import" de la Phase B traduction (05/11/2026)
 
@@ -1022,6 +1022,48 @@ explicitement dynamiques, jamais capturés en `.arb` : les numéros de version (
 `app_versions.min_supported_version`), interpolés via des placeholders ICU. Aucun nouveau cas de
 texte français en dur dans un fichier `domain`/`data` n'a été trouvé dans ce lot — pas de nouvelle
 entrée de dette technique.
+
+## Ajouts liés au lot "core/widgets" de la Phase B traduction (clôture, 05/11/2026)
+
+Dernier lot du chantier de traduction app-wide, strictement limité à `lib/core/widgets/*.dart` (18
+fichiers candidats remontés par un grep de texte français en dur, au-delà de `stepper_counter.dart`
+déjà connu via D160). Sur ces 18 fichiers, 5 portaient un vrai texte affiché/annoncé en dur plutôt
+qu'un simple commentaire de doc de classe ou un libellé entièrement fourni par l'appelant, et
+migrent vers `.arb` (6 nouvelles clés) :
+
+- `checkable_option_tile.dart`/`selectable_option_tile.dart` : `infoTooltip` avait une valeur par
+  défaut `'Informations'` codée en dur (aucun appelant ne la surcharge à ce jour) — le paramètre
+  passe de `String` à `String?` (`null` par défaut), résolu dans `build()` via
+  `infoTooltip ?? l10n.<widget>InfoTooltip`.
+- `dice_type_badge.dart::DiceTypeBadge` : le `Semantics.label` ("dé à $sides faces, $label") était
+  construit en dur — migré avec 2 placeholders ICU (`sides` entier, `label` chaîne).
+- `error_retry_state.dart::ErrorRetryState` : le `SecondaryButton` "Réessayer" était en dur —
+  aucun test de widget n'existait pour ce composant avant ce lot, un nouveau fichier de test est
+  créé (`error_retry_state_test.dart`).
+- `stepper_counter.dart::StepperCounter` : ferme D160 (voir ci-dessus) — les 2 `semanticLabel`
+  "Diminuer"/"Augmenter" migrent vers `.arb`.
+
+Les 13 autres fichiers candidats (`accent_icon_badge.dart`, `app_brand_badge.dart`,
+`dashed_button.dart`, `destructive_button.dart`, `gain_row.dart`, `legal_section_block.dart`,
+`profile_avatar.dart`, `segmented_tab_bar.dart`, `segmented_toggle.dart`, `settings_list_card.dart`,
+`sheet_header_bar.dart`, `spell_level_tab_selector.dart`, `selection_checkbox.dart`) ne portent
+aucun texte à migrer : le grep initial n'avait matché que des commentaires de documentation en
+français (convention de ce dépôt), ou le seul texte affiché est entièrement fourni par l'appelant
+via un paramètre (`label`/`title`/`subtitle`/options...) — rien à faire, composants génériques déjà
+conformes.
+
+Ricochets de test : les 4 fichiers `test/core/widgets/{checkable_option_tile,selectable_option_tile,
+dice_type_badge,stepper_counter}_test.dart` montaient directement ces composants sans
+`localizationsDelegates` (leur `build()` ne lisait jamais `AppLocalizations` avant ce lot) — les 4
+reçoivent désormais `localizationsDelegates`/`supportedLocales`/un paramètre `locale` optionnel sur
+leur fonction `_wrap`/`pump`, plus une assertion dédiée (locale `fr` et `en`) sur le nouveau texte
+localisé, sans toucher aux assertions préexistantes. Tous les écrans/widgets de fonctionnalités qui
+consomment ces 5 composants (assistant de création, inventaire, sorts, montée de niveau, groupes...)
+étaient déjà migrés par des lots précédents : leurs tests avaient donc déjà `localizationsDelegates`
+sur leur propre `MaterialApp`, aucun ricochet supplémentaire trouvé en lançant `flutter test` sur le
+dépôt entier (5280 tests, tous verts). Aucun nouveau cas de texte français en dur dans un fichier
+`domain`/`data` n'a été trouvé dans ce lot — pas de nouvelle entrée de dette technique au-delà de la
+fermeture de D160.
 
 ## Ce que l'audit n'a pas couvert
 
