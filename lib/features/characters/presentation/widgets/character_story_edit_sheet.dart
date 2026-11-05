@@ -8,6 +8,7 @@ import '../../../../core/widgets/alert_banner.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_failure.dart';
 import '../../domain/write_outcome.dart';
@@ -41,6 +42,7 @@ Future<void> showCharacterStoryEditSheet(
   required String characterId,
   required CharacterDetail detail,
 }) async {
+  final l10n = AppLocalizations.of(context)!;
   final saved = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
@@ -58,8 +60,9 @@ Future<void> showCharacterStoryEditSheet(
     ),
   );
   if (saved != true || !context.mounted) return;
-  ScaffoldMessenger.of(context)
-      .showSnackBar(const SnackBar(content: Text('Histoire mise à jour.')));
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(l10n.characterStoryEditSheetUpdatedMessage)),
+  );
 }
 
 /// Libellé + placeholder d'un des 9 champs — copie exacte de
@@ -81,57 +84,49 @@ class _StoryFieldSpec {
 /// direction-artistique) : la vue lecture suit la maquette, la vue édition
 /// calque l'étape 8/9 de l'assistant de création (seul précédent de saisie),
 /// qui est mono-colonne.
-const List<_StoryFieldSpec> _fieldSpecs = [
+///
+/// Fonction plutôt que `const List` (chantier "traduction de l'app" Phase B) :
+/// chaque libellé/placeholder vient désormais d'[AppLocalizations], qui n'est
+/// disponible qu'avec un [BuildContext] — reconstruite à chaque `build`, coût
+/// négligeable (9 éléments).
+List<_StoryFieldSpec> _fieldSpecsFor(AppLocalizations l10n) => [
   _StoryFieldSpec(
-    label: 'APPARENCE PHYSIQUE',
-    hint: "Décris l'apparence physique de ton personnage…",
+    label: l10n.characterStoryEditSheetAppearanceLabel,
+    hint: l10n.characterStoryEditSheetAppearanceHint,
   ),
   _StoryFieldSpec(
-    label: 'TRAITS DE PERSONNALITÉ',
-    hint: 'Décris les traits de personnalité de ton personnage…',
+    label: l10n.characterStoryEditSheetTraitsLabel,
+    hint: l10n.characterStoryEditSheetTraitsHint,
   ),
   _StoryFieldSpec(
-    label: 'IDÉAUX',
-    hint: 'Quels idéaux guident ton personnage ?',
+    label: l10n.characterStoryEditSheetIdealsLabel,
+    hint: l10n.characterStoryEditSheetIdealsHint,
   ),
   _StoryFieldSpec(
-    label: 'LIENS',
-    hint: "Quels liens unissent ton personnage à d'autres ?",
+    label: l10n.characterStoryEditSheetBondsLabel,
+    hint: l10n.characterStoryEditSheetBondsHint,
   ),
   _StoryFieldSpec(
-    label: 'DÉFAUTS',
-    hint: 'Quels défauts ou faiblesses a ton personnage ?',
+    label: l10n.characterStoryEditSheetFlawsLabel,
+    hint: l10n.characterStoryEditSheetFlawsHint,
   ),
   _StoryFieldSpec(
-    label: 'HISTOIRE PERSONNELLE',
-    hint: "Raconte l'histoire personnelle de ton personnage…",
+    label: l10n.characterStoryEditSheetBackstoryLabel,
+    hint: l10n.characterStoryEditSheetBackstoryHint,
   ),
   _StoryFieldSpec(
-    label: 'ALLIÉS',
-    hint: 'Quels alliés ou organisations soutiennent ton personnage ?',
+    label: l10n.characterStoryEditSheetAlliesLabel,
+    hint: l10n.characterStoryEditSheetAlliesHint,
   ),
   _StoryFieldSpec(
-    label: 'PARTICULARITÉS',
-    hint: 'Décris les particularités de ton personnage…',
+    label: l10n.characterStoryEditSheetFeaturesLabel,
+    hint: l10n.characterStoryEditSheetFeaturesHint,
   ),
   _StoryFieldSpec(
-    label: 'TRÉSOR',
-    hint: 'Quels trésors ou objets précieux possède ton personnage ?',
+    label: l10n.characterStoryEditSheetTreasureLabel,
+    hint: l10n.characterStoryEditSheetTreasureHint,
   ),
 ];
-
-/// Message hors-ligne — même texte que le bandeau/`SnackBar` déjà utilisé
-/// ailleurs sur la fiche (`character_detail_screen.dart::_offlineNotPersistedMessage`),
-/// jamais dupliqué dans une constante partagée (chaque écran affiche ce
-/// message par un mécanisme différent : bandeau inline ici, `SnackBar`
-/// ailleurs — voir la documentation de classe de
-/// [_CharacterStoryEditSheetContentState._submit]).
-const String _offlineMessage =
-    "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-    'fois reconnecté.';
-
-const String _genericErrorMessage =
-    "Impossible d'enregistrer les modifications. Réessayez.";
 
 /// Gabarit B autoportant (`showModalBottomSheet`, `isScrollControlled: true`,
 /// `FractionallySizedBox(heightFactor: 0.92)`) : `SheetHeaderBar`, 9 champs
@@ -208,6 +203,7 @@ class _CharacterStoryEditSheetContentState
 
   Future<void> _submit() async {
     if (_isSaving) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isSaving = true;
       _errorMessage = null;
@@ -233,7 +229,7 @@ class _CharacterStoryEditSheetContentState
         if (!mounted) return;
         setState(() {
           _isSaving = false;
-          _errorMessage = _offlineMessage;
+          _errorMessage = l10n.characterOfflineNotPersistedMessage;
         });
         return;
       }
@@ -258,13 +254,15 @@ class _CharacterStoryEditSheetContentState
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _genericErrorMessage;
+        _errorMessage = l10n.characterStoryEditSheetGenericErrorMessage;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final fieldSpecs = _fieldSpecsFor(l10n);
     // `isDismissible: false`/`enableDrag: false` (voir
     // `showCharacterStoryEditSheet`) bloquent respectivement le tap sur le
     // voile et le swipe-down, mais ni l'un ni l'autre ne bloque le geste
@@ -285,7 +283,7 @@ class _CharacterStoryEditSheetContentState
             child: Column(
               children: [
                 SheetHeaderBar(
-                  title: "MODIFIER L'HISTOIRE",
+                  title: l10n.characterStoryEditSheetTitle,
                   closeEnabled: !_isSaving,
                 ),
                 Expanded(
@@ -298,10 +296,10 @@ class _CharacterStoryEditSheetContentState
                           AlertBanner(message: _errorMessage!),
                           const SizedBox(height: AppSpacing.md),
                         ],
-                        for (var i = 0; i < _fieldSpecs.length; i++) ...[
+                        for (var i = 0; i < fieldSpecs.length; i++) ...[
                           if (i > 0) const SizedBox(height: AppSpacing.md),
                           _StoryTextFieldBlock(
-                            spec: _fieldSpecs[i],
+                            spec: fieldSpecs[i],
                             controller: _controllers[i],
                           ),
                         ],
@@ -320,7 +318,7 @@ class _CharacterStoryEditSheetContentState
                     children: [
                       Expanded(
                         child: SecondaryButton(
-                          label: 'Annuler',
+                          label: l10n.characterStoryEditSheetCancelButton,
                           surface: SecondaryButtonSurface.parchment,
                           onPressed: _isSaving
                               ? null
@@ -330,7 +328,7 @@ class _CharacterStoryEditSheetContentState
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: PrimaryButton(
-                          label: 'Enregistrer',
+                          label: l10n.characterStoryEditSheetSaveButton,
                           isLoading: _isSaving,
                           onPressed: _submit,
                         ),

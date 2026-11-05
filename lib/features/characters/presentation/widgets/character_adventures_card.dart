@@ -7,6 +7,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/destructive_button.dart';
 import '../../../../core/widgets/portrait_frame.dart';
 import '../../../../core/widgets/secondary_button.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_adventure.dart';
 import '../../domain/character_detail.dart';
 import '../providers/character_detail_provider.dart';
@@ -43,6 +44,7 @@ class CharacterAdventuresCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final adventures = detail.adventures;
     if (adventures.isEmpty) {
       // Ne devrait pas arriver en pratique : l'appelant est censé avoir déjà
@@ -62,7 +64,7 @@ class CharacterAdventuresCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'AVENTURES',
+            l10n.characterAdventuresCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,
@@ -82,6 +84,7 @@ class CharacterAdventuresCard extends ConsumerWidget {
                 color: AppColors.gaugeTrack,
               ),
             _AdventureRow(
+              l10n: l10n,
               adventure: adventures[i],
               onLeave: () => _confirmAndLeave(context, ref, adventures[i]),
             ),
@@ -96,6 +99,7 @@ class CharacterAdventuresCard extends ConsumerWidget {
     WidgetRef ref,
     CharacterAdventure adventure,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showLeaveAdventureConfirmationDialog(
       context,
       storyTitle: adventure.storyTitle,
@@ -109,13 +113,17 @@ class CharacterAdventuresCard extends ConsumerWidget {
       ref.invalidate(characterDetailProvider(detail.id));
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Tu as quitté ${adventure.storyTitle}.')),
+        SnackBar(
+          content: Text(
+            l10n.characterAdventuresCardLeftMessage(adventure.storyTitle),
+          ),
+        ),
       );
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Impossible de quitter cette histoire. Réessayez.'),
+        SnackBar(
+          content: Text(l10n.characterAdventuresCardLeaveGenericErrorMessage),
         ),
       );
     }
@@ -127,8 +135,13 @@ class CharacterAdventuresCard extends ConsumerWidget {
 /// simplement absente, voir la documentation de classe de
 /// [CharacterAdventure].
 class _AdventureRow extends StatelessWidget {
-  const _AdventureRow({required this.adventure, required this.onLeave});
+  const _AdventureRow({
+    required this.l10n,
+    required this.adventure,
+    required this.onLeave,
+  });
 
+  final AppLocalizations l10n;
   final CharacterAdventure adventure;
   final VoidCallback onLeave;
 
@@ -158,7 +171,9 @@ class _AdventureRow extends StatelessWidget {
                 ),
                 if (adventure.gmDisplayName != null)
                   Text(
-                    'MJ : ${adventure.gmDisplayName}',
+                    l10n.characterAdventuresCardGmLabel(
+                      adventure.gmDisplayName!,
+                    ),
                     style: AppTypography.body(
                       fontSize: 12,
                       color: AppColors.textSecondary,
@@ -171,7 +186,7 @@ class _AdventureRow extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              tooltip: 'Quitter l\'histoire',
+              tooltip: l10n.characterAdventuresCardLeaveTooltip,
               onPressed: onLeave,
               icon: const Icon(Icons.logout, color: AppColors.accentBrick),
             ),
@@ -190,6 +205,7 @@ Future<bool?> showLeaveAdventureConfirmationDialog(
   BuildContext context, {
   required String storyTitle,
 }) {
+  final l10n = AppLocalizations.of(context)!;
   return showDialog<bool>(
     context: context,
     builder: (context) => Dialog(
@@ -208,7 +224,7 @@ Future<bool?> showLeaveAdventureConfirmationDialog(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Quitter « $storyTitle » ?',
+              l10n.characterAdventuresCardLeaveConfirmationTitle(storyTitle),
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -216,8 +232,7 @@ Future<bool?> showLeaveAdventureConfirmationDialog(
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Ton personnage garde toutes ses données. Seul le lien avec '
-              'cette histoire disparaît.',
+              l10n.characterAdventuresCardLeaveConfirmationMessage,
               style: AppTypography.body(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -228,7 +243,8 @@ Future<bool?> showLeaveAdventureConfirmationDialog(
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Annuler',
+                    label: l10n
+                        .characterAdventuresCardLeaveConfirmationCancelButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: () => Navigator.of(context).pop(false),
                   ),
@@ -236,7 +252,8 @@ Future<bool?> showLeaveAdventureConfirmationDialog(
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: DestructiveButton(
-                    label: 'Quitter',
+                    label: l10n
+                        .characterAdventuresCardLeaveConfirmationConfirmButton,
                     onPressed: () => Navigator.of(context).pop(true),
                   ),
                 ),

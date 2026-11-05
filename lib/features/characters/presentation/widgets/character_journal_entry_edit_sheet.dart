@@ -7,18 +7,12 @@ import '../../../../core/widgets/alert_banner.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_failure.dart';
 import '../../domain/character_journal_entry.dart';
 import '../../domain/write_outcome.dart';
 import '../providers/character_detail_provider.dart';
 import '../providers/character_providers.dart';
-
-const String _offlineMessage =
-    "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-    'fois reconnecté.';
-
-const String _genericErrorMessage =
-    "Impossible d'enregistrer cette note. Réessayez.";
 
 /// Ouvre la sheet "Ajouter une note"/"Modifier la note" du journal de
 /// campagne (carte "Journal de campagne" de l'onglet "Histoire",
@@ -37,6 +31,7 @@ Future<void> showJournalEntryEditSheet(
   required String characterId,
   CharacterJournalEntry? entry,
 }) async {
+  final l10n = AppLocalizations.of(context)!;
   final saved = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
@@ -48,7 +43,13 @@ Future<void> showJournalEntryEditSheet(
   );
   if (saved != true || !context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(entry == null ? 'Note ajoutée.' : 'Note modifiée.')),
+    SnackBar(
+      content: Text(
+        entry == null
+            ? l10n.characterJournalEntryEditSheetAddedMessage
+            : l10n.characterJournalEntryEditSheetUpdatedMessage,
+      ),
+    ),
   );
 }
 
@@ -83,6 +84,7 @@ class _JournalEntryEditSheetContentState
   Future<void> _submit() async {
     final body = _controller.text.trim();
     if (body.isEmpty || _isSaving) return;
+    final l10n = AppLocalizations.of(context)!;
 
     setState(() {
       _isSaving = true;
@@ -107,7 +109,7 @@ class _JournalEntryEditSheetContentState
         if (!mounted) return;
         setState(() {
           _isSaving = false;
-          _errorMessage = _offlineMessage;
+          _errorMessage = l10n.characterOfflineNotPersistedMessage;
         });
         return;
       }
@@ -127,13 +129,14 @@ class _JournalEntryEditSheetContentState
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _genericErrorMessage;
+        _errorMessage = l10n.characterJournalEntryEditSheetGenericErrorMessage;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isEditing = widget.entry != null;
     return PopScope(
       canPop: !_isSaving,
@@ -146,7 +149,9 @@ class _JournalEntryEditSheetContentState
             child: Column(
               children: [
                 SheetHeaderBar(
-                  title: isEditing ? 'MODIFIER LA NOTE' : 'AJOUTER UNE NOTE',
+                  title: isEditing
+                      ? l10n.characterJournalEntryEditSheetEditTitle
+                      : l10n.characterJournalEntryEditSheetAddTitle,
                   closeEnabled: !_isSaving,
                 ),
                 Expanded(
@@ -164,8 +169,8 @@ class _JournalEntryEditSheetContentState
                           autofocus: !isEditing,
                           minLines: 6,
                           maxLines: null,
-                          decoration: const InputDecoration(
-                            hintText: 'Note de séance, événement marquant…',
+                          decoration: InputDecoration(
+                            hintText: l10n.characterJournalEntryEditSheetHint,
                           ),
                         ),
                       ],
@@ -183,7 +188,8 @@ class _JournalEntryEditSheetContentState
                     children: [
                       Expanded(
                         child: SecondaryButton(
-                          label: 'Annuler',
+                          label:
+                              l10n.characterJournalEntryEditSheetCancelButton,
                           surface: SecondaryButtonSurface.parchment,
                           onPressed: _isSaving
                               ? null
@@ -193,7 +199,7 @@ class _JournalEntryEditSheetContentState
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: PrimaryButton(
-                          label: 'Enregistrer',
+                          label: l10n.characterJournalEntryEditSheetSaveButton,
                           isLoading: _isSaving,
                           onPressed: _submit,
                         ),

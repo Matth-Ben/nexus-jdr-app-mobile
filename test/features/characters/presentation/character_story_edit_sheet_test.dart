@@ -40,6 +40,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_story_edit_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 /// Double minimal — seule [updateStoryFields] est exercée par ce fichier,
 /// même rationale de duplication que le reste de ce dépôt (voir
@@ -421,12 +422,18 @@ const _detail = CharacterDetail(
   treasureText: 'Un grimoire scellé.',
 );
 
-Future<FakeRepository> _pumpSheet(WidgetTester tester) async {
+Future<FakeRepository> _pumpSheet(
+  WidgetTester tester, {
+  Locale locale = const Locale('fr'),
+}) async {
   final repository = FakeRepository();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [characterRepositoryProvider.overrideWithValue(repository)],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -735,6 +742,41 @@ void main() {
             '`StateError` sur un widget démonté, qui ne doit jamais fuir '
             'hors du try/catch de `_submit`',
       );
+    },
+  );
+
+  testWidgets(
+    'titre, 9 libellés/placeholders, boutons et SnackBar de succès en '
+    'anglais',
+    (tester) async {
+      final repository = await _pumpSheet(tester, locale: const Locale('en'));
+
+      expect(find.text('EDIT STORY'), findsOneWidget);
+      for (final label in const [
+        'PHYSICAL APPEARANCE',
+        'PERSONALITY TRAITS',
+        'IDEALS',
+        'BONDS',
+        'FLAWS',
+        'BACKSTORY',
+        'ALLIES',
+        'FEATURES',
+        'TREASURE',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+
+      expect(
+        find.text("Describe your character's personality traits…"),
+        findsOneWidget,
+      );
+
+      expect(find.widgetWithText(SecondaryButton, 'CANCEL'), findsOneWidget);
+      await tester.tap(find.widgetWithText(PrimaryButton, 'SAVE'));
+      await tester.pumpAndSettle();
+
+      expect(repository.updateStoryFieldsCallCount, 1);
+      expect(find.text('Story updated.'), findsOneWidget);
     },
   );
 }

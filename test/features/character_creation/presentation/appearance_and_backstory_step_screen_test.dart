@@ -21,6 +21,7 @@ import 'package:personnages/features/character_creation/domain/character_creatio
 import 'package:personnages/features/character_creation/presentation/appearance_and_backstory_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 // Ordre canonique des 9 champs, voir le commentaire de classe de
 // `AppearanceAndBackstoryStepScreen` — les tests s'appuient sur cet ordre
@@ -89,7 +90,17 @@ void main() {
   Widget buildTestWidget() {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        // `portrait_upload_sheet.dart::pickLocalPortrait` (tuile "Portrait")
+        // lit désormais `AppLocalizations.of(context)!` (chantier
+        // "traduction de l'app" Phase B, lot "Characters — histoire/
+        // journal/galerie/portrait") : sans ces delegates, l'appel
+        // renverrait `null` et le `!` planterait.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
