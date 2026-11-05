@@ -5769,4 +5769,123 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get sharedCharacterViewScreenErrorRetryButtonLabel => 'Réessayer';
+
+  @override
+  String get forceUpdateScreenTitleLine1 => 'MISE À JOUR';
+
+  @override
+  String get forceUpdateScreenTitleLine2 => 'REQUISE';
+
+  @override
+  String get forceUpdateScreenBody =>
+      'Cette version de Nexus JDR n\'est plus prise en charge. Mets à jour l\'application pour continuer à gérer tes personnages en toute sécurité.';
+
+  @override
+  String get forceUpdateScreenUpdateButton => '↓ Mettre à jour';
+
+  @override
+  String forceUpdateScreenVersionInfo(
+    String installedVersion,
+    String minimumVersion,
+  ) {
+    return 'Version installée : $installedVersion · minimum requis : $minimumVersion';
+  }
+
+  @override
+  String get updateSuggestedBannerMessage => 'Nouvelle version disponible';
+
+  @override
+  String get updateSuggestedBannerUpdateAction => 'Mettre à jour';
+
+  @override
+  String get updateSuggestedBannerCloseTooltip => 'Fermer';
+
+  @override
+  String get appStoreLauncherCannotOpenMessage =>
+      'Impossible d\'ouvrir la fiche de l\'application. Réessayez.';
+
+  @override
+  String get splashScreenBrandLine1 => 'NEXUS JDR';
+
+  @override
+  String get splashScreenBrandLine2 => 'PERSONNAGES';
+
+  @override
+  String get splashScreenLoadingText => 'Préparation de la taverne…';
+
+  @override
+  String get onboardingScreenSkipAction => 'Passer';
+
+  @override
+  String onboardingScreenStepIndicator(int currentStep, int totalSteps) {
+    return '$currentStep / $totalSteps';
+  }
+
+  @override
+  String get onboardingScreenNextAction => 'Suivant';
+
+  @override
+  String get onboardingScreenBackAction => 'Retour';
+
+  @override
+  String get onboardingScreenFinishAction => 'C\'est parti !';
+
+  @override
+  String get onboardingPage1Title => 'BIENVENUE, AVENTURIER';
+
+  @override
+  String get onboardingPage1Body =>
+      'Nexus JDR t\'accompagne pour créer, suivre et jouer tes personnages D&D, à la table comme en solo. Découvrons ensemble comment ça marche.';
+
+  @override
+  String get onboardingPage2Title => 'TES PERSONNAGES';
+
+  @override
+  String get onboardingPage2Body =>
+      'Retrouve tous tes aventuriers sur un seul écran. Crée-en un nouveau pas à pas, ou importe directement une fiche depuis aidedd.org.';
+
+  @override
+  String get onboardingPage3Title => 'LA FICHE DE TON PERSONNAGE';
+
+  @override
+  String get onboardingPage3Body =>
+      'Cinq onglets réunissent tout ce qu\'il te faut en jeu : ta fiche, tes aptitudes, tes sorts, ton sac... et l\'histoire que tu écris avec lui.';
+
+  @override
+  String get onboardingPage4Title => 'REJOINDRE UNE HISTOIRE';
+
+  @override
+  String get onboardingPage4Body =>
+      'Un MJ t\'a transmis un code d\'invitation ? Rejoins son groupe pour lier ton personnage à son histoire et rester synchronisé avec la table.';
+
+  @override
+  String get onboardingPage5Title => 'C\'EST PARTI !';
+
+  @override
+  String get onboardingPage5Body =>
+      'Tout est prêt. Entre dans la taverne et commence à écrire tes légendes.';
+
+  @override
+  String get characterXmlExportGenericErrorMessage =>
+      'Impossible de générer l\'export XML. Réessayez.';
+
+  @override
+  String get characterXmlExportMulticlassWarningTitle =>
+      'Personnage multiclassé';
+
+  @override
+  String characterXmlExportMulticlassWarningBody(String className) {
+    return 'Le format XML compatible aidedd.org ne prend en charge qu\'une seule classe par personnage. Seule la classe $className sera exportée, les autres classes de ce personnage seront absentes du fichier généré.';
+  }
+
+  @override
+  String get characterXmlExportMulticlassWarningDefaultClassName =>
+      'principale';
+
+  @override
+  String get characterXmlExportMulticlassWarningCancelButton => 'Annuler';
+
+  @override
+  String get characterXmlExportMulticlassWarningConfirmButton =>
+      'Exporter quand même';
 }

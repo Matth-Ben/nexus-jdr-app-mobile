@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/app_brand_badge.dart';
 import 'package:personnages/features/splash/presentation/splash_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 /// Repère un point de l'indicateur "3 points" : un petit cercle plein
 /// `AppColors.goldEnd`, distinct de tout autre `Container` circulaire de
@@ -21,8 +22,16 @@ bool _isLoaderDot(Widget widget) {
 }
 
 void main() {
-  Widget buildTestWidget() {
-    return const MaterialApp(home: SplashScreen());
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
+    return MaterialApp(
+      // `SplashScreen` lit `AppLocalizations.of(context)!` (chantier
+      // "traduction de l'app" Phase B, lot "écrans divers") : sans ces
+      // delegates, l'appel renverrait `null` et le `!` planterait.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
+      home: const SplashScreen(),
+    );
   }
 
   testWidgets('affiche l\'emblème de marque', (tester) async {
@@ -76,4 +85,19 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  group('locale anglaise', () {
+    testWidgets('affiche "NEXUS JDR" et "CHARACTERS"', (tester) async {
+      await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+
+      expect(find.text('NEXUS JDR'), findsOneWidget);
+      expect(find.text('CHARACTERS'), findsOneWidget);
+    });
+
+    testWidgets('affiche le texte de chargement traduit', (tester) async {
+      await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+
+      expect(find.text('Preparing the tavern…'), findsOneWidget);
+    });
+  });
 }

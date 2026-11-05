@@ -9,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../characters/domain/character_detail.dart';
 import '../data/xml_character_exporter.dart';
 
@@ -32,6 +33,11 @@ Future<void> exportCharacterAsXml(
   BuildContext context,
   CharacterDetail detail,
 ) async {
+  // Capturé avant tout `await` (même convention que le reste du chantier
+  // "traduction de l'app" Phase B) : réutilisé dans le `catch` ci-dessous,
+  // potentiellement après plusieurs étapes asynchrones.
+  final l10n = AppLocalizations.of(context)!;
+
   if (XmlCharacterExporter.hasUnsupportedMulticlass(detail)) {
     final confirmed = await _showMulticlassWarningDialog(context, detail);
     if (confirmed != true || !context.mounted) return;
@@ -51,9 +57,7 @@ Future<void> exportCharacterAsXml(
     debugPrint('exportCharacterAsXml: erreur inattendue: $error');
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Impossible de générer l'export XML. Réessayez."),
-      ),
+      SnackBar(content: Text(l10n.characterXmlExportGenericErrorMessage)),
     );
   }
 }
@@ -80,7 +84,10 @@ Future<bool?> _showMulticlassWarningDialog(
   BuildContext context,
   CharacterDetail detail,
 ) {
-  final primaryClassName = detail.primaryClass?.className ?? 'principale';
+  final l10n = AppLocalizations.of(context)!;
+  final primaryClassName =
+      detail.primaryClass?.className ??
+      l10n.characterXmlExportMulticlassWarningDefaultClassName;
   return showDialog<bool>(
     context: context,
     builder: (context) => Dialog(
@@ -99,7 +106,7 @@ Future<bool?> _showMulticlassWarningDialog(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Personnage multiclassé',
+              l10n.characterXmlExportMulticlassWarningTitle,
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -107,10 +114,7 @@ Future<bool?> _showMulticlassWarningDialog(
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Le format XML compatible aidedd.org ne prend en charge '
-              "qu'une seule classe par personnage. Seule la classe "
-              '$primaryClassName sera exportée, les autres classes de ce '
-              'personnage seront absentes du fichier généré.',
+              l10n.characterXmlExportMulticlassWarningBody(primaryClassName),
               style: AppTypography.body(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -121,7 +125,7 @@ Future<bool?> _showMulticlassWarningDialog(
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Annuler',
+                    label: l10n.characterXmlExportMulticlassWarningCancelButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: () => Navigator.of(context).pop(false),
                   ),
@@ -129,7 +133,8 @@ Future<bool?> _showMulticlassWarningDialog(
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: PrimaryButton(
-                    label: 'Exporter quand même',
+                    label:
+                        l10n.characterXmlExportMulticlassWarningConfirmButton,
                     onPressed: () => Navigator.of(context).pop(true),
                   ),
                 ),

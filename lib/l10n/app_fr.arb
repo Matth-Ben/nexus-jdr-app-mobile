@@ -7605,5 +7605,167 @@
   "sharedCharacterViewScreenErrorRetryButtonLabel": "Réessayer",
   "@sharedCharacterViewScreenErrorRetryButtonLabel": {
     "description": "Bouton de `_ErrorState`."
+  },
+
+  "forceUpdateScreenTitleLine1": "MISE À JOUR",
+  "@forceUpdateScreenTitleLine1": {
+    "description": "1ère ligne du titre deux lignes de l'écran bloquant \"Erreur — Mise à jour obligatoire\" (`force_update_screen.dart`)."
+  },
+  "forceUpdateScreenTitleLine2": "REQUISE",
+  "@forceUpdateScreenTitleLine2": {
+    "description": "2e ligne du titre deux lignes de `ForceUpdateScreen`."
+  },
+  "forceUpdateScreenBody": "Cette version de Nexus JDR n'est plus prise en charge. Mets à jour l'application pour continuer à gérer tes personnages en toute sécurité.",
+  "@forceUpdateScreenBody": {
+    "description": "Texte explicatif de `ForceUpdateScreen`."
+  },
+  "forceUpdateScreenUpdateButton": "↓ Mettre à jour",
+  "@forceUpdateScreenUpdateButton": {
+    "description": "`PrimaryButton` pleine largeur de `ForceUpdateScreen`, ouvre la fiche store via `openAppStorePage` (`app_store_launcher.dart`)."
+  },
+  "forceUpdateScreenVersionInfo": "Version installée : {installedVersion} · minimum requis : {minimumVersion}",
+  "@forceUpdateScreenVersionInfo": {
+    "description": "Ligne de pied de `ForceUpdateScreen` affichant `PackageInfo.version` et `app_versions.min_supported_version` de la plateforme courante.",
+    "placeholders": {
+      "installedVersion": {
+        "type": "String",
+        "example": "0.1.0"
+      },
+      "minimumVersion": {
+        "type": "String",
+        "example": "0.3.0"
+      }
+    }
+  },
+  "updateSuggestedBannerMessage": "Nouvelle version disponible",
+  "@updateSuggestedBannerMessage": {
+    "description": "Texte principal de la bannière \"Mise à jour suggérée\" (`widgets/update_suggested_banner.dart`), insérée entre l'en-tête et la barre de recherche de `character_list_screen.dart`."
+  },
+  "updateSuggestedBannerUpdateAction": "Mettre à jour",
+  "@updateSuggestedBannerUpdateAction": {
+    "description": "Lien de `UpdateSuggestedBanner`, ouvre la fiche store via `openAppStorePage`."
+  },
+  "updateSuggestedBannerCloseTooltip": "Fermer",
+  "@updateSuggestedBannerCloseTooltip": {
+    "description": "`tooltip` de l'icône \"×\" de `UpdateSuggestedBanner`, referme la bannière pour la version courante."
+  },
+  "appStoreLauncherCannotOpenMessage": "Impossible d'ouvrir la fiche de l'application. Réessayez.",
+  "@appStoreLauncherCannotOpenMessage": {
+    "description": "SnackBar d'échec de `openAppStorePage` (`app_store_launcher.dart`), partagée par le bouton \"Mettre à jour\" de `ForceUpdateScreen` et le lien \"Mettre à jour\" d'`UpdateSuggestedBanner` — `canLaunchUrl` faux ou exception plateforme inattendue."
+  },
+
+  "splashScreenBrandLine1": "NEXUS JDR",
+  "@splashScreenBrandLine1": {
+    "description": "1ère ligne de l'emblème de marque de l'écran de lancement (`splash_screen.dart`)."
+  },
+  "splashScreenBrandLine2": "PERSONNAGES",
+  "@splashScreenBrandLine2": {
+    "description": "2e ligne de l'emblème de marque de `SplashScreen`."
+  },
+  "splashScreenLoadingText": "Préparation de la taverne…",
+  "@splashScreenLoadingText": {
+    "description": "Texte de chargement de `SplashScreen`, sous l'indicateur à 3 points."
+  },
+
+  "onboardingScreenSkipAction": "Passer",
+  "@onboardingScreenSkipAction": {
+    "description": "Lien \"Passer\" du bandeau haut de `OnboardingScreen` (`_TopBanner`), visible sur les 5 pages — appelle `markOnboardingSeen` puis sort de l'écran."
+  },
+  "onboardingScreenStepIndicator": "{currentStep} / {totalSteps}",
+  "@onboardingScreenStepIndicator": {
+    "description": "Texte \"n / 5\" du bandeau haut de `OnboardingScreen` (`_TopBanner`), à côté de la `StepProgressBar`.",
+    "placeholders": {
+      "currentStep": {
+        "type": "int",
+        "example": "1"
+      },
+      "totalSteps": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "onboardingScreenNextAction": "Suivant",
+  "@onboardingScreenNextAction": {
+    "description": "`PrimaryButton` de pied de page de `OnboardingScreen`, pages 1 à 4/5."
+  },
+  "onboardingScreenBackAction": "Retour",
+  "@onboardingScreenBackAction": {
+    "description": "`SecondaryButton` de pied de page de `OnboardingScreen`, pages 2 à 5/5."
+  },
+  "onboardingScreenFinishAction": "C'est parti !",
+  "@onboardingScreenFinishAction": {
+    "description": "`PrimaryButton` de pied de page de `OnboardingScreen`, page 5/5 uniquement — appelle `markOnboardingSeen` puis sort de l'écran."
+  },
+  "onboardingPage1Title": "BIENVENUE, AVENTURIER",
+  "@onboardingPage1Title": {
+    "description": "Titre de la page 1/5 du carousel `OnboardingScreen` (`_onboardingPages`) — `AppBrandBadge` affiché à la place du médaillon générique."
+  },
+  "onboardingPage1Body": "Nexus JDR t'accompagne pour créer, suivre et jouer tes personnages D&D, à la table comme en solo. Découvrons ensemble comment ça marche.",
+  "@onboardingPage1Body": {
+    "description": "Corps de la page 1/5 du carousel `OnboardingScreen`."
+  },
+  "onboardingPage2Title": "TES PERSONNAGES",
+  "@onboardingPage2Title": {
+    "description": "Titre de la page 2/5 du carousel `OnboardingScreen`."
+  },
+  "onboardingPage2Body": "Retrouve tous tes aventuriers sur un seul écran. Crée-en un nouveau pas à pas, ou importe directement une fiche depuis aidedd.org.",
+  "@onboardingPage2Body": {
+    "description": "Corps de la page 2/5 du carousel `OnboardingScreen`."
+  },
+  "onboardingPage3Title": "LA FICHE DE TON PERSONNAGE",
+  "@onboardingPage3Title": {
+    "description": "Titre de la page 3/5 du carousel `OnboardingScreen`."
+  },
+  "onboardingPage3Body": "Cinq onglets réunissent tout ce qu'il te faut en jeu : ta fiche, tes aptitudes, tes sorts, ton sac... et l'histoire que tu écris avec lui.",
+  "@onboardingPage3Body": {
+    "description": "Corps de la page 3/5 du carousel `OnboardingScreen`."
+  },
+  "onboardingPage4Title": "REJOINDRE UNE HISTOIRE",
+  "@onboardingPage4Title": {
+    "description": "Titre de la page 4/5 du carousel `OnboardingScreen`."
+  },
+  "onboardingPage4Body": "Un MJ t'a transmis un code d'invitation ? Rejoins son groupe pour lier ton personnage à son histoire et rester synchronisé avec la table.",
+  "@onboardingPage4Body": {
+    "description": "Corps de la page 4/5 du carousel `OnboardingScreen`."
+  },
+  "onboardingPage5Title": "C'EST PARTI !",
+  "@onboardingPage5Title": {
+    "description": "Titre de la page 5/5 du carousel `OnboardingScreen`."
+  },
+  "onboardingPage5Body": "Tout est prêt. Entre dans la taverne et commence à écrire tes légendes.",
+  "@onboardingPage5Body": {
+    "description": "Corps de la page 5/5 du carousel `OnboardingScreen`."
+  },
+
+  "characterXmlExportGenericErrorMessage": "Impossible de générer l'export XML. Réessayez.",
+  "@characterXmlExportGenericErrorMessage": {
+    "description": "SnackBar d'échec de `exportCharacterAsXml` (`character_xml_export_action.dart`) — le détail technique de l'erreur n'est jamais affiché, seulement journalisé (`debugPrint`)."
+  },
+  "characterXmlExportMulticlassWarningTitle": "Personnage multiclassé",
+  "@characterXmlExportMulticlassWarningTitle": {
+    "description": "Titre du dialogue d'avertissement affiché avant l'export d'un personnage multiclassé (`_showMulticlassWarningDialog`)."
+  },
+  "characterXmlExportMulticlassWarningBody": "Le format XML compatible aidedd.org ne prend en charge qu'une seule classe par personnage. Seule la classe {className} sera exportée, les autres classes de ce personnage seront absentes du fichier généré.",
+  "@characterXmlExportMulticlassWarningBody": {
+    "description": "Corps du dialogue d'avertissement \"Personnage multiclassé\" — {className} est le nom de la classe primaire du personnage (`CharacterDetail.primaryClass`), ou `characterXmlExportMulticlassWarningDefaultClassName` si absente.",
+    "placeholders": {
+      "className": {
+        "type": "String",
+        "example": "Guerrier"
+      }
+    }
+  },
+  "characterXmlExportMulticlassWarningDefaultClassName": "principale",
+  "@characterXmlExportMulticlassWarningDefaultClassName": {
+    "description": "Repli de {className} (`characterXmlExportMulticlassWarningBody`) quand `CharacterDetail.primaryClass` est `null` — ne devrait normalement jamais arriver pour un personnage multiclassé."
+  },
+  "characterXmlExportMulticlassWarningCancelButton": "Annuler",
+  "@characterXmlExportMulticlassWarningCancelButton": {
+    "description": "`SecondaryButton` \"Annuler\" du dialogue d'avertissement \"Personnage multiclassé\"."
+  },
+  "characterXmlExportMulticlassWarningConfirmButton": "Exporter quand même",
+  "@characterXmlExportMulticlassWarningConfirmButton": {
+    "description": "`PrimaryButton` \"Exporter quand même\" du dialogue d'avertissement \"Personnage multiclassé\" — confirme l'export de la classe primaire uniquement."
   }
 }

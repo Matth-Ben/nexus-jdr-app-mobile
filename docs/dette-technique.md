@@ -983,6 +983,46 @@ silencieusement.
 |---|---|---|---|---|
 | D165 | `CharacterIdentityFormatter` (`features/characters/domain/character_identity_formatter.dart`, `domain/` sans `BuildContext`) écrit les séparateurs/libellés "Niveau {N}" et "Historique : {nom}" en français en dur dans `subtitleLine1`/`subtitleLine2`, au milieu d'un texte par ailleurs entièrement dynamique (race/sous-race/classe/historique/alignement résolus). Consommé par `character_identity_card.dart` (fiche personnage authentifiée, déjà migré par le lot "Characters — fiche (identité/statistiques)", qui n'avait pas signalé ce point) ET par les deux écrans de ce lot (`character_share_screen.dart::_IdentityCard`, `shared_character_view_screen.dart::_SharedIdentityCard`) — un lecteur anglophone voit donc "Niveau 5"/"Historique : Noble" quelle que soit la langue de l'app. Même famille de défaut que D147/D148 (classe `domain/` sans `BuildContext` mêlant texte fixe et contenu dynamique), mais jamais signalée jusqu'ici malgré un appelant déjà migré. | basse (texte secondaire mêlé à du contenu par ailleurs dynamique — pas une donnée fausse, juste deux mots qui ne suivent pas la langue de l'app) | Faire passer `AppLocalizations` à `subtitleLine1`/`subtitleLine2` (même pattern "fonction `(l10n, detail) => ...`" déjà établi, voir D142/D143/D146) pour résoudre "Niveau {N}"/"Historique : {nom}" via deux nouvelles clés `.arb`, à appliquer aux 3 appelants (`character_identity_card.dart` et les 2 écrans de ce lot) | Ouvert, non traité |
 
+## Ajouts liés au lot "écrans divers" de la Phase B traduction (05/11/2026)
+
+4 petites features isolées migrent vers `.arb` (33 clés) : `app_update` (`force_update_screen.dart`,
+`widgets/update_suggested_banner.dart`, `app_store_launcher.dart`), `splash` (`splash_screen.dart`),
+`onboarding` (`onboarding_screen.dart`) et `xml_export` (`character_xml_export_action.dart`
+uniquement). Chaque fichier `domain`/`data` de ces 4 features a été vérifié par lecture directe avant
+exclusion, pas par analogie : `app_update/domain/app_store_urls.dart`/`app_version_check_result.dart`/
+`app_version_comparator.dart`/`app_version_status.dart` et
+`presentation/providers/app_version_providers.dart`/`update_banner_dismissal_provider.dart` ne
+portent aucun texte affiché (construction d'URL, comparaison de versions, enum, câblage Riverpod) ;
+`xml_export/data/xml_character_exporter.dart` et `xml_export/domain/aidedd_reverse_tables.dart`
+restent de la pure génération XML/tables de correspondance interne, jamais affichées à l'utilisateur
+— confirmé pour ce dernier, comme demandé, par lecture directe plutôt que par analogie avec son
+pendant `xml_import/domain/aidedd_reference_tables.dart`. `app_update/data/app_version_repository.dart`
+lève un `StateError` au message français ("Aucune ligne app_versions pour la plateforme...") quand la
+table de référence manque une ligne pour la plateforme courante : jamais affiché à l'utilisateur ni même
+journalisé (intercepté silencieusement par `appVersionCheckProvider`, qui retombe sur
+`AppVersionStatus.upToDate`) — même statut que les messages `debugPrint` déjà laissés en français sans
+entrée dédiée ailleurs dans ce dépôt (`profile_edit_screen.dart`, `bug_report_screenshot_picker.dart`,
+`xml_export/presentation/character_xml_export_action.dart` lui-même), donc pas de nouvelle entrée pour
+ce cas non plus. `onboardingScreen._onboardingPages` (contenu des 5 pages du carousel) est passé d'une
+constante à une fonction `(AppLocalizations l10n) => [...]`, même pattern que
+`profile_faq_screen.dart::_faqItems`. Ricochet trouvé en migrant `splash_screen.dart`/
+`force_update_screen.dart` : `main.dart::AppBootstrap._splashApp`/l'écran `ForceUpdateScreen` (route
+affichée par `AppBootstrap`, pas par le routeur applicatif) n'avaient aucun `localizationsDelegates`
+sur leur `MaterialApp` dédié — un `AppLocalizations.of(context)!` y aurait planté dès le premier
+lancement réel de l'app. Corrigé dans ce même lot (pas seulement signalé, cette fois, puisque c'est un
+ricochet direct de cette migration plutôt qu'un défaut préexistant) : les deux `MaterialApp` gagnent
+`localizationsDelegates`/`supportedLocales`, et sont alignés sur la même résolution de langue que
+`NexusJdrApp` (nouvelle fonction partagée `_resolveLocale`, extraite de l'ancien callback inline de
+`NexusJdrApp`, plus `locale: ref.watch(localePreferenceControllerProvider)`) plutôt que de les laisser
+suivre la langue brute de l'appareil sans jamais respecter une préférence déjà forcée dans Profil >
+Langue. `test/main_test.dart` (ricochet de test, construit `AppBootstrap` directement) fixe désormais
+`SharedPreferences.setMockInitialValues({'locale_preference': 'fr'})` pour que ses assertions
+(toutes en français) restent indépendantes de la locale par défaut de l'environnement de test. Restent
+explicitement dynamiques, jamais capturés en `.arb` : les numéros de version (`PackageInfo.version`/
+`app_versions.min_supported_version`), interpolés via des placeholders ICU. Aucun nouveau cas de
+texte français en dur dans un fichier `domain`/`data` n'a été trouvé dans ce lot — pas de nouvelle
+entrée de dette technique.
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont

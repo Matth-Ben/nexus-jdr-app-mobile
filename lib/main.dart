@@ -346,6 +346,27 @@ Future<BootstrapResult> _initializeSupabaseAndFirebase() async {
 /// dépendent de `Supabase.instance.client`, qui planterait (voir la doc de
 /// [_initializeSupabaseAndFirebase]) — [_SupabaseUnavailableScreen] prend le
 /// relais à la place, avec un bouton "Réessayer" qui relance [initialize].
+/// Résolution de langue partagée par tous les `MaterialApp`/`MaterialApp
+/// .router` de ce fichier (`NexusJdrApp`, `AppBootstrap._splashApp`, l'écran
+/// `ForceUpdateScreen`) — `AppLocalizations.supportedLocales` est généré par
+/// `flutter gen-l10n` par ordre alphabétique (`[en, fr]`), pas par ordre de
+/// déclaration de `l10n.yaml`/`app_fr.arb` : l'algorithme de résolution par
+/// défaut de Flutter (`basicLocaleListResolution`) replierait donc sur
+/// l'anglais — `supportedLocales.first` — pour un appareil dans une langue ni
+/// FR ni EN, alors que le français est la langue de repli voulue (décision
+/// déjà actée, voir le chantier "traduction de l'app"). Callback explicite
+/// plutôt que de supposer ce comportement par défaut.
+Locale _resolveLocale(Locale? deviceLocale, Iterable<Locale> supportedLocales) {
+  if (deviceLocale != null) {
+    for (final supported in supportedLocales) {
+      if (supported.languageCode == deviceLocale.languageCode) {
+        return supported;
+      }
+    }
+  }
+  return const Locale('fr');
+}
+
 @visibleForTesting
 class AppBootstrap extends ConsumerStatefulWidget {
   const AppBootstrap({
@@ -415,6 +436,18 @@ class _AppBootstrapState extends ConsumerState<AppBootstrap> {
               return MaterialApp(
                 theme: AppTheme.light,
                 debugShowCheckedModeBanner: false,
+                // `ForceUpdateScreen` lit `AppLocalizations.of(context)!`
+                // (chantier "traduction de l'app" Phase B, lot "écrans
+                // divers") : sans ces delegates, l'appel renverrait `null`
+                // et le `!` planterait. Même résolution de langue que
+                // `NexusJdrApp` ci-dessous (`_resolveLocale`,
+                // `localePreferenceControllerProvider`) : un utilisateur
+                // ayant forcé une langue dans Profil > Langue la retrouve
+                // même sur cet écran bloquant, qui précède `NexusJdrApp`.
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                localeResolutionCallback: _resolveLocale,
+                locale: ref.watch(localePreferenceControllerProvider),
                 home: ForceUpdateScreen(
                   installedVersion: versionResult.installedVersion,
                   minimumVersion: versionResult.minimumVersion,
@@ -433,6 +466,16 @@ class _AppBootstrapState extends ConsumerState<AppBootstrap> {
     return MaterialApp(
       theme: AppTheme.light,
       debugShowCheckedModeBanner: false,
+      // `SplashScreen` lit `AppLocalizations.of(context)!` (chantier
+      // "traduction de l'app" Phase B, lot "écrans divers") : sans ces
+      // delegates, l'appel renverrait `null` et le `!` planterait. Même
+      // résolution de langue que `NexusJdrApp` ci-dessous (`_resolveLocale`,
+      // `localePreferenceControllerProvider`) — voir la doc de
+      // `ForceUpdateScreen` ci-dessus pour le même rationale.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localeResolutionCallback: _resolveLocale,
+      locale: ref.watch(localePreferenceControllerProvider),
       home: const SplashScreen(),
     );
   }
@@ -558,17 +601,10 @@ class NexusJdrApp extends ConsumerWidget {
       // sur l'anglais — `supportedLocales.first` — pour un appareil dans une
       // langue ni FR ni EN, alors que le français est la langue de repli
       // voulue (décision déjà actée, voir le chantier). Callback explicite
-      // plutôt que de supposer ce comportement par défaut.
-      localeResolutionCallback: (deviceLocale, supportedLocales) {
-        if (deviceLocale != null) {
-          for (final supported in supportedLocales) {
-            if (supported.languageCode == deviceLocale.languageCode) {
-              return supported;
-            }
-          }
-        }
-        return const Locale('fr');
-      },
+      // ([_resolveLocale], partagé avec `AppBootstrap._splashApp`/l'écran
+      // `ForceUpdateScreen` — chantier "traduction de l'app" Phase B, lot
+      // "écrans divers") plutôt que de supposer ce comportement par défaut.
+      localeResolutionCallback: _resolveLocale,
       // `null` laisse `localeResolutionCallback` ci-dessus résoudre la
       // langue selon l'appareil ; une valeur explicite (`setLocale` dans
       // `LocalePreferenceController`) force cette langue indépendamment du

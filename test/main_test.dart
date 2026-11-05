@@ -20,6 +20,7 @@ import 'package:personnages/features/app_update/presentation/force_update_screen
 import 'package:personnages/features/app_update/presentation/providers/app_version_providers.dart';
 import 'package:personnages/features/splash/presentation/splash_screen.dart';
 import 'package:personnages/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Construit un [BootstrapResult] "tout va bien" par défaut pour les tests
 /// qui n'ont pas besoin de faire varier la disponibilité des SDK d'analytics
@@ -52,6 +53,21 @@ void main() {
       buildNumber: '1',
       buildSignature: '',
     );
+  });
+
+  setUp(() {
+    // `SplashScreen`/`ForceUpdateScreen` lisent désormais `AppLocalizations
+    // .of(context)!` (chantier "traduction de l'app" Phase B, lot "écrans
+    // divers") : `AppBootstrap` résout leur langue via
+    // `localePreferenceControllerProvider` (même mécanisme que
+    // `NexusJdrApp`, voir `main.dart::_resolveLocale`), qui retombe sur la
+    // langue de l'appareil (indéterminée sous `flutter test`) tant
+    // qu'aucune préférence n'est persistée. Préférence forcée au français
+    // ici, pour que les assertions de ce fichier (toutes en français)
+    // restent indépendantes de la locale par défaut de l'environnement de
+    // test — même principe que `locale: const Locale('fr')` déjà explicite
+    // sur les `MaterialApp` des tests de widget migrés par ce lot.
+    SharedPreferences.setMockInitialValues({'locale_preference': 'fr'});
   });
 
   testWidgets(
@@ -100,6 +116,66 @@ void main() {
 
       expect(find.byType(SplashScreen), findsNothing);
       expect(find.text('App prête'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'aucune préférence de langue persistée, appareil en allemand (ni FR '
+    'ni EN) -> SplashScreen résout bien en français (non-régression du '
+    'câblage réel `localizationsDelegates`/`supportedLocales`/'
+    '`localeResolutionCallback`/`locale` des `MaterialApp` d\'`AppBootstrap`'
+    ', pas seulement de `_resolveLocale` isolée — voir '
+    '`test/app_locale_resolution_test.dart`, qui ne pompe que `NexusJdrApp`, '
+    'jamais `AppBootstrap`)',
+    (tester) async {
+      // Contrairement au `setUp` de ce fichier (qui force `'fr'` pour que
+      // les autres tests de ce fichier restent indépendants de la langue de
+      // l'environnement de test) : aucune préférence n'est ici persistée,
+      // pour que seule la résolution réelle d'`AppBootstrap` (callback +
+      // `supportedLocales` + `locale`, voir `main.dart::_resolveLocale` et
+      // `_AppBootstrapState._splashApp`) détermine la langue affichée.
+      SharedPreferences.setMockInitialValues({});
+      // `locale` ET `locales` (même paire que
+      // `app_locale_resolution_test.dart`) : `WidgetsApp` calcule la locale
+      // transmise à `localeResolutionCallback` à partir de la liste
+      // `locales`, pas seulement de `locale` seul.
+      tester.platformDispatcher.localeTestValue = const Locale('de');
+      tester.platformDispatcher.localesTestValue = [const Locale('de')];
+      addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+      addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+
+      final completer = Completer<BootstrapResult>();
+      await tester.pumpWidget(
+        ProviderScope(
+          child: AppBootstrap(
+            initialize: () => completer.future,
+            child: const MaterialApp(
+              home: Scaffold(body: Center(child: Text('App prête'))),
+            ),
+          ),
+        ),
+      );
+      // Plusieurs `pump` (jamais `pumpAndSettle`, qui ne terminerait jamais
+      // tant que l'animation continue des 3 points de `SplashScreen`
+      // tourne — même piège documenté sur les autres tests de ce fichier) :
+      // `localePreferenceControllerProvider` retombe d'abord sur `null`
+      // (`sharedPreferencesProvider`, lui-même un `FutureProvider`, pas
+      // encore résolu) avant de se reconstruire une fois celui-ci résolu —
+      // un seul `pump` laisserait `MaterialApp.locale` à `null` sans avoir
+      // laissé `localeResolutionCallback` prendre le relais sur un nouveau
+      // frame.
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+
+      expect(find.byType(SplashScreen), findsOneWidget);
+      // `splashScreenBrandLine2` ("PERSONNAGES" en français, "CHARACTERS" en
+      // anglais) : si `localizationsDelegates`/`localeResolutionCallback`
+      // n'étaient pas câblés sur ce `MaterialApp` (régression visée par ce
+      // test), `AppLocalizations.of(context)` renverrait `null` et
+      // `SplashScreen` planterait avant même d'atteindre cette assertion.
+      expect(find.text('PERSONNAGES'), findsOneWidget);
+      expect(find.text('CHARACTERS'), findsNothing);
     },
   );
 

@@ -24,6 +24,7 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   int markOnboardingSeenCallCount = 0;
@@ -92,11 +93,20 @@ void main() {
   /// `profile_help_screen_test.dart::_pumpScreen`) — couvre le cas "ouvert
   /// volontairement depuis le profil" de la doc de classe de
   /// `OnboardingScreen`.
-  Future<void> pumpPushedScreen(WidgetTester tester) async {
+  Future<void> pumpPushedScreen(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [authRepositoryProvider.overrideWithValue(fakeRepository)],
         child: MaterialApp.router(
+          // `OnboardingScreen` lit `AppLocalizations.of(context)!` (chantier
+          // "traduction de l'app" Phase B, lot "écrans divers") : sans ces
+          // delegates, l'appel renverrait `null` et le `!` planterait.
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: locale,
           routerConfig: GoRouter(
             initialLocation: '/',
             routes: [
@@ -127,11 +137,17 @@ void main() {
   /// Pousse `OnboardingScreen` comme route initiale (donc jamais
   /// "poppable") — couvre le cas "forcé par le routeur à la première
   /// connexion" de la doc de classe de `OnboardingScreen`.
-  Future<void> pumpInitialScreen(WidgetTester tester) async {
+  Future<void> pumpInitialScreen(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [authRepositoryProvider.overrideWithValue(fakeRepository)],
         child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: locale,
           routerConfig: GoRouter(
             initialLocation: '/onboarding',
             routes: [
@@ -380,6 +396,93 @@ void main() {
         expect(fakeRepository.markOnboardingSeenCallCount, 1);
         expect(find.text('Ouvrir'), findsOneWidget);
         expect(tester.takeException(), isNull);
+      },
+    );
+  });
+
+  group('locale anglaise', () {
+    testWidgets(
+      'affiche le titre/texte/bandeau traduits de la page 1/5, "Skip" '
+      'visible',
+      (tester) async {
+        await pumpPushedScreen(tester, locale: const Locale('en'));
+
+        expect(find.text('WELCOME, ADVENTURER'), findsOneWidget);
+        expect(find.textContaining('Nexus JDR helps you'), findsOneWidget);
+        expect(find.text('1 / 5'), findsOneWidget);
+        expect(find.text('Skip'), findsOneWidget);
+        expect(find.text('NEXT'), findsOneWidget);
+        expect(find.text('BACK'), findsNothing);
+      },
+    );
+
+    testWidgets('taper "Next" avance à la page 2/5 traduite', (tester) async {
+      await pumpPushedScreen(tester, locale: const Locale('en'));
+
+      await tester.tap(find.text('NEXT'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('YOUR CHARACTERS'), findsOneWidget);
+      expect(find.text('2 / 5'), findsOneWidget);
+      expect(find.text('BACK'), findsOneWidget);
+      expect(find.text('NEXT'), findsOneWidget);
+    });
+
+    testWidgets('page 5/5 traduite : "BACK"/"LET\'S GO!" (pas "NEXT"), taper '
+        '"LET\'S GO!" appelle markOnboardingSeen puis sort de l\'écran', (
+      tester,
+    ) async {
+      await pumpPushedScreen(tester, locale: const Locale('en'));
+      for (var i = 0; i < 4; i++) {
+        await tester.tap(find.text('NEXT'));
+        await tester.pumpAndSettle();
+      }
+
+      expect(find.text("LET'S GO!"), findsAtLeastNWidgets(1));
+      expect(find.text('5 / 5'), findsOneWidget);
+      expect(find.text('BACK'), findsOneWidget);
+      expect(find.text('NEXT'), findsNothing);
+
+      await tester.tap(find.text("LET'S GO!").last);
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.markOnboardingSeenCallCount, 1);
+      expect(find.text('Ouvrir'), findsOneWidget);
+      expect(find.byType(OnboardingScreen), findsNothing);
+    });
+
+    testWidgets(
+      'taper "Skip" sur la page 1/5 appelle markOnboardingSeen puis sort '
+      'de l\'écran (pop), même échec réseau best-effort sans blocage',
+      (tester) async {
+        fakeRepository.markOnboardingSeenErrorToThrow = Exception(
+          'Pas de réseau (double de test).',
+        );
+        await pumpPushedScreen(tester, locale: const Locale('en'));
+
+        await tester.tap(find.text('Skip'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.markOnboardingSeenCallCount, 1);
+        expect(find.text('Ouvrir'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'écran atteint comme route initiale (non poppable, "forcé par le '
+      'routeur"), locale anglaise : "Skip" navigue vers "/" plutôt que de '
+      'pop (équivalent anglais du même cas français ci-dessus, hors '
+      'groupe "locale anglaise")',
+      (tester) async {
+        await pumpInitialScreen(tester, locale: const Locale('en'));
+
+        await tester.tap(find.text('Skip'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.markOnboardingSeenCallCount, 1);
+        expect(find.text('Liste'), findsOneWidget);
+        expect(find.byType(OnboardingScreen), findsNothing);
       },
     );
   });

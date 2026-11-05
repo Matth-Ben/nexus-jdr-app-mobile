@@ -9383,6 +9383,207 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Réessayer'**
   String get sharedCharacterViewScreenErrorRetryButtonLabel;
+
+  /// 1ère ligne du titre deux lignes de l'écran bloquant "Erreur — Mise à jour obligatoire" (`force_update_screen.dart`).
+  ///
+  /// In fr, this message translates to:
+  /// **'MISE À JOUR'**
+  String get forceUpdateScreenTitleLine1;
+
+  /// 2e ligne du titre deux lignes de `ForceUpdateScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'REQUISE'**
+  String get forceUpdateScreenTitleLine2;
+
+  /// Texte explicatif de `ForceUpdateScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette version de Nexus JDR n\'est plus prise en charge. Mets à jour l\'application pour continuer à gérer tes personnages en toute sécurité.'**
+  String get forceUpdateScreenBody;
+
+  /// `PrimaryButton` pleine largeur de `ForceUpdateScreen`, ouvre la fiche store via `openAppStorePage` (`app_store_launcher.dart`).
+  ///
+  /// In fr, this message translates to:
+  /// **'↓ Mettre à jour'**
+  String get forceUpdateScreenUpdateButton;
+
+  /// Ligne de pied de `ForceUpdateScreen` affichant `PackageInfo.version` et `app_versions.min_supported_version` de la plateforme courante.
+  ///
+  /// In fr, this message translates to:
+  /// **'Version installée : {installedVersion} · minimum requis : {minimumVersion}'**
+  String forceUpdateScreenVersionInfo(
+    String installedVersion,
+    String minimumVersion,
+  );
+
+  /// Texte principal de la bannière "Mise à jour suggérée" (`widgets/update_suggested_banner.dart`), insérée entre l'en-tête et la barre de recherche de `character_list_screen.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle version disponible'**
+  String get updateSuggestedBannerMessage;
+
+  /// Lien de `UpdateSuggestedBanner`, ouvre la fiche store via `openAppStorePage`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mettre à jour'**
+  String get updateSuggestedBannerUpdateAction;
+
+  /// `tooltip` de l'icône "×" de `UpdateSuggestedBanner`, referme la bannière pour la version courante.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer'**
+  String get updateSuggestedBannerCloseTooltip;
+
+  /// SnackBar d'échec de `openAppStorePage` (`app_store_launcher.dart`), partagée par le bouton "Mettre à jour" de `ForceUpdateScreen` et le lien "Mettre à jour" d'`UpdateSuggestedBanner` — `canLaunchUrl` faux ou exception plateforme inattendue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ouvrir la fiche de l\'application. Réessayez.'**
+  String get appStoreLauncherCannotOpenMessage;
+
+  /// 1ère ligne de l'emblème de marque de l'écran de lancement (`splash_screen.dart`).
+  ///
+  /// In fr, this message translates to:
+  /// **'NEXUS JDR'**
+  String get splashScreenBrandLine1;
+
+  /// 2e ligne de l'emblème de marque de `SplashScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'PERSONNAGES'**
+  String get splashScreenBrandLine2;
+
+  /// Texte de chargement de `SplashScreen`, sous l'indicateur à 3 points.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préparation de la taverne…'**
+  String get splashScreenLoadingText;
+
+  /// Lien "Passer" du bandeau haut de `OnboardingScreen` (`_TopBanner`), visible sur les 5 pages — appelle `markOnboardingSeen` puis sort de l'écran.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passer'**
+  String get onboardingScreenSkipAction;
+
+  /// Texte "n / 5" du bandeau haut de `OnboardingScreen` (`_TopBanner`), à côté de la `StepProgressBar`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{currentStep} / {totalSteps}'**
+  String onboardingScreenStepIndicator(int currentStep, int totalSteps);
+
+  /// `PrimaryButton` de pied de page de `OnboardingScreen`, pages 1 à 4/5.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get onboardingScreenNextAction;
+
+  /// `SecondaryButton` de pied de page de `OnboardingScreen`, pages 2 à 5/5.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get onboardingScreenBackAction;
+
+  /// `PrimaryButton` de pied de page de `OnboardingScreen`, page 5/5 uniquement — appelle `markOnboardingSeen` puis sort de l'écran.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est parti !'**
+  String get onboardingScreenFinishAction;
+
+  /// Titre de la page 1/5 du carousel `OnboardingScreen` (`_onboardingPages`) — `AppBrandBadge` affiché à la place du médaillon générique.
+  ///
+  /// In fr, this message translates to:
+  /// **'BIENVENUE, AVENTURIER'**
+  String get onboardingPage1Title;
+
+  /// Corps de la page 1/5 du carousel `OnboardingScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nexus JDR t\'accompagne pour créer, suivre et jouer tes personnages D&D, à la table comme en solo. Découvrons ensemble comment ça marche.'**
+  String get onboardingPage1Body;
+
+  /// Titre de la page 2/5 du carousel `OnboardingScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'TES PERSONNAGES'**
+  String get onboardingPage2Title;
+
+  /// Corps de la page 2/5 du carousel `OnboardingScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retrouve tous tes aventuriers sur un seul écran. Crée-en un nouveau pas à pas, ou importe directement une fiche depuis aidedd.org.'**
+  String get onboardingPage2Body;
+
+  /// Titre de la page 3/5 du carousel `OnboardingScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'LA FICHE DE TON PERSONNAGE'**
+  String get onboardingPage3Title;
+
+  /// Corps de la page 3/5 du carousel `OnboardingScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cinq onglets réunissent tout ce qu\'il te faut en jeu : ta fiche, tes aptitudes, tes sorts, ton sac... et l\'histoire que tu écris avec lui.'**
+  String get onboardingPage3Body;
+
+  /// Titre de la page 4/5 du carousel `OnboardingScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'REJOINDRE UNE HISTOIRE'**
+  String get onboardingPage4Title;
+
+  /// Corps de la page 4/5 du carousel `OnboardingScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un MJ t\'a transmis un code d\'invitation ? Rejoins son groupe pour lier ton personnage à son histoire et rester synchronisé avec la table.'**
+  String get onboardingPage4Body;
+
+  /// Titre de la page 5/5 du carousel `OnboardingScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'EST PARTI !'**
+  String get onboardingPage5Title;
+
+  /// Corps de la page 5/5 du carousel `OnboardingScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout est prêt. Entre dans la taverne et commence à écrire tes légendes.'**
+  String get onboardingPage5Body;
+
+  /// SnackBar d'échec de `exportCharacterAsXml` (`character_xml_export_action.dart`) — le détail technique de l'erreur n'est jamais affiché, seulement journalisé (`debugPrint`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de générer l\'export XML. Réessayez.'**
+  String get characterXmlExportGenericErrorMessage;
+
+  /// Titre du dialogue d'avertissement affiché avant l'export d'un personnage multiclassé (`_showMulticlassWarningDialog`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Personnage multiclassé'**
+  String get characterXmlExportMulticlassWarningTitle;
+
+  /// Corps du dialogue d'avertissement "Personnage multiclassé" — {className} est le nom de la classe primaire du personnage (`CharacterDetail.primaryClass`), ou `characterXmlExportMulticlassWarningDefaultClassName` si absente.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le format XML compatible aidedd.org ne prend en charge qu\'une seule classe par personnage. Seule la classe {className} sera exportée, les autres classes de ce personnage seront absentes du fichier généré.'**
+  String characterXmlExportMulticlassWarningBody(String className);
+
+  /// Repli de {className} (`characterXmlExportMulticlassWarningBody`) quand `CharacterDetail.primaryClass` est `null` — ne devrait normalement jamais arriver pour un personnage multiclassé.
+  ///
+  /// In fr, this message translates to:
+  /// **'principale'**
+  String get characterXmlExportMulticlassWarningDefaultClassName;
+
+  /// `SecondaryButton` "Annuler" du dialogue d'avertissement "Personnage multiclassé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get characterXmlExportMulticlassWarningCancelButton;
+
+  /// `PrimaryButton` "Exporter quand même" du dialogue d'avertissement "Personnage multiclassé" — confirme l'export de la classe primaire uniquement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exporter quand même'**
+  String get characterXmlExportMulticlassWarningConfirmButton;
 }
 
 class _AppLocalizationsDelegate

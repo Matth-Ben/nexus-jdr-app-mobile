@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../domain/app_store_urls.dart';
 
 /// Ouvre la fiche store — priorité à [storeUrl] (`app_versions.store_url`,
@@ -21,6 +22,7 @@ import '../domain/app_store_urls.dart';
 /// mal formée en base.
 Future<void> openAppStorePage(BuildContext context, {String? storeUrl}) async {
   final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context)!;
   final uri =
       (storeUrl != null && storeUrl.isNotEmpty
           ? Uri.tryParse(storeUrl)
@@ -30,17 +32,14 @@ Future<void> openAppStorePage(BuildContext context, {String? storeUrl}) async {
   try {
     if (!await canLaunchUrl(uri)) {
       messenger.showSnackBar(
-        const SnackBar(content: Text(_cannotOpenStoreMessage)),
+        SnackBar(content: Text(l10n.appStoreLauncherCannotOpenMessage)),
       );
       return;
     }
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   } catch (_) {
     messenger.showSnackBar(
-      const SnackBar(content: Text(_cannotOpenStoreMessage)),
+      SnackBar(content: Text(l10n.appStoreLauncherCannotOpenMessage)),
     );
   }
 }
-
-const String _cannotOpenStoreMessage =
-    "Impossible d'ouvrir la fiche de l'application. Réessayez.";

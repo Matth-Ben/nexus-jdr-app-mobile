@@ -1596,5 +1596,42 @@
   "sharedCharacterViewScreenInvalidLinkGroupMemberBody": "This character may have left the group.",
   "sharedCharacterViewScreenInvalidLinkRetryButtonLabel": "Retry",
   "sharedCharacterViewScreenLoadErrorMessage": "Unable to load this character. Try again.",
-  "sharedCharacterViewScreenErrorRetryButtonLabel": "Retry"
+  "sharedCharacterViewScreenErrorRetryButtonLabel": "Retry",
+
+  "forceUpdateScreenTitleLine1": "UPDATE",
+  "forceUpdateScreenTitleLine2": "REQUIRED",
+  "forceUpdateScreenBody": "This version of Nexus JDR is no longer supported. Update the app to keep managing your characters safely.",
+  "forceUpdateScreenUpdateButton": "↓ Update",
+  "forceUpdateScreenVersionInfo": "Installed version: {installedVersion} · minimum required: {minimumVersion}",
+  "updateSuggestedBannerMessage": "New version available",
+  "updateSuggestedBannerUpdateAction": "Update",
+  "updateSuggestedBannerCloseTooltip": "Close",
+  "appStoreLauncherCannotOpenMessage": "Couldn't open the app's store page. Please try again.",
+
+  "splashScreenBrandLine1": "NEXUS JDR",
+  "splashScreenBrandLine2": "CHARACTERS",
+  "splashScreenLoadingText": "Preparing the tavern…",
+
+  "onboardingScreenSkipAction": "Skip",
+  "onboardingScreenStepIndicator": "{currentStep} / {totalSteps}",
+  "onboardingScreenNextAction": "Next",
+  "onboardingScreenBackAction": "Back",
+  "onboardingScreenFinishAction": "Let's go!",
+  "onboardingPage1Title": "WELCOME, ADVENTURER",
+  "onboardingPage1Body": "Nexus JDR helps you create, track and play your D&D characters, at the table or solo. Let's see how it works together.",
+  "onboardingPage2Title": "YOUR CHARACTERS",
+  "onboardingPage2Body": "Find all your adventurers on a single screen. Create a new one step by step, or import a sheet directly from aidedd.org.",
+  "onboardingPage3Title": "YOUR CHARACTER'S SHEET",
+  "onboardingPage3Body": "Five tabs bring together everything you need in play: your sheet, your abilities, your spells, your bag... and the story you're writing with them.",
+  "onboardingPage4Title": "JOIN A STORY",
+  "onboardingPage4Body": "Has a GM sent you an invite code? Join their group to link your character to their story and stay in sync with the table.",
+  "onboardingPage5Title": "LET'S GO!",
+  "onboardingPage5Body": "Everything is ready. Step into the tavern and start writing your legends.",
+
+  "characterXmlExportGenericErrorMessage": "Couldn't generate the XML export. Please try again.",
+  "characterXmlExportMulticlassWarningTitle": "Multiclassed character",
+  "characterXmlExportMulticlassWarningBody": "The aidedd.org-compatible XML format only supports one class per character. Only the {className} class will be exported — this character's other classes will be missing from the generated file.",
+  "characterXmlExportMulticlassWarningDefaultClassName": "primary",
+  "characterXmlExportMulticlassWarningCancelButton": "Cancel",
+  "characterXmlExportMulticlassWarningConfirmButton": "Export anyway"
 }
