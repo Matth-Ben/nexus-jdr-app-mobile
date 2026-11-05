@@ -13,6 +13,7 @@ import '../../characters/domain/character_detail.dart';
 import '../../characters/domain/character_failure.dart';
 import '../../characters/domain/character_identity_formatter.dart';
 import '../../characters/domain/proficiency_bonus.dart';
+import '../../characters/presentation/character_failure_presenter.dart';
 import '../../characters/presentation/widgets/character_ability_score_grid.dart';
 import '../../characters/presentation/widgets/character_detail_tab_bar.dart';
 import '../../characters/presentation/widgets/character_equipped_weapons_card.dart';
@@ -103,8 +104,8 @@ class _SharedCharacterViewScreenState
             title: sharedAsync.value != null
                 ? _tab.headerTitle(l10n)
                 : widget.isGroupMember
-                ? 'MEMBRE DU GROUPE'
-                : 'PERSONNAGE PARTAGÉ',
+                ? l10n.sharedCharacterViewScreenGroupMemberHeaderTitle
+                : l10n.sharedCharacterViewScreenHeaderTitle,
             onBack: _goBack,
           ),
           Expanded(
@@ -120,8 +121,8 @@ class _SharedCharacterViewScreenState
               ),
               error: (error, stackTrace) => _ErrorState(
                 message: error is CharacterFailure
-                    ? error.message
-                    : 'Impossible de charger ce personnage. Réessayez.',
+                    ? resolveCharacterFailureMessage(l10n, error)
+                    : l10n.sharedCharacterViewScreenLoadErrorMessage,
                 onRetry: _retry,
               ),
             ),
@@ -208,11 +209,13 @@ class _CharacterTabBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
-        const InfoBanner(
-          message: 'Vue en lecture seule',
+        InfoBanner(
+          message: l10n.sharedCharacterViewScreenReadOnlyBanner,
           icon: Icons.lock_outline,
         ),
         const SizedBox(height: AppSpacing.md),
@@ -256,8 +259,7 @@ class _CharacterTabBody extends StatelessWidget {
         // affichée sur cet écran (retirée ci-dessous, absente de la
         // maquette de cette vue).
         Text(
-          'Toutes les sections (Compétences, Sorts, Inventaire, Histoire) '
-          'sont consultables ci-dessous, en lecture seule.',
+          l10n.sharedCharacterViewScreenSectionsHintText,
           textAlign: TextAlign.center,
           style: AppTypography.body(color: AppColors.textMuted),
         ),
@@ -355,6 +357,8 @@ class _SharedVitalsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -368,7 +372,7 @@ class _SharedVitalsCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                'POINTS DE VIE',
+                l10n.sharedCharacterViewScreenHpLabel,
                 style: AppTypography.display(
                   fontSize: 11,
                   color: AppColors.textSecondary,
@@ -403,7 +407,7 @@ class _SharedVitalsCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                'EXPÉRIENCE',
+                l10n.sharedCharacterViewScreenXpLabel,
                 style: AppTypography.display(
                   fontSize: 11,
                   color: AppColors.textSecondary,
@@ -459,6 +463,8 @@ class _TemporaryHpChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -470,7 +476,7 @@ class _TemporaryHpChip extends StatelessWidget {
         border: Border.all(color: AppColors.accentTeal, width: 1),
       ),
       child: Text(
-        '+$amount PV temp.',
+        l10n.sharedCharacterViewScreenTemporaryHpChipLabel(amount),
         style: AppTypography.body(
           fontSize: 11,
           fontWeight: FontWeight.w700,
@@ -522,6 +528,8 @@ class _InvalidLinkState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -532,8 +540,8 @@ class _InvalidLinkState extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(
               isGroupMember
-                  ? "Cette fiche n'est plus accessible"
-                  : "Ce lien de partage n'est plus valide",
+                  ? l10n.sharedCharacterViewScreenInvalidLinkGroupMemberTitle
+                  : l10n.sharedCharacterViewScreenInvalidLinkTitle,
               textAlign: TextAlign.center,
               style: AppTypography.display(
                 fontSize: 11,
@@ -543,15 +551,18 @@ class _InvalidLinkState extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               isGroupMember
-                  ? 'Ce personnage a peut-être quitté le groupe.'
-                  : 'Le partage a peut-être été désactivé, ou le lien a été '
-                        'mal recopié. Demande un nouveau lien à son '
-                        'propriétaire.',
+                  ? l10n.sharedCharacterViewScreenInvalidLinkGroupMemberBody
+                  : l10n.sharedCharacterViewScreenInvalidLinkBody,
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textMuted),
             ),
             const SizedBox(height: AppSpacing.md),
-            TextButton(onPressed: onRetry, child: const Text('Réessayer')),
+            TextButton(
+              onPressed: onRetry,
+              child: Text(
+                l10n.sharedCharacterViewScreenInvalidLinkRetryButtonLabel,
+              ),
+            ),
           ],
         ),
       ),
@@ -567,6 +578,8 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -585,7 +598,10 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            TextButton(onPressed: onRetry, child: const Text('Réessayer')),
+            TextButton(
+              onPressed: onRetry,
+              child: Text(l10n.sharedCharacterViewScreenErrorRetryButtonLabel),
+            ),
           ],
         ),
       ),

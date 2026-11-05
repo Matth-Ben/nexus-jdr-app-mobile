@@ -7464,5 +7464,146 @@
   "joinCharacterStepScreenRetryButton": "Réessayer",
   "@joinCharacterStepScreenRetryButton": {
     "description": "`SecondaryButton` de `_ErrorState`."
+  },
+  "characterShareScreenHeaderTitle": "PARTAGER LE PERSONNAGE",
+  "@characterShareScreenHeaderTitle": {
+    "description": "Titre du `WoodBackHeader` de `CharacterShareScreen` (route `/characters/:id/share`)."
+  },
+  "characterShareScreenIntroText": "Génère un lien pour montrer cette fiche en lecture seule à un ami ou à ton MJ, sans qu'il ait besoin d'un compte Nexus JDR.",
+  "@characterShareScreenIntroText": {
+    "description": "Paragraphe d'introduction affiché avant la section partage, qu'il soit actif ou non."
+  },
+  "characterShareScreenActiveBanner": "Partage actif",
+  "@characterShareScreenActiveBanner": {
+    "description": "Message de l'`InfoBanner.success` affiché quand `CharacterDetail.shareToken` est renseigné."
+  },
+  "characterShareScreenLinkLabel": "LIEN DE PARTAGE",
+  "@characterShareScreenLinkLabel": {
+    "description": "Libellé (déjà en majuscules) au-dessus du champ affichant le lien de partage."
+  },
+  "characterShareScreenLinkHelperText": "Quiconque possède ce lien peut consulter la fiche tant que le partage reste actif.",
+  "@characterShareScreenLinkHelperText": {
+    "description": "Texte d'aide affiché sous le champ de lien."
+  },
+  "characterShareScreenCopyLinkTooltip": "Copier le lien",
+  "@characterShareScreenCopyLinkTooltip": {
+    "description": "`Tooltip` du bouton carré de copie du lien (`_CopyLinkButton`)."
+  },
+  "characterShareScreenLinkCopiedMessage": "Lien copié.",
+  "@characterShareScreenLinkCopiedMessage": {
+    "description": "Message de `SnackBar` après un appel réussi à `Clipboard.setData` (`_copyLink`)."
+  },
+  "characterShareScreenRegenerateMenuLabel": "Régénérer le lien",
+  "@characterShareScreenRegenerateMenuLabel": {
+    "description": "Libellé du `MenuTile` qui relance `regenerateShareToken` quand le partage est déjà actif."
+  },
+  "characterShareScreenRegenerateSuccessMessage": "Lien de partage régénéré.",
+  "@characterShareScreenRegenerateSuccessMessage": {
+    "description": "Message de `SnackBar` après un appel réussi à `regenerateShareToken` (`_regenerate`), partage déjà actif."
+  },
+  "characterShareScreenActivateButtonLabel": "Activer le partage",
+  "@characterShareScreenActivateButtonLabel": {
+    "description": "Libellé du `PrimaryButton` affiché quand le partage est désactivé — appelle aussi `regenerateShareToken` (`_regenerate`)."
+  },
+  "characterShareScreenDangerZoneLabel": "ZONE DANGEREUSE",
+  "@characterShareScreenDangerZoneLabel": {
+    "description": "Libellé (déjà en majuscules) au-dessus du bouton de désactivation du partage."
+  },
+  "characterShareScreenDisableButtonLabel": "Désactiver le partage",
+  "@characterShareScreenDisableButtonLabel": {
+    "description": "Libellé du `DestructiveButton` qui ouvre la confirmation de désactivation (`_confirmDisable`)."
+  },
+  "characterShareScreenDisableHelperText": "Le lien actuel cessera immédiatement de fonctionner. Tu pourras en générer un nouveau plus tard.",
+  "@characterShareScreenDisableHelperText": {
+    "description": "Texte affiché sous le bouton de désactivation ET contenu du dialogue de confirmation (`_confirmDisable`) — texte identique dans les deux emplacements, une seule clé."
+  },
+  "characterShareScreenDisableDialogTitle": "Désactiver le partage ?",
+  "@characterShareScreenDisableDialogTitle": {
+    "description": "Titre de l'`AlertDialog` de confirmation (`_confirmDisable`)."
+  },
+  "characterShareScreenDisableDialogCancel": "Annuler",
+  "@characterShareScreenDisableDialogCancel": {
+    "description": "Bouton d'annulation de l'`AlertDialog` de confirmation."
+  },
+  "characterShareScreenDisableDialogConfirm": "Désactiver",
+  "@characterShareScreenDisableDialogConfirm": {
+    "description": "Bouton de confirmation de l'`AlertDialog` (plus court que `characterShareScreenDisableButtonLabel`, qui ouvre ce dialogue)."
+  },
+  "characterShareScreenDisableSuccessMessage": "Partage désactivé.",
+  "@characterShareScreenDisableSuccessMessage": {
+    "description": "Message de `SnackBar` après un appel réussi à `disableShareToken` (`_disable`)."
+  },
+  "characterShareScreenGenericErrorMessage": "Une erreur est survenue. Réessayez.",
+  "@characterShareScreenGenericErrorMessage": {
+    "description": "Message de `SnackBar` affiché quand `_regenerate`/`_disable` échouent avec une erreur qui n'est pas une `CharacterFailure` — même pattern que `summaryStepScreenGenericSubmitErrorMessage`, réutilisé aux deux points d'appel de cet écran."
+  },
+  "characterShareScreenLoadErrorMessage": "Impossible de charger ce personnage. Réessayez.",
+  "@characterShareScreenLoadErrorMessage": {
+    "description": "Repli de `_ErrorState` quand l'erreur de `characterDetailProvider` n'est pas une `CharacterFailure` — voir `resolveCharacterFailureMessage` (`presentation/character_failure_presenter.dart`) pour le cas `CharacterFailure`."
+  },
+  "characterShareScreenRetryButtonLabel": "Réessayer",
+  "@characterShareScreenRetryButtonLabel": {
+    "description": "Bouton de `_ErrorState`."
+  },
+  "sharedCharacterViewScreenHeaderTitle": "PERSONNAGE PARTAGÉ",
+  "@sharedCharacterViewScreenHeaderTitle": {
+    "description": "Titre du `WoodBackHeader` de `SharedCharacterViewScreen` tant qu'aucune fiche n'est chargée, variante lien de partage (route `/p/:token`) — remplacé par `CharacterDetailTab.headerTitle` une fois la fiche chargée."
+  },
+  "sharedCharacterViewScreenGroupMemberHeaderTitle": "MEMBRE DU GROUPE",
+  "@sharedCharacterViewScreenGroupMemberHeaderTitle": {
+    "description": "Même titre que `sharedCharacterViewScreenHeaderTitle`, variante `SharedCharacterViewScreen.groupMember` (fiche d'un membre de groupe)."
+  },
+  "sharedCharacterViewScreenReadOnlyBanner": "Vue en lecture seule",
+  "@sharedCharacterViewScreenReadOnlyBanner": {
+    "description": "Message de l'`InfoBanner` affiché en tête de l'onglet \"Personnage\"."
+  },
+  "sharedCharacterViewScreenSectionsHintText": "Toutes les sections (Compétences, Sorts, Inventaire, Histoire) sont consultables ci-dessous, en lecture seule.",
+  "@sharedCharacterViewScreenSectionsHintText": {
+    "description": "Texte explicatif affiché sous la grille de caractéristiques de l'onglet \"Personnage\"."
+  },
+  "sharedCharacterViewScreenHpLabel": "POINTS DE VIE",
+  "@sharedCharacterViewScreenHpLabel": {
+    "description": "Libellé du bandeau PV de `_SharedVitalsCard` — même texte que `characterVitalsCardHpLabel`, dupliqué volontairement (pas de dépendance entre ces deux widgets, voir la doc de classe de `_SharedVitalsCard`)."
+  },
+  "sharedCharacterViewScreenXpLabel": "EXPÉRIENCE",
+  "@sharedCharacterViewScreenXpLabel": {
+    "description": "Libellé du bandeau XP de `_SharedVitalsCard` — même texte que `characterVitalsCardXpLabel`, dupliqué volontairement (même rationale que `sharedCharacterViewScreenHpLabel`)."
+  },
+  "sharedCharacterViewScreenTemporaryHpChipLabel": "+{amount} PV temp.",
+  "@sharedCharacterViewScreenTemporaryHpChipLabel": {
+    "description": "Puce `_TemporaryHpChip` affichée quand `temporaryHp > 0` — même texte que `characterVitalsCardTemporaryHpChip`/`groupMembersTabBodyTemporaryHpChipLabel`, dupliqué volontairement (pas de dépendance entre ces widgets).",
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "sharedCharacterViewScreenInvalidLinkTitle": "Ce lien de partage n'est plus valide",
+  "@sharedCharacterViewScreenInvalidLinkTitle": {
+    "description": "Titre de `_InvalidLinkState` (résultat RPC `null`), variante lien de partage (`isGroupMember == false`)."
+  },
+  "sharedCharacterViewScreenInvalidLinkGroupMemberTitle": "Cette fiche n'est plus accessible",
+  "@sharedCharacterViewScreenInvalidLinkGroupMemberTitle": {
+    "description": "Titre de `_InvalidLinkState`, variante `isGroupMember == true`."
+  },
+  "sharedCharacterViewScreenInvalidLinkBody": "Le partage a peut-être été désactivé, ou le lien a été mal recopié. Demande un nouveau lien à son propriétaire.",
+  "@sharedCharacterViewScreenInvalidLinkBody": {
+    "description": "Corps de `_InvalidLinkState`, variante lien de partage (`isGroupMember == false`)."
+  },
+  "sharedCharacterViewScreenInvalidLinkGroupMemberBody": "Ce personnage a peut-être quitté le groupe.",
+  "@sharedCharacterViewScreenInvalidLinkGroupMemberBody": {
+    "description": "Corps de `_InvalidLinkState`, variante `isGroupMember == true`."
+  },
+  "sharedCharacterViewScreenInvalidLinkRetryButtonLabel": "Réessayer",
+  "@sharedCharacterViewScreenInvalidLinkRetryButtonLabel": {
+    "description": "Bouton de `_InvalidLinkState` (les deux variantes)."
+  },
+  "sharedCharacterViewScreenLoadErrorMessage": "Impossible de charger ce personnage. Réessayez.",
+  "@sharedCharacterViewScreenLoadErrorMessage": {
+    "description": "Repli de `_ErrorState` quand l'erreur n'est pas une `CharacterFailure` — voir `resolveCharacterFailureMessage` (`presentation/character_failure_presenter.dart`) pour le cas `CharacterFailure`."
+  },
+  "sharedCharacterViewScreenErrorRetryButtonLabel": "Réessayer",
+  "@sharedCharacterViewScreenErrorRetryButtonLabel": {
+    "description": "Bouton de `_ErrorState`."
   }
 }

@@ -5650,4 +5650,123 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get joinCharacterStepScreenRetryButton => 'Réessayer';
+
+  @override
+  String get characterShareScreenHeaderTitle => 'PARTAGER LE PERSONNAGE';
+
+  @override
+  String get characterShareScreenIntroText =>
+      'Génère un lien pour montrer cette fiche en lecture seule à un ami ou à ton MJ, sans qu\'il ait besoin d\'un compte Nexus JDR.';
+
+  @override
+  String get characterShareScreenActiveBanner => 'Partage actif';
+
+  @override
+  String get characterShareScreenLinkLabel => 'LIEN DE PARTAGE';
+
+  @override
+  String get characterShareScreenLinkHelperText =>
+      'Quiconque possède ce lien peut consulter la fiche tant que le partage reste actif.';
+
+  @override
+  String get characterShareScreenCopyLinkTooltip => 'Copier le lien';
+
+  @override
+  String get characterShareScreenLinkCopiedMessage => 'Lien copié.';
+
+  @override
+  String get characterShareScreenRegenerateMenuLabel => 'Régénérer le lien';
+
+  @override
+  String get characterShareScreenRegenerateSuccessMessage =>
+      'Lien de partage régénéré.';
+
+  @override
+  String get characterShareScreenActivateButtonLabel => 'Activer le partage';
+
+  @override
+  String get characterShareScreenDangerZoneLabel => 'ZONE DANGEREUSE';
+
+  @override
+  String get characterShareScreenDisableButtonLabel => 'Désactiver le partage';
+
+  @override
+  String get characterShareScreenDisableHelperText =>
+      'Le lien actuel cessera immédiatement de fonctionner. Tu pourras en générer un nouveau plus tard.';
+
+  @override
+  String get characterShareScreenDisableDialogTitle =>
+      'Désactiver le partage ?';
+
+  @override
+  String get characterShareScreenDisableDialogCancel => 'Annuler';
+
+  @override
+  String get characterShareScreenDisableDialogConfirm => 'Désactiver';
+
+  @override
+  String get characterShareScreenDisableSuccessMessage => 'Partage désactivé.';
+
+  @override
+  String get characterShareScreenGenericErrorMessage =>
+      'Une erreur est survenue. Réessayez.';
+
+  @override
+  String get characterShareScreenLoadErrorMessage =>
+      'Impossible de charger ce personnage. Réessayez.';
+
+  @override
+  String get characterShareScreenRetryButtonLabel => 'Réessayer';
+
+  @override
+  String get sharedCharacterViewScreenHeaderTitle => 'PERSONNAGE PARTAGÉ';
+
+  @override
+  String get sharedCharacterViewScreenGroupMemberHeaderTitle =>
+      'MEMBRE DU GROUPE';
+
+  @override
+  String get sharedCharacterViewScreenReadOnlyBanner => 'Vue en lecture seule';
+
+  @override
+  String get sharedCharacterViewScreenSectionsHintText =>
+      'Toutes les sections (Compétences, Sorts, Inventaire, Histoire) sont consultables ci-dessous, en lecture seule.';
+
+  @override
+  String get sharedCharacterViewScreenHpLabel => 'POINTS DE VIE';
+
+  @override
+  String get sharedCharacterViewScreenXpLabel => 'EXPÉRIENCE';
+
+  @override
+  String sharedCharacterViewScreenTemporaryHpChipLabel(int amount) {
+    return '+$amount PV temp.';
+  }
+
+  @override
+  String get sharedCharacterViewScreenInvalidLinkTitle =>
+      'Ce lien de partage n\'est plus valide';
+
+  @override
+  String get sharedCharacterViewScreenInvalidLinkGroupMemberTitle =>
+      'Cette fiche n\'est plus accessible';
+
+  @override
+  String get sharedCharacterViewScreenInvalidLinkBody =>
+      'Le partage a peut-être été désactivé, ou le lien a été mal recopié. Demande un nouveau lien à son propriétaire.';
+
+  @override
+  String get sharedCharacterViewScreenInvalidLinkGroupMemberBody =>
+      'Ce personnage a peut-être quitté le groupe.';
+
+  @override
+  String get sharedCharacterViewScreenInvalidLinkRetryButtonLabel =>
+      'Réessayer';
+
+  @override
+  String get sharedCharacterViewScreenLoadErrorMessage =>
+      'Impossible de charger ce personnage. Réessayez.';
+
+  @override
+  String get sharedCharacterViewScreenErrorRetryButtonLabel => 'Réessayer';
 }

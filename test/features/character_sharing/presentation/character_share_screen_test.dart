@@ -41,6 +41,7 @@ import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   CharacterDetail? detailToReturn;
@@ -437,7 +438,7 @@ void main() {
     fakeSharingRepository = _FakeCharacterSharingRepository();
   });
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return ProviderScope(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeCharacterRepository),
@@ -446,6 +447,12 @@ void main() {
         ),
       ],
       child: MaterialApp.router(
+        // `CharacterShareScreen` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B, lot "Character sharing") :
+        // sans ces delegates, l'appel renverrait `null` et le `!` planterait.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         routerConfig: GoRouter(
           initialLocation: '/characters/char-1/share',
           routes: [
@@ -464,10 +471,13 @@ void main() {
   // Surface de test agrandie : "Désactiver le partage"/le dialogue de
   // confirmation sont autrement hors du viewport 800×600 par défaut — même
   // ajustement que `character_detail_screen_test.dart`.
-  Future<void> pumpShareScreen(WidgetTester tester) async {
+  Future<void> pumpShareScreen(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     await tester.binding.setSurfaceSize(const Size(800, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
   }
 
   testWidgets(
@@ -597,4 +607,82 @@ void main() {
       );
     },
   );
+
+  group('locale anglaise', () {
+    testWidgets(
+      'partage inactif : affiche "ENABLE SHARING", pas de bannière ni de '
+      'zone dangereuse',
+      (tester) async {
+        fakeCharacterRepository.detailToReturn = _baseDetail;
+
+        await pumpShareScreen(tester, locale: const Locale('en'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('ENABLE SHARING'), findsOneWidget);
+        expect(find.text('Sharing active'), findsNothing);
+        expect(find.text('DANGER ZONE'), findsNothing);
+      },
+    );
+
+    testWidgets('partage actif : affiche le lien, "Regenerate link" et la zone '
+        'dangereuse avec "Disable sharing"', (tester) async {
+      fakeCharacterRepository.detailToReturn = _baseDetail.copyWith(
+        shareToken: 'existing-token',
+      );
+
+      await pumpShareScreen(tester, locale: const Locale('en'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sharing active'), findsOneWidget);
+      expect(
+        find.textContaining('nexus-jdr.app/p/existing-token'),
+        findsOneWidget,
+      );
+      expect(find.text('Regenerate link'), findsOneWidget);
+      expect(find.text('DANGER ZONE'), findsOneWidget);
+      expect(find.text('Disable sharing'), findsOneWidget);
+    });
+
+    testWidgets(
+      'tap "Disable sharing" ouvre une confirmation traduite ; confirmer '
+      'appelle disableShareToken',
+      (tester) async {
+        fakeCharacterRepository.detailToReturn = _baseDetail.copyWith(
+          shareToken: 'existing-token',
+        );
+
+        await pumpShareScreen(tester, locale: const Locale('en'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Disable sharing'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Disable sharing?'), findsOneWidget);
+        expect(fakeSharingRepository.disableCallCount, 0);
+
+        await tester.tap(find.text('Disable'));
+        await tester.pumpAndSettle();
+
+        expect(fakeSharingRepository.disableCallCount, 1);
+        expect(find.text('Sharing disabled.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'échec générique (non CharacterFailure) de régénération affiche le '
+      'message d\'erreur traduit en SnackBar',
+      (tester) async {
+        fakeCharacterRepository.detailToReturn = _baseDetail;
+        fakeSharingRepository.regenerateErrorToThrow = Exception('boom');
+
+        await pumpShareScreen(tester, locale: const Locale('en'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('ENABLE SHARING'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Something went wrong. Try again.'), findsOneWidget);
+      },
+    );
+  });
 }
