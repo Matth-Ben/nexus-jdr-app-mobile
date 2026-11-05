@@ -288,6 +288,25 @@ void main() {
     expect(find.text('REJOINDRE UN GROUPE'), findsOneWidget);
   });
 
+  testWidgets(
+    'nombre de membres au singulier en français ("1 membre", sans "s")',
+    (tester) async {
+      fakeGroupRepository.groupsToReturn = const [
+        GroupSummary(
+          id: 'group-1',
+          name: 'Les Lames',
+          memberCount: 1,
+          founderId: 'founder-id',
+        ),
+      ];
+
+      await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 membre'), findsOneWidget);
+    },
+  );
+
   testWidgets('taper un groupe de la liste navigue vers /groups/:id', (
     tester,
   ) async {
