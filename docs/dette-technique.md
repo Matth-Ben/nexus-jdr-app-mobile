@@ -920,7 +920,7 @@ D160.
 ## Ajouts liés au lot "XML import" de la Phase B traduction (05/11/2026)
 
 `xml_import_review_screen.dart` (et son contrôleur `xml_import_providers.dart`) migrent vers
-`.arb` (85 clés). Le texte de résolution d'échec de parsing (`XmlCharacterImportParser.parse`,
+`.arb` (86 clés). Le texte de résolution d'échec de parsing (`XmlCharacterImportParser.parse`,
 4 cas distincts) est sorti de `domain/` vers un nouvel enum stable
 (`domain/xml_import_parse_error_code.dart::XmlImportParseErrorCode`), résolu en texte affichable
 uniquement côté `presentation/` — même principe que `CharacterErrorCode`/`GroupErrorCode`, mais
