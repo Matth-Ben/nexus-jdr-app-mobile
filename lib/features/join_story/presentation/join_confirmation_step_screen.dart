@@ -8,21 +8,12 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/portrait_frame.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/story_invite_failure.dart';
 import '../domain/story_preview.dart';
 import 'join_routes.dart';
 import 'providers/join_story_providers.dart';
 import 'widgets/join_step_header.dart';
-
-/// Message générique réseau — même texte que
-/// `features/characters/data/character_error_mapper.dart::_networkErrorMessage`
-/// (déjà réutilisé partout ailleurs dans l'app pour ce cas), dupliqué ici
-/// plutôt qu'importé depuis la feature `characters` : même principe de
-/// duplication assumée que le reste de ce dépôt (voir la documentation de
-/// classe de `RaceRowMapper`).
-const String _genericNetworkErrorMessage =
-    'Impossible de contacter le serveur. Vérifiez votre connexion internet '
-    'et réessayez.';
 
 /// Étape 2/4 du flux "Rejoindre une histoire" : confirmation (nom + image de
 /// couverture de l'histoire), avant tout engagement — `preview-story-invite`
@@ -58,6 +49,7 @@ class JoinConfirmationStepScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final previewAsync = ref.watch(storyInvitePreviewProvider(code: code));
 
     return Scaffold(
@@ -65,7 +57,7 @@ class JoinConfirmationStepScreen extends ConsumerWidget {
         data: (preview) => Column(
           children: [
             JoinStepHeader(
-              stepTitle: 'Confirmation',
+              stepTitle: l10n.joinConfirmationStepScreenStepTitle,
               currentStep: 2,
               onBack: () => _goBack(context),
             ),
@@ -93,6 +85,7 @@ class JoinConfirmationStepScreen extends ConsumerWidget {
   }
 
   Widget _buildConfirmation(BuildContext context, StoryPreview preview) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: Padding(
@@ -125,7 +118,9 @@ class JoinConfirmationStepScreen extends ConsumerWidget {
                     if (preview.gmDisplayName != null) ...[
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        'MJ : ${preview.gmDisplayName}',
+                        l10n.joinConfirmationStepScreenGmLabel(
+                          preview.gmDisplayName!,
+                        ),
                         textAlign: TextAlign.center,
                         style: AppTypography.body(
                           fontSize: 13,
@@ -135,9 +130,7 @@ class JoinConfirmationStepScreen extends ConsumerWidget {
                     ],
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'En rejoignant, ton personnage sera visible par le MJ '
-                      '(lecture seule). Tu pourras quitter l\'histoire à '
-                      'tout moment depuis sa fiche.',
+                      l10n.joinConfirmationStepScreenDisclaimer,
                       textAlign: TextAlign.center,
                       style: AppTypography.body(
                         fontSize: 12,
@@ -149,7 +142,7 @@ class JoinConfirmationStepScreen extends ConsumerWidget {
               ),
             ),
             PrimaryButton(
-              label: 'Rejoindre',
+              label: l10n.joinConfirmationStepScreenJoinButton,
               onPressed: () => context.push(JoinRoutes.character(code)),
             ),
           ],
@@ -159,25 +152,28 @@ class JoinConfirmationStepScreen extends ConsumerWidget {
   }
 
   Widget _buildError(BuildContext context, WidgetRef ref, Object error) {
+    final l10n = AppLocalizations.of(context)!;
     final kind = error is StoryInviteFailure
         ? error.kind
         : StoryInviteFailureKind.generic;
 
     return switch (kind) {
       StoryInviteFailureKind.invalidCode => _CodeErrorState(
-        message: 'Ce code d\'invitation n\'est pas valide.',
-        secondaryMessage: 'Vérifie le code transmis par ton MJ et réessaye.',
+        message: l10n.joinConfirmationStepScreenInvalidCodeMessage,
+        secondaryMessage:
+            l10n.joinConfirmationStepScreenInvalidCodeSecondaryMessage,
         onEditCode: () => _editCode(context),
       ),
       StoryInviteFailureKind.inviteDisabled => _CodeErrorState(
-        message: 'Cette invitation a été désactivée.',
-        secondaryMessage: 'Demande à ton MJ de générer un nouveau lien.',
+        message: l10n.joinConfirmationStepScreenInviteDisabledMessage,
+        secondaryMessage:
+            l10n.joinConfirmationStepScreenInviteDisabledSecondaryMessage,
         onEditCode: () => _editCode(context),
       ),
       StoryInviteFailureKind.characterNotOwned ||
       StoryInviteFailureKind.alreadyJoined ||
       StoryInviteFailureKind.generic => _NetworkErrorState(
-        message: _genericNetworkErrorMessage,
+        message: l10n.joinConfirmationStepScreenGenericErrorMessage,
         onRetry: () => ref.invalidate(storyInvitePreviewProvider(code: code)),
       ),
     };
@@ -200,6 +196,7 @@ class _CodeErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -233,7 +230,7 @@ class _CodeErrorState extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: SecondaryButton(
-                label: 'Modifier le code',
+                label: l10n.joinConfirmationStepScreenEditCodeButton,
                 surface: SecondaryButtonSurface.parchment,
                 onPressed: onEditCode,
               ),
@@ -255,6 +252,7 @@ class _NetworkErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -274,7 +272,7 @@ class _NetworkErrorState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             SecondaryButton(
-              label: 'Réessayer',
+              label: l10n.joinConfirmationStepScreenRetryButton,
               surface: SecondaryButtonSurface.parchment,
               onPressed: onRetry,
             ),

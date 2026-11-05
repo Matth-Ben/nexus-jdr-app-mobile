@@ -17,6 +17,7 @@ import 'package:personnages/features/join_story/domain/story_invite_failure.dart
 import 'package:personnages/features/join_story/domain/story_preview.dart';
 import 'package:personnages/features/join_story/presentation/join_confirmation_step_screen.dart';
 import 'package:personnages/features/join_story/presentation/providers/join_story_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeStoryInviteRepository implements StoryInviteRepository {
   StoryPreview? previewToReturn;
@@ -76,10 +77,18 @@ GoRouter _buildTestRouter() {
   );
 }
 
-Widget _buildTestWidget(_FakeStoryInviteRepository repository) {
+Widget _buildTestWidget(
+  _FakeStoryInviteRepository repository, {
+  Locale locale = const Locale('fr'),
+}) {
   return ProviderScope(
     overrides: [storyInviteRepositoryProvider.overrideWithValue(repository)],
-    child: MaterialApp.router(routerConfig: _buildTestRouter()),
+    child: MaterialApp.router(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
+      routerConfig: _buildTestRouter(),
+    ),
   );
 }
 
@@ -242,4 +251,128 @@ void main() {
       );
     },
   );
+
+  group('locale anglaise', () {
+    testWidgets('titre d\'étape, mention du MJ et bouton traduits', (
+      tester,
+    ) async {
+      fakeRepository.previewToReturn = const StoryPreview(
+        title: 'La Malédiction du Nord',
+        gmDisplayName: 'Alarik',
+      );
+
+      await tester.pumpWidget(
+        _buildTestWidget(fakeRepository, locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Confirmation'), findsOneWidget);
+      expect(find.text('GM: Alarik'), findsOneWidget);
+      // "JOIN" apparaît aussi bien dans le bandeau bois partagé
+      // (`JoinStepHeader`, `joinStepHeaderTitle` = "Join" en anglais) que
+      // dans le `PrimaryButton` de cet écran (`joinConfirmationStepScreenJoinButton`
+      // = "Join" également) — coïncidence de traduction, vérifiée ici
+      // spécifiquement sur le bouton.
+      expect(
+        find.descendant(
+          of: find.byType(PrimaryButton),
+          matching: find.text('JOIN'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('affiche un indicateur de chargement pendant la résolution', (
+      tester,
+    ) async {
+      fakeRepository.previewCompleter = Completer<StoryPreview>();
+
+      await tester.pumpWidget(
+        _buildTestWidget(fakeRepository, locale: const Locale('en')),
+      );
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // Bandeau minimal (`JoinStepMinimalHeader`), affiché pendant le
+      // chargement : "JOIN" plutôt que "REJOINDRE" confirme la locale.
+      expect(find.text('JOIN'), findsOneWidget);
+    });
+
+    testWidgets(
+      'code invalide : affiche le message dédié et "Edit code" repousse '
+      'l\'étape 1/4 avec le code pré-rempli',
+      (tester) async {
+        fakeRepository.previewErrorToThrow = const StoryInviteFailure(
+          StoryInviteFailureKind.invalidCode,
+          serverMessage: 'Code invalide.',
+        );
+
+        await tester.pumpWidget(
+          _buildTestWidget(fakeRepository, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('This invite code isn\'t valid.'), findsOneWidget);
+        expect(
+          find.text('Check the code your GM gave you and try again.'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('EDIT CODE'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 1 code=AB3F7K'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'invitation désactivée : affiche le message dédié avec "Edit code"',
+      (tester) async {
+        fakeRepository.previewErrorToThrow = const StoryInviteFailure(
+          StoryInviteFailureKind.inviteDisabled,
+        );
+
+        await tester.pumpWidget(
+          _buildTestWidget(fakeRepository, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('This invite has been disabled.'), findsOneWidget);
+        expect(
+          find.text('Ask your GM to generate a new link.'),
+          findsOneWidget,
+        );
+        expect(find.text('EDIT CODE'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'erreur générique/réseau : affiche le message générique et "Retry" '
+      'relance la requête',
+      (tester) async {
+        fakeRepository.previewErrorToThrow = const StoryInviteFailure(
+          StoryInviteFailureKind.generic,
+        );
+
+        await tester.pumpWidget(
+          _buildTestWidget(fakeRepository, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'Unable to reach the server. Check your internet connection '
+            'and try again.',
+          ),
+          findsOneWidget,
+        );
+        expect(fakeRepository.previewCallCount, 1);
+
+        await tester.tap(find.text('RETRY'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.previewCallCount, 2);
+      },
+    );
+  });
 }

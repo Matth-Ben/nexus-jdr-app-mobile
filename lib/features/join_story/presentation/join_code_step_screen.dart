@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../../l10n/app_localizations.dart';
 import 'join_routes.dart';
 import 'widgets/join_step_header.dart';
 
@@ -57,10 +58,15 @@ class _JoinCodeStepScreenState extends State<JoinCodeStepScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: Column(
         children: [
-          JoinStepHeader(stepTitle: 'Code', currentStep: 1, onBack: _goBack),
+          JoinStepHeader(
+            stepTitle: l10n.joinCodeStepScreenStepTitle,
+            currentStep: 1,
+            onBack: _goBack,
+          ),
           Expanded(
             child: SafeArea(
               top: false,
@@ -94,7 +100,7 @@ class _JoinCodeStepScreenState extends State<JoinCodeStepScreen> {
                             ),
                             const SizedBox(height: AppSpacing.md),
                             Text(
-                              "As-tu un code d'invitation ?",
+                              l10n.joinCodeStepScreenTitle,
                               textAlign: TextAlign.center,
                               style: AppTypography.body(
                                 fontSize: 18,
@@ -103,8 +109,7 @@ class _JoinCodeStepScreenState extends State<JoinCodeStepScreen> {
                             ),
                             const SizedBox(height: AppSpacing.xs),
                             Text(
-                              "Ton MJ te l'a partagé depuis l'app Histoires "
-                              'pour rejoindre sa campagne.',
+                              l10n.joinCodeStepScreenSubtitle,
                               textAlign: TextAlign.center,
                               style: AppTypography.body(
                                 fontSize: 13,
@@ -115,7 +120,7 @@ class _JoinCodeStepScreenState extends State<JoinCodeStepScreen> {
                             Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                "Code d'invitation",
+                                l10n.joinCodeStepScreenFieldLabel,
                                 style: AppTypography.body(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -140,15 +145,15 @@ class _JoinCodeStepScreenState extends State<JoinCodeStepScreen> {
                                 fontWeight: FontWeight.w700,
                               ).copyWith(letterSpacing: 6),
                               onChanged: (_) => setState(() {}),
-                              decoration: const InputDecoration(
-                                hintText: 'AB3F7K',
+                              decoration: InputDecoration(
+                                hintText: l10n.joinCodeStepScreenFieldHint,
                                 hintTextDirection: TextDirection.ltr,
                                 counterText: '',
                               ),
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             Text(
-                              'Code fourni par ton MJ (lettres et chiffres).',
+                              l10n.joinCodeStepScreenFieldHelper,
                               textAlign: TextAlign.center,
                               style: AppTypography.body(
                                 fontSize: 11,
@@ -160,7 +165,7 @@ class _JoinCodeStepScreenState extends State<JoinCodeStepScreen> {
                       ),
                     ),
                     PrimaryButton(
-                      label: 'Suivant',
+                      label: l10n.joinCodeStepScreenNextButton,
                       onPressed: _controller.text.trim().length >= 6
                           ? _submit
                           : null,

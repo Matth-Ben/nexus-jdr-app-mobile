@@ -1524,5 +1524,41 @@
   "xmlImportReviewScreenParseErrorInvalidXml": "This file is not valid XML.",
   "xmlImportReviewScreenParseErrorMissingBuilderRoot": "This file doesn't look like an aidedd.org export (missing <builder> root).",
   "xmlImportReviewScreenParseErrorMissingCharacterElement": "This file doesn't look like an aidedd.org export (missing <character> tag).",
-  "xmlImportReviewScreenParseErrorMissingRequiredFields": "This file doesn't contain the minimum information for a character (name, race, class, background)."
+  "xmlImportReviewScreenParseErrorMissingRequiredFields": "This file doesn't contain the minimum information for a character (name, race, class, background).",
+
+  "joinStepHeaderTitle": "JOIN",
+  "joinStepHeaderStepCounter": "Step {currentStep} / {totalSteps}",
+
+  "joinCodeStepScreenStepTitle": "Code",
+  "joinCodeStepScreenTitle": "Do you have an invite code?",
+  "joinCodeStepScreenSubtitle": "Your GM shared it with you from the Histoires app to join their campaign.",
+  "joinCodeStepScreenFieldLabel": "Invite code",
+  "joinCodeStepScreenFieldHint": "AB3F7K",
+  "joinCodeStepScreenFieldHelper": "Code provided by your GM (letters and digits).",
+  "joinCodeStepScreenNextButton": "Next",
+
+  "joinConfirmationStepScreenStepTitle": "Confirmation",
+  "joinConfirmationStepScreenGmLabel": "GM: {gmDisplayName}",
+  "joinConfirmationStepScreenDisclaimer": "By joining, your character will be visible to the GM (read-only). You can leave the story at any time from its sheet.",
+  "joinConfirmationStepScreenJoinButton": "Join",
+  "joinConfirmationStepScreenInvalidCodeMessage": "This invite code isn't valid.",
+  "joinConfirmationStepScreenInvalidCodeSecondaryMessage": "Check the code your GM gave you and try again.",
+  "joinConfirmationStepScreenInviteDisabledMessage": "This invite has been disabled.",
+  "joinConfirmationStepScreenInviteDisabledSecondaryMessage": "Ask your GM to generate a new link.",
+  "joinConfirmationStepScreenEditCodeButton": "Edit code",
+  "joinConfirmationStepScreenGenericErrorMessage": "Unable to reach the server. Check your internet connection and try again.",
+  "joinConfirmationStepScreenRetryButton": "Retry",
+
+  "joinCharacterStepScreenStepTitle": "Choose a character",
+  "joinCharacterStepScreenJoinedSnackbar": "Story joined!",
+  "joinCharacterStepScreenAlreadyJoinedErrorMessage": "This character is already linked to this story.",
+  "joinCharacterStepScreenInvalidCodeErrorMessage": "This invite code isn't valid.",
+  "joinCharacterStepScreenInviteDisabledErrorMessage": "This invite has been disabled.",
+  "joinCharacterStepScreenGenericErrorMessage": "Unable to join this story. Try again.",
+  "joinCharacterStepScreenCharactersLoadErrorMessage": "Unable to load your characters. Try again.",
+  "joinCharacterStepScreenQuestionLabel": "Which character is joining the adventure?",
+  "joinCharacterStepScreenEmptyStateMessage": "You don't have a character to link yet.",
+  "joinCharacterStepScreenCreateCharacterButton": "+ Create a new character",
+  "joinCharacterStepScreenJoiningOverlayMessage": "Joining the story...",
+  "joinCharacterStepScreenRetryButton": "Retry"
 }

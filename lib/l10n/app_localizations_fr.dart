@@ -5533,4 +5533,121 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get xmlImportReviewScreenParseErrorMissingRequiredFields =>
       'Ce fichier ne contient pas les informations minimales d\'un personnage (nom, race, classe, historique).';
+
+  @override
+  String get joinStepHeaderTitle => 'REJOINDRE';
+
+  @override
+  String joinStepHeaderStepCounter(int currentStep, int totalSteps) {
+    return 'Étape $currentStep / $totalSteps';
+  }
+
+  @override
+  String get joinCodeStepScreenStepTitle => 'Code';
+
+  @override
+  String get joinCodeStepScreenTitle => 'As-tu un code d\'invitation ?';
+
+  @override
+  String get joinCodeStepScreenSubtitle =>
+      'Ton MJ te l\'a partagé depuis l\'app Histoires pour rejoindre sa campagne.';
+
+  @override
+  String get joinCodeStepScreenFieldLabel => 'Code d\'invitation';
+
+  @override
+  String get joinCodeStepScreenFieldHint => 'AB3F7K';
+
+  @override
+  String get joinCodeStepScreenFieldHelper =>
+      'Code fourni par ton MJ (lettres et chiffres).';
+
+  @override
+  String get joinCodeStepScreenNextButton => 'Suivant';
+
+  @override
+  String get joinConfirmationStepScreenStepTitle => 'Confirmation';
+
+  @override
+  String joinConfirmationStepScreenGmLabel(String gmDisplayName) {
+    return 'MJ : $gmDisplayName';
+  }
+
+  @override
+  String get joinConfirmationStepScreenDisclaimer =>
+      'En rejoignant, ton personnage sera visible par le MJ (lecture seule). Tu pourras quitter l\'histoire à tout moment depuis sa fiche.';
+
+  @override
+  String get joinConfirmationStepScreenJoinButton => 'Rejoindre';
+
+  @override
+  String get joinConfirmationStepScreenInvalidCodeMessage =>
+      'Ce code d\'invitation n\'est pas valide.';
+
+  @override
+  String get joinConfirmationStepScreenInvalidCodeSecondaryMessage =>
+      'Vérifie le code transmis par ton MJ et réessaye.';
+
+  @override
+  String get joinConfirmationStepScreenInviteDisabledMessage =>
+      'Cette invitation a été désactivée.';
+
+  @override
+  String get joinConfirmationStepScreenInviteDisabledSecondaryMessage =>
+      'Demande à ton MJ de générer un nouveau lien.';
+
+  @override
+  String get joinConfirmationStepScreenEditCodeButton => 'Modifier le code';
+
+  @override
+  String get joinConfirmationStepScreenGenericErrorMessage =>
+      'Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.';
+
+  @override
+  String get joinConfirmationStepScreenRetryButton => 'Réessayer';
+
+  @override
+  String get joinCharacterStepScreenStepTitle => 'Choix du personnage';
+
+  @override
+  String get joinCharacterStepScreenJoinedSnackbar => 'Histoire rejointe !';
+
+  @override
+  String get joinCharacterStepScreenAlreadyJoinedErrorMessage =>
+      'Ce personnage est déjà rattaché à cette histoire.';
+
+  @override
+  String get joinCharacterStepScreenInvalidCodeErrorMessage =>
+      'Ce code d\'invitation n\'est pas valide.';
+
+  @override
+  String get joinCharacterStepScreenInviteDisabledErrorMessage =>
+      'Cette invitation a été désactivée.';
+
+  @override
+  String get joinCharacterStepScreenGenericErrorMessage =>
+      'Impossible de rejoindre cette histoire. Réessayez.';
+
+  @override
+  String get joinCharacterStepScreenCharactersLoadErrorMessage =>
+      'Impossible de charger vos personnages. Réessayez.';
+
+  @override
+  String get joinCharacterStepScreenQuestionLabel =>
+      'Quel personnage rejoint l\'aventure ?';
+
+  @override
+  String get joinCharacterStepScreenEmptyStateMessage =>
+      'Tu n\'as pas encore de personnage à rattacher.';
+
+  @override
+  String get joinCharacterStepScreenCreateCharacterButton =>
+      '+ Créer un nouveau personnage';
+
+  @override
+  String get joinCharacterStepScreenJoiningOverlayMessage =>
+      'Rattachement à l\'histoire...';
+
+  @override
+  String get joinCharacterStepScreenRetryButton => 'Réessayer';
 }

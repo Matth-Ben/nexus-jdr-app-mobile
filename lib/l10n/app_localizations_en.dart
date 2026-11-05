@@ -5475,4 +5475,121 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get xmlImportReviewScreenParseErrorMissingRequiredFields =>
       'This file doesn\'t contain the minimum information for a character (name, race, class, background).';
+
+  @override
+  String get joinStepHeaderTitle => 'JOIN';
+
+  @override
+  String joinStepHeaderStepCounter(int currentStep, int totalSteps) {
+    return 'Step $currentStep / $totalSteps';
+  }
+
+  @override
+  String get joinCodeStepScreenStepTitle => 'Code';
+
+  @override
+  String get joinCodeStepScreenTitle => 'Do you have an invite code?';
+
+  @override
+  String get joinCodeStepScreenSubtitle =>
+      'Your GM shared it with you from the Histoires app to join their campaign.';
+
+  @override
+  String get joinCodeStepScreenFieldLabel => 'Invite code';
+
+  @override
+  String get joinCodeStepScreenFieldHint => 'AB3F7K';
+
+  @override
+  String get joinCodeStepScreenFieldHelper =>
+      'Code provided by your GM (letters and digits).';
+
+  @override
+  String get joinCodeStepScreenNextButton => 'Next';
+
+  @override
+  String get joinConfirmationStepScreenStepTitle => 'Confirmation';
+
+  @override
+  String joinConfirmationStepScreenGmLabel(String gmDisplayName) {
+    return 'GM: $gmDisplayName';
+  }
+
+  @override
+  String get joinConfirmationStepScreenDisclaimer =>
+      'By joining, your character will be visible to the GM (read-only). You can leave the story at any time from its sheet.';
+
+  @override
+  String get joinConfirmationStepScreenJoinButton => 'Join';
+
+  @override
+  String get joinConfirmationStepScreenInvalidCodeMessage =>
+      'This invite code isn\'t valid.';
+
+  @override
+  String get joinConfirmationStepScreenInvalidCodeSecondaryMessage =>
+      'Check the code your GM gave you and try again.';
+
+  @override
+  String get joinConfirmationStepScreenInviteDisabledMessage =>
+      'This invite has been disabled.';
+
+  @override
+  String get joinConfirmationStepScreenInviteDisabledSecondaryMessage =>
+      'Ask your GM to generate a new link.';
+
+  @override
+  String get joinConfirmationStepScreenEditCodeButton => 'Edit code';
+
+  @override
+  String get joinConfirmationStepScreenGenericErrorMessage =>
+      'Unable to reach the server. Check your internet connection and try again.';
+
+  @override
+  String get joinConfirmationStepScreenRetryButton => 'Retry';
+
+  @override
+  String get joinCharacterStepScreenStepTitle => 'Choose a character';
+
+  @override
+  String get joinCharacterStepScreenJoinedSnackbar => 'Story joined!';
+
+  @override
+  String get joinCharacterStepScreenAlreadyJoinedErrorMessage =>
+      'This character is already linked to this story.';
+
+  @override
+  String get joinCharacterStepScreenInvalidCodeErrorMessage =>
+      'This invite code isn\'t valid.';
+
+  @override
+  String get joinCharacterStepScreenInviteDisabledErrorMessage =>
+      'This invite has been disabled.';
+
+  @override
+  String get joinCharacterStepScreenGenericErrorMessage =>
+      'Unable to join this story. Try again.';
+
+  @override
+  String get joinCharacterStepScreenCharactersLoadErrorMessage =>
+      'Unable to load your characters. Try again.';
+
+  @override
+  String get joinCharacterStepScreenQuestionLabel =>
+      'Which character is joining the adventure?';
+
+  @override
+  String get joinCharacterStepScreenEmptyStateMessage =>
+      'You don\'t have a character to link yet.';
+
+  @override
+  String get joinCharacterStepScreenCreateCharacterButton =>
+      '+ Create a new character';
+
+  @override
+  String get joinCharacterStepScreenJoiningOverlayMessage =>
+      'Joining the story...';
+
+  @override
+  String get joinCharacterStepScreenRetryButton => 'Retry';
 }

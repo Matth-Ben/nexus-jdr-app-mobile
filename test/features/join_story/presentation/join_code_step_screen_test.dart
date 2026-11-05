@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/join_story/presentation/join_code_step_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 GoRouter _buildTestRouter() {
   return GoRouter(
@@ -32,8 +33,13 @@ GoRouter _buildTestRouter() {
   );
 }
 
-Widget _buildTestWidget() {
-  return MaterialApp.router(routerConfig: _buildTestRouter());
+Widget _buildTestWidget({Locale locale = const Locale('fr')}) {
+  return MaterialApp.router(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: locale,
+    routerConfig: _buildTestRouter(),
+  );
 }
 
 bool _isPrimaryButtonEnabled(WidgetTester tester) {
@@ -85,8 +91,10 @@ void main() {
 
   testWidgets('le champ est pré-rempli via initialCode', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(body: JoinCodeStepScreen(initialCode: 'ZZ9988')),
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(body: JoinCodeStepScreen(initialCode: 'ZZ9988')),
       ),
     );
 
@@ -105,4 +113,26 @@ void main() {
       expect(find.text('Liste des personnages'), findsOneWidget);
     },
   );
+
+  testWidgets('locale anglaise : titre, sous-titre et bouton traduits', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildTestWidget(locale: const Locale('en')));
+
+    expect(find.text('JOIN'), findsOneWidget);
+    expect(find.text('Step 1 / 4'), findsOneWidget);
+    expect(find.text('Do you have an invite code?'), findsOneWidget);
+    expect(
+      find.text(
+        'Your GM shared it with you from the Histoires app to join their '
+        'campaign.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Code provided by your GM (letters and digits).'),
+      findsOneWidget,
+    );
+    expect(find.text('NEXT'), findsOneWidget);
+  });
 }
