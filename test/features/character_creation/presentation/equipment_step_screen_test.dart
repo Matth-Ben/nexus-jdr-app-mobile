@@ -34,6 +34,7 @@ import 'package:personnages/features/character_creation/presentation/equipment_s
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   BackgroundCatalog? backgroundCatalogToReturn;
@@ -196,10 +197,15 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
@@ -219,13 +225,16 @@ void main() {
   // la hauteur disponible pour la liste défilante, ce qui faisait manquer
   // certaines catégories d'objets (`ListView` ne construit que les
   // éléments visibles) à la hauteur par défaut (~600).
-  Future<void> pumpEquipmentStep(WidgetTester tester) async {
+  Future<void> pumpEquipmentStep(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     tester.view.physicalSize = const Size(800, 1300);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     router.push('/characters/new/step-7');
     await tester.pumpAndSettle();
@@ -593,6 +602,89 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Symbole sacré'), findsOneWidget);
     expect(find.text('Dague'), findsOneWidget);
+  });
+
+  group('locale anglaise (en) : texte UI fixe traduit, contenu D&D et '
+      '`EquipmentCategoryRules.labelFor` (D151, hors périmètre) restent en '
+      'français', () {
+    testWidgets('affiche l\'infobulle "Help" pendant le chargement', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.backgroundCatalogCompleter =
+          Completer<BackgroundCatalog>();
+      selectBackground(1);
+
+      await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+      router.push('/characters/new/step-7');
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byTooltip('Help'), findsOneWidget);
+    });
+
+    testWidgets('message d\'erreur de repli (erreur générique, pas une '
+        '`CharacterCreationFailure`) et bouton "RETRY" en anglais', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.backgroundCatalogErrorToThrow = Exception('boom');
+      selectBackground(1);
+
+      await pumpEquipmentStep(tester, locale: const Locale('en'));
+
+      expect(
+        find.text("Couldn't load the starting equipment. Try again."),
+        findsOneWidget,
+      );
+      expect(find.text('RETRY'), findsOneWidget);
+    });
+
+    testWidgets('écran nominal (onglets, bandeau doré, boutons) traduit — nom '
+        'd\'objet (donnée D&D) ET libellé de catégorie '
+        '(`EquipmentCategoryRules.labelFor`, D151) restent en français', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+        backgrounds: [_acolyte],
+      );
+      fakeRepository.itemCatalogToReturn = _itemCatalog;
+      selectBackground(1);
+
+      await pumpEquipmentStep(tester, locale: const Locale('en'));
+
+      expect(find.text('8. Equipment'), findsOneWidget);
+      expect(find.text('Step 8 / 10'), findsOneWidget);
+      expect(find.text('BACKGROUND'), findsOneWidget);
+      expect(find.text('BUY (15 PO)'), findsOneWidget);
+      expect(find.text('BACKGROUND EQUIPMENT'), findsOneWidget);
+      expect(find.text('STARTING GOLD'), findsOneWidget);
+      expect(find.text('15 po'), findsOneWidget);
+      expect(find.text('BACK'), findsOneWidget);
+      expect(find.text('NEXT'), findsOneWidget);
+      expect(find.byTooltip('Help'), findsOneWidget);
+
+      // Objet résolu : nom D&D jamais traduit, catégorie toujours en
+      // français (D151, `EquipmentCategoryRules.labelFor` n'a pas de
+      // variante anglaise).
+      expect(find.text('Dague'), findsOneWidget);
+      expect(find.text('Arme'), findsOneWidget);
+
+      await tester.tap(find.text('BUY (15 PO)'));
+      await tester.pumpAndSettle();
+
+      // Titre de section catégorie (D151) et sous-titre "{catégorie} · "
+      // restent en français pour le mot "Arme", seule l'unité "po" et le
+      // séparateur "·" viennent de la clé `.arb` traduite.
+      expect(find.text('ARME'), findsOneWidget);
+      expect(find.text('Arme · 2 po'), findsOneWidget);
+
+      await tester.tap(find.text('NEXT'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Étape Apparence, histoire et portrait'),
+        findsOneWidget,
+      );
+    });
   });
 
   group('aide contextuelle / abandon (docs/cahier-des-charges/'

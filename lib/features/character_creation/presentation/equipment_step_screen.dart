@@ -14,6 +14,7 @@ import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/segmented_toggle.dart';
 import '../../../core/widgets/step_progress_bar.dart';
 import '../../../core/widgets/stepper_counter.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/background_equipment_entry.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/class_starting_equipment.dart';
@@ -135,15 +136,17 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dataAsync = ref.watch(equipmentStepDataProvider);
 
     return Scaffold(
       body: dataAsync.when(
-        data: _buildContent,
+        data: (data) => _buildContent(data, l10n),
         loading: () => Column(
           children: [
             _MinimalHeader(
               onBack: _goBack,
+              helpTooltip: l10n.equipmentStepScreenHelpTooltip,
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.equipment),
             ),
@@ -164,6 +167,7 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
           children: [
             _MinimalHeader(
               onBack: _goBack,
+              helpTooltip: l10n.equipmentStepScreenHelpTooltip,
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.equipment),
             ),
@@ -171,8 +175,8 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
               child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
-                    : "Impossible de charger l'équipement de départ. "
-                          'Réessayez.',
+                    : l10n.equipmentStepScreenGenericErrorMessage,
+                retryLabel: l10n.equipmentStepScreenRetryButton,
                 // Invalide les providers *feuilles* plutôt que le seul
                 // `equipmentStepDataProvider` — même bug déjà corrigé sur
                 // `SkillsAndToolsStepScreen`/`SpellsStepScreen` (voir leur
@@ -199,7 +203,7 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
     );
   }
 
-  Widget _buildContent(EquipmentStepData data) {
+  Widget _buildContent(EquipmentStepData data, AppLocalizations l10n) {
     final items = data.itemCatalog.items;
     final classOption = ClassEquipmentOption.select(
       data.classEquipmentOptions,
@@ -226,6 +230,9 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
           onBack: _goBack,
           currentStep: 8,
           totalSteps: _totalSteps,
+          headerTitle: l10n.equipmentStepScreenHeaderTitle,
+          stepCounterLabel: l10n.equipmentStepScreenStepCounter(8, _totalSteps),
+          helpTooltip: l10n.equipmentStepScreenHelpTooltip,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.equipment),
         ),
         Expanded(
@@ -242,15 +249,15 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
                   ),
                   child: SegmentedToggle<EquipmentChoiceTab>(
                     options: [
-                      const SegmentedToggleOption(
+                      SegmentedToggleOption(
                         value: EquipmentChoiceTab.background,
-                        label: 'Historique',
+                        label: l10n.equipmentStepScreenBackgroundTabLabel,
                       ),
                       SegmentedToggleOption(
                         value: EquipmentChoiceTab.purchase,
-                        label:
-                            'Acheter '
-                            '(${GoldAmountFormatter.format(startingGold)} po)',
+                        label: l10n.equipmentStepScreenPurchaseTabLabel(
+                          GoldAmountFormatter.format(startingGold),
+                        ),
                       ),
                     ],
                     value: _activeTab,
@@ -266,10 +273,14 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
                       AppSpacing.md,
                     ),
                     children: [
-                      ..._classSection(data.classEquipmentOptions, classOption),
+                      ..._classSection(
+                        data.classEquipmentOptions,
+                        classOption,
+                        l10n,
+                      ),
                       ...isPurchaseTab
-                          ? _shopSection(items)
-                          : _historySection(data.historyEquipment),
+                          ? _shopSection(items, l10n)
+                          : _historySection(data.historyEquipment, l10n),
                     ],
                   ),
                 ),
@@ -284,23 +295,29 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
                     children: [
                       if (isPurchaseTab && isOverBudget)
                         AlertBanner(
-                          message:
-                              'Budget dépassé de '
-                              '${GoldAmountFormatter.format(-remainingGold)} po',
+                          message: l10n.equipmentStepScreenOverBudgetMessage(
+                            GoldAmountFormatter.format(-remainingGold),
+                          ),
                         )
                       else
                         _GoldBanner(
-                          label: isPurchaseTab ? 'OR RESTANT' : 'OR DE DÉPART',
-                          amount: isPurchaseTab
-                              ? remainingGold
-                              : startingGold.toDouble(),
+                          label: isPurchaseTab
+                              ? l10n.equipmentStepScreenRemainingGoldLabel
+                              : l10n.equipmentStepScreenStartingGoldLabel,
+                          amountLabel: l10n.equipmentStepScreenGoldAmount(
+                            GoldAmountFormatter.format(
+                              isPurchaseTab
+                                  ? remainingGold
+                                  : startingGold.toDouble(),
+                            ),
+                          ),
                         ),
                       const SizedBox(height: AppSpacing.sm),
                       Row(
                         children: [
                           Expanded(
                             child: SecondaryButton(
-                              label: 'Retour',
+                              label: l10n.equipmentStepScreenBackButton,
                               surface: SecondaryButtonSurface.parchment,
                               onPressed: _goBack,
                             ),
@@ -308,7 +325,7 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Suivant',
+                              label: l10n.equipmentStepScreenNextButton,
                               onPressed: canProceed ? _submit : null,
                             ),
                           ),
@@ -335,15 +352,16 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
   List<Widget> _classSection(
     List<ClassEquipmentOption> options,
     ClassEquipmentOption? selected,
+    AppLocalizations l10n,
   ) {
     if (options.isEmpty) return const [];
     return [
-      const _SectionHeader(title: 'ÉQUIPEMENT DE CLASSE'),
+      _SectionHeader(title: l10n.equipmentStepScreenClassEquipmentSectionTitle),
       const SizedBox(height: AppSpacing.sm),
       for (var i = 0; i < options.length; i++) ...[
         if (i > 0) const SizedBox(height: AppSpacing.xs),
         CheckableOptionTile(
-          title: 'Option ${options[i].label}',
+          title: l10n.equipmentStepScreenClassOptionTitle(options[i].label),
           subtitle: options[i].summary,
           checked: options[i].label == selected?.label,
           onTap: () => setState(() => _classOptionLabel = options[i].label),
@@ -358,15 +376,20 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
   /// — ou l'état vide si l'historique n'a aucun équipement (ne devrait
   /// normalement jamais arriver pour le contenu peuplé, voir
   /// `domain/background_equipment_parser.dart`, mais reste géré proprement).
-  List<Widget> _historySection(List<BackgroundEquipmentEntry> entries) {
+  List<Widget> _historySection(
+    List<BackgroundEquipmentEntry> entries,
+    AppLocalizations l10n,
+  ) {
     if (entries.isEmpty) {
-      return const [
-        _EmptyState(message: 'Aucun équipement pour cet historique.'),
+      return [
+        _EmptyState(message: l10n.equipmentStepScreenEmptyHistoryMessage),
       ];
     }
 
     return [
-      const _SectionHeader(title: "ÉQUIPEMENT DE L'HISTORIQUE"),
+      _SectionHeader(
+        title: l10n.equipmentStepScreenHistoryEquipmentSectionTitle,
+      ),
       const SizedBox(height: AppSpacing.sm),
       for (var i = 0; i < entries.length; i++) ...[
         if (i > 0) const SizedBox(height: AppSpacing.xs),
@@ -393,9 +416,9 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
   /// tri alphabétique FR à l'intérieur de chaque groupe — catégories non
   /// peuplées (ex. `objet_magique`) simplement absentes, jamais affichées
   /// comme section vide.
-  List<Widget> _shopSection(List<ItemOption> items) {
+  List<Widget> _shopSection(List<ItemOption> items, AppLocalizations l10n) {
     if (items.isEmpty) {
-      return const [_EmptyState(message: "Aucun objet disponible à l'achat.")];
+      return [_EmptyState(message: l10n.equipmentStepScreenEmptyShopMessage)];
     }
 
     final widgets = <Widget>[];
@@ -417,20 +440,25 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
       widgets.add(const SizedBox(height: AppSpacing.sm));
       for (var i = 0; i < categoryItems.length; i++) {
         if (i > 0) widgets.add(const SizedBox(height: AppSpacing.xs));
-        widgets.add(_shopTile(categoryItems[i], index: index));
+        widgets.add(_shopTile(categoryItems[i], index: index, l10n: l10n));
         index++;
       }
     }
     return widgets;
   }
 
-  Widget _shopTile(ItemOption item, {required int index}) {
+  Widget _shopTile(
+    ItemOption item, {
+    required int index,
+    required AppLocalizations l10n,
+  }) {
     final quantity = _cart[item.name] ?? 0;
     return CheckableOptionTile(
       title: item.name,
-      subtitle:
-          '${EquipmentCategoryRules.labelFor(item.category)} · '
-          '${GoldAmountFormatter.format(item.costAmount)} po',
+      subtitle: l10n.equipmentStepScreenShopItemSubtitle(
+        EquipmentCategoryRules.labelFor(item.category),
+        GoldAmountFormatter.format(item.costAmount),
+      ),
       leading: AccentIconBadge(
         index: index,
         icon: EquipmentCategoryRules.iconFor(item.category),
@@ -504,10 +532,10 @@ class _EmptyState extends StatelessWidget {
 /// vérifié par l'agent `direction-artistique` ; seule la bordure du bandeau
 /// reste dorée).
 class _GoldBanner extends StatelessWidget {
-  const _GoldBanner({required this.label, required this.amount});
+  const _GoldBanner({required this.label, required this.amountLabel});
 
   final String label;
-  final double amount;
+  final String amountLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -536,7 +564,7 @@ class _GoldBanner extends StatelessWidget {
             ),
           ),
           Text(
-            '${GoldAmountFormatter.format(amount)} po',
+            amountLabel,
             style: AppTypography.body(
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -558,12 +586,18 @@ class _Header extends StatelessWidget {
     required this.onBack,
     required this.currentStep,
     required this.totalSteps,
+    required this.headerTitle,
+    required this.stepCounterLabel,
+    required this.helpTooltip,
     required this.onHelp,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
+  final String headerTitle;
+  final String stepCounterLabel;
+  final String helpTooltip;
   final VoidCallback onHelp;
 
   @override
@@ -600,7 +634,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
-                      tooltip: 'Aide',
+                      tooltip: helpTooltip,
                       icon: const Icon(
                         Icons.help_outline,
                         color: AppColors.textOnWood,
@@ -618,7 +652,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '8. Équipement',
+                          headerTitle,
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -626,7 +660,7 @@ class _Header extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          stepCounterLabel,
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,
@@ -654,9 +688,14 @@ class _Header extends StatelessWidget {
 /// chargement/l'erreur — copie exacte du pattern des étapes 4/6 (voir la
 /// documentation de classe de [EquipmentStepScreen]).
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({required this.onBack, required this.onHelp});
+  const _MinimalHeader({
+    required this.onBack,
+    required this.helpTooltip,
+    required this.onHelp,
+  });
 
   final VoidCallback onBack;
+  final String helpTooltip;
   final VoidCallback onHelp;
 
   @override
@@ -688,7 +727,7 @@ class _MinimalHeader extends StatelessWidget {
               const Spacer(),
               IconButton(
                 onPressed: onHelp,
-                tooltip: 'Aide',
+                tooltip: helpTooltip,
                 icon: const Icon(
                   Icons.help_outline,
                   color: AppColors.textOnWood,
@@ -703,9 +742,14 @@ class _MinimalHeader extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
+  const _ErrorState({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
 
   final String message;
+  final String retryLabel;
   final VoidCallback onRetry;
 
   @override
@@ -728,7 +772,7 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(label: retryLabel, onPressed: onRetry),
           ],
         ),
       ),

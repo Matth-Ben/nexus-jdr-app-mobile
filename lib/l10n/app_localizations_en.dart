@@ -4078,4 +4078,123 @@ class AppLocalizationsEn extends AppLocalizations {
   String skillsAndToolsStepScreenQuotaBadge(int selectedCount, int quota) {
     return '$selectedCount / $quota chosen';
   }
+
+  @override
+  String get spellsStepScreenHelpTooltip => 'Help';
+
+  @override
+  String get spellsStepScreenHeaderTitle => '7. Spells';
+
+  @override
+  String spellsStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Step $currentStep / $totalSteps';
+  }
+
+  @override
+  String get spellsStepScreenGenericErrorMessage =>
+      'Couldn\'t load the available spells. Try again.';
+
+  @override
+  String get spellsStepScreenRetryButton => 'Retry';
+
+  @override
+  String get spellsStepScreenBackButton => 'Back';
+
+  @override
+  String get spellsStepScreenNextButton => 'Next';
+
+  @override
+  String get spellsStepScreenCantripTabLabel => 'Cantrips';
+
+  @override
+  String get spellsStepScreenLevelOneTabLabel => 'Level 1';
+
+  @override
+  String get spellsStepScreenCantripSectionTitle => 'KNOWN CANTRIPS';
+
+  @override
+  String get spellsStepScreenLevelOneSectionTitle => 'KNOWN LEVEL 1 SPELLS';
+
+  @override
+  String spellsStepScreenQuotaBadge(int selectedCount, int quota) {
+    return '$selectedCount / $quota';
+  }
+
+  @override
+  String spellsStepScreenSpellInfoTooltip(String spellName) {
+    return 'Description of $spellName';
+  }
+
+  @override
+  String get equipmentStepScreenHelpTooltip => 'Help';
+
+  @override
+  String get equipmentStepScreenHeaderTitle => '8. Equipment';
+
+  @override
+  String equipmentStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Step $currentStep / $totalSteps';
+  }
+
+  @override
+  String get equipmentStepScreenGenericErrorMessage =>
+      'Couldn\'t load the starting equipment. Try again.';
+
+  @override
+  String get equipmentStepScreenRetryButton => 'Retry';
+
+  @override
+  String get equipmentStepScreenBackButton => 'Back';
+
+  @override
+  String get equipmentStepScreenNextButton => 'Next';
+
+  @override
+  String get equipmentStepScreenBackgroundTabLabel => 'Background';
+
+  @override
+  String equipmentStepScreenPurchaseTabLabel(String amount) {
+    return 'Buy ($amount po)';
+  }
+
+  @override
+  String get equipmentStepScreenClassEquipmentSectionTitle => 'CLASS EQUIPMENT';
+
+  @override
+  String equipmentStepScreenClassOptionTitle(String label) {
+    return 'Option $label';
+  }
+
+  @override
+  String get equipmentStepScreenHistoryEquipmentSectionTitle =>
+      'BACKGROUND EQUIPMENT';
+
+  @override
+  String get equipmentStepScreenEmptyHistoryMessage =>
+      'No equipment for this background.';
+
+  @override
+  String get equipmentStepScreenEmptyShopMessage =>
+      'No items available for purchase.';
+
+  @override
+  String equipmentStepScreenOverBudgetMessage(String amount) {
+    return 'Budget exceeded by $amount po';
+  }
+
+  @override
+  String get equipmentStepScreenStartingGoldLabel => 'STARTING GOLD';
+
+  @override
+  String get equipmentStepScreenRemainingGoldLabel => 'REMAINING GOLD';
+
+  @override
+  String equipmentStepScreenGoldAmount(String amount) {
+    return '$amount po';
+  }
+
+  @override
+  String equipmentStepScreenShopItemSubtitle(String category, String cost) {
+    return '$category · $cost po';
+  }
 }
