@@ -831,9 +831,10 @@ void main() {
     },
   );
 
-  testWidgets(
-    'locale anglaise : titre d\'étape, question et bouton "créer" traduits',
-    (tester) async {
+  group('locale anglaise', () {
+    testWidgets('titre d\'étape, question et bouton "créer" traduits', (
+      tester,
+    ) async {
       fakeCharacterRepository.charactersToReturn = const [
         CharacterSummary(
           id: '1',
@@ -858,6 +859,194 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('+ CREATE A NEW CHARACTER'), findsOneWidget);
-    },
-  );
+    });
+
+    testWidgets(
+      'état vide : message dédié, le bouton "+ Create" reste affiché',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [];
+
+        await tester.pumpWidget(
+          _buildTestWidget(
+            characterRepository: fakeCharacterRepository,
+            storyInviteRepository: fakeStoryInviteRepository,
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('You don\'t have a character to link yet.'),
+          findsOneWidget,
+        );
+        expect(find.text('+ CREATE A NEW CHARACTER'), findsOneWidget);
+      },
+    );
+
+    testWidgets('état d\'erreur avec bouton "Retry"', (tester) async {
+      // Volontairement pas une `CharacterFailure` (dont le message est
+      // produit côté FR par le fake, indépendant de la locale, voir le test
+      // FR homologue) : seule une erreur non mappée déclenche la résolution
+      // via `joinCharacterStepScreenCharactersLoadErrorMessage`.
+      fakeCharacterRepository.charactersErrorToThrow = StateError('boom');
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          storyInviteRepository: fakeStoryInviteRepository,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Unable to load your characters. Try again.'),
+        findsOneWidget,
+      );
+      expect(find.text('RETRY'), findsOneWidget);
+    });
+
+    testWidgets(
+      'tap sur une carte personnage affiche l\'overlay pendant l\'appel, '
+      'puis navigue vers la fiche avec un SnackBar de succès',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
+        ];
+        fakeStoryInviteRepository.joinCompleter = Completer<JoinStoryResult>();
+
+        await tester.pumpWidget(
+          _buildTestWidget(
+            characterRepository: fakeCharacterRepository,
+            storyInviteRepository: fakeStoryInviteRepository,
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(CharacterCard));
+        await tester.pump();
+
+        expect(find.text('Joining the story...'), findsOneWidget);
+
+        fakeStoryInviteRepository.joinCompleter!.complete(
+          const JoinStoryResult(
+            characterCampaignId: 'cc-1',
+            joinedAt: '2026-08-30T00:00:00Z',
+            characterId: '42',
+            storyId: 'story-1',
+            storyTitle: 'Histoire test',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Fiche personnage 42'), findsOneWidget);
+        expect(find.text('Story joined!'), findsOneWidget);
+      },
+    );
+
+    testWidgets('échec "already_joined" : affiche le bandeau dédié', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
+      ];
+      fakeStoryInviteRepository.joinErrorToThrow = const StoryInviteFailure(
+        StoryInviteFailureKind.alreadyJoined,
+      );
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          storyInviteRepository: fakeStoryInviteRepository,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(CharacterCard));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('This character is already linked to this story.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('échec générique : affiche le message générique', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
+      ];
+      fakeStoryInviteRepository.joinErrorToThrow = StateError('boom');
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          storyInviteRepository: fakeStoryInviteRepository,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(CharacterCard));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Unable to join this story. Try again.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('échec "invalid_code" : affiche le bandeau dédié', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
+      ];
+      fakeStoryInviteRepository.joinErrorToThrow = const StoryInviteFailure(
+        StoryInviteFailureKind.invalidCode,
+      );
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          storyInviteRepository: fakeStoryInviteRepository,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(CharacterCard));
+      await tester.pumpAndSettle();
+
+      expect(find.text('This invite code isn\'t valid.'), findsOneWidget);
+    });
+
+    testWidgets('échec "invite_disabled" : affiche le bandeau dédié', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
+      ];
+      fakeStoryInviteRepository.joinErrorToThrow = const StoryInviteFailure(
+        StoryInviteFailureKind.inviteDisabled,
+      );
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          storyInviteRepository: fakeStoryInviteRepository,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(CharacterCard));
+      await tester.pumpAndSettle();
+
+      expect(find.text('This invite has been disabled.'), findsOneWidget);
+    });
+  });
 }
