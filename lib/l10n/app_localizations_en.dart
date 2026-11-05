@@ -5592,4 +5592,120 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get joinCharacterStepScreenRetryButton => 'Retry';
+
+  @override
+  String get characterShareScreenHeaderTitle => 'SHARE CHARACTER';
+
+  @override
+  String get characterShareScreenIntroText =>
+      'Generate a link to show this sheet in read-only mode to a friend or your GM, without them needing a Nexus JDR account.';
+
+  @override
+  String get characterShareScreenActiveBanner => 'Sharing active';
+
+  @override
+  String get characterShareScreenLinkLabel => 'SHARE LINK';
+
+  @override
+  String get characterShareScreenLinkHelperText =>
+      'Anyone with this link can view the sheet as long as sharing stays active.';
+
+  @override
+  String get characterShareScreenCopyLinkTooltip => 'Copy link';
+
+  @override
+  String get characterShareScreenLinkCopiedMessage => 'Link copied.';
+
+  @override
+  String get characterShareScreenRegenerateMenuLabel => 'Regenerate link';
+
+  @override
+  String get characterShareScreenRegenerateSuccessMessage =>
+      'Share link regenerated.';
+
+  @override
+  String get characterShareScreenActivateButtonLabel => 'Enable sharing';
+
+  @override
+  String get characterShareScreenDangerZoneLabel => 'DANGER ZONE';
+
+  @override
+  String get characterShareScreenDisableButtonLabel => 'Disable sharing';
+
+  @override
+  String get characterShareScreenDisableHelperText =>
+      'The current link will stop working immediately. You can generate a new one later.';
+
+  @override
+  String get characterShareScreenDisableDialogTitle => 'Disable sharing?';
+
+  @override
+  String get characterShareScreenDisableDialogCancel => 'Cancel';
+
+  @override
+  String get characterShareScreenDisableDialogConfirm => 'Disable';
+
+  @override
+  String get characterShareScreenDisableSuccessMessage => 'Sharing disabled.';
+
+  @override
+  String get characterShareScreenGenericErrorMessage =>
+      'Something went wrong. Try again.';
+
+  @override
+  String get characterShareScreenLoadErrorMessage =>
+      'Unable to load this character. Try again.';
+
+  @override
+  String get characterShareScreenRetryButtonLabel => 'Retry';
+
+  @override
+  String get sharedCharacterViewScreenHeaderTitle => 'SHARED CHARACTER';
+
+  @override
+  String get sharedCharacterViewScreenGroupMemberHeaderTitle => 'GROUP MEMBER';
+
+  @override
+  String get sharedCharacterViewScreenReadOnlyBanner => 'Read-only view';
+
+  @override
+  String get sharedCharacterViewScreenSectionsHintText =>
+      'All sections (Skills, Spells, Inventory, Story) can be viewed below, in read-only mode.';
+
+  @override
+  String get sharedCharacterViewScreenHpLabel => 'HIT POINTS';
+
+  @override
+  String get sharedCharacterViewScreenXpLabel => 'EXPERIENCE';
+
+  @override
+  String sharedCharacterViewScreenTemporaryHpChipLabel(int amount) {
+    return '+$amount temp. HP';
+  }
+
+  @override
+  String get sharedCharacterViewScreenInvalidLinkTitle =>
+      'This share link is no longer valid';
+
+  @override
+  String get sharedCharacterViewScreenInvalidLinkGroupMemberTitle =>
+      'This sheet is no longer accessible';
+
+  @override
+  String get sharedCharacterViewScreenInvalidLinkBody =>
+      'Sharing may have been disabled, or the link was copied incorrectly. Ask its owner for a new link.';
+
+  @override
+  String get sharedCharacterViewScreenInvalidLinkGroupMemberBody =>
+      'This character may have left the group.';
+
+  @override
+  String get sharedCharacterViewScreenInvalidLinkRetryButtonLabel => 'Retry';
+
+  @override
+  String get sharedCharacterViewScreenLoadErrorMessage =>
+      'Unable to load this character. Try again.';
+
+  @override
+  String get sharedCharacterViewScreenErrorRetryButtonLabel => 'Retry';
 }

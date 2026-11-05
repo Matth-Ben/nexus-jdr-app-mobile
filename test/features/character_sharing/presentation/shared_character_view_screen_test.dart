@@ -103,24 +103,23 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return ProviderScope(
       overrides: [
         characterSharingRepositoryProvider.overrideWithValue(fakeRepository),
       ],
       child: MaterialApp.router(
-        // `SharedCharacterViewScreen` lit désormais `AppLocalizations
-        // .of(context)!` (ricochet du chantier "traduction de l'app" Phase
-        // B, lot "Characters — fiche (identité/statistiques)" :
-        // `CharacterDetailTab.headerTitle` a besoin d'un `AppLocalizations`
-        // depuis ce lot) : sans ces delegates, l'appel renverrait `null` et
-        // le `!` planterait. Ce fichier reste en français (langue par
-        // défaut de l'environnement `flutter test` non forcée auparavant,
-        // désormais fixée explicitement) : aucune assertion de ce fichier
-        // n'est modifiée par ce lot, hors de son périmètre.
+        // `SharedCharacterViewScreen` lit `AppLocalizations.of(context)!`
+        // (ricochet du chantier "traduction de l'app" Phase B, lot
+        // "Characters — fiche (identité/statistiques)" pour
+        // `CharacterDetailTab.headerTitle`, complété par le lot "Character
+        // sharing" pour le reste de l'écran) : sans ces delegates, l'appel
+        // renverrait `null` et le `!` planterait. [locale] par défaut `fr`
+        // pour toutes les assertions existantes de ce fichier, paramétrable
+        // pour le groupe `locale anglaise` ci-dessous.
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('fr'),
+        locale: locale,
         routerConfig: GoRouter(
           initialLocation: '/p/tok-abc',
           routes: [
@@ -140,10 +139,13 @@ void main() {
   // caractéristiques, jets de sauvegarde) sont autrement hors du cacheExtent
   // par défaut d'un `ListView` sur 800×600 — même ajustement que
   // `character_detail_screen_test.dart`.
-  Future<void> pumpSharedView(WidgetTester tester) async {
+  Future<void> pumpSharedView(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     await tester.binding.setSurfaceSize(const Size(800, 2000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
   }
 
   testWidgets('affiche un indicateur de chargement pendant la récupération', (
@@ -753,10 +755,162 @@ void main() {
     },
   );
 
+  testWidgets(
+    'CharacterFailure code accessDenied : résolu via AppLocalizations, pas '
+    'le message brut du dépôt (couverture du trou signalé par qa-testeur, '
+    'chantier "traduction de l\'app" Phase B, lot "Character sharing")',
+    (tester) async {
+      fakeRepository.errorToThrow = const CharacterFailure(
+        'message brut non affiché',
+        code: CharacterErrorCode.accessDenied,
+      );
+
+      await pumpSharedView(tester);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text("Vous n'avez pas accès à ces personnages."),
+        findsOneWidget,
+      );
+      expect(find.text('message brut non affiché'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'CharacterFailure code network : résolu via AppLocalizations (couverture '
+    'du trou signalé par qa-testeur, chantier "traduction de l\'app" Phase '
+    'B, lot "Character sharing")',
+    (tester) async {
+      fakeRepository.errorToThrow = const CharacterFailure(
+        'message brut non affiché',
+        code: CharacterErrorCode.network,
+      );
+
+      await pumpSharedView(tester);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Impossible de contacter le serveur. Vérifiez votre connexion '
+          'internet et réessayez.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  group('locale anglaise', () {
+    testWidgets('affiche un indicateur de chargement pendant la récupération', (
+      tester,
+    ) async {
+      fakeRepository.completer = Completer<CharacterDetail?>();
+
+      await pumpSharedView(tester, locale: const Locale('en'));
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets(
+      'personnage partagé valide : affiche le bandeau "Read-only view" et '
+      'la barre de 5 onglets traduite',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpSharedView(tester, locale: const Locale('en'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Read-only view'), findsOneWidget);
+        expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+        expect(find.text('CHAR.'), findsOneWidget);
+        expect(
+          find.text(
+            'All sections (Skills, Spells, Inventory, Story) can be viewed '
+            'below, in read-only mode.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'token invalide/révoqué (résultat null) : affiche l\'état "lien non '
+      'valide" traduit, pas la barre d\'onglets',
+      (tester) async {
+        fakeRepository.detailToReturn = null;
+
+        await pumpSharedView(tester, locale: const Locale('en'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('SHARED CHARACTER'), findsOneWidget);
+        expect(find.text('This share link is no longer valid'), findsOneWidget);
+        expect(
+          find.text(
+            'Sharing may have been disabled, or the link was copied '
+            'incorrectly. Ask its owner for a new link.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('CHAR.'), findsNothing);
+
+        fakeRepository.detailToReturn = _baseDetail;
+        await tester.tap(find.text('Retry'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+      },
+    );
+
+    testWidgets('échec générique (non CharacterFailure) : affiche le message '
+        'd\'erreur traduit avec un bouton "Retry"', (tester) async {
+      fakeRepository.errorToThrow = Exception('boom');
+
+      await pumpSharedView(tester, locale: const Locale('en'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Unable to load this character. Try again.'),
+        findsOneWidget,
+      );
+
+      fakeRepository.errorToThrow = null;
+      fakeRepository.detailToReturn = _baseDetail;
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+    });
+
+    testWidgets(
+      'CharacterFailure code accessDenied : résolu via AppLocalizations en '
+      'anglais (couverture du trou signalé par qa-testeur — aucun test de '
+      'ce dépôt ne vérifiait jusqu\'ici characterAccessDeniedErrorMessage '
+      'en anglais)',
+      (tester) async {
+        fakeRepository.errorToThrow = const CharacterFailure(
+          'raw message not displayed',
+          code: CharacterErrorCode.accessDenied,
+        );
+
+        await pumpSharedView(tester, locale: const Locale('en'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text("You don't have access to these characters."),
+          findsOneWidget,
+        );
+        expect(find.text('raw message not displayed'), findsNothing);
+      },
+    );
+  });
+
   group(
     'fiche d’un membre de groupe (SharedCharacterViewScreen.groupMember)',
     () {
-      Future<void> pumpGroupMemberView(WidgetTester tester) async {
+      Future<void> pumpGroupMemberView(
+        WidgetTester tester, {
+        Locale locale = const Locale('fr'),
+      }) async {
         await tester.binding.setSurfaceSize(const Size(800, 2000));
         addTearDown(() => tester.binding.setSurfaceSize(null));
         await tester.pumpWidget(
@@ -770,7 +924,7 @@ void main() {
               // Voir le commentaire équivalent de `buildTestWidget` ci-dessus.
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              locale: const Locale('fr'),
+              locale: locale,
               routerConfig: GoRouter(
                 initialLocation: '/groups/g-1/members/c-9',
                 routes: [
@@ -813,6 +967,42 @@ void main() {
         expect(find.text('MEMBRE DU GROUPE'), findsOneWidget);
         expect(find.text("Cette fiche n'est plus accessible"), findsOneWidget);
         expect(find.textContaining('lien'), findsNothing);
+      });
+
+      group('locale anglaise', () {
+        testWidgets(
+          'charge la fiche via le groupe et l’affiche en lecture seule '
+          'traduite',
+          (tester) async {
+            fakeRepository.detailToReturn = _baseDetail;
+
+            await pumpGroupMemberView(tester, locale: const Locale('en'));
+
+            expect(find.text('Read-only view'), findsOneWidget);
+            expect(find.text('CHAR.'), findsOneWidget);
+          },
+        );
+
+        testWidgets(
+          'fiche inaccessible (résultat null) : message propre au groupe '
+          'traduit, sans parler de lien',
+          (tester) async {
+            fakeRepository.detailToReturn = null;
+
+            await pumpGroupMemberView(tester, locale: const Locale('en'));
+
+            expect(find.text('GROUP MEMBER'), findsOneWidget);
+            expect(
+              find.text('This sheet is no longer accessible'),
+              findsOneWidget,
+            );
+            expect(
+              find.text('This character may have left the group.'),
+              findsOneWidget,
+            );
+            expect(find.textContaining('link'), findsNothing);
+          },
+        );
       });
     },
   );

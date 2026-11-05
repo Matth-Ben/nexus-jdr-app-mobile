@@ -9179,6 +9179,210 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Réessayer'**
   String get joinCharacterStepScreenRetryButton;
+
+  /// Titre du `WoodBackHeader` de `CharacterShareScreen` (route `/characters/:id/share`).
+  ///
+  /// In fr, this message translates to:
+  /// **'PARTAGER LE PERSONNAGE'**
+  String get characterShareScreenHeaderTitle;
+
+  /// Paragraphe d'introduction affiché avant la section partage, qu'il soit actif ou non.
+  ///
+  /// In fr, this message translates to:
+  /// **'Génère un lien pour montrer cette fiche en lecture seule à un ami ou à ton MJ, sans qu\'il ait besoin d\'un compte Nexus JDR.'**
+  String get characterShareScreenIntroText;
+
+  /// Message de l'`InfoBanner.success` affiché quand `CharacterDetail.shareToken` est renseigné.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partage actif'**
+  String get characterShareScreenActiveBanner;
+
+  /// Libellé (déjà en majuscules) au-dessus du champ affichant le lien de partage.
+  ///
+  /// In fr, this message translates to:
+  /// **'LIEN DE PARTAGE'**
+  String get characterShareScreenLinkLabel;
+
+  /// Texte d'aide affiché sous le champ de lien.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quiconque possède ce lien peut consulter la fiche tant que le partage reste actif.'**
+  String get characterShareScreenLinkHelperText;
+
+  /// `Tooltip` du bouton carré de copie du lien (`_CopyLinkButton`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Copier le lien'**
+  String get characterShareScreenCopyLinkTooltip;
+
+  /// Message de `SnackBar` après un appel réussi à `Clipboard.setData` (`_copyLink`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Lien copié.'**
+  String get characterShareScreenLinkCopiedMessage;
+
+  /// Libellé du `MenuTile` qui relance `regenerateShareToken` quand le partage est déjà actif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Régénérer le lien'**
+  String get characterShareScreenRegenerateMenuLabel;
+
+  /// Message de `SnackBar` après un appel réussi à `regenerateShareToken` (`_regenerate`), partage déjà actif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lien de partage régénéré.'**
+  String get characterShareScreenRegenerateSuccessMessage;
+
+  /// Libellé du `PrimaryButton` affiché quand le partage est désactivé — appelle aussi `regenerateShareToken` (`_regenerate`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Activer le partage'**
+  String get characterShareScreenActivateButtonLabel;
+
+  /// Libellé (déjà en majuscules) au-dessus du bouton de désactivation du partage.
+  ///
+  /// In fr, this message translates to:
+  /// **'ZONE DANGEREUSE'**
+  String get characterShareScreenDangerZoneLabel;
+
+  /// Libellé du `DestructiveButton` qui ouvre la confirmation de désactivation (`_confirmDisable`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactiver le partage'**
+  String get characterShareScreenDisableButtonLabel;
+
+  /// Texte affiché sous le bouton de désactivation ET contenu du dialogue de confirmation (`_confirmDisable`) — texte identique dans les deux emplacements, une seule clé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le lien actuel cessera immédiatement de fonctionner. Tu pourras en générer un nouveau plus tard.'**
+  String get characterShareScreenDisableHelperText;
+
+  /// Titre de l'`AlertDialog` de confirmation (`_confirmDisable`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactiver le partage ?'**
+  String get characterShareScreenDisableDialogTitle;
+
+  /// Bouton d'annulation de l'`AlertDialog` de confirmation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get characterShareScreenDisableDialogCancel;
+
+  /// Bouton de confirmation de l'`AlertDialog` (plus court que `characterShareScreenDisableButtonLabel`, qui ouvre ce dialogue).
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactiver'**
+  String get characterShareScreenDisableDialogConfirm;
+
+  /// Message de `SnackBar` après un appel réussi à `disableShareToken` (`_disable`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Partage désactivé.'**
+  String get characterShareScreenDisableSuccessMessage;
+
+  /// Message de `SnackBar` affiché quand `_regenerate`/`_disable` échouent avec une erreur qui n'est pas une `CharacterFailure` — même pattern que `summaryStepScreenGenericSubmitErrorMessage`, réutilisé aux deux points d'appel de cet écran.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une erreur est survenue. Réessayez.'**
+  String get characterShareScreenGenericErrorMessage;
+
+  /// Repli de `_ErrorState` quand l'erreur de `characterDetailProvider` n'est pas une `CharacterFailure` — voir `resolveCharacterFailureMessage` (`presentation/character_failure_presenter.dart`) pour le cas `CharacterFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger ce personnage. Réessayez.'**
+  String get characterShareScreenLoadErrorMessage;
+
+  /// Bouton de `_ErrorState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get characterShareScreenRetryButtonLabel;
+
+  /// Titre du `WoodBackHeader` de `SharedCharacterViewScreen` tant qu'aucune fiche n'est chargée, variante lien de partage (route `/p/:token`) — remplacé par `CharacterDetailTab.headerTitle` une fois la fiche chargée.
+  ///
+  /// In fr, this message translates to:
+  /// **'PERSONNAGE PARTAGÉ'**
+  String get sharedCharacterViewScreenHeaderTitle;
+
+  /// Même titre que `sharedCharacterViewScreenHeaderTitle`, variante `SharedCharacterViewScreen.groupMember` (fiche d'un membre de groupe).
+  ///
+  /// In fr, this message translates to:
+  /// **'MEMBRE DU GROUPE'**
+  String get sharedCharacterViewScreenGroupMemberHeaderTitle;
+
+  /// Message de l'`InfoBanner` affiché en tête de l'onglet "Personnage".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vue en lecture seule'**
+  String get sharedCharacterViewScreenReadOnlyBanner;
+
+  /// Texte explicatif affiché sous la grille de caractéristiques de l'onglet "Personnage".
+  ///
+  /// In fr, this message translates to:
+  /// **'Toutes les sections (Compétences, Sorts, Inventaire, Histoire) sont consultables ci-dessous, en lecture seule.'**
+  String get sharedCharacterViewScreenSectionsHintText;
+
+  /// Libellé du bandeau PV de `_SharedVitalsCard` — même texte que `characterVitalsCardHpLabel`, dupliqué volontairement (pas de dépendance entre ces deux widgets, voir la doc de classe de `_SharedVitalsCard`).
+  ///
+  /// In fr, this message translates to:
+  /// **'POINTS DE VIE'**
+  String get sharedCharacterViewScreenHpLabel;
+
+  /// Libellé du bandeau XP de `_SharedVitalsCard` — même texte que `characterVitalsCardXpLabel`, dupliqué volontairement (même rationale que `sharedCharacterViewScreenHpLabel`).
+  ///
+  /// In fr, this message translates to:
+  /// **'EXPÉRIENCE'**
+  String get sharedCharacterViewScreenXpLabel;
+
+  /// Puce `_TemporaryHpChip` affichée quand `temporaryHp > 0` — même texte que `characterVitalsCardTemporaryHpChip`/`groupMembersTabBodyTemporaryHpChipLabel`, dupliqué volontairement (pas de dépendance entre ces widgets).
+  ///
+  /// In fr, this message translates to:
+  /// **'+{amount} PV temp.'**
+  String sharedCharacterViewScreenTemporaryHpChipLabel(int amount);
+
+  /// Titre de `_InvalidLinkState` (résultat RPC `null`), variante lien de partage (`isGroupMember == false`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce lien de partage n\'est plus valide'**
+  String get sharedCharacterViewScreenInvalidLinkTitle;
+
+  /// Titre de `_InvalidLinkState`, variante `isGroupMember == true`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette fiche n\'est plus accessible'**
+  String get sharedCharacterViewScreenInvalidLinkGroupMemberTitle;
+
+  /// Corps de `_InvalidLinkState`, variante lien de partage (`isGroupMember == false`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Le partage a peut-être été désactivé, ou le lien a été mal recopié. Demande un nouveau lien à son propriétaire.'**
+  String get sharedCharacterViewScreenInvalidLinkBody;
+
+  /// Corps de `_InvalidLinkState`, variante `isGroupMember == true`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce personnage a peut-être quitté le groupe.'**
+  String get sharedCharacterViewScreenInvalidLinkGroupMemberBody;
+
+  /// Bouton de `_InvalidLinkState` (les deux variantes).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get sharedCharacterViewScreenInvalidLinkRetryButtonLabel;
+
+  /// Repli de `_ErrorState` quand l'erreur n'est pas une `CharacterFailure` — voir `resolveCharacterFailureMessage` (`presentation/character_failure_presenter.dart`) pour le cas `CharacterFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger ce personnage. Réessayez.'**
+  String get sharedCharacterViewScreenLoadErrorMessage;
+
+  /// Bouton de `_ErrorState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get sharedCharacterViewScreenErrorRetryButtonLabel;
 }
 
 class _AppLocalizationsDelegate
