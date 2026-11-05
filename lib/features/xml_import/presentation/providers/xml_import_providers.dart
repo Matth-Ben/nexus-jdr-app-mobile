@@ -22,6 +22,7 @@ import '../../data/xml_import_repository.dart';
 import '../../domain/xml_character_import_resolved.dart';
 import '../../domain/xml_character_import_resolver.dart';
 import '../../domain/xml_field_resolution.dart';
+import '../../domain/xml_import_parse_error_code.dart';
 import '../../domain/xml_import_parse_result.dart';
 import '../../domain/xml_name_resolver.dart';
 import '../../domain/xml_named_option.dart';
@@ -42,13 +43,18 @@ part 'xml_import_providers.g.dart';
 /// freezed pour `XmlImportParseResult.failure`, voir
 /// `domain/xml_import_parse_result.dart`) pour éviter toute collision de nom
 /// entre les deux classes, bien réelles toutes les deux dans ce module.
+///
+/// [code] (pas un message déjà construit, voir
+/// `domain/xml_import_parse_error_code.dart`, chantier de traduction Phase B)
+/// — résolu en texte affichable uniquement par
+/// `presentation/xml_import_review_screen.dart`, seul consommateur.
 class XmlImportInvalidFileFailure implements Exception {
-  const XmlImportInvalidFileFailure(this.message);
+  const XmlImportInvalidFileFailure(this.code);
 
-  final String message;
+  final XmlImportParseErrorCode code;
 
   @override
-  String toString() => message;
+  String toString() => code.toString();
 }
 
 @Riverpod(keepAlive: true)
@@ -121,8 +127,9 @@ class XmlImportReviewController extends _$XmlImportReviewController {
     final parseResult = XmlCharacterImportParser.parse(xmlSource);
     final raw = switch (parseResult) {
       XmlImportParseSuccess(:final character) => character,
-      XmlImportParseFailure(:final message) =>
-        throw XmlImportInvalidFileFailure(message),
+      XmlImportParseFailure(:final code) => throw XmlImportInvalidFileFailure(
+        code,
+      ),
     };
 
     final repository = ref.watch(characterCreationRepositoryProvider);

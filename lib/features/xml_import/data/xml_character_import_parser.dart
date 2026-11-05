@@ -1,6 +1,7 @@
 import 'package:xml/xml.dart';
 
 import '../domain/xml_character_import_raw.dart';
+import '../domain/xml_import_parse_error_code.dart';
 import '../domain/xml_import_parse_result.dart';
 import '../domain/xml_raw_level_entry.dart';
 import '../domain/xml_raw_spell_entry.dart';
@@ -23,22 +24,20 @@ abstract final class XmlCharacterImportParser {
       root = document.rootElement;
     } catch (_) {
       return const XmlImportParseResult.failure(
-        'Ce fichier n\'est pas un XML valide.',
+        XmlImportParseErrorCode.invalidXml,
       );
     }
 
     if (root.name.local != 'builder') {
       return const XmlImportParseResult.failure(
-        'Ce fichier ne semble pas être un export aidedd.org '
-        '(racine <builder> introuvable).',
+        XmlImportParseErrorCode.missingBuilderRoot,
       );
     }
 
     final character = root.getElement('character');
     if (character == null) {
       return const XmlImportParseResult.failure(
-        'Ce fichier ne semble pas être un export aidedd.org '
-        '(balise <character> introuvable).',
+        XmlImportParseErrorCode.missingCharacterElement,
       );
     }
 
@@ -51,8 +50,7 @@ abstract final class XmlCharacterImportParser {
         characterClass == null ||
         background == null) {
       return const XmlImportParseResult.failure(
-        'Ce fichier ne contient pas les informations minimales d\'un '
-        'personnage (nom, race, classe, historique).',
+        XmlImportParseErrorCode.missingRequiredFields,
       );
     }
 

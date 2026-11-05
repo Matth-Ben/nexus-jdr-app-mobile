@@ -6886,5 +6886,429 @@
   "claimGroupTreasureItemSheetSubmitButtonLabel": "Réclamer",
   "@claimGroupTreasureItemSheetSubmitButtonLabel": {
     "description": "`PrimaryButton`, actif seulement si la quantité choisie est non nulle."
+  },
+
+  "xmlImportReviewScreenHeaderTitle": "VÉRIFICATION IMPORT",
+  "@xmlImportReviewScreenHeaderTitle": {
+    "description": "Titre du bandeau bois, états \"Chargement\"/\"Vérification\"/\"Erreur réseau\" (`_Header`)."
+  },
+  "xmlImportReviewScreenHeaderSubtitle": "{fileName} importé depuis aidedd.org",
+  "@xmlImportReviewScreenHeaderSubtitle": {
+    "description": "Sous-titre du bandeau bois, états \"Vérification\"/\"Erreur réseau\" — `fileName` est le nom du fichier importé (dynamique).",
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "xmlImportReviewScreenLoadingSubtitle": "Analyse de {fileName} en cours...",
+  "@xmlImportReviewScreenLoadingSubtitle": {
+    "description": "Sous-titre du bandeau bois pendant le chargement des catalogues.",
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "xmlImportReviewScreenInvalidFileHeaderTitle": "IMPORT XML",
+  "@xmlImportReviewScreenInvalidFileHeaderTitle": {
+    "description": "Titre du bandeau bois, état \"Erreur (XML invalide)\" — pas de sous-titre pour cet état, voir `_InvalidFileErrorState`."
+  },
+  "xmlImportReviewScreenNetworkErrorMessage": "Impossible de charger les données de référence. Réessayez.",
+  "@xmlImportReviewScreenNetworkErrorMessage": {
+    "description": "Message de repli de `_NetworkErrorState` quand l'erreur n'est pas une `CharacterCreationFailure` (celle-ci garde son propre `.message`, voir D161/`docs/dette-technique.md`)."
+  },
+  "xmlImportReviewScreenAllFieldsResolvedMessage": "Tous les champs ont été reconnus automatiquement.",
+  "@xmlImportReviewScreenAllFieldsResolvedMessage": {
+    "description": "Texte de statut positif affiché quand aucun champ ne nécessite de correction manuelle."
+  },
+  "xmlImportReviewScreenUnresolvedFieldsCountMessage": "{count, plural, =1{1 champ nécessite une correction manuelle avant validation} other{{count} champs nécessitent une correction manuelle avant validation}}",
+  "@xmlImportReviewScreenUnresolvedFieldsCountMessage": {
+    "description": "Texte de statut négatif, nombre de champs encore non résolus.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "xmlImportReviewScreenValidateButtonLabel": "Valider le personnage",
+  "@xmlImportReviewScreenValidateButtonLabel": {
+    "description": "`PrimaryButton` de bas d'écran."
+  },
+  "xmlImportReviewScreenMissingRaceField": "la race",
+  "@xmlImportReviewScreenMissingRaceField": {
+    "description": "Segment de `xmlImportReviewScreenMissingFieldsErrorMessage` quand la race bloque la validation."
+  },
+  "xmlImportReviewScreenMissingClassField": "la classe",
+  "@xmlImportReviewScreenMissingClassField": {
+    "description": "Segment de `xmlImportReviewScreenMissingFieldsErrorMessage` quand la classe bloque la validation."
+  },
+  "xmlImportReviewScreenMissingRacialChoicesField": "les bonus raciaux au choix",
+  "@xmlImportReviewScreenMissingRacialChoicesField": {
+    "description": "Segment de `xmlImportReviewScreenMissingFieldsErrorMessage` quand les bonus raciaux au choix ne sont pas complets."
+  },
+  "xmlImportReviewScreenFieldConjunction": "et",
+  "@xmlImportReviewScreenFieldConjunction": {
+    "description": "Mot de liaison entre les segments de `xmlImportReviewScreenMissingFieldsErrorMessage` (jusqu'à 3 segments, chacun joint par ce mot — pas une virgule d'Oxford, comportement inchangé par rapport à l'ancien texte en dur)."
+  },
+  "xmlImportReviewScreenMissingFieldsErrorMessage": "Corrigez d'abord {missingFields} avant d'enregistrer ce personnage.",
+  "@xmlImportReviewScreenMissingFieldsErrorMessage": {
+    "description": "Message bloquant (réutilise `AlertBanner`) quand race/classe/bonus raciaux au choix ne sont pas résolus — `missingFields` est la jointure déjà construite des segments ci-dessus.",
+    "placeholders": {
+      "missingFields": {
+        "type": "String"
+      }
+    }
+  },
+  "xmlImportReviewScreenUnresolvedDialogTitle": "CHAMPS NON RÉSOLUS",
+  "@xmlImportReviewScreenUnresolvedDialogTitle": {
+    "description": "Titre du dialogue de confirmation ouvert quand au moins un champ reste non résolu."
+  },
+  "xmlImportReviewScreenUnresolvedDialogMessage": "Certains éléments importés n'ont pas pu être reconnus automatiquement. Ils seront enregistrés comme non catalogués et resteront corrigibles plus tard depuis la fiche du personnage.",
+  "@xmlImportReviewScreenUnresolvedDialogMessage": {
+    "description": "Corps du dialogue \"CHAMPS NON RÉSOLUS\"."
+  },
+  "xmlImportReviewScreenUnresolvedDialogBackButtonLabel": "Retourner corriger",
+  "@xmlImportReviewScreenUnresolvedDialogBackButtonLabel": {
+    "description": "`SecondaryButton` du dialogue \"CHAMPS NON RÉSOLUS\", annule la sauvegarde."
+  },
+  "xmlImportReviewScreenUnresolvedDialogContinueButtonLabel": "Continuer",
+  "@xmlImportReviewScreenUnresolvedDialogContinueButtonLabel": {
+    "description": "`PrimaryButton` du dialogue \"CHAMPS NON RÉSOLUS\", poursuit la sauvegarde malgré les champs non résolus."
+  },
+  "xmlImportReviewScreenDefaultCharacterName": "Personnage importé",
+  "@xmlImportReviewScreenDefaultCharacterName": {
+    "description": "Nom du personnage écrit en base quand le champ `<name>` du fichier source est vide."
+  },
+  "xmlImportReviewScreenGenericSaveErrorMessage": "Une erreur est survenue. Réessayez.",
+  "@xmlImportReviewScreenGenericSaveErrorMessage": {
+    "description": "Message de repli affiché quand l'échec de sauvegarde n'est pas une `CharacterCreationFailure` (celle-ci garde son propre `.message`, voir D161/`docs/dette-technique.md`)."
+  },
+  "xmlImportReviewScreenNameFieldTitle": "Nom",
+  "@xmlImportReviewScreenNameFieldTitle": {
+    "description": "Titre de carte — champ \"Nom\", toujours une carte de résumé (jamais une alerte)."
+  },
+  "xmlImportReviewScreenRaceFieldTitle": "Race",
+  "@xmlImportReviewScreenRaceFieldTitle": {
+    "description": "Titre de carte — champ \"Race\", aussi utilisé (en majuscules) comme titre de la bottom sheet de correction."
+  },
+  "xmlImportReviewScreenClassFieldTitle": "Classe",
+  "@xmlImportReviewScreenClassFieldTitle": {
+    "description": "Titre de carte — champ \"Classe\"."
+  },
+  "xmlImportReviewScreenSubclassFieldTitle": "Sous-classe",
+  "@xmlImportReviewScreenSubclassFieldTitle": {
+    "description": "Titre de carte — champ \"Sous-classe\" (`classPath`), affiché seulement si présent dans le fichier source."
+  },
+  "xmlImportReviewScreenLevelFieldTitle": "Niveau",
+  "@xmlImportReviewScreenLevelFieldTitle": {
+    "description": "Titre de carte — champ \"Niveau\", toujours une carte de résumé."
+  },
+  "xmlImportReviewScreenBackgroundFieldTitle": "Historique",
+  "@xmlImportReviewScreenBackgroundFieldTitle": {
+    "description": "Titre de carte — champ \"Historique\"."
+  },
+  "xmlImportReviewScreenAbilityScoresFieldTitle": "Caractéristiques",
+  "@xmlImportReviewScreenAbilityScoresFieldTitle": {
+    "description": "Titre de carte — champ \"Caractéristiques\", toujours une carte de résumé."
+  },
+  "xmlImportReviewScreenHitPointsFieldTitle": "Points de vie",
+  "@xmlImportReviewScreenHitPointsFieldTitle": {
+    "description": "Titre de carte — champ \"Points de vie\", toujours une carte de résumé."
+  },
+  "xmlImportReviewScreenSkillsFieldTitle": "Compétences",
+  "@xmlImportReviewScreenSkillsFieldTitle": {
+    "description": "Titre de carte — champ \"Compétences\" (4 groupes consolidés)."
+  },
+  "xmlImportReviewScreenToolsFieldTitle": "Outils",
+  "@xmlImportReviewScreenToolsFieldTitle": {
+    "description": "Titre de carte — champ \"Outils\" (maîtrises d'outils)."
+  },
+  "xmlImportReviewScreenLanguagesFieldTitle": "Langues",
+  "@xmlImportReviewScreenLanguagesFieldTitle": {
+    "description": "Titre de carte — champ \"Langues\"."
+  },
+  "xmlImportReviewScreenInnateSpellsFieldTitle": "Sorts innés",
+  "@xmlImportReviewScreenInnateSpellsFieldTitle": {
+    "description": "Titre de carte — champ \"Sorts innés\"."
+  },
+  "xmlImportReviewScreenKnownSpellsFieldTitle": "Sorts connus",
+  "@xmlImportReviewScreenKnownSpellsFieldTitle": {
+    "description": "Titre de carte — champ \"Sorts connus\"."
+  },
+  "xmlImportReviewScreenCurrencyFieldTitle": "Argent",
+  "@xmlImportReviewScreenCurrencyFieldTitle": {
+    "description": "Titre de carte — champ \"Argent\", toujours une carte de résumé."
+  },
+  "xmlImportReviewScreenArmorFieldTitle": "Armure",
+  "@xmlImportReviewScreenArmorFieldTitle": {
+    "description": "Titre de carte — champ \"Armure\" (codé)."
+  },
+  "xmlImportReviewScreenShieldFieldTitle": "Bouclier",
+  "@xmlImportReviewScreenShieldFieldTitle": {
+    "description": "Titre de carte — champ \"Bouclier\" (codé)."
+  },
+  "xmlImportReviewScreenWeaponsFieldTitle": "Armes",
+  "@xmlImportReviewScreenWeaponsFieldTitle": {
+    "description": "Titre de carte — champ \"Armes\" (quantifié)."
+  },
+  "xmlImportReviewScreenToolEquipmentFieldTitle": "Outils physiques",
+  "@xmlImportReviewScreenToolEquipmentFieldTitle": {
+    "description": "Titre de carte — champ \"Outils physiques\" (quantifié, matériel d'outillage, distinct des maîtrises d'outils)."
+  },
+  "xmlImportReviewScreenItemsFieldTitle": "Objets",
+  "@xmlImportReviewScreenItemsFieldTitle": {
+    "description": "Titre de carte — champ \"Objets\" (quantifié)."
+  },
+  "xmlImportReviewScreenCustomItemsFieldTitle": "Objets personnalisés",
+  "@xmlImportReviewScreenCustomItemsFieldTitle": {
+    "description": "Titre de carte — objets personnalisés (`itemX`), toujours `custom`, jamais une alerte."
+  },
+  "xmlImportReviewScreenCustomItemsBadgeLabel": "Personnalisé",
+  "@xmlImportReviewScreenCustomItemsBadgeLabel": {
+    "description": "Badge discret de la carte \"Objets personnalisés\"."
+  },
+  "xmlImportReviewScreenStartingPackFieldTitle": "Paquetage de départ",
+  "@xmlImportReviewScreenStartingPackFieldTitle": {
+    "description": "Titre de carte — champ \"Paquetage de départ\" (`pack`), traçabilité uniquement, toujours une carte de résumé."
+  },
+  "xmlImportReviewScreenAlignmentFieldTitle": "Alignement",
+  "@xmlImportReviewScreenAlignmentFieldTitle": {
+    "description": "Titre de carte — champ \"Alignement\" (codé)."
+  },
+  "xmlImportReviewScreenSexFieldTitle": "Sexe",
+  "@xmlImportReviewScreenSexFieldTitle": {
+    "description": "Titre de carte — champ \"Sexe\" (codé)."
+  },
+  "xmlImportReviewScreenAppearanceFieldTitle": "Apparence",
+  "@xmlImportReviewScreenAppearanceFieldTitle": {
+    "description": "Titre de carte — champ \"Apparence\", toujours une carte de résumé (\"Renseignée\"/\"Non renseignée\")."
+  },
+  "xmlImportReviewScreenHistoryFieldTitle": "Histoire",
+  "@xmlImportReviewScreenHistoryFieldTitle": {
+    "description": "Titre de carte — champ \"Histoire\", toujours une carte de résumé (\"Renseignée\"/\"Non renseignée\")."
+  },
+  "xmlImportReviewScreenExperienceFieldTitle": "Expérience",
+  "@xmlImportReviewScreenExperienceFieldTitle": {
+    "description": "Titre de carte — champ \"Expérience\", affiché seulement si `<xp>` est présent dans le fichier source."
+  },
+  "xmlImportReviewScreenNoNameValue": "Sans nom",
+  "@xmlImportReviewScreenNoNameValue": {
+    "description": "Valeur affichée par la carte \"Nom\" quand `<name>` est vide (affichage seulement — `xmlImportReviewScreenDefaultCharacterName` régit le nom réellement enregistré)."
+  },
+  "xmlImportReviewScreenFilledValueLabel": "Renseignée",
+  "@xmlImportReviewScreenFilledValueLabel": {
+    "description": "Valeur des cartes \"Apparence\"/\"Histoire\" quand au moins un champ libre correspondant est non vide."
+  },
+  "xmlImportReviewScreenNotFilledValueLabel": "Non renseignée",
+  "@xmlImportReviewScreenNotFilledValueLabel": {
+    "description": "Valeur des cartes \"Apparence\"/\"Histoire\" quand tous les champs libres correspondants sont vides."
+  },
+  "xmlImportReviewScreenIncompleteDataBadgeLabel": "Donnée incomplète",
+  "@xmlImportReviewScreenIncompleteDataBadgeLabel": {
+    "description": "Badge discret affiché sur une carte de résumé dont la valeur reconnue a été créée comme placeholder (\"Garder comme élément personnalisé\")."
+  },
+  "xmlImportReviewScreenExperienceValue": "{xp} XP",
+  "@xmlImportReviewScreenExperienceValue": {
+    "description": "Valeur de la carte \"Expérience\".",
+    "placeholders": {
+      "xp": {
+        "type": "int"
+      }
+    }
+  },
+  "xmlImportReviewScreenHitPointsValue": "{hp} PV",
+  "@xmlImportReviewScreenHitPointsValue": {
+    "description": "Valeur de la carte \"Points de vie\".",
+    "placeholders": {
+      "hp": {
+        "type": "int"
+      }
+    }
+  },
+  "xmlImportReviewScreenNoCurrencyValue": "Aucune",
+  "@xmlImportReviewScreenNoCurrencyValue": {
+    "description": "Valeur de la carte \"Argent\" quand les 5 dénominations sont à 0."
+  },
+  "xmlImportReviewScreenGoldAmount": "{amount} po",
+  "@xmlImportReviewScreenGoldAmount": {
+    "description": "Segment \"pièces d'or\" de la carte \"Argent\".",
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "xmlImportReviewScreenPlatinumAmount": "{amount} pp",
+  "@xmlImportReviewScreenPlatinumAmount": {
+    "description": "Segment \"pièces de platine\" de la carte \"Argent\".",
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "xmlImportReviewScreenElectrumAmount": "{amount} pe",
+  "@xmlImportReviewScreenElectrumAmount": {
+    "description": "Segment \"pièces d'électrum\" de la carte \"Argent\".",
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "xmlImportReviewScreenSilverAmount": "{amount} pa",
+  "@xmlImportReviewScreenSilverAmount": {
+    "description": "Segment \"pièces d'argent\" de la carte \"Argent\".",
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "xmlImportReviewScreenCopperAmount": "{amount} pc",
+  "@xmlImportReviewScreenCopperAmount": {
+    "description": "Segment \"pièces de cuivre\" de la carte \"Argent\".",
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "xmlImportReviewScreenFieldUnrecognizedMessage": "{title} non reconnu(e) : \"{rawValue}\"",
+  "@xmlImportReviewScreenFieldUnrecognizedMessage": {
+    "description": "Message d'une carte d'alerte pour un champ à catalogue unique ou codé non reconnu — `title` est un des titres de champ déjà localisés ci-dessus, `rawValue` est le jeton brut du fichier source (dynamique).",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "rawValue": {
+        "type": "String"
+      }
+    }
+  },
+  "xmlImportReviewScreenUncatalogedItemsCountMessage": "{count, plural, =1{1 élément non catalogué — à corriger manuellement.} other{{count} éléments non catalogués — à corriger manuellement.}}",
+  "@xmlImportReviewScreenUncatalogedItemsCountMessage": {
+    "description": "Message d'une carte d'alerte consolidée (compétences/outils/langues/armes/outils physiques/objets).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "xmlImportReviewScreenUncatalogedSpellsCountMessage": "{count, plural, =1{1 sort non catalogué — à corriger manuellement.} other{{count} sorts non catalogués — à corriger manuellement.}}",
+  "@xmlImportReviewScreenUncatalogedSpellsCountMessage": {
+    "description": "Message d'une carte d'alerte consolidée pour les sorts innés/connus.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "xmlImportReviewScreenCorrectionSheetTitle": "CORRIGER : {title}",
+  "@xmlImportReviewScreenCorrectionSheetTitle": {
+    "description": "Titre de la bottom sheet de correction (simple ou \"mode liste\") — `title` est déjà le titre de champ localisé, déjà mis en majuscules par l'appelant.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "xmlImportReviewScreenCorrectEntryButtonLabel": "Corriger",
+  "@xmlImportReviewScreenCorrectEntryButtonLabel": {
+    "description": "Bouton par ligne de la bottom sheet \"mode liste\" (champ consolidé)."
+  },
+  "xmlImportReviewScreenKeepAllAsCustomButtonLabel": "Tout garder comme éléments personnalisés",
+  "@xmlImportReviewScreenKeepAllAsCustomButtonLabel": {
+    "description": "`SecondaryButton` de bas de la bottom sheet \"mode liste\"."
+  },
+  "xmlImportReviewScreenSearchFieldHint": "Rechercher...",
+  "@xmlImportReviewScreenSearchFieldHint": {
+    "description": "Texte indicatif du champ de recherche de la bottom sheet de correction simple."
+  },
+  "xmlImportReviewScreenNoMatchMessage": "Aucune correspondance trouvée.",
+  "@xmlImportReviewScreenNoMatchMessage": {
+    "description": "Message affiché quand la recherche de la bottom sheet de correction simple ne trouve aucun candidat."
+  },
+  "xmlImportReviewScreenKeepAsCustomButtonLabel": "Garder comme élément personnalisé",
+  "@xmlImportReviewScreenKeepAsCustomButtonLabel": {
+    "description": "`SecondaryButton` de la bottom sheet de correction simple."
+  },
+  "xmlImportReviewScreenConfirmButtonLabel": "Confirmer",
+  "@xmlImportReviewScreenConfirmButtonLabel": {
+    "description": "`PrimaryButton` de la bottom sheet de correction simple."
+  },
+  "xmlImportReviewScreenPlaceholderSaveErrorMessage": "Impossible d'enregistrer cet élément. Réessayez.",
+  "@xmlImportReviewScreenPlaceholderSaveErrorMessage": {
+    "description": "`SnackBar` affichée quand \"Garder comme élément personnalisé\" échoue (réseau, RLS...)."
+  },
+  "xmlImportReviewScreenPlaceholderSavingInProgressMessage": "Enregistrement en cours...",
+  "@xmlImportReviewScreenPlaceholderSavingInProgressMessage": {
+    "description": "Message de la carte d'alerte le temps qu'un appel \"Garder comme élément personnalisé\" soit en vol pour ce champ."
+  },
+  "xmlImportReviewScreenSavingOverlayMessage": "Enregistrement du personnage...",
+  "@xmlImportReviewScreenSavingOverlayMessage": {
+    "description": "Texte de `_SavingOverlay`, affiché pendant la sauvegarde finale."
+  },
+  "xmlImportReviewScreenInvalidFileTitle": "Fichier illisible",
+  "@xmlImportReviewScreenInvalidFileTitle": {
+    "description": "Titre de `_InvalidFileErrorState`."
+  },
+  "xmlImportReviewScreenInvalidFileSubtitle": "Ce fichier ne semble pas être un export aidedd.org valide.",
+  "@xmlImportReviewScreenInvalidFileSubtitle": {
+    "description": "Sous-titre fixe de `_InvalidFileErrorState`, au-dessus du message détaillé dynamique (`xmlImportReviewScreenParseErrorXxx`)."
+  },
+  "xmlImportReviewScreenInvalidFilePickAnotherButtonLabel": "Choisir un autre fichier",
+  "@xmlImportReviewScreenInvalidFilePickAnotherButtonLabel": {
+    "description": "`PrimaryButton` de `_InvalidFileErrorState`."
+  },
+  "xmlImportReviewScreenInvalidFileCancelButtonLabel": "Annuler",
+  "@xmlImportReviewScreenInvalidFileCancelButtonLabel": {
+    "description": "Lien texte de `_InvalidFileErrorState`."
+  },
+  "xmlImportReviewScreenRetryButtonLabel": "Réessayer",
+  "@xmlImportReviewScreenRetryButtonLabel": {
+    "description": "`SecondaryButton` de `_NetworkErrorState`."
+  },
+  "xmlImportReviewScreenUnhandledStyleCombatFieldLabel": "Style de combat",
+  "@xmlImportReviewScreenUnhandledStyleCombatFieldLabel": {
+    "description": "Segment de la carte informative neutre (`_buildUnhandledInfoMessage`) quand `styleCombat1`/`styleCombat2` sont présents."
+  },
+  "xmlImportReviewScreenUnhandledKnownInvocationFieldLabel": "Invocation connue",
+  "@xmlImportReviewScreenUnhandledKnownInvocationFieldLabel": {
+    "description": "Segment de la carte informative neutre quand `knownInvocations` est non vide."
+  },
+  "xmlImportReviewScreenUnhandledFavoredEnemyFieldLabel": "Ennemi juré",
+  "@xmlImportReviewScreenUnhandledFavoredEnemyFieldLabel": {
+    "description": "Segment de la carte informative neutre quand `favoredEnemy0`/`favoredEnemy6`/`favoredEnemy14` sont présents."
+  },
+  "xmlImportReviewScreenUnhandledFieldsMessage": "Non importé automatiquement dans cette version : {fields}.",
+  "@xmlImportReviewScreenUnhandledFieldsMessage": {
+    "description": "Première phrase de la carte informative neutre — `fields` est la jointure (virgule) des segments ci-dessus réellement présents dans le fichier.",
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "xmlImportReviewScreenAbilityIncreasesPresentMessage": "Augmentations de caractéristiques : présentes dans le fichier mais non interprétées automatiquement.",
+  "@xmlImportReviewScreenAbilityIncreasesPresentMessage": {
+    "description": "Seconde phrase (optionnelle) de la carte informative neutre, quand `aug_carac0/1/2` sont présents dans au moins une entrée de niveau."
+  },
+  "xmlImportReviewScreenParseErrorInvalidXml": "Ce fichier n'est pas un XML valide.",
+  "@xmlImportReviewScreenParseErrorInvalidXml": {
+    "description": "Message détaillé de `_InvalidFileErrorState` pour `XmlImportParseErrorCode.invalidXml`."
+  },
+  "xmlImportReviewScreenParseErrorMissingBuilderRoot": "Ce fichier ne semble pas être un export aidedd.org (racine <builder> introuvable).",
+  "@xmlImportReviewScreenParseErrorMissingBuilderRoot": {
+    "description": "Message détaillé de `_InvalidFileErrorState` pour `XmlImportParseErrorCode.missingBuilderRoot`."
+  },
+  "xmlImportReviewScreenParseErrorMissingCharacterElement": "Ce fichier ne semble pas être un export aidedd.org (balise <character> introuvable).",
+  "@xmlImportReviewScreenParseErrorMissingCharacterElement": {
+    "description": "Message détaillé de `_InvalidFileErrorState` pour `XmlImportParseErrorCode.missingCharacterElement`."
+  },
+  "xmlImportReviewScreenParseErrorMissingRequiredFields": "Ce fichier ne contient pas les informations minimales d'un personnage (nom, race, classe, historique).",
+  "@xmlImportReviewScreenParseErrorMissingRequiredFields": {
+    "description": "Message détaillé de `_InvalidFileErrorState` pour `XmlImportParseErrorCode.missingRequiredFields`."
   }
 }

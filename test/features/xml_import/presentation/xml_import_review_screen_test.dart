@@ -835,10 +835,12 @@ void main() {
   Widget buildTestWidget({
     required String xmlSource,
     String fileName = 'test.xml',
+    Locale locale = const Locale('fr'),
   }) {
     return UncontrolledProviderScope(
       container: container,
       child: MaterialApp.router(
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: GoRouter(
@@ -1325,4 +1327,133 @@ void main() {
       expect(fakePlaceholderCatalogRepository.findOrCreateRaceCallCount, 1);
     },
   );
+
+  group('traduction anglaise', () {
+    testWidgets('état "Chargement" : bandeau et sous-titre en anglais', (
+      WidgetTester tester,
+    ) async {
+      fakeCharacterCreationRepository.raceCatalogCompleter = Completer();
+
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(xmlSource: _cleanXml, locale: const Locale('en')),
+      );
+      await tester.pump();
+
+      expect(find.text('IMPORT REVIEW'), findsOneWidget);
+      expect(find.textContaining('Analyzing test.xml'), findsOneWidget);
+    });
+
+    testWidgets('happy path (0 alerte) : bandeau, texte de statut et bouton '
+        '"VALIDATE CHARACTER" en anglais, sauvegarde toujours fonctionnelle', (
+      WidgetTester tester,
+    ) async {
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(xmlSource: _cleanXml, locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('test.xml imported from aidedd.org'), findsOneWidget);
+      expect(
+        find.text('All fields were recognized automatically.'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('VALIDATE CHARACTER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeXmlImportRepository.saveCallCount, 1);
+    });
+
+    testWidgets(
+      'alertes multiples : décompte pluriel ICU "3 fields need..." en '
+      'anglais, carte consolidée "2 uncataloged items..."',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(
+          buildTestWidget(
+            xmlSource: _multipleAlertsXml,
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('3 fields need a manual correction before validation'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Alignment not recognized'), findsOneWidget);
+        expect(
+          find.text('2 uncataloged items — need manual correction.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'alerte unique : décompte singulier ICU "1 field needs..." en anglais',
+      (WidgetTester tester) async {
+        fakeCharacterCreationRepository.subclassCatalogToReturn =
+            const SubclassCatalog(subclasses: [_evocation]);
+
+        growTestViewport(tester);
+        await tester.pumpWidget(
+          buildTestWidget(
+            xmlSource: _unrecognizedSubclassXml,
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('1 field needs a manual correction before validation'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('race et classe non reconnues : message bloquant en anglais', (
+      WidgetTester tester,
+    ) async {
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(
+          xmlSource: _raceAndClassUnresolvedXml,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('VALIDATE CHARACTER'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Fix race and class first before saving this character.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'état "Erreur" (XML invalide) : bandeau, titre, sous-titre, message '
+      'détaillé et boutons en anglais',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(
+          buildTestWidget(xmlSource: _invalidXml, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('XML IMPORT'), findsOneWidget);
+        expect(find.text('Unreadable file'), findsOneWidget);
+        expect(
+          find.text("This file doesn't look like a valid aidedd.org export."),
+          findsOneWidget,
+        );
+        expect(find.text('This file is not valid XML.'), findsOneWidget);
+        expect(find.text('CHOOSE ANOTHER FILE'), findsOneWidget);
+        expect(find.text('Cancel'), findsOneWidget);
+      },
+    );
+  });
 }

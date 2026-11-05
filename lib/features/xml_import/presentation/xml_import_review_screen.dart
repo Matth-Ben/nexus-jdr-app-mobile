@@ -10,6 +10,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/sheet_header_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../character_creation/domain/ability_score_definitions.dart';
 import '../../character_creation/domain/character_creation_failure.dart';
 import '../../character_creation/domain/class_option.dart';
@@ -22,6 +23,7 @@ import '../domain/aidedd_reference_tables.dart';
 import '../domain/xml_character_import_resolved.dart';
 import '../domain/xml_field_resolution.dart';
 import '../domain/xml_import_alert_summary.dart';
+import '../domain/xml_import_parse_error_code.dart';
 import '../domain/xml_import_save_data_resolver.dart';
 import '../domain/xml_race_resolver.dart';
 import 'providers/xml_import_providers.dart';
@@ -100,6 +102,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dataAsync = ref.watch(_provider);
 
     return Scaffold(
@@ -109,18 +112,22 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
             data: (data) => Column(
               children: [
                 _Header(
-                  title: 'VÉRIFICATION IMPORT',
-                  subtitle: '${widget.fileName} importé depuis aidedd.org',
+                  title: l10n.xmlImportReviewScreenHeaderTitle,
+                  subtitle: l10n.xmlImportReviewScreenHeaderSubtitle(
+                    widget.fileName,
+                  ),
                   onBack: _goBack,
                 ),
-                Expanded(child: _buildContent(context, data)),
+                Expanded(child: _buildContent(context, l10n, data)),
               ],
             ),
             loading: () => Column(
               children: [
                 _Header(
-                  title: 'VÉRIFICATION IMPORT',
-                  subtitle: 'Analyse de ${widget.fileName} en cours...',
+                  title: l10n.xmlImportReviewScreenHeaderTitle,
+                  subtitle: l10n.xmlImportReviewScreenLoadingSubtitle(
+                    widget.fileName,
+                  ),
                   onBack: _goBack,
                 ),
                 const Expanded(
@@ -132,23 +139,36 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
                 ),
               ],
             ),
-            error: (error, stackTrace) => _buildError(context, error),
+            error: (error, stackTrace) => _buildError(l10n, error),
           ),
-          if (_isSaving) const _SavingOverlay(),
+          if (_isSaving)
+            _SavingOverlay(
+              message: l10n.xmlImportReviewScreenSavingOverlayMessage,
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildError(BuildContext context, Object error) {
+  Widget _buildError(AppLocalizations l10n, Object error) {
     if (error is XmlImportInvalidFileFailure) {
       return Column(
         children: [
-          _Header(title: 'IMPORT XML', subtitle: null, onBack: _goBack),
+          _Header(
+            title: l10n.xmlImportReviewScreenInvalidFileHeaderTitle,
+            subtitle: null,
+            onBack: _goBack,
+          ),
           Expanded(
             child: _InvalidFileErrorState(
               fileName: widget.fileName,
-              message: error.message,
+              title: l10n.xmlImportReviewScreenInvalidFileTitle,
+              subtitle: l10n.xmlImportReviewScreenInvalidFileSubtitle,
+              message: _parseErrorMessage(l10n, error.code),
+              pickAnotherLabel:
+                  l10n.xmlImportReviewScreenInvalidFilePickAnotherButtonLabel,
+              cancelLabel:
+                  l10n.xmlImportReviewScreenInvalidFileCancelButtonLabel,
               onPickAnother: _goBack,
               onCancel: _goBack,
             ),
@@ -162,19 +182,24 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     // sur le patron générique déjà utilisé par le reste de l'app
     // (message + bouton "Réessayer"), signalé ici plutôt qu'improvisé
     // silencieusement.
+    //
+    // `error.message` d'une `CharacterCreationFailure` reste un texte
+    // français en dur (même mécanique transitoire que `CharacterFailure`/
+    // `GroupFailure`, voir D148/D161 de `docs/dette-technique.md`) : hors
+    // périmètre de ce lot, qui ne migre que le texte propre à cet écran.
     return Column(
       children: [
         _Header(
-          title: 'VÉRIFICATION IMPORT',
-          subtitle: '${widget.fileName} importé depuis aidedd.org',
+          title: l10n.xmlImportReviewScreenHeaderTitle,
+          subtitle: l10n.xmlImportReviewScreenHeaderSubtitle(widget.fileName),
           onBack: _goBack,
         ),
         Expanded(
           child: _NetworkErrorState(
             message: error is CharacterCreationFailure
                 ? error.message
-                : 'Impossible de charger les données de référence. '
-                      'Réessayez.',
+                : l10n.xmlImportReviewScreenNetworkErrorMessage,
+            retryLabel: l10n.xmlImportReviewScreenRetryButtonLabel,
             onRetry: () => ref.invalidate(_provider),
           ),
         ),
@@ -182,7 +207,31 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     );
   }
 
-  Widget _buildContent(BuildContext context, XmlImportReviewData data) {
+  /// Résout [code] (`domain/xml_import_parse_error_code.dart`, jamais un
+  /// texte déjà construit) en message affichable — seule résolution de ce
+  /// type dans tout le dépôt, voir la documentation de classe de
+  /// [XmlImportInvalidFileFailure].
+  static String _parseErrorMessage(
+    AppLocalizations l10n,
+    XmlImportParseErrorCode code,
+  ) {
+    return switch (code) {
+      XmlImportParseErrorCode.invalidXml =>
+        l10n.xmlImportReviewScreenParseErrorInvalidXml,
+      XmlImportParseErrorCode.missingBuilderRoot =>
+        l10n.xmlImportReviewScreenParseErrorMissingBuilderRoot,
+      XmlImportParseErrorCode.missingCharacterElement =>
+        l10n.xmlImportReviewScreenParseErrorMissingCharacterElement,
+      XmlImportParseErrorCode.missingRequiredFields =>
+        l10n.xmlImportReviewScreenParseErrorMissingRequiredFields,
+    };
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    AppLocalizations l10n,
+    XmlImportReviewData data,
+  ) {
     final unresolvedCount = XmlImportAlertSummary.countUnresolved(
       data.resolved,
     );
@@ -195,7 +244,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
               horizontal: AppSpacing.lg,
               vertical: AppSpacing.md,
             ),
-            children: _buildRows(context, data),
+            children: _buildRows(context, l10n, data),
           ),
         ),
         Padding(
@@ -211,7 +260,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(
-                    'Tous les champs ont été reconnus automatiquement.',
+                    l10n.xmlImportReviewScreenAllFieldsResolvedMessage,
                     textAlign: TextAlign.center,
                     style: AppTypography.body(
                       fontSize: 13,
@@ -224,11 +273,9 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(
-                    unresolvedCount == 1
-                        ? '1 champ nécessite une correction manuelle avant '
-                              'validation'
-                        : '$unresolvedCount champs nécessitent une '
-                              'correction manuelle avant validation',
+                    l10n.xmlImportReviewScreenUnresolvedFieldsCountMessage(
+                      unresolvedCount,
+                    ),
                     textAlign: TextAlign.center,
                     style: AppTypography.body(
                       fontSize: 13,
@@ -242,11 +289,12 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
                 const SizedBox(height: AppSpacing.sm),
               ],
               PrimaryButton(
-                label: 'Valider le personnage',
+                label: l10n.xmlImportReviewScreenValidateButtonLabel,
                 isLoading: _isSaving,
                 onPressed: _isSaving
                     ? null
-                    : () => _handleValidate(context, data, unresolvedCount),
+                    : () =>
+                          _handleValidate(context, l10n, data, unresolvedCount),
               ),
             ],
           ),
@@ -269,6 +317,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
   /// corriger, la sauvegarde n'est même pas tentée.
   Future<void> _handleValidate(
     BuildContext context,
+    AppLocalizations l10n,
     XmlImportReviewData data,
     int unresolvedCount,
   ) async {
@@ -282,24 +331,25 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
         !racialChoiceSpec.isComplete(data.resolved.racialBonusChoices);
     if (raceBlocked || classBlocked || racialChoicesBlocked) {
       final missingFields = [
-        if (raceBlocked) 'la race',
-        if (classBlocked) 'la classe',
-        if (racialChoicesBlocked) 'les bonus raciaux au choix',
-      ].join(' et ');
+        if (raceBlocked) l10n.xmlImportReviewScreenMissingRaceField,
+        if (classBlocked) l10n.xmlImportReviewScreenMissingClassField,
+        if (racialChoicesBlocked)
+          l10n.xmlImportReviewScreenMissingRacialChoicesField,
+      ].join(' ${l10n.xmlImportReviewScreenFieldConjunction} ');
       setState(() {
-        _saveErrorMessage =
-            'Corrigez d\'abord $missingFields avant d\'enregistrer ce '
-            'personnage.';
+        _saveErrorMessage = l10n.xmlImportReviewScreenMissingFieldsErrorMessage(
+          missingFields,
+        );
       });
       return;
     }
 
     if (unresolvedCount > 0) {
-      final shouldContinue = await _showUnresolvedFieldsDialog(context);
+      final shouldContinue = await _showUnresolvedFieldsDialog(context, l10n);
       if (shouldContinue != true) return;
       if (!context.mounted) return;
     }
-    await _save(data);
+    await _save(l10n, data);
   }
 
   /// Bonus raciaux à répartir pour la race/sous-race reconnues, `null` si
@@ -323,7 +373,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     );
   }
 
-  Future<bool?> _showUnresolvedFieldsDialog(BuildContext context) {
+  Future<bool?> _showUnresolvedFieldsDialog(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) {
     return showDialog<bool>(
       context: context,
       builder: (context) => Dialog(
@@ -342,15 +395,12 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'CHAMPS NON RÉSOLUS',
+                l10n.xmlImportReviewScreenUnresolvedDialogTitle,
                 style: AppTypography.display(fontSize: 12),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'Certains éléments importés n\'ont pas pu être reconnus '
-                'automatiquement. Ils seront enregistrés comme non '
-                'catalogués et resteront corrigibles plus tard depuis la '
-                'fiche du personnage.',
+                l10n.xmlImportReviewScreenUnresolvedDialogMessage,
                 style: AppTypography.body(
                   fontSize: 13,
                   color: AppColors.textSecondary,
@@ -361,7 +411,8 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
                 children: [
                   Expanded(
                     child: SecondaryButton(
-                      label: 'Retourner corriger',
+                      label: l10n
+                          .xmlImportReviewScreenUnresolvedDialogBackButtonLabel,
                       surface: SecondaryButtonSurface.parchment,
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
@@ -369,7 +420,8 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: PrimaryButton(
-                      label: 'Continuer',
+                      label: l10n
+                          .xmlImportReviewScreenUnresolvedDialogContinueButtonLabel,
                       onPressed: () => Navigator.of(context).pop(true),
                     ),
                   ),
@@ -382,7 +434,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     );
   }
 
-  Future<void> _save(XmlImportReviewData data) async {
+  Future<void> _save(AppLocalizations l10n, XmlImportReviewData data) async {
     setState(() {
       _isSaving = true;
       _saveErrorMessage = null;
@@ -396,7 +448,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
         alignmentCatalog: data.alignmentCatalog,
       );
       final name = data.resolved.name.trim().isEmpty
-          ? 'Personnage importé'
+          ? l10n.xmlImportReviewScreenDefaultCharacterName
           : data.resolved.name.trim();
 
       await ref
@@ -416,7 +468,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _saveErrorMessage = 'Une erreur est survenue. Réessayez.';
+        _saveErrorMessage = l10n.xmlImportReviewScreenGenericSaveErrorMessage;
       });
     }
   }
@@ -440,7 +492,11 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
   /// depuis que la table `subclasses` est peuplée : affiché et corrigible
   /// comme Race/Classe/Historique, voir le bloc "Sous-classe" ci-dessous et
   /// `SubclassCatalog`/[XmlImportReviewController.correctSubclass].
-  List<Widget> _buildRows(BuildContext context, XmlImportReviewData data) {
+  List<Widget> _buildRows(
+    BuildContext context,
+    AppLocalizations l10n,
+    XmlImportReviewData data,
+  ) {
     final resolved = data.resolved;
     final widgets = <Widget>[];
 
@@ -475,13 +531,19 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     }
 
     // Nom.
-    addSummary('Nom', resolved.name.isEmpty ? 'Sans nom' : resolved.name);
+    addSummary(
+      l10n.xmlImportReviewScreenNameFieldTitle,
+      resolved.name.isEmpty
+          ? l10n.xmlImportReviewScreenNoNameValue
+          : resolved.name,
+    );
 
     // Race (et sous-race identifiée dans `<race>`, voir `XmlRaceResolver`).
     _addSingleCatalogField(
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Race',
+      title: l10n.xmlImportReviewScreenRaceFieldTitle,
       resolution: resolved.race,
       valueOf: (race) => XmlRaceResolver.labelOf(race, resolved.subrace),
       candidates: [
@@ -497,6 +559,8 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
           _controller().keepRaceAsPlaceholder(rawValue),
       isIncompleteOf: (race) => race.isIncomplete,
       placeholderFieldKey: 'race',
+      incompleteDataBadgeLabel:
+          l10n.xmlImportReviewScreenIncompleteDataBadgeLabel,
     );
 
     // Bonus raciaux au choix : un export aidedd.org ne dit pas comment ils
@@ -515,9 +579,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
     // Classe.
     _addSingleCatalogField(
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Classe',
+      title: l10n.xmlImportReviewScreenClassFieldTitle,
       resolution: resolved.characterClass,
       valueOf: (classOption) => classOption.name,
       candidates: [
@@ -544,9 +609,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
         _ => null,
       };
       _addSingleCatalogField(
+        l10n: l10n,
         addSummary: addSummary,
         addAlert: addAlert,
-        title: 'Sous-classe',
+        title: l10n.xmlImportReviewScreenSubclassFieldTitle,
         resolution: subclassResolution,
         valueOf: (subclass) => subclass.name,
         candidates: [
@@ -558,13 +624,14 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     }
 
     // Niveau.
-    addSummary('Niveau', '${resolved.level}');
+    addSummary(l10n.xmlImportReviewScreenLevelFieldTitle, '${resolved.level}');
 
     // Historique.
     _addSingleCatalogField(
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Historique',
+      title: l10n.xmlImportReviewScreenBackgroundFieldTitle,
       resolution: resolved.background,
       valueOf: (background) => background.name,
       candidates: [
@@ -576,12 +643,14 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
           _controller().keepBackgroundAsPlaceholder(rawValue),
       isIncompleteOf: (background) => background.isIncomplete,
       placeholderFieldKey: 'background',
+      incompleteDataBadgeLabel:
+          l10n.xmlImportReviewScreenIncompleteDataBadgeLabel,
     );
 
     // Caractéristiques.
     addSummary(
-      'Caractéristiques',
-      _formatAbilityScores(resolved.abilityScores),
+      l10n.xmlImportReviewScreenAbilityScoresFieldTitle,
+      _formatAbilityScores(resolved.abilityScores, l10n),
     );
 
     // Points de vie.
@@ -589,16 +658,18 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       resolved.abilityScores['con'] ?? 10,
     );
     addSummary(
-      'Points de vie',
-      '${_XmlImportHitPointsPreview.compute(resolved, constitutionModifier)} PV',
+      l10n.xmlImportReviewScreenHitPointsFieldTitle,
+      l10n.xmlImportReviewScreenHitPointsValue(
+        _XmlImportHitPointsPreview.compute(resolved, constitutionModifier),
+      ),
     );
 
     // Compétences (4 groupes consolidés).
     _addGroupedField(
-      context: context,
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Compétences',
+      title: l10n.xmlImportReviewScreenSkillsFieldTitle,
       groups: resolved.skillProficiencies,
       candidates: AideddReferenceTables.skills.values.toList(),
       confirmFor: (groupId, index) =>
@@ -611,10 +682,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
     // Outils (maîtrises).
     _addToolOrLanguageField(
-      context: context,
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Outils',
+      title: l10n.xmlImportReviewScreenToolsFieldTitle,
       groups: resolved.toolProficiencies,
       nameOf: (tool) => tool.name,
       candidates: [for (final tool in data.toolCatalog.tools) tool.name],
@@ -628,10 +699,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
     // Langues.
     _addToolOrLanguageField(
-      context: context,
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Langues',
+      title: l10n.xmlImportReviewScreenLanguagesFieldTitle,
       groups: resolved.languages,
       nameOf: (language) => language.name,
       candidates: [
@@ -647,10 +718,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
     // Sorts innés.
     _addSpellField(
-      context: context,
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Sorts innés',
+      title: l10n.xmlImportReviewScreenInnateSpellsFieldTitle,
       entries: resolved.innateSpells,
       candidates: [for (final spell in data.spellCatalog.spells) spell.name],
       onCorrect: (index) =>
@@ -662,10 +733,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
     // Sorts connus.
     _addSpellField(
-      context: context,
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Sorts connus',
+      title: l10n.xmlImportReviewScreenKnownSpellsFieldTitle,
       entries: resolved.knownSpells,
       candidates: [for (final spell in data.spellCatalog.spells) spell.name],
       onCorrect: (index) =>
@@ -676,13 +747,17 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     );
 
     // Argent.
-    addSummary('Argent', _formatCurrency(resolved));
+    addSummary(
+      l10n.xmlImportReviewScreenCurrencyFieldTitle,
+      _formatCurrency(resolved, l10n),
+    );
 
     // Armure.
     _addCodedField(
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Armure',
+      title: l10n.xmlImportReviewScreenArmorFieldTitle,
       resolution: resolved.armor,
       candidates: AideddReferenceTables.armor.values.toList(),
       fieldId: 'armor',
@@ -690,9 +765,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
     // Bouclier.
     _addCodedField(
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Bouclier',
+      title: l10n.xmlImportReviewScreenShieldFieldTitle,
       resolution: resolved.shield,
       candidates: AideddReferenceTables.shield.values.toList(),
       fieldId: 'shield',
@@ -700,10 +776,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
     // Armes.
     _addQuantifiedField(
-      context: context,
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Armes',
+      title: l10n.xmlImportReviewScreenWeaponsFieldTitle,
       entries: resolved.weapons,
       candidates: AideddReferenceTables.weapons.values
           .where((label) => label != AideddReferenceTables.weapons[0])
@@ -714,10 +790,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
     // Outils physiques.
     _addQuantifiedField(
-      context: context,
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Outils physiques',
+      title: l10n.xmlImportReviewScreenToolEquipmentFieldTitle,
       entries: resolved.toolEquipment,
       candidates: AideddReferenceTables.toolsEquipment.values
           .where((label) => label != AideddReferenceTables.toolsEquipment[0])
@@ -728,10 +804,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
     // Objets.
     _addQuantifiedField(
-      context: context,
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Objets',
+      title: l10n.xmlImportReviewScreenItemsFieldTitle,
       entries: resolved.items,
       candidates: AideddReferenceTables.items.values
           .where((label) => label != AideddReferenceTables.items[0])
@@ -749,9 +825,9 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       ];
       if (texts.isNotEmpty) {
         addSummary(
-          'Objets personnalisés',
+          l10n.xmlImportReviewScreenCustomItemsFieldTitle,
           texts.join(', '),
-          badgeText: 'Personnalisé',
+          badgeText: l10n.xmlImportReviewScreenCustomItemsBadgeLabel,
         );
       }
     }
@@ -763,6 +839,12 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     // libellé non reconnu reste affiché tel quel (jeton brut), jamais perdu
     // silencieusement, mais sans jamais compter dans
     // `XmlImportAlertSummary.countUnresolved`.
+    //
+    // Le libellé "Non reconnu (traçabilité uniquement)" reste un texte
+    // français en dur — ce champ n'est consommé que par 2 fixtures de test
+    // synthétiques (jamais par une capture d'écran réelle vérifiée
+    // `direction-artistique`), pas migré dans ce lot, voir D163 de
+    // `docs/dette-technique.md`.
     final pack = resolved.pack;
     if (pack != null) {
       final packLabel = switch (pack) {
@@ -772,15 +854,16 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
         XmlFieldResolutionCustom<String>() => '',
       };
       if (packLabel.isNotEmpty) {
-        addSummary('Paquetage de départ', packLabel);
+        addSummary(l10n.xmlImportReviewScreenStartingPackFieldTitle, packLabel);
       }
     }
 
     // Alignement.
     _addCodedField(
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Alignement',
+      title: l10n.xmlImportReviewScreenAlignmentFieldTitle,
       resolution: resolved.alignment,
       candidates: AideddReferenceTables.alignments.values.toList(),
       fieldId: 'alignment',
@@ -788,9 +871,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
     // Sexe.
     _addCodedField(
+      l10n: l10n,
       addSummary: addSummary,
       addAlert: addAlert,
-      title: 'Sexe',
+      title: l10n.xmlImportReviewScreenSexFieldTitle,
       resolution: resolved.sexe,
       candidates: AideddReferenceTables.sexes.values.toList(),
       fieldId: 'sexe',
@@ -805,7 +889,12 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
         resolved.skin != null ||
         resolved.hair != null ||
         resolved.appearanceText.isNotEmpty;
-    addSummary('Apparence', hasAppearance ? 'Renseignée' : 'Non renseignée');
+    addSummary(
+      l10n.xmlImportReviewScreenAppearanceFieldTitle,
+      hasAppearance
+          ? l10n.xmlImportReviewScreenFilledValueLabel
+          : l10n.xmlImportReviewScreenNotFilledValueLabel,
+    );
 
     // Histoire.
     final hasHistory =
@@ -817,11 +906,19 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
         resolved.alliesText.isNotEmpty ||
         resolved.featuresText.isNotEmpty ||
         resolved.treasureText.isNotEmpty;
-    addSummary('Histoire', hasHistory ? 'Renseignée' : 'Non renseignée');
+    addSummary(
+      l10n.xmlImportReviewScreenHistoryFieldTitle,
+      hasHistory
+          ? l10n.xmlImportReviewScreenFilledValueLabel
+          : l10n.xmlImportReviewScreenNotFilledValueLabel,
+    );
 
     // Expérience.
     if (resolved.xp != null) {
-      addSummary('Expérience', '${resolved.xp} XP');
+      addSummary(
+        l10n.xmlImportReviewScreenExperienceFieldTitle,
+        l10n.xmlImportReviewScreenExperienceValue(resolved.xp!),
+      );
     }
 
     // Carte informative neutre listant les champs du fichier source pour
@@ -833,7 +930,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     // Seuls les champs réellement présents dans CE fichier sont listés (pas
     // une liste statique des 5 champs possibles) — voir [_buildUnhandledInfo
     // Message].
-    final infoMessage = _buildUnhandledInfoMessage(resolved);
+    final infoMessage = _buildUnhandledInfoMessage(resolved, l10n);
     if (infoMessage != null) {
       addSpacer();
       widgets.add(_InfoCard(message: infoMessage));
@@ -855,15 +952,19 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
   ///
   /// `subclass` n'y figure plus (voir la doc de [_buildRows]) : affiché et
   /// corrigible comme un champ normal désormais, plus "non importé".
-  String? _buildUnhandledInfoMessage(XmlCharacterImportResolved resolved) {
+  String? _buildUnhandledInfoMessage(
+    XmlCharacterImportResolved resolved,
+    AppLocalizations l10n,
+  ) {
     final unhandledFields = [
       if (resolved.styleCombat1 != null || resolved.styleCombat2 != null)
-        'Style de combat',
-      if (resolved.knownInvocations.isNotEmpty) 'Invocation connue',
+        l10n.xmlImportReviewScreenUnhandledStyleCombatFieldLabel,
+      if (resolved.knownInvocations.isNotEmpty)
+        l10n.xmlImportReviewScreenUnhandledKnownInvocationFieldLabel,
       if (resolved.favoredEnemy0 != null ||
           resolved.favoredEnemy6 != null ||
           resolved.favoredEnemy14 != null)
-        'Ennemi juré',
+        l10n.xmlImportReviewScreenUnhandledFavoredEnemyFieldLabel,
     ];
     final hasAsiData = resolved.levels.any(
       (level) => level.abilityIncreases.any((increase) => increase != -1),
@@ -873,11 +974,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
     final sentences = <String>[
       if (unhandledFields.isNotEmpty)
-        'Non importé automatiquement dans cette version : '
-            '${unhandledFields.join(', ')}.',
-      if (hasAsiData)
-        'Augmentations de caractéristiques : présentes dans le fichier '
-            'mais non interprétées automatiquement.',
+        l10n.xmlImportReviewScreenUnhandledFieldsMessage(
+          unhandledFields.join(', '),
+        ),
+      if (hasAsiData) l10n.xmlImportReviewScreenAbilityIncreasesPresentMessage,
     ];
     return sentences.join('\n\n');
   }
@@ -911,9 +1011,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       await action();
     } catch (_) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Impossible d'enregistrer cet élément. Réessayez."),
+        SnackBar(
+          content: Text(l10n.xmlImportReviewScreenPlaceholderSaveErrorMessage),
         ),
       );
     } finally {
@@ -926,6 +1027,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
   }
 
   void _addSingleCatalogField<T>({
+    required AppLocalizations l10n,
     required void Function(String title, String value, {String? badgeText})
     addSummary,
     required void Function(
@@ -962,6 +1064,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     /// est fourni (Race : `'race'`, Historique : `'background'`), `null`
     /// sinon (Classe).
     String? placeholderFieldKey,
+
+    /// Badge affiché via [isIncompleteOf] — requis dès que [isIncompleteOf]
+    /// est fourni (Race/Historique).
+    String? incompleteDataBadgeLabel,
   }) {
     switch (resolution) {
       case XmlFieldResolutionRecognized<T>(:final value):
@@ -969,7 +1075,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
           title,
           valueOf(value),
           badgeText: (isIncompleteOf?.call(value) ?? false)
-              ? 'Donnée incomplète'
+              ? incompleteDataBadgeLabel
               : null,
         );
       case XmlFieldResolutionUnrecognized<T>(:final rawValue):
@@ -978,13 +1084,15 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
             _pendingPlaceholderFields.contains(placeholderFieldKey);
         addAlert(
           title,
-          '$title non reconnu(e) : "$rawValue"',
+          l10n.xmlImportReviewScreenFieldUnrecognizedMessage(title, rawValue),
           () => _openCorrectionFlow(
             cardTitle: title,
             entries: [
               _CorrectableEntry(
                 rawValue: rawValue,
-                sheetTitle: 'CORRIGER : ${title.toUpperCase()}',
+                sheetTitle: l10n.xmlImportReviewScreenCorrectionSheetTitle(
+                  title.toUpperCase(),
+                ),
                 candidates: candidates,
                 onConfirm: (label) {
                   if (label != null) {
@@ -1009,6 +1117,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
   }
 
   void _addCodedField({
+    required AppLocalizations l10n,
     required void Function(String title, String value, {String? badgeText})
     addSummary,
     required void Function(String title, String message, VoidCallback onTap)
@@ -1024,13 +1133,15 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       case XmlFieldResolutionUnrecognized<String>(:final rawValue):
         addAlert(
           title,
-          '$title non reconnu(e) : "$rawValue"',
+          l10n.xmlImportReviewScreenFieldUnrecognizedMessage(title, rawValue),
           () => _openCorrectionFlow(
             cardTitle: title,
             entries: [
               _CorrectableEntry(
                 rawValue: rawValue,
-                sheetTitle: 'CORRIGER : ${title.toUpperCase()}',
+                sheetTitle: l10n.xmlImportReviewScreenCorrectionSheetTitle(
+                  title.toUpperCase(),
+                ),
                 candidates: candidates,
                 onConfirm: (label) {
                   if (label != null) {
@@ -1047,7 +1158,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
   }
 
   void _addGroupedField({
-    required BuildContext context,
+    required AppLocalizations l10n,
     required void Function(String title, String value, {String? badgeText})
     addSummary,
     required void Function(String title, String message, VoidCallback onTap)
@@ -1071,7 +1182,9 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
             entries.add(
               _CorrectableEntry(
                 rawValue: rawValue,
-                sheetTitle: 'CORRIGER : ${title.toUpperCase()}',
+                sheetTitle: l10n.xmlImportReviewScreenCorrectionSheetTitle(
+                  title.toUpperCase(),
+                ),
                 candidates: candidates,
                 onConfirm: (label) {
                   if (label != null) confirmFor(groupId, index)(label);
@@ -1090,17 +1203,14 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     if (entries.isNotEmpty) {
       addAlert(
         title,
-        entries.length == 1
-            ? '1 élément non catalogué — à corriger manuellement.'
-            : '${entries.length} éléments non catalogués — à corriger '
-                  'manuellement.',
+        l10n.xmlImportReviewScreenUncatalogedItemsCountMessage(entries.length),
         () => _openCorrectionFlow(cardTitle: title, entries: entries),
       );
     }
   }
 
   void _addToolOrLanguageField<T>({
-    required BuildContext context,
+    required AppLocalizations l10n,
     required void Function(String title, String value, {String? badgeText})
     addSummary,
     required void Function(String title, String message, VoidCallback onTap)
@@ -1125,7 +1235,9 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
             entries.add(
               _CorrectableEntry(
                 rawValue: rawValue,
-                sheetTitle: 'CORRIGER : ${title.toUpperCase()}',
+                sheetTitle: l10n.xmlImportReviewScreenCorrectionSheetTitle(
+                  title.toUpperCase(),
+                ),
                 candidates: candidates,
                 onConfirm: (label) {
                   if (label != null) confirmFor(groupId, index)(label);
@@ -1145,17 +1257,14 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     if (entries.isNotEmpty) {
       addAlert(
         title,
-        entries.length == 1
-            ? '1 élément non catalogué — à corriger manuellement.'
-            : '${entries.length} éléments non catalogués — à corriger '
-                  'manuellement.',
+        l10n.xmlImportReviewScreenUncatalogedItemsCountMessage(entries.length),
         () => _openCorrectionFlow(cardTitle: title, entries: entries),
       );
     }
   }
 
   void _addSpellField({
-    required BuildContext context,
+    required AppLocalizations l10n,
     required void Function(String title, String value, {String? badgeText})
     addSummary,
     required void Function(
@@ -1207,7 +1316,9 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
           alertEntries.add(
             _CorrectableEntry(
               rawValue: rawValue,
-              sheetTitle: 'CORRIGER : ${title.toUpperCase()}',
+              sheetTitle: l10n.xmlImportReviewScreenCorrectionSheetTitle(
+                title.toUpperCase(),
+              ),
               candidates: candidates,
               onConfirm: (label) {
                 if (label != null) {
@@ -1231,7 +1342,9 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       addSummary(
         title,
         recognizedLabels.join(', '),
-        badgeText: hasIncompleteEntry ? 'Donnée incomplète' : null,
+        badgeText: hasIncompleteEntry
+            ? l10n.xmlImportReviewScreenIncompleteDataBadgeLabel
+            : null,
       );
     }
     if (alertEntries.isNotEmpty) {
@@ -1240,10 +1353,9 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
           _pendingPlaceholderFields.contains(placeholderFieldKey);
       addAlert(
         title,
-        alertEntries.length == 1
-            ? '1 sort non catalogué — à corriger manuellement.'
-            : '${alertEntries.length} sorts non catalogués — à corriger '
-                  'manuellement.',
+        l10n.xmlImportReviewScreenUncatalogedSpellsCountMessage(
+          alertEntries.length,
+        ),
         () => _openCorrectionFlow(cardTitle: title, entries: alertEntries),
         isPending: isPending,
       );
@@ -1251,7 +1363,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
   }
 
   void _addQuantifiedField({
-    required BuildContext context,
+    required AppLocalizations l10n,
     required void Function(String title, String value, {String? badgeText})
     addSummary,
     required void Function(String title, String message, VoidCallback onTap)
@@ -1273,7 +1385,9 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
           alertEntries.add(
             _CorrectableEntry(
               rawValue: rawValue,
-              sheetTitle: 'CORRIGER : ${title.toUpperCase()}',
+              sheetTitle: l10n.xmlImportReviewScreenCorrectionSheetTitle(
+                title.toUpperCase(),
+              ),
               candidates: candidates,
               onConfirm: (label) {
                 if (label != null) onCorrect(index)(label);
@@ -1291,10 +1405,9 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     if (alertEntries.isNotEmpty) {
       addAlert(
         title,
-        alertEntries.length == 1
-            ? '1 élément non catalogué — à corriger manuellement.'
-            : '${alertEntries.length} éléments non catalogués — à corriger '
-                  'manuellement.',
+        l10n.xmlImportReviewScreenUncatalogedItemsCountMessage(
+          alertEntries.length,
+        ),
         () => _openCorrectionFlow(cardTitle: title, entries: alertEntries),
       );
     }
@@ -1362,33 +1475,44 @@ abstract final class _XmlImportHitPointsPreview {
   }
 }
 
-const Map<String, String> _abilityAbbreviations = {
-  'str': 'For',
-  'dex': 'Dex',
-  'con': 'Con',
-  'int': 'Int',
-  'wis': 'Sag',
-  'cha': 'Cha',
+/// Clés `.arb` partagées `characterAbilityAbbreviationXxx` (chantier
+/// "traduction de l'app" Phase B) — code Dart dupliqué localement plutôt que
+/// promu en fonction partagée, même rationale de duplication systématique que
+/// `summary_step_screen.dart::_abilityAbbreviations` (voir son commentaire de
+/// classe).
+Map<String, String> _abilityAbbreviations(AppLocalizations l10n) => {
+  'str': l10n.characterAbilityAbbreviationStr,
+  'dex': l10n.characterAbilityAbbreviationDex,
+  'con': l10n.characterAbilityAbbreviationCon,
+  'int': l10n.characterAbilityAbbreviationInt,
+  'wis': l10n.characterAbilityAbbreviationWis,
+  'cha': l10n.characterAbilityAbbreviationCha,
 };
 
-String _formatAbilityScores(Map<String, int> scores) {
+String _formatAbilityScores(Map<String, int> scores, AppLocalizations l10n) {
+  final abbreviations = _abilityAbbreviations(l10n);
   final parts = <String>[
     for (final definition in abilityScoreDefinitions)
       if (scores.containsKey(definition.key))
-        '${_abilityAbbreviations[definition.key]} ${scores[definition.key]}',
+        '${abbreviations[definition.key]} ${scores[definition.key]}',
   ];
   return parts.join(' · ');
 }
 
-String _formatCurrency(XmlCharacterImportResolved resolved) {
+String _formatCurrency(
+  XmlCharacterImportResolved resolved,
+  AppLocalizations l10n,
+) {
   final parts = <String>[
-    if (resolved.gp > 0) '${resolved.gp} po',
-    if (resolved.pp > 0) '${resolved.pp} pp',
-    if (resolved.ep > 0) '${resolved.ep} pe',
-    if (resolved.sp > 0) '${resolved.sp} pa',
-    if (resolved.cp > 0) '${resolved.cp} pc',
+    if (resolved.gp > 0) l10n.xmlImportReviewScreenGoldAmount(resolved.gp),
+    if (resolved.pp > 0) l10n.xmlImportReviewScreenPlatinumAmount(resolved.pp),
+    if (resolved.ep > 0) l10n.xmlImportReviewScreenElectrumAmount(resolved.ep),
+    if (resolved.sp > 0) l10n.xmlImportReviewScreenSilverAmount(resolved.sp),
+    if (resolved.cp > 0) l10n.xmlImportReviewScreenCopperAmount(resolved.cp),
   ];
-  return parts.isEmpty ? 'Aucune' : parts.join(' · ');
+  return parts.isEmpty
+      ? l10n.xmlImportReviewScreenNoCurrencyValue
+      : parts.join(' · ');
 }
 
 /// Une entrée corrigible individuelle (un champ singulier, ou un sous-élément
@@ -1725,6 +1849,7 @@ class _GroupCorrectionSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: Container(
@@ -1732,7 +1857,11 @@ class _GroupCorrectionSheet extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SheetHeaderBar(title: 'CORRIGER : ${title.toUpperCase()}'),
+            SheetHeaderBar(
+              title: l10n.xmlImportReviewScreenCorrectionSheetTitle(
+                title.toUpperCase(),
+              ),
+            ),
             Flexible(
               child: ListView.separated(
                 shrinkWrap: true,
@@ -1769,7 +1898,7 @@ class _GroupCorrectionSheet extends StatelessWidget {
                         TextButton(
                           onPressed: () => onCorrectEntry(entry),
                           child: Text(
-                            'Corriger',
+                            l10n.xmlImportReviewScreenCorrectEntryButtonLabel,
                             style: AppTypography.body(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -1791,7 +1920,7 @@ class _GroupCorrectionSheet extends StatelessWidget {
                 AppSpacing.lg,
               ),
               child: SecondaryButton(
-                label: 'Tout garder comme éléments personnalisés',
+                label: l10n.xmlImportReviewScreenKeepAllAsCustomButtonLabel,
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -1868,6 +1997,7 @@ class _CorrectionBottomSheetState extends State<_CorrectionBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final filtered = _filtered;
     final canConfirm = _selectedCandidate != null || _keepAsIs;
 
@@ -1893,8 +2023,8 @@ class _CorrectionBottomSheetState extends State<_CorrectionBottomSheet> {
                       TextField(
                         controller: _searchController,
                         onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                          hintText: 'Rechercher...',
+                        decoration: InputDecoration(
+                          hintText: l10n.xmlImportReviewScreenSearchFieldHint,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
@@ -1904,7 +2034,7 @@ class _CorrectionBottomSheetState extends State<_CorrectionBottomSheet> {
                             vertical: AppSpacing.md,
                           ),
                           child: Text(
-                            'Aucune correspondance trouvée.',
+                            l10n.xmlImportReviewScreenNoMatchMessage,
                             style: AppTypography.body(
                               fontSize: 13,
                               color: AppColors.textSecondary,
@@ -1934,7 +2064,8 @@ class _CorrectionBottomSheetState extends State<_CorrectionBottomSheet> {
                         children: [
                           Expanded(
                             child: SecondaryButton(
-                              label: 'Garder comme élément personnalisé',
+                              label: l10n
+                                  .xmlImportReviewScreenKeepAsCustomButtonLabel,
                               onPressed: _selectKeepAsIs,
                             ),
                           ),
@@ -1949,7 +2080,7 @@ class _CorrectionBottomSheetState extends State<_CorrectionBottomSheet> {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       PrimaryButton(
-                        label: 'Confirmer',
+                        label: l10n.xmlImportReviewScreenConfirmButtonLabel,
                         onPressed: canConfirm ? _confirm : null,
                       ),
                     ],
@@ -1967,7 +2098,9 @@ class _CorrectionBottomSheetState extends State<_CorrectionBottomSheet> {
 /// Overlay de sauvegarde en cours — scrim `wood.dark` 60% par-dessus l'écran,
 /// carte `parchment.card` centrée avec spinner foncé — voir la spec visuelle.
 class _SavingOverlay extends StatelessWidget {
-  const _SavingOverlay();
+  const _SavingOverlay({required this.message});
+
+  final String message;
 
   @override
   Widget build(BuildContext context) {
@@ -1990,7 +2123,7 @@ class _SavingOverlay extends StatelessWidget {
               const CircularProgressIndicator(color: AppColors.woodMedium),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'Enregistrement du personnage...',
+                message,
                 style: AppTypography.body(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -2026,13 +2159,21 @@ class _SavingOverlay extends StatelessWidget {
 class _InvalidFileErrorState extends StatelessWidget {
   const _InvalidFileErrorState({
     required this.fileName,
+    required this.title,
+    required this.subtitle,
     required this.message,
+    required this.pickAnotherLabel,
+    required this.cancelLabel,
     required this.onPickAnother,
     required this.onCancel,
   });
 
   final String fileName;
+  final String title;
+  final String subtitle;
   final String message;
+  final String pickAnotherLabel;
+  final String cancelLabel;
   final VoidCallback onPickAnother;
   final VoidCallback onCancel;
 
@@ -2069,7 +2210,7 @@ class _InvalidFileErrorState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Fichier illisible',
+              title,
               textAlign: TextAlign.center,
               style: AppTypography.body(
                 fontSize: 18,
@@ -2079,7 +2220,7 @@ class _InvalidFileErrorState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Ce fichier ne semble pas être un export aidedd.org valide.',
+              subtitle,
               textAlign: TextAlign.center,
               style: AppTypography.body(
                 fontSize: 14,
@@ -2136,7 +2277,7 @@ class _InvalidFileErrorState extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: PrimaryButton(
-                label: 'Choisir un autre fichier',
+                label: pickAnotherLabel,
                 onPressed: onPickAnother,
               ),
             ),
@@ -2144,7 +2285,7 @@ class _InvalidFileErrorState extends StatelessWidget {
             TextButton(
               onPressed: onCancel,
               child: Text(
-                'Annuler',
+                cancelLabel,
                 style: AppTypography.body(
                   fontWeight: FontWeight.w700,
                   color: AppColors.textSecondary,
@@ -2161,9 +2302,14 @@ class _InvalidFileErrorState extends StatelessWidget {
 /// État d'erreur réseau (chargement des catalogues) — patron générique
 /// message + "Réessayer", déjà utilisé par le reste de l'app.
 class _NetworkErrorState extends StatelessWidget {
-  const _NetworkErrorState({required this.message, required this.onRetry});
+  const _NetworkErrorState({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
 
   final String message;
+  final String retryLabel;
   final VoidCallback onRetry;
 
   @override
@@ -2187,7 +2333,7 @@ class _NetworkErrorState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             SecondaryButton(
-              label: 'Réessayer',
+              label: retryLabel,
               surface: SecondaryButtonSurface.parchment,
               onPressed: onRetry,
             ),

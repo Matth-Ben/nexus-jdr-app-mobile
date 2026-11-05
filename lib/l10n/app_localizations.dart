@@ -8468,6 +8468,519 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Réclamer'**
   String get claimGroupTreasureItemSheetSubmitButtonLabel;
+
+  /// Titre du bandeau bois, états "Chargement"/"Vérification"/"Erreur réseau" (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'VÉRIFICATION IMPORT'**
+  String get xmlImportReviewScreenHeaderTitle;
+
+  /// Sous-titre du bandeau bois, états "Vérification"/"Erreur réseau" — `fileName` est le nom du fichier importé (dynamique).
+  ///
+  /// In fr, this message translates to:
+  /// **'{fileName} importé depuis aidedd.org'**
+  String xmlImportReviewScreenHeaderSubtitle(String fileName);
+
+  /// Sous-titre du bandeau bois pendant le chargement des catalogues.
+  ///
+  /// In fr, this message translates to:
+  /// **'Analyse de {fileName} en cours...'**
+  String xmlImportReviewScreenLoadingSubtitle(String fileName);
+
+  /// Titre du bandeau bois, état "Erreur (XML invalide)" — pas de sous-titre pour cet état, voir `_InvalidFileErrorState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'IMPORT XML'**
+  String get xmlImportReviewScreenInvalidFileHeaderTitle;
+
+  /// Message de repli de `_NetworkErrorState` quand l'erreur n'est pas une `CharacterCreationFailure` (celle-ci garde son propre `.message`, voir D161/`docs/dette-technique.md`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les données de référence. Réessayez.'**
+  String get xmlImportReviewScreenNetworkErrorMessage;
+
+  /// Texte de statut positif affiché quand aucun champ ne nécessite de correction manuelle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les champs ont été reconnus automatiquement.'**
+  String get xmlImportReviewScreenAllFieldsResolvedMessage;
+
+  /// Texte de statut négatif, nombre de champs encore non résolus.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 champ nécessite une correction manuelle avant validation} other{{count} champs nécessitent une correction manuelle avant validation}}'**
+  String xmlImportReviewScreenUnresolvedFieldsCountMessage(int count);
+
+  /// `PrimaryButton` de bas d'écran.
+  ///
+  /// In fr, this message translates to:
+  /// **'Valider le personnage'**
+  String get xmlImportReviewScreenValidateButtonLabel;
+
+  /// Segment de `xmlImportReviewScreenMissingFieldsErrorMessage` quand la race bloque la validation.
+  ///
+  /// In fr, this message translates to:
+  /// **'la race'**
+  String get xmlImportReviewScreenMissingRaceField;
+
+  /// Segment de `xmlImportReviewScreenMissingFieldsErrorMessage` quand la classe bloque la validation.
+  ///
+  /// In fr, this message translates to:
+  /// **'la classe'**
+  String get xmlImportReviewScreenMissingClassField;
+
+  /// Segment de `xmlImportReviewScreenMissingFieldsErrorMessage` quand les bonus raciaux au choix ne sont pas complets.
+  ///
+  /// In fr, this message translates to:
+  /// **'les bonus raciaux au choix'**
+  String get xmlImportReviewScreenMissingRacialChoicesField;
+
+  /// Mot de liaison entre les segments de `xmlImportReviewScreenMissingFieldsErrorMessage` (jusqu'à 3 segments, chacun joint par ce mot — pas une virgule d'Oxford, comportement inchangé par rapport à l'ancien texte en dur).
+  ///
+  /// In fr, this message translates to:
+  /// **'et'**
+  String get xmlImportReviewScreenFieldConjunction;
+
+  /// Message bloquant (réutilise `AlertBanner`) quand race/classe/bonus raciaux au choix ne sont pas résolus — `missingFields` est la jointure déjà construite des segments ci-dessus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Corrigez d\'abord {missingFields} avant d\'enregistrer ce personnage.'**
+  String xmlImportReviewScreenMissingFieldsErrorMessage(String missingFields);
+
+  /// Titre du dialogue de confirmation ouvert quand au moins un champ reste non résolu.
+  ///
+  /// In fr, this message translates to:
+  /// **'CHAMPS NON RÉSOLUS'**
+  String get xmlImportReviewScreenUnresolvedDialogTitle;
+
+  /// Corps du dialogue "CHAMPS NON RÉSOLUS".
+  ///
+  /// In fr, this message translates to:
+  /// **'Certains éléments importés n\'ont pas pu être reconnus automatiquement. Ils seront enregistrés comme non catalogués et resteront corrigibles plus tard depuis la fiche du personnage.'**
+  String get xmlImportReviewScreenUnresolvedDialogMessage;
+
+  /// `SecondaryButton` du dialogue "CHAMPS NON RÉSOLUS", annule la sauvegarde.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retourner corriger'**
+  String get xmlImportReviewScreenUnresolvedDialogBackButtonLabel;
+
+  /// `PrimaryButton` du dialogue "CHAMPS NON RÉSOLUS", poursuit la sauvegarde malgré les champs non résolus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get xmlImportReviewScreenUnresolvedDialogContinueButtonLabel;
+
+  /// Nom du personnage écrit en base quand le champ `<name>` du fichier source est vide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personnage importé'**
+  String get xmlImportReviewScreenDefaultCharacterName;
+
+  /// Message de repli affiché quand l'échec de sauvegarde n'est pas une `CharacterCreationFailure` (celle-ci garde son propre `.message`, voir D161/`docs/dette-technique.md`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Une erreur est survenue. Réessayez.'**
+  String get xmlImportReviewScreenGenericSaveErrorMessage;
+
+  /// Titre de carte — champ "Nom", toujours une carte de résumé (jamais une alerte).
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom'**
+  String get xmlImportReviewScreenNameFieldTitle;
+
+  /// Titre de carte — champ "Race", aussi utilisé (en majuscules) comme titre de la bottom sheet de correction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Race'**
+  String get xmlImportReviewScreenRaceFieldTitle;
+
+  /// Titre de carte — champ "Classe".
+  ///
+  /// In fr, this message translates to:
+  /// **'Classe'**
+  String get xmlImportReviewScreenClassFieldTitle;
+
+  /// Titre de carte — champ "Sous-classe" (`classPath`), affiché seulement si présent dans le fichier source.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sous-classe'**
+  String get xmlImportReviewScreenSubclassFieldTitle;
+
+  /// Titre de carte — champ "Niveau", toujours une carte de résumé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau'**
+  String get xmlImportReviewScreenLevelFieldTitle;
+
+  /// Titre de carte — champ "Historique".
+  ///
+  /// In fr, this message translates to:
+  /// **'Historique'**
+  String get xmlImportReviewScreenBackgroundFieldTitle;
+
+  /// Titre de carte — champ "Caractéristiques", toujours une carte de résumé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Caractéristiques'**
+  String get xmlImportReviewScreenAbilityScoresFieldTitle;
+
+  /// Titre de carte — champ "Points de vie", toujours une carte de résumé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Points de vie'**
+  String get xmlImportReviewScreenHitPointsFieldTitle;
+
+  /// Titre de carte — champ "Compétences" (4 groupes consolidés).
+  ///
+  /// In fr, this message translates to:
+  /// **'Compétences'**
+  String get xmlImportReviewScreenSkillsFieldTitle;
+
+  /// Titre de carte — champ "Outils" (maîtrises d'outils).
+  ///
+  /// In fr, this message translates to:
+  /// **'Outils'**
+  String get xmlImportReviewScreenToolsFieldTitle;
+
+  /// Titre de carte — champ "Langues".
+  ///
+  /// In fr, this message translates to:
+  /// **'Langues'**
+  String get xmlImportReviewScreenLanguagesFieldTitle;
+
+  /// Titre de carte — champ "Sorts innés".
+  ///
+  /// In fr, this message translates to:
+  /// **'Sorts innés'**
+  String get xmlImportReviewScreenInnateSpellsFieldTitle;
+
+  /// Titre de carte — champ "Sorts connus".
+  ///
+  /// In fr, this message translates to:
+  /// **'Sorts connus'**
+  String get xmlImportReviewScreenKnownSpellsFieldTitle;
+
+  /// Titre de carte — champ "Argent", toujours une carte de résumé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Argent'**
+  String get xmlImportReviewScreenCurrencyFieldTitle;
+
+  /// Titre de carte — champ "Armure" (codé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Armure'**
+  String get xmlImportReviewScreenArmorFieldTitle;
+
+  /// Titre de carte — champ "Bouclier" (codé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Bouclier'**
+  String get xmlImportReviewScreenShieldFieldTitle;
+
+  /// Titre de carte — champ "Armes" (quantifié).
+  ///
+  /// In fr, this message translates to:
+  /// **'Armes'**
+  String get xmlImportReviewScreenWeaponsFieldTitle;
+
+  /// Titre de carte — champ "Outils physiques" (quantifié, matériel d'outillage, distinct des maîtrises d'outils).
+  ///
+  /// In fr, this message translates to:
+  /// **'Outils physiques'**
+  String get xmlImportReviewScreenToolEquipmentFieldTitle;
+
+  /// Titre de carte — champ "Objets" (quantifié).
+  ///
+  /// In fr, this message translates to:
+  /// **'Objets'**
+  String get xmlImportReviewScreenItemsFieldTitle;
+
+  /// Titre de carte — objets personnalisés (`itemX`), toujours `custom`, jamais une alerte.
+  ///
+  /// In fr, this message translates to:
+  /// **'Objets personnalisés'**
+  String get xmlImportReviewScreenCustomItemsFieldTitle;
+
+  /// Badge discret de la carte "Objets personnalisés".
+  ///
+  /// In fr, this message translates to:
+  /// **'Personnalisé'**
+  String get xmlImportReviewScreenCustomItemsBadgeLabel;
+
+  /// Titre de carte — champ "Paquetage de départ" (`pack`), traçabilité uniquement, toujours une carte de résumé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Paquetage de départ'**
+  String get xmlImportReviewScreenStartingPackFieldTitle;
+
+  /// Titre de carte — champ "Alignement" (codé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Alignement'**
+  String get xmlImportReviewScreenAlignmentFieldTitle;
+
+  /// Titre de carte — champ "Sexe" (codé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Sexe'**
+  String get xmlImportReviewScreenSexFieldTitle;
+
+  /// Titre de carte — champ "Apparence", toujours une carte de résumé ("Renseignée"/"Non renseignée").
+  ///
+  /// In fr, this message translates to:
+  /// **'Apparence'**
+  String get xmlImportReviewScreenAppearanceFieldTitle;
+
+  /// Titre de carte — champ "Histoire", toujours une carte de résumé ("Renseignée"/"Non renseignée").
+  ///
+  /// In fr, this message translates to:
+  /// **'Histoire'**
+  String get xmlImportReviewScreenHistoryFieldTitle;
+
+  /// Titre de carte — champ "Expérience", affiché seulement si `<xp>` est présent dans le fichier source.
+  ///
+  /// In fr, this message translates to:
+  /// **'Expérience'**
+  String get xmlImportReviewScreenExperienceFieldTitle;
+
+  /// Valeur affichée par la carte "Nom" quand `<name>` est vide (affichage seulement — `xmlImportReviewScreenDefaultCharacterName` régit le nom réellement enregistré).
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans nom'**
+  String get xmlImportReviewScreenNoNameValue;
+
+  /// Valeur des cartes "Apparence"/"Histoire" quand au moins un champ libre correspondant est non vide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renseignée'**
+  String get xmlImportReviewScreenFilledValueLabel;
+
+  /// Valeur des cartes "Apparence"/"Histoire" quand tous les champs libres correspondants sont vides.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non renseignée'**
+  String get xmlImportReviewScreenNotFilledValueLabel;
+
+  /// Badge discret affiché sur une carte de résumé dont la valeur reconnue a été créée comme placeholder ("Garder comme élément personnalisé").
+  ///
+  /// In fr, this message translates to:
+  /// **'Donnée incomplète'**
+  String get xmlImportReviewScreenIncompleteDataBadgeLabel;
+
+  /// Valeur de la carte "Expérience".
+  ///
+  /// In fr, this message translates to:
+  /// **'{xp} XP'**
+  String xmlImportReviewScreenExperienceValue(int xp);
+
+  /// Valeur de la carte "Points de vie".
+  ///
+  /// In fr, this message translates to:
+  /// **'{hp} PV'**
+  String xmlImportReviewScreenHitPointsValue(int hp);
+
+  /// Valeur de la carte "Argent" quand les 5 dénominations sont à 0.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune'**
+  String get xmlImportReviewScreenNoCurrencyValue;
+
+  /// Segment "pièces d'or" de la carte "Argent".
+  ///
+  /// In fr, this message translates to:
+  /// **'{amount} po'**
+  String xmlImportReviewScreenGoldAmount(int amount);
+
+  /// Segment "pièces de platine" de la carte "Argent".
+  ///
+  /// In fr, this message translates to:
+  /// **'{amount} pp'**
+  String xmlImportReviewScreenPlatinumAmount(int amount);
+
+  /// Segment "pièces d'électrum" de la carte "Argent".
+  ///
+  /// In fr, this message translates to:
+  /// **'{amount} pe'**
+  String xmlImportReviewScreenElectrumAmount(int amount);
+
+  /// Segment "pièces d'argent" de la carte "Argent".
+  ///
+  /// In fr, this message translates to:
+  /// **'{amount} pa'**
+  String xmlImportReviewScreenSilverAmount(int amount);
+
+  /// Segment "pièces de cuivre" de la carte "Argent".
+  ///
+  /// In fr, this message translates to:
+  /// **'{amount} pc'**
+  String xmlImportReviewScreenCopperAmount(int amount);
+
+  /// Message d'une carte d'alerte pour un champ à catalogue unique ou codé non reconnu — `title` est un des titres de champ déjà localisés ci-dessus, `rawValue` est le jeton brut du fichier source (dynamique).
+  ///
+  /// In fr, this message translates to:
+  /// **'{title} non reconnu(e) : \"{rawValue}\"'**
+  String xmlImportReviewScreenFieldUnrecognizedMessage(
+    String title,
+    String rawValue,
+  );
+
+  /// Message d'une carte d'alerte consolidée (compétences/outils/langues/armes/outils physiques/objets).
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 élément non catalogué — à corriger manuellement.} other{{count} éléments non catalogués — à corriger manuellement.}}'**
+  String xmlImportReviewScreenUncatalogedItemsCountMessage(int count);
+
+  /// Message d'une carte d'alerte consolidée pour les sorts innés/connus.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 sort non catalogué — à corriger manuellement.} other{{count} sorts non catalogués — à corriger manuellement.}}'**
+  String xmlImportReviewScreenUncatalogedSpellsCountMessage(int count);
+
+  /// Titre de la bottom sheet de correction (simple ou "mode liste") — `title` est déjà le titre de champ localisé, déjà mis en majuscules par l'appelant.
+  ///
+  /// In fr, this message translates to:
+  /// **'CORRIGER : {title}'**
+  String xmlImportReviewScreenCorrectionSheetTitle(String title);
+
+  /// Bouton par ligne de la bottom sheet "mode liste" (champ consolidé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Corriger'**
+  String get xmlImportReviewScreenCorrectEntryButtonLabel;
+
+  /// `SecondaryButton` de bas de la bottom sheet "mode liste".
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout garder comme éléments personnalisés'**
+  String get xmlImportReviewScreenKeepAllAsCustomButtonLabel;
+
+  /// Texte indicatif du champ de recherche de la bottom sheet de correction simple.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher...'**
+  String get xmlImportReviewScreenSearchFieldHint;
+
+  /// Message affiché quand la recherche de la bottom sheet de correction simple ne trouve aucun candidat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune correspondance trouvée.'**
+  String get xmlImportReviewScreenNoMatchMessage;
+
+  /// `SecondaryButton` de la bottom sheet de correction simple.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garder comme élément personnalisé'**
+  String get xmlImportReviewScreenKeepAsCustomButtonLabel;
+
+  /// `PrimaryButton` de la bottom sheet de correction simple.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmer'**
+  String get xmlImportReviewScreenConfirmButtonLabel;
+
+  /// `SnackBar` affichée quand "Garder comme élément personnalisé" échoue (réseau, RLS...).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer cet élément. Réessayez.'**
+  String get xmlImportReviewScreenPlaceholderSaveErrorMessage;
+
+  /// Message de la carte d'alerte le temps qu'un appel "Garder comme élément personnalisé" soit en vol pour ce champ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrement en cours...'**
+  String get xmlImportReviewScreenPlaceholderSavingInProgressMessage;
+
+  /// Texte de `_SavingOverlay`, affiché pendant la sauvegarde finale.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrement du personnage...'**
+  String get xmlImportReviewScreenSavingOverlayMessage;
+
+  /// Titre de `_InvalidFileErrorState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichier illisible'**
+  String get xmlImportReviewScreenInvalidFileTitle;
+
+  /// Sous-titre fixe de `_InvalidFileErrorState`, au-dessus du message détaillé dynamique (`xmlImportReviewScreenParseErrorXxx`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier ne semble pas être un export aidedd.org valide.'**
+  String get xmlImportReviewScreenInvalidFileSubtitle;
+
+  /// `PrimaryButton` de `_InvalidFileErrorState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un autre fichier'**
+  String get xmlImportReviewScreenInvalidFilePickAnotherButtonLabel;
+
+  /// Lien texte de `_InvalidFileErrorState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get xmlImportReviewScreenInvalidFileCancelButtonLabel;
+
+  /// `SecondaryButton` de `_NetworkErrorState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get xmlImportReviewScreenRetryButtonLabel;
+
+  /// Segment de la carte informative neutre (`_buildUnhandledInfoMessage`) quand `styleCombat1`/`styleCombat2` sont présents.
+  ///
+  /// In fr, this message translates to:
+  /// **'Style de combat'**
+  String get xmlImportReviewScreenUnhandledStyleCombatFieldLabel;
+
+  /// Segment de la carte informative neutre quand `knownInvocations` est non vide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Invocation connue'**
+  String get xmlImportReviewScreenUnhandledKnownInvocationFieldLabel;
+
+  /// Segment de la carte informative neutre quand `favoredEnemy0`/`favoredEnemy6`/`favoredEnemy14` sont présents.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ennemi juré'**
+  String get xmlImportReviewScreenUnhandledFavoredEnemyFieldLabel;
+
+  /// Première phrase de la carte informative neutre — `fields` est la jointure (virgule) des segments ci-dessus réellement présents dans le fichier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non importé automatiquement dans cette version : {fields}.'**
+  String xmlImportReviewScreenUnhandledFieldsMessage(String fields);
+
+  /// Seconde phrase (optionnelle) de la carte informative neutre, quand `aug_carac0/1/2` sont présents dans au moins une entrée de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'Augmentations de caractéristiques : présentes dans le fichier mais non interprétées automatiquement.'**
+  String get xmlImportReviewScreenAbilityIncreasesPresentMessage;
+
+  /// Message détaillé de `_InvalidFileErrorState` pour `XmlImportParseErrorCode.invalidXml`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier n\'est pas un XML valide.'**
+  String get xmlImportReviewScreenParseErrorInvalidXml;
+
+  /// Message détaillé de `_InvalidFileErrorState` pour `XmlImportParseErrorCode.missingBuilderRoot`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier ne semble pas être un export aidedd.org (racine <builder> introuvable).'**
+  String get xmlImportReviewScreenParseErrorMissingBuilderRoot;
+
+  /// Message détaillé de `_InvalidFileErrorState` pour `XmlImportParseErrorCode.missingCharacterElement`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier ne semble pas être un export aidedd.org (balise <character> introuvable).'**
+  String get xmlImportReviewScreenParseErrorMissingCharacterElement;
+
+  /// Message détaillé de `_InvalidFileErrorState` pour `XmlImportParseErrorCode.missingRequiredFields`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier ne contient pas les informations minimales d\'un personnage (nom, race, classe, historique).'**
+  String get xmlImportReviewScreenParseErrorMissingRequiredFields;
 }
 
 class _AppLocalizationsDelegate
