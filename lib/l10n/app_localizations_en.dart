@@ -1321,6 +1321,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get characterDetailHelpTooltip => 'Help';
 
   @override
+  String get characterSheetHelpTitle => 'The character sheet';
+
+  @override
+  String get characterSheetHelpBody =>
+      'SPD. (speed): the distance your character can move in one turn.\nAC (armor class): the score an enemy must reach to hit you, calculated from your armor, your shield and your Dexterity.\nINIT. (initiative): your bonus on the roll that sets turn order in combat — tap the tile to roll it.\nINSP. (inspiration): granted by the DM, tap the tile to use or spend it.\n\nHit points: use the card\'s buttons to take damage, heal, or take a rest.\n\nAbility scores (FOR, DEX, CON, INT, SAG, CHA): score and modifier — tap a tile to make a roll.\n\nBottom tabs: Skills, Spells, Bag and Story group the rest of your sheet; in lists, tap an item to see its detail.\n\nShare (link icon): creates a read-only link to this sheet, for example for your DM. The ⋮ menu lets you export to XML, archive or delete the character.';
+
+  @override
   String get characterDetailMoreOptionsTooltip => 'More options';
 
   @override

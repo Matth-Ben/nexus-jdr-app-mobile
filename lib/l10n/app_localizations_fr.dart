@@ -1338,6 +1338,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get characterDetailHelpTooltip => 'Aide';
 
   @override
+  String get characterSheetHelpTitle => 'La fiche personnage';
+
+  @override
+  String get characterSheetHelpBody =>
+      'VIT. (vitesse) : distance que ton personnage parcourt en un tour.\nCA (classe d\'armure) : le score qu\'un ennemi doit atteindre pour te toucher, calculé depuis ton armure, ton bouclier et ta Dextérité.\nINIT. (initiative) : ton bonus au jet qui fixe l\'ordre de jeu en combat — touche la tuile pour le lancer.\nINSP. (inspiration) : accordée par le MJ, touche la tuile pour l\'activer ou la dépenser.\n\nPoints de vie : utilise les boutons de la carte pour encaisser des dégâts, te soigner ou prendre un repos.\n\nCaractéristiques (FOR, DEX, CON, INT, SAG, CHA) : score et modificateur — touche une tuile pour lancer un jet.\n\nOnglets du bas : Aptitudes, Sorts, Sac et Histoire regroupent le reste de ta fiche ; dans les listes, touche un élément pour voir son détail.\n\nPartager (icône lien) : crée un lien de lecture seule vers cette fiche, par exemple pour ton MJ. Le menu ⋮ permet d\'exporter en XML, archiver ou supprimer le personnage.';
+
+  @override
   String get characterDetailMoreOptionsTooltip => 'Plus d\'options';
 
   @override
