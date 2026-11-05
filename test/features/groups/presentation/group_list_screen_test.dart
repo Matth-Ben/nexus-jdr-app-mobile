@@ -25,6 +25,7 @@ import 'package:personnages/features/groups/domain/group_treasure_item.dart';
 import 'package:personnages/features/groups/domain/joined_group.dart';
 import 'package:personnages/features/groups/presentation/group_list_screen.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakeGroupRepository implements GroupRepository {
@@ -176,13 +177,21 @@ User _fakeUser() {
   );
 }
 
-Widget _buildTestWidget(_FakeGroupRepository groupRepository) {
+Widget _buildTestWidget(
+  _FakeGroupRepository groupRepository, {
+  Locale locale = const Locale('fr'),
+}) {
   return ProviderScope(
     overrides: [
       groupRepositoryProvider.overrideWithValue(groupRepository),
       currentUserProvider.overrideWithValue(_fakeUser()),
     ],
-    child: MaterialApp.router(routerConfig: _buildTestRouter()),
+    child: MaterialApp.router(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      routerConfig: _buildTestRouter(),
+    ),
   );
 }
 
@@ -278,6 +287,25 @@ void main() {
     expect(find.text('CRÉER UN GROUPE'), findsOneWidget);
     expect(find.text('REJOINDRE UN GROUPE'), findsOneWidget);
   });
+
+  testWidgets(
+    'nombre de membres au singulier en français ("1 membre", sans "s")',
+    (tester) async {
+      fakeGroupRepository.groupsToReturn = const [
+        GroupSummary(
+          id: 'group-1',
+          name: 'Les Lames',
+          memberCount: 1,
+          founderId: 'founder-id',
+        ),
+      ];
+
+      await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 membre'), findsOneWidget);
+    },
+  );
 
   testWidgets('taper un groupe de la liste navigue vers /groups/:id', (
     tester,
@@ -424,6 +452,72 @@ void main() {
     expect(find.text("AUCUN GROUPE POUR L'INSTANT"), findsOneWidget);
   });
 
+  testWidgets(
+    'GroupFailure code générique : affiche le message du dépôt tel quel',
+    (tester) async {
+      fakeGroupRepository.errorToThrow = const GroupFailure(
+        'Erreur spécifique.',
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Erreur spécifique.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GroupFailure code accessDenied : résolu via AppLocalizations, pas le '
+    'message brut du dépôt (chantier "traduction de l\'app")',
+    (tester) async {
+      fakeGroupRepository.errorToThrow = const GroupFailure(
+        'message brut non affiché',
+        code: GroupErrorCode.accessDenied,
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+      await tester.pumpAndSettle();
+
+      expect(find.text("Vous n'avez pas accès à ce groupe."), findsOneWidget);
+      expect(find.text('message brut non affiché'), findsNothing);
+    },
+  );
+
+  testWidgets('GroupFailure code network : résolu via AppLocalizations', (
+    tester,
+  ) async {
+    fakeGroupRepository.errorToThrow = const GroupFailure(
+      'message brut non affiché',
+      code: GroupErrorCode.network,
+    );
+
+    await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Impossible de contacter le serveur. Vérifiez votre connexion '
+        'internet et réessayez.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'échec générique (pas une GroupFailure) : message de repli traduit',
+    (tester) async {
+      fakeGroupRepository.errorToThrow = Exception('boom');
+
+      await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Impossible de charger vos groupes. Réessayez.'),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('état d\'erreur : tokens "on-wood" (écran "scène") plutôt que '
       '"parchemin" — texte en textOnWood, bouton "Réessayer" en surface '
       '"scene" par défaut (recettage direction artistique du 13/09)', (
@@ -464,5 +558,74 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Liste des personnages'), findsOneWidget);
+  });
+
+  group('traduction anglaise', () {
+    testWidgets(
+      'titre, boutons, pluriel du nombre de membres (singulier et pluriel) '
+      'en anglais',
+      (tester) async {
+        fakeGroupRepository.groupsToReturn = const [
+          GroupSummary(
+            id: 'group-1',
+            name: 'The Blades',
+            memberCount: 1,
+            founderId: 'current-user-id',
+          ),
+          GroupSummary(
+            id: 'group-2',
+            name: 'The Shadows',
+            memberCount: 4,
+            founderId: 'founder-id',
+          ),
+        ];
+
+        await tester.pumpWidget(
+          _buildTestWidget(fakeGroupRepository, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('GROUPS'), findsOneWidget);
+        expect(find.text('CREATE A GROUP'), findsOneWidget);
+        expect(find.text('JOIN A GROUP'), findsOneWidget);
+        expect(find.text('1 member'), findsOneWidget);
+        expect(find.text('4 members'), findsOneWidget);
+        expect(find.text('YOU'), findsOneWidget);
+      },
+    );
+
+    testWidgets('état vide en anglais', (tester) async {
+      fakeGroupRepository.groupsToReturn = const [];
+
+      await tester.pumpWidget(
+        _buildTestWidget(fakeGroupRepository, locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('NO GROUPS YET'), findsOneWidget);
+      expect(
+        find.textContaining('Create a group for your team'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'état d\'erreur en anglais : message de repli (erreur générique, pas '
+      'une `GroupFailure`) et bouton "RETRY"',
+      (tester) async {
+        fakeGroupRepository.errorToThrow = Exception('boom');
+
+        await tester.pumpWidget(
+          _buildTestWidget(fakeGroupRepository, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Unable to load your groups. Try again.'),
+          findsOneWidget,
+        );
+        expect(find.text('RETRY'), findsOneWidget);
+      },
+    );
   });
 }

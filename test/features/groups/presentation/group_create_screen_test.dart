@@ -525,6 +525,7 @@ GoRouter _buildTestRouter() {
 Widget _buildTestWidget({
   required _FakeCharacterRepository characterRepository,
   required _FakeGroupRepository groupRepository,
+  Locale locale = const Locale('fr'),
 }) {
   return ProviderScope(
     overrides: [
@@ -538,7 +539,7 @@ Widget _buildTestWidget({
       // renverrait `null` et le `!` planterait.
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('fr'),
+      locale: locale,
       routerConfig: _buildTestRouter(),
     ),
   );
@@ -742,6 +743,64 @@ void main() {
     },
   );
 
+  testWidgets(
+    'GroupFailure code accessDenied : résolu via AppLocalizations, pas le '
+    'message brut du dépôt (chantier "traduction de l\'app")',
+    (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(id: '1', name: 'Sylvi', level: 3, xp: 900),
+      ];
+      fakeGroupRepository.createErrorToThrow = const GroupFailure(
+        'message brut non affiché',
+        code: GroupErrorCode.accessDenied,
+      );
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          groupRepository: fakeGroupRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField), 'Les Lames');
+      await _selectCharacterViaSheet(tester, 'Sylvi');
+      await tester.tap(find.text('CRÉER LE GROUPE'));
+      await tester.pumpAndSettle();
+
+      expect(find.text("Vous n'avez pas accès à ce groupe."), findsOneWidget);
+      expect(find.text('message brut non affiché'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'échec générique (pas une GroupFailure) : message de repli traduit',
+    (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(id: '1', name: 'Sylvi', level: 3, xp: 900),
+      ];
+      fakeGroupRepository.createErrorToThrow = Exception('boom');
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          groupRepository: fakeGroupRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField), 'Les Lames');
+      await _selectCharacterViaSheet(tester, 'Sylvi');
+      await tester.tap(find.text('CRÉER LE GROUPE'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Impossible de créer le groupe. Réessayez.'),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('état vide (aucun personnage) : message dédié', (tester) async {
     fakeCharacterRepository.charactersToReturn = const [];
 
@@ -869,5 +928,89 @@ void main() {
         expect(_isPrimaryButtonEnabled(tester, 'Créer le groupe'), isTrue);
       },
     );
+  });
+
+  group('traduction anglaise', () {
+    testWidgets('titre, intro, libellés et sélecteur de rôle en anglais', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(id: '1', name: 'Sylvi', level: 3, xp: 900),
+      ];
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          groupRepository: fakeGroupRepository,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('CREATE A GROUP'), findsOneWidget);
+      expect(
+        find.textContaining("A group lets you track your team's HP"),
+        findsOneWidget,
+      );
+      expect(find.text('Group name'), findsOneWidget);
+      expect(find.text('Who represents you in this group?'), findsOneWidget);
+      expect(find.text('Choose a character or a role'), findsOneWidget);
+      expect(
+        find.textContaining('An invite code will be generated'),
+        findsOneWidget,
+      );
+
+      await tester.enterText(find.byType(TextFormField), 'The Dawnblades');
+      await _openCharacterPicker(tester);
+      expect(find.text('CHOOSE YOUR ROLE'), findsOneWidget);
+      expect(find.text('GM — no character'), findsOneWidget);
+      await tester.tap(find.text('Sylvi'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(_isPrimaryButtonEnabled(tester, 'Create the group'), isTrue);
+
+      fakeGroupRepository.createCompleter = Completer<CreatedGroup>();
+      await tester.tap(find.text('CREATE THE GROUP'));
+      await tester.pump();
+
+      expect(find.text('Creating the group...'), findsOneWidget);
+
+      fakeGroupRepository.createCompleter!.complete(
+        const CreatedGroup(
+          id: 'group-1',
+          name: 'The Dawnblades',
+          inviteCode: 'AB3F7K2M',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Group created!'), findsOneWidget);
+    });
+
+    testWidgets('succès et échec réseau en anglais', (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(id: '1', name: 'Sylvi', level: 3, xp: 900),
+      ];
+      fakeGroupRepository.createErrorToThrow = Exception('boom');
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          groupRepository: fakeGroupRepository,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField), 'The Dawnblades');
+      await _selectCharacterViaSheet(tester, 'Sylvi');
+      await tester.tap(find.text('CREATE THE GROUP'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Unable to create the group. Try again.'),
+        findsOneWidget,
+      );
+    });
   });
 }

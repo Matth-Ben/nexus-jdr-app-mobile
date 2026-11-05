@@ -9,6 +9,7 @@ import '../../../core/widgets/dashed_border_painter.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 import '../domain/group_color_assigner.dart';
 import '../domain/group_failure.dart';
@@ -38,6 +39,7 @@ class GroupListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final groupsAsync = ref.watch(myGroupsProvider);
     final currentUserId = ref.watch(currentUserProvider)?.id;
 
@@ -63,8 +65,8 @@ class GroupListScreen extends ConsumerWidget {
                 ),
                 error: (error, stackTrace) => _ErrorState(
                   message: error is GroupFailure
-                      ? error.message
-                      : 'Impossible de charger vos groupes. Réessayez.',
+                      ? _resolveGroupFailureMessage(l10n, error)
+                      : l10n.groupListScreenLoadErrorMessage,
                   onRetry: () => ref.invalidate(myGroupsProvider),
                 ),
               ),
@@ -80,14 +82,14 @@ class GroupListScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: PrimaryButton(
-                      label: 'Créer un groupe',
+                      label: l10n.groupListScreenCreateButtonLabel,
                       onPressed: () => context.push('/groups/new'),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: SecondaryButton(
-                      label: 'Rejoindre un groupe',
+                      label: l10n.groupListScreenJoinButtonLabel,
                       onPressed: () => context.push('/groups/join'),
                     ),
                   ),
@@ -112,6 +114,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         IconButton(
@@ -123,7 +126,7 @@ class _Header extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.xs),
         Text(
-          'GROUPES',
+          l10n.groupListScreenTitle,
           style: AppTypography.display(
             fontSize: 15,
             color: AppColors.textOnWood,
@@ -195,6 +198,7 @@ class _GroupRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -241,7 +245,7 @@ class _GroupRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${group.memberCount} membres',
+                      l10n.groupListScreenMemberCountLabel(group.memberCount),
                       style: AppTypography.body(
                         fontSize: 13,
                         color: AppColors.textSecondary,
@@ -295,6 +299,7 @@ class _FounderBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -303,7 +308,7 @@ class _FounderBadge extends StatelessWidget {
         border: Border.all(color: AppColors.woodLight, width: 1),
       ),
       child: Text(
-        'TOI',
+        l10n.groupListScreenFounderBadgeLabel,
         style: AppTypography.display(
           fontSize: 9,
           color: AppColors.textSecondary,
@@ -326,6 +331,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -351,7 +357,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              "AUCUN GROUPE POUR L'INSTANT",
+              l10n.groupListScreenEmptyTitle,
               textAlign: TextAlign.center,
               style: AppTypography.display(
                 fontSize: 11,
@@ -360,8 +366,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              "Crée un groupe pour ton équipe, ou rejoins celui de tes "
-              "coéquipiers avec un code d'invitation.",
+              l10n.groupListScreenEmptyBody,
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textOnWoodMuted),
             ),
@@ -380,6 +385,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -398,10 +404,35 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textOnWood),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(
+              label: l10n.groupListScreenRetryButtonLabel,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// Résout le texte final d'une [GroupFailure] à afficher à l'écran.
+///
+/// Voir la doc de classe d'[GroupErrorCode] (`domain/group_failure.dart`)
+/// pour le choix architectural : [GroupFailure.code] est résolu ici via
+/// [AppLocalizations] pour les codes connus, [GroupFailure.message] (déjà
+/// construit par `data/group_error_mapper.dart`, ou fourni directement par
+/// `GroupRepository`/les tests) reste utilisé tel quel pour
+/// [GroupErrorCode.generic].
+String _resolveGroupFailureMessage(
+  AppLocalizations l10n,
+  GroupFailure failure,
+) {
+  switch (failure.code) {
+    case GroupErrorCode.accessDenied:
+      return l10n.groupAccessDeniedErrorMessage;
+    case GroupErrorCode.network:
+      return l10n.groupNetworkErrorMessage;
+    case GroupErrorCode.generic:
+      return failure.message;
   }
 }

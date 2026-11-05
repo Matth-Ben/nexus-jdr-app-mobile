@@ -4572,4 +4572,189 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get racialBonusChoiceCardOneOneOnePatternLabel => '+1 / +1 / +1';
+
+  @override
+  String get groupListScreenTitle => 'GROUPES';
+
+  @override
+  String get groupListScreenCreateButtonLabel => 'Créer un groupe';
+
+  @override
+  String get groupListScreenJoinButtonLabel => 'Rejoindre un groupe';
+
+  @override
+  String get groupListScreenLoadErrorMessage =>
+      'Impossible de charger vos groupes. Réessayez.';
+
+  @override
+  String get groupListScreenEmptyTitle => 'AUCUN GROUPE POUR L\'INSTANT';
+
+  @override
+  String get groupListScreenEmptyBody =>
+      'Crée un groupe pour ton équipe, ou rejoins celui de tes coéquipiers avec un code d\'invitation.';
+
+  @override
+  String groupListScreenMemberCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count membres',
+      one: '1 membre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get groupListScreenFounderBadgeLabel => 'TOI';
+
+  @override
+  String get groupListScreenRetryButtonLabel => 'Réessayer';
+
+  @override
+  String get groupAccessDeniedErrorMessage =>
+      'Vous n\'avez pas accès à ce groupe.';
+
+  @override
+  String get groupNetworkErrorMessage =>
+      'Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.';
+
+  @override
+  String get groupCreateScreenRolePickerTitle => 'CHOISIR TON RÔLE';
+
+  @override
+  String get groupCreateScreenCharactersLoadErrorMessage =>
+      'Impossible de charger vos personnages. Réessayez.';
+
+  @override
+  String get groupCreateScreenTitle => 'CRÉER UN GROUPE';
+
+  @override
+  String get groupCreateScreenIntro =>
+      'Un groupe permet de suivre les PV de ton équipe en direct et de gérer un butin commun, indépendamment des histoires du MJ.';
+
+  @override
+  String get groupCreateScreenNameLabel => 'Nom du groupe';
+
+  @override
+  String get groupCreateScreenNameHint => 'Ex. Les Lames de l\'Aube';
+
+  @override
+  String get groupCreateScreenRoleQuestionLabel =>
+      'Qui te représente dans ce groupe ?';
+
+  @override
+  String get groupCreateScreenRoleQuestionHint =>
+      'Ce personnage représentera ta présence dans le tableau de bord du groupe.';
+
+  @override
+  String get groupCreateScreenSubmitButtonLabel => 'Créer le groupe';
+
+  @override
+  String get groupCreateScreenSuccessSnackbar => 'Groupe créé !';
+
+  @override
+  String get groupCreateScreenGenericErrorMessage =>
+      'Impossible de créer le groupe. Réessayez.';
+
+  @override
+  String get groupCreateScreenGameMasterRoleLabel => 'MJ — sans personnage';
+
+  @override
+  String get groupCreateScreenCreatingOverlayMessage => 'Création du groupe...';
+
+  @override
+  String get groupCreateScreenNoCharacterNote =>
+      'Tu n\'as pas encore de personnage à inscrire dans ce groupe.';
+
+  @override
+  String get groupCreateScreenInviteCodeNote =>
+      'Un code d\'invitation sera généré automatiquement à la création.';
+
+  @override
+  String get groupCreateScreenRoleSelectorPlaceholder =>
+      'Choisir un personnage ou un rôle';
+
+  @override
+  String get groupCreateScreenCharactersRetryButtonLabel => 'Réessayer';
+
+  @override
+  String get groupJoinScreenGenericErrorMessage =>
+      'Impossible de rejoindre ce groupe. Réessayez.';
+
+  @override
+  String get groupJoinScreenRolePickerTitle => 'CHOISIR TON RÔLE';
+
+  @override
+  String get groupJoinScreenCharactersLoadErrorMessage =>
+      'Impossible de charger vos personnages. Réessayez.';
+
+  @override
+  String get groupJoinScreenTitle => 'REJOINDRE UN GROUPE';
+
+  @override
+  String get groupJoinScreenSuccessSnackbar => 'Groupe rejoint !';
+
+  @override
+  String get groupJoinScreenInvalidCodeErrorMessage =>
+      'Ce code d\'invitation n\'est pas valide.';
+
+  @override
+  String get groupJoinScreenAlreadyInGroupErrorMessage =>
+      'Ce personnage est déjà membre de ce groupe.';
+
+  @override
+  String get groupJoinScreenMjAlreadyAssignedErrorMessage =>
+      'Ce groupe a déjà un MJ sans personnage.';
+
+  @override
+  String get groupJoinScreenIntro =>
+      'Demande le code d\'invitation à un membre du groupe, puis choisis le personnage qui vous rejoindra.';
+
+  @override
+  String get groupJoinScreenCodeFieldLabel => 'Code d\'invitation';
+
+  @override
+  String get groupJoinScreenCodeFieldHint => 'AB3F - 7K2M';
+
+  @override
+  String get groupJoinScreenRoleQuestionLabel =>
+      'Qui te représente dans ce groupe ?';
+
+  @override
+  String get groupJoinScreenSubmitButtonLabel => 'Rejoindre';
+
+  @override
+  String get groupJoinScreenGameMasterRoleLabel => 'MJ — sans personnage';
+
+  @override
+  String get groupJoinScreenGameMasterRoleSubtitle =>
+      'Suit le groupe sans fiche de personnage.';
+
+  @override
+  String get groupJoinScreenNoCharacterMessage =>
+      'Tu n\'as pas encore de personnage à rattacher.';
+
+  @override
+  String get groupJoinScreenRoleSelectorPlaceholder =>
+      'Choisir un personnage ou un rôle';
+
+  @override
+  String get groupJoinScreenCharactersRetryButtonLabel => 'Réessayer';
+
+  @override
+  String get groupJoinScreenJoiningOverlayMessage =>
+      'Rattachement au groupe...';
+
+  @override
+  String get groupConfirmationDialogCancelButtonLabel => 'Annuler';
+
+  @override
+  String groupInviteCodeChipSemanticLabel(String code) {
+    return 'Copier le code d\'invitation $code';
+  }
+
+  @override
+  String groupInviteCodeChipCopiedSnackbar(String code) {
+    return 'Code $code copié.';
+  }
 }

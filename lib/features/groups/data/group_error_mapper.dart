@@ -10,7 +10,10 @@ const String _networkErrorMessage =
 /// message utilisateur en français — même principe que `mapCharacterError`.
 GroupFailure mapGroupError(PostgrestException error) {
   if (error.code == '42501') {
-    return const GroupFailure("Vous n'avez pas accès à ce groupe.");
+    return const GroupFailure(
+      "Vous n'avez pas accès à ce groupe.",
+      code: GroupErrorCode.accessDenied,
+    );
   }
   return GroupFailure(
     error.message.isNotEmpty ? error.message : _networkErrorMessage,
@@ -19,4 +22,5 @@ GroupFailure mapGroupError(PostgrestException error) {
 
 /// Message générique pour toute erreur qui n'est pas une [PostgrestException]
 /// (ex. absence de réseau).
-GroupFailure mapUnknownGroupError() => const GroupFailure(_networkErrorMessage);
+GroupFailure mapUnknownGroupError() =>
+    const GroupFailure(_networkErrorMessage, code: GroupErrorCode.network);

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Code d'invitation d'un groupe, copiable d'un toucher (demande
 /// utilisateur, 2026-09-27 : le code affiché ne pouvait pas être copié).
@@ -19,18 +20,22 @@ class GroupInviteCodeChip extends StatelessWidget {
   final String code;
 
   Future<void> _copy(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     await Clipboard.setData(ClipboardData(text: code));
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('Code $code copié.')));
+      ..showSnackBar(
+        SnackBar(content: Text(l10n.groupInviteCodeChipCopiedSnackbar(code))),
+      );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Semantics(
       button: true,
-      label: "Copier le code d'invitation $code",
+      label: l10n.groupInviteCodeChipSemanticLabel(code),
       excludeSemantics: true,
       child: Material(
         color: AppColors.parchmentCard,

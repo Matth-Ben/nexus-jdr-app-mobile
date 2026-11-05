@@ -50,6 +50,7 @@ import 'package:personnages/features/groups/domain/group_treasure_item.dart';
 import 'package:personnages/features/groups/domain/joined_group.dart';
 import 'package:personnages/features/groups/presentation/group_join_screen.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   List<CharacterSummary>? charactersToReturn;
@@ -537,13 +538,19 @@ GoRouter _buildTestRouter() {
 Widget _buildTestWidget({
   required _FakeCharacterRepository characterRepository,
   required _FakeGroupRepository groupRepository,
+  Locale locale = const Locale('fr'),
 }) {
   return ProviderScope(
     overrides: [
       characterRepositoryProvider.overrideWithValue(characterRepository),
       groupRepositoryProvider.overrideWithValue(groupRepository),
     ],
-    child: MaterialApp.router(routerConfig: _buildTestRouter()),
+    child: MaterialApp.router(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      routerConfig: _buildTestRouter(),
+    ),
   );
 }
 
@@ -648,8 +655,10 @@ void main() {
           ),
           groupRepositoryProvider.overrideWithValue(fakeGroupRepository),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: GroupJoinScreen(initialCode: 'ZZ9988XX')),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(body: GroupJoinScreen(initialCode: 'ZZ9988XX')),
         ),
       ),
     );
@@ -956,6 +965,130 @@ void main() {
 
         expect(
           find.text('Ce groupe a déjà un MJ sans personnage.'),
+          findsOneWidget,
+        );
+      },
+    );
+  });
+
+  group('traduction anglaise', () {
+    testWidgets('titre, intro et libellés en anglais', (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          groupRepository: fakeGroupRepository,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('JOIN A GROUP'), findsOneWidget);
+      expect(
+        find.textContaining('Ask a group member for the invite code'),
+        findsOneWidget,
+      );
+      expect(find.text('Invite code'), findsOneWidget);
+      expect(find.text('Who represents you in this group?'), findsOneWidget);
+      expect(
+        find.text("You don't have a character yet to attach."),
+        findsOneWidget,
+      );
+      expect(find.text('JOIN'), findsOneWidget);
+    });
+
+    testWidgets(
+      'succès : aperçu puis rattachement en anglais, SnackBar de succès',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
+        ];
+        fakeGroupRepository.joinCompleter = Completer<JoinedGroup>();
+
+        await tester.pumpWidget(
+          _buildTestWidget(
+            characterRepository: fakeCharacterRepository,
+            groupRepository: fakeGroupRepository,
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), 'ab3f7k');
+        await tester.pump();
+        await tester.tap(find.text('JOIN'));
+        await tester.pump();
+
+        expect(find.text('Joining the group...'), findsOneWidget);
+
+        fakeGroupRepository.joinCompleter!.complete(
+          const JoinedGroup(groupId: 'group-1', name: 'Les Lames'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Group joined!'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'code invalide et erreurs générique/déjà-membre/MJ déjà assigné en '
+      'anglais',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(id: '1', name: 'Halltesse', level: 5, xp: 7000),
+        ];
+        fakeGroupRepository.previewErrorToThrow = const GroupInviteFailure(
+          GroupInviteFailureKind.invalidCode,
+        );
+
+        await tester.pumpWidget(
+          _buildTestWidget(
+            characterRepository: fakeCharacterRepository,
+            groupRepository: fakeGroupRepository,
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), 'ab3f7k');
+        await tester.pump();
+        await tester.tap(find.text('JOIN'));
+        await tester.pumpAndSettle();
+
+        expect(find.text("This invite code isn't valid."), findsOneWidget);
+
+        fakeGroupRepository.previewErrorToThrow = null;
+        fakeGroupRepository.joinErrorToThrow = const GroupInviteFailure(
+          GroupInviteFailureKind.alreadyInGroup,
+        );
+        await tester.tap(find.text('JOIN'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('This character is already a member of this group.'),
+          findsOneWidget,
+        );
+
+        fakeGroupRepository.joinErrorToThrow = const GroupInviteFailure(
+          GroupInviteFailureKind.mjAlreadyAssigned,
+        );
+        await tester.tap(find.text('JOIN'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('This group already has a GM without a character.'),
+          findsOneWidget,
+        );
+
+        fakeGroupRepository.joinErrorToThrow = const GroupInviteFailure(
+          GroupInviteFailureKind.generic,
+        );
+        await tester.tap(find.text('JOIN'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Unable to join this group. Try again.'),
           findsOneWidget,
         );
       },

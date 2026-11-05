@@ -13,6 +13,7 @@ import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/features/groups/domain/group_member.dart';
 import 'package:personnages/features/groups/domain/group_role.dart';
 import 'package:personnages/features/groups/presentation/widgets/group_members_tab_body.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 const _me = GroupMember(
   characterId: 'char-me',
@@ -85,7 +86,17 @@ Future<void> _pump(WidgetTester tester, GroupDetail detail) async {
       ),
     ],
   );
-  await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+  await tester.pumpWidget(
+    MaterialApp.router(
+      // `GroupInviteCodeChip` lit `AppLocalizations.of(context)!` (chantier
+      // "traduction de l'app" Phase B, lot "Groups — rejoindre/créer") :
+      // sans ces delegates, l'appel renverrait `null` et le `!` planterait.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('fr'),
+      routerConfig: router,
+    ),
+  );
   await tester.pumpAndSettle();
 }
 

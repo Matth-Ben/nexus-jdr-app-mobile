@@ -11,6 +11,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/sheet_header_bar.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../characters/domain/character_failure.dart';
 import '../../characters/domain/character_summary.dart';
 import '../../characters/presentation/providers/character_providers.dart';
@@ -106,6 +107,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
   Future<void> _openRolePicker(
     AsyncValue<List<CharacterSummary>> charactersAsync,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -118,7 +120,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
             decoration: const BoxDecoration(color: AppColors.parchmentBg),
             child: Column(
               children: [
-                const SheetHeaderBar(title: 'CHOISIR TON RÔLE'),
+                SheetHeaderBar(title: l10n.groupCreateScreenRolePickerTitle),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.all(AppSpacing.lg),
@@ -164,8 +166,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
                         error: (error, stackTrace) => _ErrorState(
                           message: error is CharacterFailure
                               ? error.message
-                              : 'Impossible de charger vos personnages. '
-                                    'Réessayez.',
+                              : l10n.groupCreateScreenCharactersLoadErrorMessage,
                           onRetry: () => ref.invalidate(charactersProvider),
                         ),
                       ),
@@ -186,6 +187,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
       (_selectedCharacterId != null || _joinAsGameMaster);
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context)!;
     final name = _nameController.text.trim();
     final characterId = _joinAsGameMaster ? null : _selectedCharacterId;
     if (name.isEmpty ||
@@ -204,26 +206,28 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
           .read(groupRepositoryProvider)
           .createGroup(name: name, characterId: characterId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Groupe créé !')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.groupCreateScreenSuccessSnackbar)),
+      );
       context.go('/groups/${created.id}');
     } on GroupFailure catch (failure) {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = failure.message;
+        _errorMessage = _resolveGroupFailureMessage(l10n, failure);
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = 'Impossible de créer le groupe. Réessayez.';
+        _errorMessage = l10n.groupCreateScreenGenericErrorMessage;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final charactersAsync = ref.watch(charactersProvider);
 
     return Scaffold(
@@ -232,7 +236,10 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
         children: [
           Column(
             children: [
-              WoodBackHeader(title: 'CRÉER UN GROUPE', onBack: _goBack),
+              WoodBackHeader(
+                title: l10n.groupCreateScreenTitle,
+                onBack: _goBack,
+              ),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(
@@ -249,16 +256,14 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
                         const SizedBox(height: AppSpacing.md),
                       ],
                       Text(
-                        'Un groupe permet de suivre les PV de ton équipe en '
-                        'direct et de gérer un butin commun, indépendamment '
-                        'des histoires du MJ.',
+                        l10n.groupCreateScreenIntro,
                         style: AppTypography.body(
                           color: AppColors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
-                        'Nom du groupe',
+                        l10n.groupCreateScreenNameLabel,
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
@@ -271,13 +276,13 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
                         enabled: !_isSaving,
                         minLines: 1,
                         maxLines: 1,
-                        decoration: const InputDecoration(
-                          hintText: 'Ex. Les Lames de l\'Aube',
+                        decoration: InputDecoration(
+                          hintText: l10n.groupCreateScreenNameHint,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       Text(
-                        'Qui te représente dans ce groupe ?',
+                        l10n.groupCreateScreenRoleQuestionLabel,
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
@@ -286,8 +291,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        'Ce personnage représentera ta présence dans le '
-                        'tableau de bord du groupe.',
+                        l10n.groupCreateScreenRoleQuestionHint,
                         style: AppTypography.body(
                           fontSize: 12,
                           color: AppColors.textMuted,
@@ -302,7 +306,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 child: PrimaryButton(
-                  label: 'Créer le groupe',
+                  label: l10n.groupCreateScreenSubmitButtonLabel,
                   onPressed: _canSubmit ? _submit : null,
                 ),
               ),
@@ -408,6 +412,7 @@ class _GmOptionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -434,7 +439,7 @@ class _GmOptionRow extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  'MJ — sans personnage',
+                  l10n.groupCreateScreenGameMasterRoleLabel,
                   style: AppTypography.body(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -501,11 +506,12 @@ class _RoleSelectorTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final character = this.character;
     final hasSelection = isGameMaster || character != null;
     final label = isGameMaster
-        ? 'MJ — sans personnage'
-        : character?.name ?? 'Choisir un personnage ou un rôle';
+        ? l10n.groupCreateScreenGameMasterRoleLabel
+        : character?.name ?? l10n.groupCreateScreenRoleSelectorPlaceholder;
 
     return Material(
       color: Colors.transparent,
@@ -576,6 +582,7 @@ class _InviteCodeNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
@@ -590,8 +597,7 @@ class _InviteCodeNote extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              "Un code d'invitation sera généré automatiquement à la "
-              'création.',
+              l10n.groupCreateScreenInviteCodeNote,
               style: AppTypography.body(
                 fontSize: 12,
                 color: AppColors.textSecondary,
@@ -609,6 +615,7 @@ class _CreatingGroupOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ColoredBox(
       color: AppColors.woodDark.withValues(alpha: 0.6),
       child: Center(
@@ -628,7 +635,7 @@ class _CreatingGroupOverlay extends StatelessWidget {
               const CircularProgressIndicator(color: AppColors.woodMedium),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'Création du groupe...',
+                l10n.groupCreateScreenCreatingOverlayMessage,
                 style: AppTypography.body(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -653,6 +660,7 @@ class _NoCharacterNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
@@ -671,7 +679,7 @@ class _NoCharacterNote extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              "Tu n'as pas encore de personnage à inscrire dans ce groupe.",
+              l10n.groupCreateScreenNoCharacterNote,
               style: AppTypography.body(
                 fontSize: 12,
                 color: AppColors.textSecondary,
@@ -692,6 +700,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -711,7 +720,7 @@ class _ErrorState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             SecondaryButton(
-              label: 'Réessayer',
+              label: l10n.groupCreateScreenCharactersRetryButtonLabel,
               surface: SecondaryButtonSurface.parchment,
               onPressed: onRetry,
             ),
@@ -719,5 +728,30 @@ class _ErrorState extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Résout le texte final d'une [GroupFailure] à afficher à l'écran.
+///
+/// Voir la doc de classe d'[GroupErrorCode] (`domain/group_failure.dart`)
+/// pour le choix architectural : [GroupFailure.code] est résolu ici via
+/// [AppLocalizations] pour les codes connus, [GroupFailure.message] (déjà
+/// construit par `data/group_error_mapper.dart`, ou fourni directement par
+/// `GroupRepository`/les tests) reste utilisé tel quel pour
+/// [GroupErrorCode.generic]. Duplication volontaire de
+/// `group_list_screen.dart::_resolveGroupFailureMessage` (classe/fonction
+/// privée à son fichier, même convention de duplication que le reste de ce
+/// dépôt, voir `GroupMemberRowMapper`).
+String _resolveGroupFailureMessage(
+  AppLocalizations l10n,
+  GroupFailure failure,
+) {
+  switch (failure.code) {
+    case GroupErrorCode.accessDenied:
+      return l10n.groupAccessDeniedErrorMessage;
+    case GroupErrorCode.network:
+      return l10n.groupNetworkErrorMessage;
+    case GroupErrorCode.generic:
+      return failure.message;
   }
 }
