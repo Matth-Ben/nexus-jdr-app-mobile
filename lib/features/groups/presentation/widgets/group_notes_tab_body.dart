@@ -8,6 +8,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Callback "Enregistrer" de l'onglet "Notes" — voir
 /// `GroupRepository.saveGroupNote`. Reçoit le texte intégral du champ, pas un
@@ -82,6 +83,7 @@ class _GroupNotesTabBodyState extends State<GroupNotesTabBody> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Expanded(
@@ -92,10 +94,8 @@ class _GroupNotesTabBodyState extends State<GroupNotesTabBody> {
               maxLines: null,
               expands: true,
               textAlignVertical: TextAlignVertical.top,
-              decoration: const InputDecoration(
-                hintText:
-                    'Prends tes notes pendant la partie : événements, '
-                    'indices, rebondissements…',
+              decoration: InputDecoration(
+                hintText: l10n.groupNotesTabBodyHintText,
                 alignLabelWithHint: true,
               ),
             ),
@@ -118,7 +118,7 @@ class _GroupNotesTabBodyState extends State<GroupNotesTabBody> {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: PrimaryButton(
-                  label: 'Enregistrer',
+                  label: l10n.groupNotesTabBodySaveButtonLabel,
                   isLoading: widget.isSaving,
                   onPressed: (_isDirty && !widget.isSaving) ? _save : null,
                 ),
@@ -177,6 +177,7 @@ class _DictationButtonState extends State<_DictationButton> {
       return;
     }
 
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isBusy = true);
     final available = await _speech.initialize(
       onError: (error) => _handleError(error),
@@ -189,10 +190,7 @@ class _DictationButtonState extends State<_DictationButton> {
     if (!mounted) return;
     if (!available) {
       setState(() => _isBusy = false);
-      widget.onError(
-        'Reconnaissance vocale indisponible sur cet appareil ou accès '
-        'micro refusé.',
-      );
+      widget.onError(l10n.groupNotesTabBodyDictationUnavailableMessage);
       return;
     }
 
@@ -204,9 +202,16 @@ class _DictationButtonState extends State<_DictationButton> {
     await _speech.listen(onResult: _handleResult);
   }
 
+  // `AppLocalizations.of(context)` exige un `context` monté — ce callback
+  // peut être déclenché par le moteur système après que ce widget a déjà
+  // été démonté (ex. l'utilisateur quitte l'onglet Notes pendant l'écoute),
+  // d'où le retour anticipé plutôt que l'ancien appel inconditionnel à
+  // `widget.onError`.
   void _handleError(SpeechRecognitionError error) {
-    if (mounted) setState(() => _isListening = false);
-    widget.onError('Erreur de reconnaissance vocale : ${error.errorMsg}');
+    if (!mounted) return;
+    setState(() => _isListening = false);
+    final l10n = AppLocalizations.of(context)!;
+    widget.onError(l10n.groupNotesTabBodyDictationErrorMessage(error.errorMsg));
   }
 
   void _handleResult(SpeechRecognitionResult result) {

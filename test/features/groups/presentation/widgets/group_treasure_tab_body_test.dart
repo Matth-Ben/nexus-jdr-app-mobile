@@ -14,6 +14,7 @@ import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/features/groups/domain/group_treasure.dart';
 import 'package:personnages/features/groups/domain/group_treasure_item.dart';
 import 'package:personnages/features/groups/presentation/widgets/group_treasure_tab_body.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 void main() {
   Widget buildWidget({
@@ -23,8 +24,15 @@ void main() {
     VoidCallback? onClaimCurrency,
     ClaimGroupTreasureItemCallback? onClaimItem,
     VoidCallback? onAddToTreasure,
+    Locale locale = const Locale('fr'),
   }) {
     return MaterialApp(
+      // Ce widget lit `AppLocalizations.of(context)!` (chantier "traduction
+      // de l'app" Phase B, lot "Groups — onglets/butin") : sans ces
+      // delegates, l'appel renverrait `null` et le `!` planterait.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(
         body: GroupTreasureTabBody(
           treasure: treasure,
@@ -236,5 +244,75 @@ void main() {
       find.textContaining("tu peux gérer le butin commun mais pas"),
       findsNothing,
     );
+  });
+
+  group('traduction anglaise', () {
+    testWidgets(
+      'les 2 libellés de section, le bouton pointillé et le bouton bordé '
+      'doré en anglais',
+      (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            treasure: const GroupTreasure(groupId: 'group-1', currencyGp: 12),
+            locale: const Locale('en'),
+          ),
+        );
+
+        expect(find.text('SHARED CURRENCY'), findsOneWidget);
+        expect(find.text('PENDING ITEMS'), findsOneWidget);
+        expect(find.text('Claim to my inventory'), findsOneWidget);
+        expect(find.text("ADD TO THE GROUP'S LOOT"), findsOneWidget);
+      },
+    );
+
+    testWidgets('état vide des objets en attente en anglais', (tester) async {
+      await tester.pumpWidget(
+        buildWidget(
+          treasure: const GroupTreasure(groupId: 'group-1'),
+          locale: const Locale('en'),
+        ),
+      );
+
+      expect(find.text('No pending items.'), findsOneWidget);
+    });
+
+    testWidgets(
+      'une ligne d\'objet en attente : quantité et lien "Claim" en anglais',
+      (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            treasure: const GroupTreasure(
+              groupId: 'group-1',
+              items: [
+                GroupTreasureItem(
+                  itemId: 7,
+                  displayName: 'Potion of healing',
+                  quantity: 3,
+                ),
+              ],
+            ),
+            locale: const Locale('en'),
+          ),
+        );
+
+        expect(find.text('× 3'), findsOneWidget);
+        expect(find.text('Claim'), findsOneWidget);
+      },
+    );
+
+    testWidgets('bandeau MJ sans personnage en anglais', (tester) async {
+      await tester.pumpWidget(
+        buildWidget(
+          treasure: const GroupTreasure(groupId: 'group-1'),
+          canClaim: false,
+          locale: const Locale('en'),
+        ),
+      );
+
+      expect(
+        find.textContaining("you can manage the shared loot but can't"),
+        findsOneWidget,
+      );
+    });
   });
 }

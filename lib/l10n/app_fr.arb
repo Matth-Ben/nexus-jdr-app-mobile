@@ -6676,5 +6676,215 @@
   "groupCharacterReassignmentScreenSavingOverlayMessage": "Mise à jour du groupe...",
   "@groupCharacterReassignmentScreenSavingOverlayMessage": {
     "description": "Texte de `_ReassignmentSavingOverlay`, affiché pendant `setGroupCharacter`."
+  },
+
+  "groupMembersTabBodyShareCodeBannerMessage": "Partage ce code pour inviter d'autres joueurs (touche-le pour le copier) :",
+  "@groupMembersTabBodyShareCodeBannerMessage": {
+    "description": "`InfoBanner` affiché quand le joueur est seul dans le groupe (`showBanner`), au-dessus du `GroupInviteCodeChip`."
+  },
+  "groupMembersTabBodyLiveUpdateLabel": "Mis à jour en direct",
+  "@groupMembersTabBodyLiveUpdateLabel": {
+    "description": "`_LiveUpdateIndicator`, en tête de liste — rend visible la mise à jour Realtime silencieuse de cet onglet."
+  },
+  "groupMembersTabBodyRemoveMemberTooltip": "Exclure {memberName}",
+  "@groupMembersTabBodyRemoveMemberTooltip": {
+    "description": "`tooltip` du bouton `_RemoveMemberButton` (icône `person_remove_outlined`) — `memberName` est le nom du membre, dynamique.",
+    "placeholders": {
+      "memberName": {
+        "type": "String"
+      }
+    }
+  },
+  "groupMembersTabBodyGameMasterPrefix": "MJ - ",
+  "@groupMembersTabBodyGameMasterPrefix": {
+    "description": "Préfixe du `TextSpan` \"MJ - {nom}\" de la carte MJ volontaire (`_MemberCard._buildGameMasterCard`) — le nom qui suit reste dynamique."
+  },
+  "groupMembersTabBodySelfSuffix": " (toi)",
+  "@groupMembersTabBodySelfSuffix": {
+    "description": "Suffixe affiché après le nom du joueur connecté sur sa propre carte (personnage, MJ volontaire ou orpheline) — 3 points d'appel identiques dans `_MemberCard`."
+  },
+  "groupMembersTabBodyGameMasterHpNote": "Ne suit pas ses PV ici.",
+  "@groupMembersTabBodyGameMasterHpNote": {
+    "description": "Texte neutre affiché à la place de la ligne PV sur la carte MJ volontaire — ne JAMAIS afficher une valeur factice (0/0 serait lu comme \"en train de mourir\")."
+  },
+  "groupMembersTabBodyAwaitingCharacterLabel": "En attente d'un personnage",
+  "@groupMembersTabBodyAwaitingCharacterLabel": {
+    "description": "Nom de repli du membre orphelin (`GroupMember.isAwaitingCharacter`, voir les fixtures de test) ET texte d'état affiché à la place de la ligne PV sur sa carte (`_MemberCard._buildAwaitingCharacterCard`)."
+  },
+  "groupMembersTabBodyDeadStatusLabel": "MORT",
+  "@groupMembersTabBodyDeadStatusLabel": {
+    "description": "`_StatusBadge` pour `CharacterVitalStatus.dead`, déjà en majuscules."
+  },
+  "groupMembersTabBodyUnconsciousStatusLabel": "INCONSCIENT",
+  "@groupMembersTabBodyUnconsciousStatusLabel": {
+    "description": "`_StatusBadge` pour `CharacterVitalStatus.unconscious`, déjà en majuscules."
+  },
+  "groupMembersTabBodyArmorClassLabel": "CA {armorClass}",
+  "@groupMembersTabBodyArmorClassLabel": {
+    "description": "`_ArmorClassLine` — \"CA {valeur}\", avec ou sans suffixe signé du bonus manuel (ajouté séparément par l'appelant).",
+    "placeholders": {
+      "armorClass": {
+        "type": "int"
+      }
+    }
+  },
+  "groupMembersTabBodyTemporaryHpChipLabel": "+{amount} PV temp.",
+  "@groupMembersTabBodyTemporaryHpChipLabel": {
+    "description": "`_TemporaryHpChip` — même texte que `characterVitalsCardTemporaryHpChip`, dupliqué volontairement (pas de dépendance entre ces deux widgets).",
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "groupMembersTabBodyPrivacyExplanation": "Touche un membre pour voir sa fiche complète, en lecture seule. Personne ne peut modifier le personnage d'un autre.",
+  "@groupMembersTabBodyPrivacyExplanation": {
+    "description": "`_PrivacyExplanation`, en pied de liste — rappelle ce que la RLS de groupe autorise déjà à lire côté serveur."
+  },
+  "groupMembersTabBodyLeaveGroupLinkLabel": "Quitter le groupe",
+  "@groupMembersTabBodyLeaveGroupLinkLabel": {
+    "description": "`_LeaveGroupLinkLabel`, affiché en pied d'onglet pour les membres non-fondateurs uniquement."
+  },
+
+  "groupTreasureTabBodyGameMasterBannerMessage": "En tant que MJ sans personnage, tu peux gérer le butin commun mais pas t'attribuer une part — seuls les membres avec un personnage le peuvent.",
+  "@groupTreasureTabBodyGameMasterBannerMessage": {
+    "description": "`InfoBanner` affiché quand `canClaim` est faux (MJ sans personnage, voir `group_screen.dart::_buildTreasureTab`)."
+  },
+  "groupTreasureTabBodyCurrencySectionLabel": "MONNAIE COMMUNE",
+  "@groupTreasureTabBodyCurrencySectionLabel": {
+    "description": "`_SectionLabel`, déjà en majuscules."
+  },
+  "groupTreasureTabBodyPendingItemsSectionLabel": "OBJETS EN ATTENTE",
+  "@groupTreasureTabBodyPendingItemsSectionLabel": {
+    "description": "`_SectionLabel`, déjà en majuscules."
+  },
+  "groupTreasureTabBodyClaimCurrencyButtonLabel": "Répartir vers mon inventaire",
+  "@groupTreasureTabBodyClaimCurrencyButtonLabel": {
+    "description": "`DashedButton` qui ouvre `claim_group_treasure_currency_sheet.dart` — `PrimaryButton`/`SecondaryButton`/`DashedButton` mettent déjà leur libellé en majuscules à l'affichage, ce texte reste en casse normale."
+  },
+  "groupTreasureTabBodyAddToTreasureButtonLabel": "Ajouter au butin du groupe",
+  "@groupTreasureTabBodyAddToTreasureButtonLabel": {
+    "description": "`SecondaryButton` qui ouvre `add_to_group_treasure_sheet.dart`."
+  },
+  "groupTreasureTabBodyItemQuantityLabel": "× {quantity}",
+  "@groupTreasureTabBodyItemQuantityLabel": {
+    "description": "Sous-titre de `_TreasureItemRow` — `item.displayName` (ligne 1, dynamique) reste séparé de cette quantité (ligne 2).",
+    "placeholders": {
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+  "groupTreasureTabBodyClaimItemLinkLabel": "S'attribuer",
+  "@groupTreasureTabBodyClaimItemLinkLabel": {
+    "description": "Lien texte de `_TreasureItemRow`, ouvre `claim_group_treasure_item_sheet.dart`."
+  },
+  "groupTreasureTabBodyEmptyItemsMessage": "Aucun objet en attente.",
+  "@groupTreasureTabBodyEmptyItemsMessage": {
+    "description": "`_EmptyTreasureItemsState`, affiché quand `treasure.items` est vide."
+  },
+
+  "groupNotesTabBodyHintText": "Prends tes notes pendant la partie : événements, indices, rebondissements…",
+  "@groupNotesTabBodyHintText": {
+    "description": "`hintText` du `TextField` principal de l'onglet Notes."
+  },
+  "groupNotesTabBodySaveButtonLabel": "Enregistrer",
+  "@groupNotesTabBodySaveButtonLabel": {
+    "description": "`PrimaryButton` \"Enregistrer\", actif seulement si le texte a changé (`_isDirty`)."
+  },
+  "groupNotesTabBodyDictationUnavailableMessage": "Reconnaissance vocale indisponible sur cet appareil ou accès micro refusé.",
+  "@groupNotesTabBodyDictationUnavailableMessage": {
+    "description": "Transmis à `onDictationError` quand `SpeechToText.initialize` échoue (appareil ou permission)."
+  },
+  "groupNotesTabBodyDictationErrorMessage": "Erreur de reconnaissance vocale : {errorMsg}",
+  "@groupNotesTabBodyDictationErrorMessage": {
+    "description": "Transmis à `onDictationError` sur `SpeechRecognitionError` — `errorMsg` vient du moteur système (`speech_to_text`), jamais traduit (texte déjà fourni par la plateforme, pas une chaîne du dépôt).",
+    "placeholders": {
+      "errorMsg": {
+        "type": "String"
+      }
+    }
+  },
+
+  "addToGroupTreasureSheetTitle": "AJOUTER AU BUTIN DU GROUPE",
+  "@addToGroupTreasureSheetTitle": {
+    "description": "Titre de `SheetHeaderBar`, déjà en majuscules."
+  },
+  "addToGroupTreasureSheetCurrencySectionLabel": "MONNAIE",
+  "@addToGroupTreasureSheetCurrencySectionLabel": {
+    "description": "Même libellé que `addRewardSheetCurrencyLabel`, dupliqué volontairement (sheet distincte)."
+  },
+  "addToGroupTreasureSheetItemsSectionLabel": "OBJETS",
+  "@addToGroupTreasureSheetItemsSectionLabel": {
+    "description": "Même libellé que `addRewardSheetItemsLabel`, dupliqué volontairement (sheet distincte)."
+  },
+  "addToGroupTreasureSheetAddItemsButtonLabel": "Ajouter des objets",
+  "@addToGroupTreasureSheetAddItemsButtonLabel": {
+    "description": "`DashedAddTile` — au pluriel, contrairement à `addRewardSheetAddItemLabel` (\"Ajouter un objet\") : `pickInventoryAdditions` permet une sélection multiple ici."
+  },
+  "addToGroupTreasureSheetCancelButtonLabel": "Annuler",
+  "@addToGroupTreasureSheetCancelButtonLabel": {
+    "description": "`SecondaryButton` \"Annuler\", ferme la sheet sans appliquer."
+  },
+  "addToGroupTreasureSheetApplyButtonLabel": "Ajouter au butin",
+  "@addToGroupTreasureSheetApplyButtonLabel": {
+    "description": "`PrimaryButton`, actif seulement si `_canApply` (au moins une monnaie ou un objet saisi)."
+  },
+  "addToGroupTreasureSheetItemQuantityLabel": "{name} × {quantity}",
+  "@addToGroupTreasureSheetItemQuantityLabel": {
+    "description": "`_TreasureDraftItemRow` — même format que `addRewardSheetItemQuantityLabel` (`name` déjà résolu, catalogue ou objet personnalisé).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+
+  "claimGroupTreasureCurrencySheetTitle": "S'ATTRIBUER DE LA MONNAIE",
+  "@claimGroupTreasureCurrencySheetTitle": {
+    "description": "Titre de `SheetHeaderBar`, déjà en majuscules."
+  },
+  "claimGroupTreasureCurrencySheetCancelButtonLabel": "Annuler",
+  "@claimGroupTreasureCurrencySheetCancelButtonLabel": {
+    "description": "`SecondaryButton` \"Annuler\", ferme la sheet sans appliquer."
+  },
+  "claimGroupTreasureCurrencySheetApplyButtonLabel": "S'attribuer",
+  "@claimGroupTreasureCurrencySheetApplyButtonLabel": {
+    "description": "`PrimaryButton`, actif seulement si `_canApply` (au moins un montant saisi)."
+  },
+  "claimGroupTreasureCurrencySheetMaxLabel": "/ {max}",
+  "@claimGroupTreasureCurrencySheetMaxLabel": {
+    "description": "`_ClaimCurrencyField` — solde maximum disponible dans le butin, affiché sous le champ.",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+
+  "claimGroupTreasureItemSheetTitle": "Réclamer {itemName}",
+  "@claimGroupTreasureItemSheetTitle": {
+    "description": "Titre de la sheet légère — `itemName` est `GroupTreasureItem.displayName`, dynamique.",
+    "placeholders": {
+      "itemName": {
+        "type": "String"
+      }
+    }
+  },
+  "claimGroupTreasureItemSheetAvailableLabel": "{quantity, plural, =1{1 disponible} other{{quantity} disponibles}}",
+  "@claimGroupTreasureItemSheetAvailableLabel": {
+    "description": "Sous-titre \"{quantité} disponible(s)\" — ancien texte en dur toujours au pluriel (\"1 disponible(s)\"), corrigé en ICU plural par cette migration.",
+    "placeholders": {
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+  "claimGroupTreasureItemSheetSubmitButtonLabel": "Réclamer",
+  "@claimGroupTreasureItemSheetSubmitButtonLabel": {
+    "description": "`PrimaryButton`, actif seulement si la quantité choisie est non nulle."
   }
 }

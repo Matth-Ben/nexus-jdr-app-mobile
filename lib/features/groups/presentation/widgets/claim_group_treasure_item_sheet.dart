@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/stepper_counter.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/group_treasure_item.dart';
 
 /// Sheet légère "Réclamer {nom}" — calque `_ItemQuantitySheetContent`
@@ -39,6 +40,7 @@ class _ClaimItemSheetContentState extends State<_ClaimItemSheetContent> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -52,7 +54,7 @@ class _ClaimItemSheetContentState extends State<_ClaimItemSheetContent> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Réclamer ${widget.item.displayName}',
+              l10n.claimGroupTreasureItemSheetTitle(widget.item.displayName),
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -60,7 +62,9 @@ class _ClaimItemSheetContentState extends State<_ClaimItemSheetContent> {
             ),
             const SizedBox(height: 4),
             Text(
-              '${widget.item.quantity} disponible(s)',
+              l10n.claimGroupTreasureItemSheetAvailableLabel(
+                widget.item.quantity,
+              ),
               style: AppTypography.body(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -80,7 +84,7 @@ class _ClaimItemSheetContentState extends State<_ClaimItemSheetContent> {
             ),
             const SizedBox(height: AppSpacing.md),
             PrimaryButton(
-              label: 'Réclamer',
+              label: l10n.claimGroupTreasureItemSheetSubmitButtonLabel,
               onPressed: _quantity > 0
                   ? () => Navigator.of(context).pop(_quantity)
                   : null,
