@@ -6630,7 +6630,7 @@ abstract class AppLocalizations {
   /// **'Scores finaux : bonus de race et améliorations déjà inclus. Ajuste-les librement (1 à 30).'**
   String get abilityScoreStepScreenEditIntroMessage;
 
-  /// Rappel affiché en mode modification quand la race a changé depuis l'original, {before}/{after} viennent de `_racialBonusesLabel` (bonus de race/sous-race formatés par `RaceSummaryFormatter.formatAbilityBonuses`, domaine, non traduit — D148/D149 de docs/dette-technique.md).
+  /// Rappel affiché en mode modification quand la race a changé depuis l'original, {before}/{after} viennent de `_racialBonusesLabel` (bonus de race/sous-race formatés par `RaceSummaryFormatter.formatAbilityBonuses`, domaine, non traduit — D157 de docs/dette-technique.md).
   ///
   /// In fr, this message translates to:
   /// **'Race modifiée — reporte toi-même la différence de bonus :\navant : {before}\nmaintenant : {after}'**

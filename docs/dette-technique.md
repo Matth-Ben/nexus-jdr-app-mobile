@@ -850,6 +850,21 @@ périmètre des 5 fichiers assignés à ce lot).
 | D155 | `spell_option_info_sheet.dart` (`presentation/widgets/`, panneau d'information d'un sort ouvert depuis le bouton ⓘ de l'étape 6/9 "Sorts", `spells_step_screen.dart`, migré au lot 4) reste entièrement non traduit : tous ses libellés fixes ("Sort mineur"/"Sort de niveau N", "Temps d'incantation", "Portée", "Composantes", "Durée", "Concentration", "Oui"/"Non", "DESCRIPTION", "Description indisponible.") sont codés en dur en français — jamais assigné à aucun des 5 sous-lots de `character_creation` (ni celui qui a migré l'écran qui l'ouvre, ni celui-ci). Repéré par le grep final de ce lot. | basse (texte secondaire, pas une donnée fausse — juste une langue qui ne suit pas le réglage de l'app) | Migrer `spell_option_info_sheet.dart` vers `.arb` à l'occasion d'un futur petit lot dédié aux panneaux d'information non couverts (voir aussi `item_info_panel.dart`/`spell_info_panel.dart` de la fiche personnage, probablement dans le même lot si elle existe déjà comme dette) | Ouvert, non traité |
 | D156 | `character_edit_flow.dart::startCharacterEdit` (`presentation/widgets/`, lancé depuis l'entrée « Modifier » du menu ⋮ de la fiche personnage) affiche un message de repli d'erreur générique toujours en français ("Impossible de charger le personnage à modifier. Réessayez."), hors du cas `CharacterCreationFailure` (`error.message`, déjà couvert par D148). Jamais assigné à aucun des 5 sous-lots de `character_creation` — cette fonction est invoquée depuis la fiche personnage (`features/characters`), pas depuis un écran de l'assistant proprement dit. Repéré par le grep final de ce lot. | basse (texte secondaire, chemin d'erreur réseau peu fréquent) | Migrer ce message vers `.arb` à l'occasion d'un futur lot touchant soit `character_edit_flow.dart` lui-même, soit l'écran de fiche personnage qui déclenche `startCharacterEdit` (`character_detail_screen.dart` ou équivalent) | Ouvert, non traité |
 
+## Ajouts liés à la relecture qa-testeur du lot "Character creation — widgets partagés" (05/11/2026)
+
+`qa-testeur` a relu ce lot (commit `890053a`) et trouvé un gap transversal raté par le grep
+final de ce lot et de celui qui l'a précédé ("Character creation — caractéristiques/
+compétences") : la description de la clé `.arb` `abilityScoreStepScreenRaceChangedMessage`
+(introduite par ce lot précédent) affirmait que `RaceSummaryFormatter.formatAbilityBonuses`
+était déjà couvert par D148/D149 — or ni l'une ni l'autre de ces deux entrées ne nomme
+`RaceSummaryFormatter`. Cette référence croisée fausse avait fait croire aux grep finaux des
+lots suivants que ce cas était déjà tracé. Corrigée pour renvoyer vers D157 ci-dessous plutôt
+que vers D148/D149.
+
+| ID | Constat | Gravité | Correction | État |
+|---|---|---|---|---|
+| D157 | Le motif d'abréviation de caractéristique ("For"/"Dex"/"Con"/"Int"/"Sag"/"Cha") est codé en dur en français dans 3 fichiers `domain/` distincts, tous les trois réellement affichés à l'écran (en anglais comme en français) : `ability_score_definitions.dart` (champs `label`/`abbreviation` des 6 `AbilityScoreDefinition`), consommé par `racial_bonus_choice_card.dart`, `skills_and_tools_step_screen.dart`, `class_choice_step_screen.dart` et `character_ability_score_grid.dart` (fiche personnage, hors `character_creation`) ; `race_summary_formatter.dart` (map `_abilityAbbreviations` + le littéral `'+1 à toutes les caractéristiques'`), consommé par `ability_score_step_screen.dart` ; `skill_ability_mapping.dart` (`abilityAbbreviationBySkill`), consommé par `skills_and_tools_step_screen.dart`/`class_choice_step_screen.dart`. Même famille de défaut que D142/D143/D146/D148/D149/D151/D154 (classe `domain/` sans `BuildContext`). | basse (texte secondaire, pas une donnée fausse — juste une langue qui ne suit pas le réglage de l'app) | Migrer ces 3 fichiers vers le pattern "fonction `(l10n) => ...`" déjà établi (voir D142/D143/D146/D148/D149/D151/D154) — chantier à part, qui touche aussi `character_ability_score_grid.dart` déjà mergé dans le chantier Characters, hors `character_creation` | Ouvert, non traité |
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont

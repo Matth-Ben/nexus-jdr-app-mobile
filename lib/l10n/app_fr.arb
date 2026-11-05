@@ -5450,7 +5450,7 @@
   },
   "abilityScoreStepScreenRaceChangedMessage": "Race modifiée — reporte toi-même la différence de bonus :\navant : {before}\nmaintenant : {after}",
   "@abilityScoreStepScreenRaceChangedMessage": {
-    "description": "Rappel affiché en mode modification quand la race a changé depuis l'original, {before}/{after} viennent de `_racialBonusesLabel` (bonus de race/sous-race formatés par `RaceSummaryFormatter.formatAbilityBonuses`, domaine, non traduit — D148/D149 de docs/dette-technique.md).",
+    "description": "Rappel affiché en mode modification quand la race a changé depuis l'original, {before}/{after} viennent de `_racialBonusesLabel` (bonus de race/sous-race formatés par `RaceSummaryFormatter.formatAbilityBonuses`, domaine, non traduit — D157 de docs/dette-technique.md).",
     "placeholders": {
       "before": {
         "type": "String"
