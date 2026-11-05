@@ -12,6 +12,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../characters/domain/level_up_choice_options.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/class_choice_rules.dart';
@@ -242,6 +243,7 @@ class _NamedChoiceBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final catalogAsync = ref.watch(classCatalogProvider);
 
     return catalogAsync.when(
@@ -251,7 +253,7 @@ class _NamedChoiceBody extends ConsumerWidget {
               (classOption) => classOption.id == classId,
               orElse: () => ClassOption(
                 id: classId,
-                name: 'cette classe',
+                name: l10n.classChoiceStepScreenFallbackClassName,
                 description: '',
                 hitDie: 6,
               ),
@@ -284,7 +286,7 @@ class _NamedChoiceBody extends ConsumerWidget {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Ce choix se fait dès le niveau 1 pour $className.',
+                    l10n.classChoiceStepScreenIntroText(className),
                     style: AppTypography.body(fontSize: 14),
                   ),
                 ),
@@ -300,7 +302,7 @@ class _NamedChoiceBody extends ConsumerWidget {
                   children: [
                     if (selectedValue == null) ...[
                       Text(
-                        'Choisis une option pour continuer.',
+                        l10n.classChoiceStepScreenChooseOptionHint,
                         style: AppTypography.body(
                           fontSize: 12,
                           color: AppColors.accentBrick,
@@ -343,7 +345,8 @@ class _NamedChoiceBody extends ConsumerWidget {
         body: _ErrorState(
           message: error is CharacterCreationFailure
               ? error.message
-              : 'Impossible de charger les classes disponibles. Réessayez.',
+              : l10n.classChoiceStepScreenGenericErrorMessage,
+          retryLabel: l10n.classChoiceStepScreenRetryButton,
           onRetry: () => ref.invalidate(classCatalogProvider),
         ),
       ),
@@ -380,6 +383,7 @@ class _ExpertiseBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final dataAsync = ref.watch(skillsAndToolsStepDataProvider);
 
     return dataAsync.when(
@@ -449,7 +453,7 @@ class _ExpertiseBody extends ConsumerWidget {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Ce choix se fait dès le niveau 1 pour ${classOption.name}.',
+                    l10n.classChoiceStepScreenIntroText(classOption.name),
                     style: AppTypography.body(fontSize: 14),
                   ),
                 ),
@@ -459,8 +463,7 @@ class _ExpertiseBody extends ConsumerWidget {
                     ? Padding(
                         padding: const EdgeInsets.all(AppSpacing.lg),
                         child: Text(
-                          "Aucune option n'est disponible pour ce choix. Tu "
-                          'peux continuer sans en faire.',
+                          l10n.classChoiceStepScreenNoOptionsAvailableMessage,
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textMuted,
@@ -476,8 +479,11 @@ class _ExpertiseBody extends ConsumerWidget {
                         ),
                         children: [
                           _SectionHeader(
-                            title: 'COMPÉTENCES MAÎTRISÉES',
-                            badge: '$selectedCount / $effectiveQuota choisies',
+                            title: l10n.classChoiceStepScreenSkillsSectionTitle,
+                            badge: l10n.classChoiceStepScreenQuotaBadge(
+                              selectedCount,
+                              effectiveQuota,
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           for (
@@ -522,8 +528,8 @@ class _ExpertiseBody extends ConsumerWidget {
         body: _ErrorState(
           message: error is CharacterCreationFailure
               ? error.message
-              : 'Impossible de charger les compétences disponibles. '
-                    'Réessayez.',
+              : l10n.classChoiceStepScreenSkillsErrorMessage,
+          retryLabel: l10n.classChoiceStepScreenRetryButton,
           onRetry: () => ref.invalidate(skillsAndToolsStepDataProvider),
         ),
       ),
@@ -634,13 +640,16 @@ class _Scaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         _Header(
           onBack: onGoBack,
-          title: title,
+          headerTitle: l10n.classChoiceStepScreenHeaderTitle(title),
+          stepCounterLabel: l10n.classChoiceStepScreenStepCounter(3, 10),
           currentStep: 3,
           totalSteps: 10,
+          helpTooltip: l10n.classChoiceStepScreenHelpTooltip,
           onHelp: () => showStepHelpSheet(
             context,
             title == ClassChoiceRules.titleFor(ClassChoiceKind.expertise)
@@ -662,7 +671,7 @@ class _Scaffold extends StatelessWidget {
                         children: [
                           Expanded(
                             child: SecondaryButton(
-                              label: 'Retour',
+                              label: l10n.classChoiceStepScreenBackButton,
                               surface: SecondaryButtonSurface.parchment,
                               onPressed: onGoBack,
                             ),
@@ -670,7 +679,7 @@ class _Scaffold extends StatelessWidget {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Suivant',
+                              label: l10n.classChoiceStepScreenNextButton,
                               onPressed: canProceed ? onSubmit : null,
                             ),
                           ),
@@ -697,16 +706,20 @@ class _Scaffold extends StatelessWidget {
 class _Header extends StatelessWidget {
   const _Header({
     required this.onBack,
-    required this.title,
+    required this.headerTitle,
+    required this.stepCounterLabel,
     required this.currentStep,
     required this.totalSteps,
+    required this.helpTooltip,
     required this.onHelp,
   });
 
   final VoidCallback onBack;
-  final String title;
+  final String headerTitle;
+  final String stepCounterLabel;
   final int currentStep;
   final int totalSteps;
+  final String helpTooltip;
   final VoidCallback onHelp;
 
   @override
@@ -743,7 +756,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
-                      tooltip: 'Aide',
+                      tooltip: helpTooltip,
                       icon: const Icon(
                         Icons.help_outline,
                         color: AppColors.textOnWood,
@@ -761,7 +774,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '3. $title',
+                          headerTitle,
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -769,7 +782,7 @@ class _Header extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          stepCounterLabel,
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,
@@ -794,9 +807,14 @@ class _Header extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
+  const _ErrorState({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
 
   final String message;
+  final String retryLabel;
   final VoidCallback onRetry;
 
   @override
@@ -819,7 +837,7 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(label: retryLabel, onPressed: onRetry),
           ],
         ),
       ),

@@ -33,6 +33,7 @@ import 'package:personnages/features/character_creation/presentation/class_choic
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_edit_session_provider.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   ClassCatalog? classCatalogToReturn;
@@ -201,10 +202,15 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
@@ -215,7 +221,10 @@ void main() {
       tester.widget<PrimaryButton>(find.byType(PrimaryButton)).onPressed !=
       null;
 
-  Future<void> pumpClassChoiceStep(WidgetTester tester) async {
+  Future<void> pumpClassChoiceStep(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     // Surface de test agrandie en hauteur — même rationale que
     // `skills_and_tools_step_screen_test.dart` (le pied de page
     // "Brouillon sauvegardé automatiquement · Abandonner" réduit la hauteur
@@ -226,7 +235,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     router.push('/characters/new/class-choice');
     await tester.pumpAndSettle();
@@ -584,6 +593,107 @@ void main() {
 
         expect(find.text('Étape Apparence'), findsOneWidget);
         expect(find.text('Étape Équipement'), findsNothing);
+      },
+    );
+  });
+
+  group('traduction anglaise', () {
+    testWidgets(
+      '_NamedChoiceBody (Guerrier) : en-tête, compteur, intro, indication, '
+      'boutons et tooltip d\'aide en anglais — le titre "Style de combat" '
+      'lui-même reste en français (`ClassChoiceRules`, domaine non traduit, '
+      'D149 de docs/dette-technique.md)',
+      (WidgetTester tester) async {
+        fakeRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [_guerrier],
+        );
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setClass(classId: 5);
+
+        await pumpClassChoiceStep(tester, locale: const Locale('en'));
+
+        expect(find.text('3. Style de combat'), findsOneWidget);
+        expect(find.text('Step 3 / 10'), findsOneWidget);
+        expect(
+          find.text('This choice is made right at level 1 for Guerrier.'),
+          findsOneWidget,
+        );
+        expect(find.text('Choose an option to continue.'), findsOneWidget);
+        expect(find.text('BACK'), findsOneWidget);
+        expect(find.text('NEXT'), findsOneWidget);
+        expect(find.byTooltip('Help'), findsOneWidget);
+
+        await tester.tap(find.text('Duel'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('NEXT'));
+        await tester.pumpAndSettle();
+
+        expect(
+          readDraft(),
+          const CharacterCreationDraft(
+            classId: 5,
+            classFeatureChoiceValue: 'Duel',
+          ),
+        );
+        expect(find.text('Étape Historique'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      '_NamedChoiceBody : message d\'erreur de repli et bouton "RETRY" en '
+      'anglais',
+      (WidgetTester tester) async {
+        fakeRepository.classCatalogErrorToThrow = Exception('boom');
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setClass(classId: 5);
+
+        await pumpClassChoiceStep(tester, locale: const Locale('en'));
+
+        expect(
+          find.text("Couldn't load the available classes. Try again."),
+          findsOneWidget,
+        );
+        expect(find.text('RETRY'), findsOneWidget);
+
+        fakeRepository.classCatalogErrorToThrow = null;
+        fakeRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [_guerrier],
+        );
+        await tester.tap(find.text('RETRY'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Archerie'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      '_ExpertiseBody (Roublard) : titre de section, badge de quota et '
+      'titre d\'étape en anglais',
+      (WidgetTester tester) async {
+        fakeRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [_roublard],
+        );
+        fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+          backgrounds: [_ermite],
+        );
+        final notifier = container.read(
+          characterCreationDraftControllerProvider.notifier,
+        );
+        notifier.setClass(classId: 9);
+        notifier.setBackground(backgroundId: 10);
+        notifier.setSkillsAndTools(
+          classSkillChoices: const ['Discrétion', 'Perception'],
+          classToolChoices: const [],
+          backgroundLanguageChoices: const [],
+        );
+
+        await pumpClassChoiceStep(tester, locale: const Locale('en'));
+
+        expect(find.text('3. Expertise'), findsOneWidget);
+        expect(find.text('PROFICIENT SKILLS'), findsOneWidget);
+        expect(find.text('0 / 2 chosen'), findsOneWidget);
       },
     );
   });

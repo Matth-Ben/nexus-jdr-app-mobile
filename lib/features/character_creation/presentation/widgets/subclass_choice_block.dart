@@ -8,6 +8,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/selectable_option_tile.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/creation_step_help.dart';
 import '../../domain/subclass_choice_catalog.dart';
 import '../../domain/subclass_choice_rules.dart';
@@ -76,6 +77,7 @@ class _SubclassChoiceBlockState extends State<SubclassChoiceBlock> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final title = SubclassChoiceRules.titleFor(widget.className);
     final options = widget.catalogAsync.asData?.value.optionsFor(
       widget.classId,
@@ -87,7 +89,9 @@ class _SubclassChoiceBlockState extends State<SubclassChoiceBlock> {
       padding: const EdgeInsets.only(left: AppSpacing.md, top: AppSpacing.sm),
       child: Semantics(
         container: true,
-        label: isEmptyChoice ? title : '$title, choix obligatoire',
+        label: isEmptyChoice
+            ? title
+            : l10n.subclassChoiceBlockRequiredSemanticsLabel(title),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -99,14 +103,14 @@ class _SubclassChoiceBlockState extends State<SubclassChoiceBlock> {
               ),
             ),
             const SizedBox(height: 2),
-            _buildBody(),
+            _buildBody(l10n),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     return widget.catalogAsync.when(
       skipLoadingOnRefresh: false,
       loading: () => const SizedBox(
@@ -131,8 +135,7 @@ class _SubclassChoiceBlockState extends State<SubclassChoiceBlock> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    'Impossible de charger les sous-classes disponibles. '
-                    'Réessaie.',
+                    l10n.subclassChoiceBlockErrorMessage,
                     style: AppTypography.body(fontSize: 14),
                   ),
                 ),
@@ -140,7 +143,7 @@ class _SubclassChoiceBlockState extends State<SubclassChoiceBlock> {
             ),
             const SizedBox(height: AppSpacing.sm),
             SecondaryButton(
-              label: 'Réessayer',
+              label: l10n.subclassChoiceBlockRetryButton,
               surface: SecondaryButtonSurface.parchment,
               onPressed: widget.onRetry,
             ),
@@ -153,8 +156,7 @@ class _SubclassChoiceBlockState extends State<SubclassChoiceBlock> {
           return Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xs),
             child: Text(
-              "Aucune sous-classe n'est disponible pour cette classe. Tu "
-              'peux continuer sans en choisir.',
+              l10n.subclassChoiceBlockEmptyMessage,
               style: AppTypography.body(
                 fontSize: 13,
                 color: AppColors.textMuted,
@@ -166,7 +168,7 @@ class _SubclassChoiceBlockState extends State<SubclassChoiceBlock> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Ce choix se fait dès le niveau 1 pour cette classe.',
+              l10n.subclassChoiceBlockIntroText,
               style: AppTypography.body(
                 fontSize: 13,
                 color: AppColors.textMuted,
@@ -175,7 +177,7 @@ class _SubclassChoiceBlockState extends State<SubclassChoiceBlock> {
             if (widget.selectedSubclassId == null) ...[
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Choisis une option pour continuer.',
+                l10n.subclassChoiceBlockChooseOptionHint,
                 style: AppTypography.body(
                   fontSize: 12,
                   color: AppColors.accentBrick,

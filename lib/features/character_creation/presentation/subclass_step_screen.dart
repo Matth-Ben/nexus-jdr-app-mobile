@@ -8,6 +8,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/class_catalog.dart';
 import '../domain/class_option.dart';
@@ -109,15 +110,17 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
       return const Scaffold(body: SizedBox.shrink());
     }
 
+    final l10n = AppLocalizations.of(context)!;
     final classCatalogAsync = ref.watch(classCatalogProvider);
 
     return Scaffold(
       body: classCatalogAsync.when(
-        data: (catalog) => _buildContent(catalog, classId),
+        data: (catalog) => _buildContent(catalog, classId, l10n),
         loading: () => Column(
           children: [
             _MinimalHeader(
               onBack: _goBack,
+              helpTooltip: l10n.subclassStepScreenHelpTooltip,
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.classStep),
             ),
@@ -138,6 +141,7 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
           children: [
             _MinimalHeader(
               onBack: _goBack,
+              helpTooltip: l10n.subclassStepScreenHelpTooltip,
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.classStep),
             ),
@@ -145,8 +149,8 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
               child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
-                    : 'Impossible de charger les classes disponibles. '
-                          'Réessayez.',
+                    : l10n.subclassStepScreenGenericErrorMessage,
+                retryLabel: l10n.subclassStepScreenRetryButton,
                 onRetry: () => ref.invalidate(classCatalogProvider),
               ),
             ),
@@ -162,13 +166,17 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
     );
   }
 
-  Widget _buildContent(ClassCatalog classCatalog, int classId) {
+  Widget _buildContent(
+    ClassCatalog classCatalog,
+    int classId,
+    AppLocalizations l10n,
+  ) {
     final className = classCatalog.classes
         .firstWhere(
           (classOption) => classOption.id == classId,
           orElse: () => ClassOption(
             id: classId,
-            name: 'cette classe',
+            name: l10n.subclassStepScreenFallbackClassName,
             description: '',
             hitDie: 6,
           ),
@@ -226,6 +234,9 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
           onBack: _goBack,
           currentStep: 3,
           totalSteps: _totalSteps,
+          headerTitle: l10n.subclassStepScreenHeaderTitle,
+          stepCounterLabel: l10n.subclassStepScreenStepCounter(3, _totalSteps),
+          helpTooltip: l10n.subclassStepScreenHelpTooltip,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.classStep),
         ),
         Expanded(
@@ -243,7 +254,7 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Ce choix se fait dès le niveau 1 pour $className.',
+                      l10n.subclassStepScreenIntroText(className),
                       style: AppTypography.body(fontSize: 14),
                     ),
                   ),
@@ -302,7 +313,7 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
                         children: [
                           Expanded(
                             child: SecondaryButton(
-                              label: 'Retour',
+                              label: l10n.subclassStepScreenBackButton,
                               surface: SecondaryButtonSurface.parchment,
                               onPressed: _goBack,
                             ),
@@ -310,7 +321,7 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Suivant',
+                              label: l10n.subclassStepScreenNextButton,
                               onPressed: canProceed ? _submit : null,
                             ),
                           ),
@@ -340,12 +351,18 @@ class _Header extends StatelessWidget {
     required this.onBack,
     required this.currentStep,
     required this.totalSteps,
+    required this.headerTitle,
+    required this.stepCounterLabel,
+    required this.helpTooltip,
     required this.onHelp,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
+  final String headerTitle;
+  final String stepCounterLabel;
+  final String helpTooltip;
   final VoidCallback onHelp;
 
   @override
@@ -382,7 +399,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
-                      tooltip: 'Aide',
+                      tooltip: helpTooltip,
                       icon: const Icon(
                         Icons.help_outline,
                         color: AppColors.textOnWood,
@@ -400,7 +417,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '3. Sous-classe',
+                          headerTitle,
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -408,7 +425,7 @@ class _Header extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          stepCounterLabel,
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,
@@ -435,9 +452,14 @@ class _Header extends StatelessWidget {
 /// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
 /// chargement/l'erreur — copie exacte du pattern des autres étapes.
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({required this.onBack, required this.onHelp});
+  const _MinimalHeader({
+    required this.onBack,
+    required this.helpTooltip,
+    required this.onHelp,
+  });
 
   final VoidCallback onBack;
+  final String helpTooltip;
   final VoidCallback onHelp;
 
   @override
@@ -469,7 +491,7 @@ class _MinimalHeader extends StatelessWidget {
               const Spacer(),
               IconButton(
                 onPressed: onHelp,
-                tooltip: 'Aide',
+                tooltip: helpTooltip,
                 icon: const Icon(
                   Icons.help_outline,
                   color: AppColors.textOnWood,
@@ -484,9 +506,14 @@ class _MinimalHeader extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
+  const _ErrorState({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
 
   final String message;
+  final String retryLabel;
   final VoidCallback onRetry;
 
   @override
@@ -509,7 +536,7 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(label: retryLabel, onPressed: onRetry),
           ],
         ),
       ),

@@ -41,6 +41,7 @@ import 'package:personnages/features/character_creation/presentation/providers/c
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/providers/subclass_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   ClassCatalog? catalogToReturn;
@@ -226,18 +227,26 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
   CharacterCreationDraft readDraft() =>
       container.read(characterCreationDraftControllerProvider);
 
-  Future<void> pumpClassStep(WidgetTester tester) async {
-    await tester.pumpWidget(buildTestWidget());
+  Future<void> pumpClassStep(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     router.push('/characters/new/step-2');
     await tester.pumpAndSettle();
@@ -972,5 +981,83 @@ void main() {
         expect(find.text('Étape suivante'), findsOneWidget);
       },
     );
+  });
+
+  group('traduction anglaise', () {
+    testWidgets(
+      'en-tête, compteur, intro, bandeau de verrouillage, boutons et tooltip '
+      'd\'aide en anglais, "NEXT" écrit toujours le brouillon',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const ClassCatalog(
+          classes: [_magicien, _guerrier],
+        );
+        const editDraft = CharacterCreationDraft(classId: 2);
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .replaceWith(editDraft);
+        container
+            .read(characterEditSessionControllerProvider.notifier)
+            .start(
+              CharacterEditSession(
+                snapshot: CharacterEditSnapshot(
+                  characterId: 'c1',
+                  name: 'Brunhilde',
+                  primaryClassId: 2,
+                  primaryClassLevel: 5,
+                  totalLevel: 5,
+                  maxHp: 40,
+                  currentHp: 40,
+                ),
+                originalDraft: editDraft,
+              ),
+            );
+
+        await pumpClassStep(tester, locale: const Locale('en'));
+
+        expect(find.text('3. Class'), findsOneWidget);
+        expect(find.text('Step 3 / 10'), findsOneWidget);
+        expect(
+          find.text('Choose the path your character will follow.'),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining(
+            'Class and subclass can only be changed at level 1.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('BACK'), findsOneWidget);
+        expect(find.text('NEXT'), findsOneWidget);
+        expect(find.byTooltip('Help'), findsOneWidget);
+
+        await tester.tap(find.text('NEXT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape suivante'), findsOneWidget);
+        expect(readDraft().classId, 2);
+      },
+    );
+
+    testWidgets('message d\'erreur de repli (erreur générique, pas une '
+        '`CharacterCreationFailure`) et bouton "RETRY" en anglais', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.catalogErrorToThrow = Exception('boom');
+
+      await pumpClassStep(tester, locale: const Locale('en'));
+
+      expect(
+        find.text("Couldn't load the available classes. Try again."),
+        findsOneWidget,
+      );
+      expect(find.text('RETRY'), findsOneWidget);
+
+      fakeRepository.catalogErrorToThrow = null;
+      fakeRepository.catalogToReturn = const ClassCatalog(classes: [_magicien]);
+      await tester.tap(find.text('RETRY'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Magicien'), findsOneWidget);
+    });
   });
 }

@@ -5118,5 +5118,256 @@
   "backgroundStepScreenNextButton": "Suivant",
   "@backgroundStepScreenNextButton": {
     "description": "`PrimaryButton` \"Suivant\" (met son libellé en majuscules à l'affichage)."
+  },
+
+  "classStepScreenHelpTooltip": "Aide",
+  "@classStepScreenHelpTooltip": {
+    "description": "Tooltip de l'icône \"?\" du bandeau bois (`_Header`/`_MinimalHeader`), ouvre l'aide contextuelle de l'étape."
+  },
+  "classStepScreenHeaderTitle": "3. Classe",
+  "@classStepScreenHeaderTitle": {
+    "description": "Titre d'étape du bandeau bois (`_Header`)."
+  },
+  "classStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@classStepScreenStepCounter": {
+    "description": "Compteur d'étape du bandeau bois (`_Header`).",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "classStepScreenIntroText": "Choisis la voie que ton personnage empruntera.",
+  "@classStepScreenIntroText": {
+    "description": "Phrase d'intro affichée au-dessus de la liste des classes."
+  },
+  "classStepScreenLockedBannerMessage": "La classe et la sous-classe ne peuvent être modifiées qu'au niveau 1.",
+  "@classStepScreenLockedBannerMessage": {
+    "description": "Message de `InfoBanner` affiché en mode modification quand la classe est verrouillée (niveau > 1)."
+  },
+  "classStepScreenBackButton": "Retour",
+  "@classStepScreenBackButton": {
+    "description": "`SecondaryButton` \"Retour\" (met son libellé en majuscules à l'affichage)."
+  },
+  "classStepScreenNextButton": "Suivant",
+  "@classStepScreenNextButton": {
+    "description": "`PrimaryButton` \"Suivant\" (met son libellé en majuscules à l'affichage)."
+  },
+  "classStepScreenGenericErrorMessage": "Impossible de charger les classes disponibles. Réessayez.",
+  "@classStepScreenGenericErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`."
+  },
+  "classStepScreenRetryButton": "Réessayer",
+  "@classStepScreenRetryButton": {
+    "description": "`SecondaryButton` \"Réessayer\" de `_ErrorState` (met son libellé en majuscules à l'affichage)."
+  },
+
+  "classChoiceStepScreenHelpTooltip": "Aide",
+  "@classChoiceStepScreenHelpTooltip": {
+    "description": "Tooltip de l'icône \"?\" du bandeau bois (`_Header`), ouvre l'aide contextuelle de l'étape (style de combat/ennemi juré/expertise)."
+  },
+  "classChoiceStepScreenHeaderTitle": "3. {title}",
+  "@classChoiceStepScreenHeaderTitle": {
+    "description": "Titre d'étape du bandeau bois (`_Header`), {title} vient de `ClassChoiceRules.titleFor` (domaine, reste en français — D149 de docs/dette-technique.md).",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "classChoiceStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@classChoiceStepScreenStepCounter": {
+    "description": "Compteur d'étape du bandeau bois (`_Header`).",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "classChoiceStepScreenIntroText": "Ce choix se fait dès le niveau 1 pour {className}.",
+  "@classChoiceStepScreenIntroText": {
+    "description": "Phrase d'intro affichée au-dessus des options, {className} vient des données (`ClassOption.name`, non traduit).",
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "classChoiceStepScreenChooseOptionHint": "Choisis une option pour continuer.",
+  "@classChoiceStepScreenChooseOptionHint": {
+    "description": "Indication affichée en rouge tant qu'aucune option n'est sélectionnée (`_NamedChoiceBody`)."
+  },
+  "classChoiceStepScreenFallbackClassName": "cette classe",
+  "@classChoiceStepScreenFallbackClassName": {
+    "description": "Libellé de repli si l'id de classe du brouillon est absent du catalogue chargé (`_NamedChoiceBody`, cas défensif), même principe que `subraceStepScreenFallbackRaceName`."
+  },
+  "classChoiceStepScreenBackButton": "Retour",
+  "@classChoiceStepScreenBackButton": {
+    "description": "`SecondaryButton` \"Retour\" (met son libellé en majuscules à l'affichage)."
+  },
+  "classChoiceStepScreenNextButton": "Suivant",
+  "@classChoiceStepScreenNextButton": {
+    "description": "`PrimaryButton` \"Suivant\" (met son libellé en majuscules à l'affichage)."
+  },
+  "classChoiceStepScreenGenericErrorMessage": "Impossible de charger les classes disponibles. Réessayez.",
+  "@classChoiceStepScreenGenericErrorMessage": {
+    "description": "Message de repli de `_ErrorState` (`_NamedChoiceBody`) quand l'erreur n'est pas une `CharacterCreationFailure`."
+  },
+  "classChoiceStepScreenRetryButton": "Réessayer",
+  "@classChoiceStepScreenRetryButton": {
+    "description": "`SecondaryButton` \"Réessayer\" de `_ErrorState` (met son libellé en majuscules à l'affichage)."
+  },
+  "classChoiceStepScreenSkillsSectionTitle": "COMPÉTENCES MAÎTRISÉES",
+  "@classChoiceStepScreenSkillsSectionTitle": {
+    "description": "Titre de section au-dessus des compétences candidates à l'Expertise (`_ExpertiseBody`/`_SectionHeader`)."
+  },
+  "classChoiceStepScreenQuotaBadge": "{selectedCount} / {effectiveQuota} choisies",
+  "@classChoiceStepScreenQuotaBadge": {
+    "description": "Badge de quota de `_SectionHeader` (`_ExpertiseBody`), ex. \"0 / 2 choisies\".",
+    "placeholders": {
+      "selectedCount": {
+        "type": "int"
+      },
+      "effectiveQuota": {
+        "type": "int"
+      }
+    }
+  },
+  "classChoiceStepScreenNoOptionsAvailableMessage": "Aucune option n'est disponible pour ce choix. Tu peux continuer sans en faire.",
+  "@classChoiceStepScreenNoOptionsAvailableMessage": {
+    "description": "Message défensif affiché quand `effectiveQuota <= 0` (`_ExpertiseBody`)."
+  },
+  "classChoiceStepScreenSkillsErrorMessage": "Impossible de charger les compétences disponibles. Réessayez.",
+  "@classChoiceStepScreenSkillsErrorMessage": {
+    "description": "Message de repli de `_ErrorState` (`_ExpertiseBody`) quand l'erreur n'est pas une `CharacterCreationFailure`."
+  },
+
+  "subclassStepScreenHelpTooltip": "Aide",
+  "@subclassStepScreenHelpTooltip": {
+    "description": "Tooltip de l'icône \"?\" du bandeau bois (`_Header`/`_MinimalHeader`), ouvre l'aide contextuelle de l'étape."
+  },
+  "subclassStepScreenHeaderTitle": "3. Sous-classe",
+  "@subclassStepScreenHeaderTitle": {
+    "description": "Titre d'étape du bandeau bois (`_Header`)."
+  },
+  "subclassStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@subclassStepScreenStepCounter": {
+    "description": "Compteur d'étape du bandeau bois (`_Header`).",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "subclassStepScreenIntroText": "Ce choix se fait dès le niveau 1 pour {className}.",
+  "@subclassStepScreenIntroText": {
+    "description": "Phrase d'intro affichée au-dessus du bloc de choix de sous-classe, {className} vient des données (`ClassOption.name`, non traduit).",
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "subclassStepScreenFallbackClassName": "cette classe",
+  "@subclassStepScreenFallbackClassName": {
+    "description": "Libellé de repli si l'id de classe du brouillon est absent du catalogue chargé (cas défensif), même principe que `subraceStepScreenFallbackRaceName`."
+  },
+  "subclassStepScreenBackButton": "Retour",
+  "@subclassStepScreenBackButton": {
+    "description": "`SecondaryButton` \"Retour\" (met son libellé en majuscules à l'affichage)."
+  },
+  "subclassStepScreenNextButton": "Suivant",
+  "@subclassStepScreenNextButton": {
+    "description": "`PrimaryButton` \"Suivant\" (met son libellé en majuscules à l'affichage)."
+  },
+  "subclassStepScreenGenericErrorMessage": "Impossible de charger les classes disponibles. Réessayez.",
+  "@subclassStepScreenGenericErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`."
+  },
+  "subclassStepScreenRetryButton": "Réessayer",
+  "@subclassStepScreenRetryButton": {
+    "description": "`SecondaryButton` \"Réessayer\" de `_ErrorState` (met son libellé en majuscules à l'affichage)."
+  },
+
+  "subclassChoiceBlockRequiredSemanticsLabel": "{title}, choix obligatoire",
+  "@subclassChoiceBlockRequiredSemanticsLabel": {
+    "description": "Label de `Semantics` quand au moins une option est disponible, {title} vient de `SubclassChoiceRules.titleFor` (domaine, reste en français — D149 de docs/dette-technique.md).",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "subclassChoiceBlockIntroText": "Ce choix se fait dès le niveau 1 pour cette classe.",
+  "@subclassChoiceBlockIntroText": {
+    "description": "Phrase affichée au-dessus de la liste d'options de sous-classe."
+  },
+  "subclassChoiceBlockChooseOptionHint": "Choisis une option pour continuer.",
+  "@subclassChoiceBlockChooseOptionHint": {
+    "description": "Indication affichée en rouge tant qu'aucune sous-classe n'est sélectionnée."
+  },
+  "subclassChoiceBlockEmptyMessage": "Aucune sous-classe n'est disponible pour cette classe. Tu peux continuer sans en choisir.",
+  "@subclassChoiceBlockEmptyMessage": {
+    "description": "Message défensif affiché quand le catalogue ne propose aucune option pour cette classe."
+  },
+  "subclassChoiceBlockErrorMessage": "Impossible de charger les sous-classes disponibles. Réessaie.",
+  "@subclassChoiceBlockErrorMessage": {
+    "description": "Message d'erreur affiché en cas d'échec de chargement du catalogue de sous-classes."
+  },
+  "subclassChoiceBlockRetryButton": "Réessayer",
+  "@subclassChoiceBlockRetryButton": {
+    "description": "`SecondaryButton` \"Réessayer\" affiché sous le message d'erreur (met son libellé en majuscules à l'affichage)."
+  },
+
+  "subclassFeatureChoiceBlockFallbackTitle": "Choix de sous-classe",
+  "@subclassFeatureChoiceBlockFallbackTitle": {
+    "description": "Titre de repli affiché avant que le choix (`SubclassFeatureChoice`) n'ait fini de se charger."
+  },
+  "subclassFeatureChoiceBlockRequiredSemanticsLabel": "{title}, choix obligatoire",
+  "@subclassFeatureChoiceBlockRequiredSemanticsLabel": {
+    "description": "Label de `Semantics` quand au moins une option est disponible, {title} vient de `SubclassFeatureChoice.featureName` (donnée, non traduite).",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "subclassFeatureChoiceBlockAnnouncement": "Choisis le choix de {featureName}.",
+  "@subclassFeatureChoiceBlockAnnouncement": {
+    "description": "Texte annoncé aux lecteurs d'écran quand les options apparaissent, {featureName} vient de `SubclassFeatureChoice.featureName` (déjà passé en minuscules par l'appelant, donnée non traduite).",
+    "placeholders": {
+      "featureName": {
+        "type": "String"
+      }
+    }
+  },
+  "subclassFeatureChoiceBlockIntroText": "Ce choix se fait dès le niveau 1 de ta sous-classe.",
+  "@subclassFeatureChoiceBlockIntroText": {
+    "description": "Phrase affichée au-dessus de la liste d'options du second choix de sous-classe."
+  },
+  "subclassFeatureChoiceBlockChooseOptionHint": "Choisis une option pour continuer.",
+  "@subclassFeatureChoiceBlockChooseOptionHint": {
+    "description": "Indication affichée en rouge tant qu'aucune option n'est sélectionnée."
+  },
+  "subclassFeatureChoiceBlockNoOptionsMessage": "Aucune option n'est disponible pour ce choix. Tu peux continuer sans en faire.",
+  "@subclassFeatureChoiceBlockNoOptionsMessage": {
+    "description": "Message défensif affiché quand `options` est vide (ex. D95, class_options pas encore peuplées)."
+  },
+  "subclassFeatureChoiceBlockErrorMessage": "Impossible de charger ce choix de sous-classe. Réessaie.",
+  "@subclassFeatureChoiceBlockErrorMessage": {
+    "description": "Message d'erreur affiché en cas d'échec de chargement du second choix de niveau 1."
+  },
+  "subclassFeatureChoiceBlockRetryButton": "Réessayer",
+  "@subclassFeatureChoiceBlockRetryButton": {
+    "description": "`SecondaryButton` \"Réessayer\" affiché sous le message d'erreur (met son libellé en majuscules à l'affichage)."
   }
 }
