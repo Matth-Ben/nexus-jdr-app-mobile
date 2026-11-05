@@ -10,6 +10,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/race_catalog.dart';
@@ -140,6 +141,7 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
       return const Scaffold(body: SizedBox.shrink());
     }
 
+    final l10n = AppLocalizations.of(context)!;
     final catalogAsync = ref.watch(raceCatalogProvider);
 
     return Scaffold(
@@ -174,8 +176,7 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
               child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
-                    : 'Impossible de charger les races disponibles. '
-                          'Réessayez.',
+                    : l10n.subraceStepScreenGenericErrorMessage,
                 onRetry: () => ref.invalidate(raceCatalogProvider),
               ),
             ),
@@ -192,12 +193,13 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
   }
 
   Widget _buildContent(RaceCatalog catalog, int raceId) {
+    final l10n = AppLocalizations.of(context)!;
     final raceName = catalog.races
         .firstWhere(
           (race) => race.id == raceId,
           orElse: () => RaceOption(
             id: raceId,
-            name: 'cette race',
+            name: l10n.subraceStepScreenFallbackRaceName,
             abilityBonuses: const {},
             traits: const [],
             source: '',
@@ -232,7 +234,7 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Choisis une sous-race pour $raceName.',
+                      l10n.subraceStepScreenIntroText(raceName),
                       style: AppTypography.body(fontSize: 14),
                     ),
                   ),
@@ -277,7 +279,7 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
                         children: [
                           Expanded(
                             child: SecondaryButton(
-                              label: 'Retour',
+                              label: l10n.subraceStepScreenBackButton,
                               surface: SecondaryButtonSurface.parchment,
                               onPressed: _goBack,
                             ),
@@ -285,7 +287,7 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Suivant',
+                              label: l10n.subraceStepScreenNextButton,
                               onPressed: canProceed ? _submit : null,
                             ),
                           ),
@@ -325,6 +327,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ColoredBox(
       color: AppColors.woodMedium,
       child: SafeArea(
@@ -357,7 +360,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
-                      tooltip: 'Aide',
+                      tooltip: l10n.subraceStepScreenHelpTooltip,
                       icon: const Icon(
                         Icons.help_outline,
                         color: AppColors.textOnWood,
@@ -375,7 +378,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '2. Sous-race',
+                          l10n.subraceStepScreenHeaderTitle,
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -383,7 +386,10 @@ class _Header extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          l10n.subraceStepScreenStepCounter(
+                            currentStep,
+                            totalSteps,
+                          ),
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,
@@ -444,7 +450,8 @@ class _MinimalHeader extends StatelessWidget {
               const Spacer(),
               IconButton(
                 onPressed: onHelp,
-                tooltip: 'Aide',
+                tooltip: AppLocalizations.of(context)!
+                    .subraceStepScreenHelpTooltip,
                 icon: const Icon(
                   Icons.help_outline,
                   color: AppColors.textOnWood,
@@ -484,7 +491,10 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(
+              label: AppLocalizations.of(context)!.subraceStepScreenRetryButton,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),

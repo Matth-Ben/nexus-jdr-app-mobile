@@ -38,6 +38,7 @@ import 'package:personnages/features/character_creation/presentation/background_
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   BackgroundCatalog? catalogToReturn;
@@ -180,18 +181,26 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
   CharacterCreationDraft readDraft() =>
       container.read(characterCreationDraftControllerProvider);
 
-  Future<void> pumpBackgroundStep(WidgetTester tester) async {
-    await tester.pumpWidget(buildTestWidget());
+  Future<void> pumpBackgroundStep(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     router.push('/characters/new/step-3');
     await tester.pumpAndSettle();
@@ -690,5 +699,60 @@ void main() {
         expect(find.text('Abandonner la création ?'), findsOneWidget);
       },
     );
+  });
+
+  group('traduction anglaise', () {
+    testWidgets(
+      'en-tête, compteur, intro, boutons et tooltip d\'aide en anglais, '
+      '"NEXT" écrit toujours le brouillon',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const BackgroundCatalog(
+          backgrounds: [_ermite, _soldat],
+        );
+
+        await pumpBackgroundStep(tester, locale: const Locale('en'));
+
+        expect(find.text('4. Background'), findsOneWidget);
+        expect(find.text('Step 4 / 10'), findsOneWidget);
+        expect(
+          find.text('Where did your character come from before the adventure?'),
+          findsOneWidget,
+        );
+        expect(find.text('BACK'), findsOneWidget);
+        expect(find.text('NEXT'), findsOneWidget);
+        expect(find.byTooltip('Help'), findsOneWidget);
+
+        await tester.tap(find.text('Soldat'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('NEXT'));
+        await tester.pumpAndSettle();
+
+        expect(readDraft(), const CharacterCreationDraft(backgroundId: 2));
+      },
+    );
+
+    testWidgets('message d\'erreur de repli (erreur générique, pas une '
+        '`CharacterCreationFailure`) et bouton "RETRY" en anglais', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.catalogErrorToThrow = Exception('boom');
+
+      await pumpBackgroundStep(tester, locale: const Locale('en'));
+
+      expect(
+        find.text("Couldn't load the available backgrounds. Try again."),
+        findsOneWidget,
+      );
+
+      fakeRepository.catalogErrorToThrow = null;
+      fakeRepository.catalogToReturn = const BackgroundCatalog(
+        backgrounds: [_ermite],
+      );
+
+      await tester.tap(find.text('RETRY'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ermite'), findsOneWidget);
+    });
   });
 }

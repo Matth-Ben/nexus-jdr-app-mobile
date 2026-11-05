@@ -12,6 +12,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/lineage_choice_catalog.dart';
@@ -320,6 +321,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final catalogAsync = ref.watch(raceCatalogProvider);
 
     return Scaffold(
@@ -354,8 +356,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
               child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
-                    : 'Impossible de charger les races disponibles. '
-                          'Réessayez.',
+                    : l10n.raceStepScreenGenericErrorMessage,
                 onRetry: () => ref.invalidate(raceCatalogProvider),
               ),
             ),
@@ -372,6 +373,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   }
 
   Widget _buildContent(RaceCatalog catalog) {
+    final l10n = AppLocalizations.of(context)!;
     // `watch` (pas seulement `read` dans `_submit`) : déclenche son
     // chargement dès l'affichage de cet écran plutôt qu'à la soumission,
     // pour qu'il soit déjà résolu — pour N'IMPORTE QUELLE race — au moment
@@ -462,7 +464,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      "Choisis l'ascendance de ton personnage.",
+                      l10n.raceStepScreenIntroText,
                       style: AppTypography.body(fontSize: 14),
                     ),
                   ),
@@ -480,9 +482,9 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                     ),
                     child: TextFormField(
                       controller: _searchController,
-                      decoration: const InputDecoration(
-                        hintText: 'Rechercher une race...',
-                        prefixIcon: Icon(
+                      decoration: InputDecoration(
+                        hintText: l10n.raceStepScreenSearchHint,
+                        prefixIcon: const Icon(
                           Icons.search,
                           color: AppColors.textMuted,
                         ),
@@ -499,11 +501,8 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                     ),
                     children: [
                       if (isRaceLocked) ...[
-                        const InfoBanner(
-                          message:
-                              'La race ne peut pas être modifiée après la '
-                              'création du personnage : elle est liée aux '
-                              'sorts innés déjà acquis.',
+                        InfoBanner(
+                          message: l10n.raceStepScreenLockedBannerMessage,
                           icon: Icons.lock_outline,
                         ),
                         const SizedBox(height: AppSpacing.sm),
@@ -512,12 +511,12 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                         const _EmptySearchState()
                       else ...[
                         ..._raceGroupSection(
-                          title: 'RACES DE BASE',
+                          title: l10n.raceStepScreenCoreRacesSectionTitle,
                           races: coreRaces,
                           startIndex: 0,
                         ),
                         ..._raceGroupSection(
-                          title: "RACES D'EXTENSION",
+                          title: l10n.raceStepScreenExtensionRacesSectionTitle,
                           races: extensionRaces,
                           startIndex: coreRaces.length,
                           addSpacingBefore: coreRaces.isNotEmpty,
@@ -525,7 +524,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                       ],
                       const SizedBox(height: AppSpacing.sm),
                       SelectableOptionTile(
-                        title: 'Race personnalisée',
+                        title: l10n.raceStepScreenCustomRaceTileTitle,
                         selected: _isCustomRaceSelected,
                         // Verrouillée : affiche le nom déjà saisi en lecture
                         // seule au lieu du `TextField` éditable ci-dessous
@@ -548,8 +547,8 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                         ],
                         TextField(
                           controller: _customRaceController,
-                          decoration: const InputDecoration(
-                            hintText: 'Nom de la race personnalisée',
+                          decoration: InputDecoration(
+                            hintText: l10n.raceStepScreenCustomRaceHint,
                           ),
                           onChanged: (_) => setState(() {}),
                         ),
@@ -565,7 +564,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                         children: [
                           Expanded(
                             child: SecondaryButton(
-                              label: 'Retour',
+                              label: l10n.raceStepScreenBackButton,
                               surface: SecondaryButtonSurface.parchment,
                               onPressed: _goToCharacterList,
                             ),
@@ -573,7 +572,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Suivant',
+                              label: l10n.raceStepScreenNextButton,
                               onPressed: canProceed
                                   ? () => _submit(catalog)
                                   : null,
@@ -752,7 +751,8 @@ class _SuggestionChip extends StatelessWidget {
     // largeur du `Wrap` sous contraintes lâches).
     return Semantics(
       button: true,
-      label: 'Utiliser "$label" comme race personnalisée',
+      label: AppLocalizations.of(context)!
+          .raceStepScreenSuggestionChipSemanticsLabel(label),
       onTap: onTap,
       container: true,
       excludeSemantics: true,
@@ -807,7 +807,7 @@ class _EmptySearchState extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
       child: Text(
-        'Aucune race trouvée.',
+        AppLocalizations.of(context)!.raceStepScreenEmptySearchMessage,
         style: AppTypography.body(color: AppColors.textMuted),
       ),
     );
@@ -834,6 +834,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ColoredBox(
       color: AppColors.woodMedium,
       child: SafeArea(
@@ -866,7 +867,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
-                      tooltip: 'Aide',
+                      tooltip: l10n.raceStepScreenHelpTooltip,
                       icon: const Icon(
                         Icons.help_outline,
                         color: AppColors.textOnWood,
@@ -884,7 +885,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '2. Race',
+                          l10n.raceStepScreenHeaderTitle,
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -892,7 +893,10 @@ class _Header extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          l10n.raceStepScreenStepCounter(
+                            currentStep,
+                            totalSteps,
+                          ),
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,
@@ -953,7 +957,8 @@ class _MinimalHeader extends StatelessWidget {
               const Spacer(),
               IconButton(
                 onPressed: onHelp,
-                tooltip: 'Aide',
+                tooltip: AppLocalizations.of(context)!
+                    .raceStepScreenHelpTooltip,
                 icon: const Icon(
                   Icons.help_outline,
                   color: AppColors.textOnWood,
@@ -993,7 +998,10 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(
+              label: AppLocalizations.of(context)!.raceStepScreenRetryButton,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),

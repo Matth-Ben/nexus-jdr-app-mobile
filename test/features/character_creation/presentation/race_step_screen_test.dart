@@ -47,6 +47,7 @@ import 'package:personnages/features/character_creation/presentation/providers/c
 import 'package:personnages/features/character_creation/presentation/providers/lineage_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/race_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   RaceCatalog? catalogToReturn;
@@ -349,10 +350,15 @@ void main() {
     );
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
@@ -397,13 +403,16 @@ void main() {
   // (~600) et faire manquer certaines races/certains champs à
   // `find.text(...)`/`find.byType(...)` (`ListView` ne construit que les
   // éléments visibles).
-  Future<void> pumpTallRaceStep(WidgetTester tester) async {
+  Future<void> pumpTallRaceStep(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     tester.view.physicalSize = const Size(800, 1300);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
   }
 
@@ -1663,5 +1672,153 @@ void main() {
         );
       },
     );
+  });
+
+  group('traduction anglaise', () {
+    testWidgets(
+      'en-tête, compteur, intro, recherche, sections, boutons et tooltip '
+      'd\'aide en anglais, "NEXT" écrit toujours le brouillon',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfe, _humain, _aasimar],
+          subraces: [],
+        );
+
+        await pumpTallRaceStep(tester, locale: const Locale('en'));
+
+        expect(find.text('2. Race'), findsOneWidget);
+        expect(find.text('Step 2 / 10'), findsOneWidget);
+        expect(find.text("Choose your character's ancestry."), findsOneWidget);
+        expect(
+          find.widgetWithText(TextFormField, 'Search for a race...'),
+          findsOneWidget,
+        );
+        expect(find.text('CORE RACES'), findsOneWidget);
+        expect(find.text('EXPANSION RACES'), findsOneWidget);
+        expect(find.text('Custom race'), findsOneWidget);
+        expect(find.byTooltip('Help'), findsOneWidget);
+
+        await tester.tap(find.text('Humain'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('NEXT'));
+        await tester.pumpAndSettle();
+
+        expect(
+          readDraft(),
+          const CharacterCreationDraft(raceId: 2, subraceId: null),
+        );
+      },
+    );
+
+    testWidgets(
+      '"No race found.", placeholder de race personnalisée et suggestion '
+      'de race indisponible en anglais',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfeAvec2024, _demiElfe],
+          subraces: [],
+        );
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setEdition('2024');
+
+        await pumpTallRaceStep(tester, locale: const Locale('en'));
+
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Search for a race...'),
+          'Gobelours',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('No race found.'), findsOneWidget);
+
+        await tester.tap(find.text('Custom race'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is TextField &&
+                widget.decoration?.hintText == 'Custom race name',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label == 'Use "Demi-elfe" as a custom race',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'bandeau de verrouillage de race (mode modification) en anglais',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfe],
+          subraces: [],
+        );
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .replaceWith(const CharacterCreationDraft(raceId: 1));
+        container
+            .read(characterEditSessionControllerProvider.notifier)
+            .start(
+              const CharacterEditSession(
+                snapshot: CharacterEditSnapshot(
+                  characterId: 'c1',
+                  name: 'Brunhilde',
+                  primaryClassId: 2,
+                  primaryClassLevel: 1,
+                  totalLevel: 1,
+                  maxHp: 10,
+                  currentHp: 10,
+                ),
+                originalDraft: CharacterCreationDraft(raceId: 1),
+              ),
+            );
+
+        await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining(
+            "Race can't be changed after the character is created",
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('BACK'), findsOneWidget);
+        expect(find.text('NEXT'), findsOneWidget);
+      },
+    );
+
+    testWidgets('message d\'erreur de repli (erreur générique, pas une '
+        '`CharacterCreationFailure`) et bouton "RETRY" en anglais', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.catalogErrorToThrow = Exception('boom');
+
+      await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text("Couldn't load the available races. Try again."),
+        findsOneWidget,
+      );
+
+      fakeRepository.catalogErrorToThrow = null;
+      fakeRepository.catalogToReturn = const RaceCatalog(
+        races: [_elfe],
+        subraces: [],
+      );
+
+      await tester.tap(find.text('RETRY'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Elfe'), findsOneWidget);
+    });
   });
 }
