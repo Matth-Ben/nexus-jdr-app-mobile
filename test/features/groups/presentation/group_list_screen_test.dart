@@ -489,72 +489,68 @@ void main() {
     expect(find.text('Liste des personnages'), findsOneWidget);
   });
 
-  group(
-    'badge de statut priorisé sur _GroupRow (F03, '
-    'docs/retours-utilisateurs.md)',
-    () {
-      testWidgets(
-        'deadCount > 0 : affiche "X MORT(S)", jamais cumulé avec "PV bas"',
-        (tester) async {
-          fakeGroupRepository.groupsToReturn = const [
-            GroupSummary(
-              id: 'group-1',
-              name: 'Les Lames',
-              memberCount: 4,
-              founderId: 'founder-id',
-              deadCount: 1,
-              lowHpCount: 2,
-            ),
-          ];
-
-          await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
-          await tester.pumpAndSettle();
-
-          expect(find.text('1 MORT'), findsOneWidget);
-          expect(find.textContaining('PV BAS'), findsNothing);
-        },
-      );
-
-      testWidgets('deadCount == 0 et lowHpCount > 0 : affiche "X PV BAS"', (
-        tester,
-      ) async {
+  group('badge de statut priorisé sur _GroupRow (F03, '
+      'docs/retours-utilisateurs.md)', () {
+    testWidgets(
+      'deadCount > 0 : affiche "X MORT(S)", jamais cumulé avec "PV bas"',
+      (tester) async {
         fakeGroupRepository.groupsToReturn = const [
           GroupSummary(
             id: 'group-1',
             name: 'Les Lames',
             memberCount: 4,
             founderId: 'founder-id',
-            lowHpCount: 3,
+            deadCount: 1,
+            lowHpCount: 2,
           ),
         ];
 
         await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
         await tester.pumpAndSettle();
 
-        expect(find.text('3 PV BAS'), findsOneWidget);
-      });
+        expect(find.text('1 MORT'), findsOneWidget);
+        expect(find.textContaining('PV BAS'), findsNothing);
+      },
+    );
 
-      testWidgets(
-        'deadCount et lowHpCount à 0 (défaut) : aucun badge affiché',
-        (tester) async {
-          fakeGroupRepository.groupsToReturn = const [
-            GroupSummary(
-              id: 'group-1',
-              name: 'Les Lames',
-              memberCount: 2,
-              founderId: 'founder-id',
-            ),
-          ];
+    testWidgets('deadCount == 0 et lowHpCount > 0 : affiche "X PV BAS"', (
+      tester,
+    ) async {
+      fakeGroupRepository.groupsToReturn = const [
+        GroupSummary(
+          id: 'group-1',
+          name: 'Les Lames',
+          memberCount: 4,
+          founderId: 'founder-id',
+          lowHpCount: 3,
+        ),
+      ];
 
-          await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
-          await tester.pumpAndSettle();
+      await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+      await tester.pumpAndSettle();
 
-          expect(find.textContaining('MORT'), findsNothing);
-          expect(find.textContaining('PV BAS'), findsNothing);
-        },
-      );
-    },
-  );
+      expect(find.text('3 PV BAS'), findsOneWidget);
+    });
+
+    testWidgets('deadCount et lowHpCount à 0 (défaut) : aucun badge affiché', (
+      tester,
+    ) async {
+      fakeGroupRepository.groupsToReturn = const [
+        GroupSummary(
+          id: 'group-1',
+          name: 'Les Lames',
+          memberCount: 2,
+          founderId: 'founder-id',
+        ),
+      ];
+
+      await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('MORT'), findsNothing);
+      expect(find.textContaining('PV BAS'), findsNothing);
+    });
+  });
 
   group('RouteAware.didPopNext (rafraîchissement au retour du détail d\'un '
       'groupe, F03 qa-testeur)', () {

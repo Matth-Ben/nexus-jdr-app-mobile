@@ -461,32 +461,34 @@ void main() {
       }
     });
 
-    test('aucun groupe (groupIds vide) -> retourne une liste vide sans '
-        "jamais interroger group_character_status_overview (point 2)",
-        () async {
-      const ownerId = 'user-1';
-      final requests = <http.Request>[];
-      final client = await _buildSignedInFakeClient(
-        ownerId: ownerId,
-        onRequest: requests.add,
-        tableRows: const {'group_members': []},
-      );
-      final repository = SupabaseGroupRepository(client);
+    test(
+      'aucun groupe (groupIds vide) -> retourne une liste vide sans '
+      "jamais interroger group_character_status_overview (point 2)",
+      () async {
+        const ownerId = 'user-1';
+        final requests = <http.Request>[];
+        final client = await _buildSignedInFakeClient(
+          ownerId: ownerId,
+          onRequest: requests.add,
+          tableRows: const {'group_members': []},
+        );
+        final repository = SupabaseGroupRepository(client);
 
-      final groups = await repository.fetchMyGroups();
+        final groups = await repository.fetchMyGroups();
 
-      expect(groups, isEmpty);
-      expect(
-        requests.any(
-          (request) =>
-              request.url.path.endsWith('/group_character_status_overview'),
-        ),
-        isFalse,
-        reason:
-            'namesById.isEmpty -> retour anticipe avant toute requete '
-            'groupee (comptage des membres ou statut vital)',
-      );
-    });
+        expect(groups, isEmpty);
+        expect(
+          requests.any(
+            (request) =>
+                request.url.path.endsWith('/group_character_status_overview'),
+          ),
+          isFalse,
+          reason:
+              'namesById.isEmpty -> retour anticipe avant toute requete '
+              'groupee (comptage des membres ou statut vital)',
+        );
+      },
+    );
   });
 
   group('SupabaseGroupRepository.fetchGroupDetail', () {

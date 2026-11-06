@@ -16,10 +16,7 @@ void main() {
   testWidgets(
     'deadCount et lowHpCount tous les deux à 0 : aucun badge affiché',
     (tester) async {
-      await _pump(
-        tester,
-        const GroupStatusBadge(deadCount: 0, lowHpCount: 0),
-      );
+      await _pump(tester, const GroupStatusBadge(deadCount: 0, lowHpCount: 0));
 
       expect(find.byType(Container), findsNothing);
       expect(find.byType(Text), findsNothing);
@@ -29,36 +26,24 @@ void main() {
   testWidgets(
     'deadCount > 0 et lowHpCount == 0 : affiche "X MORT(S)" au singulier',
     (tester) async {
-      await _pump(
-        tester,
-        const GroupStatusBadge(deadCount: 1, lowHpCount: 0),
-      );
+      await _pump(tester, const GroupStatusBadge(deadCount: 1, lowHpCount: 0));
 
       expect(find.text('1 MORT'), findsOneWidget);
       expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
     },
   );
 
-  testWidgets(
-    'deadCount > 1 : affiche "X MORTS" au pluriel',
-    (tester) async {
-      await _pump(
-        tester,
-        const GroupStatusBadge(deadCount: 3, lowHpCount: 0),
-      );
+  testWidgets('deadCount > 1 : affiche "X MORTS" au pluriel', (tester) async {
+    await _pump(tester, const GroupStatusBadge(deadCount: 3, lowHpCount: 0));
 
-      expect(find.text('3 MORTS'), findsOneWidget);
-    },
-  );
+    expect(find.text('3 MORTS'), findsOneWidget);
+  });
 
   testWidgets(
     'deadCount == 0 et lowHpCount > 0 : affiche "X PV BAS" avec l\'icône '
     "d'avertissement",
     (tester) async {
-      await _pump(
-        tester,
-        const GroupStatusBadge(deadCount: 0, lowHpCount: 2),
-      );
+      await _pump(tester, const GroupStatusBadge(deadCount: 0, lowHpCount: 2));
 
       expect(find.text('2 PV BAS'), findsOneWidget);
       expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
@@ -69,10 +54,7 @@ void main() {
     'deadCount > 0 ET lowHpCount > 0 : "X MORT(S)" prioritaire, jamais cumulé '
     'avec "PV bas" (avis direction-artistique du comité de revue F03)',
     (tester) async {
-      await _pump(
-        tester,
-        const GroupStatusBadge(deadCount: 1, lowHpCount: 2),
-      );
+      await _pump(tester, const GroupStatusBadge(deadCount: 1, lowHpCount: 2));
 
       expect(find.text('1 MORT'), findsOneWidget);
       expect(find.textContaining('PV BAS'), findsNothing);
@@ -83,10 +65,7 @@ void main() {
     'badge "mort" : fond alertBannerBackground, bordure accentBrick (même '
     'gabarit que `_StatusBadge` de `group_members_tab_body.dart`)',
     (tester) async {
-      await _pump(
-        tester,
-        const GroupStatusBadge(deadCount: 1, lowHpCount: 0),
-      );
+      await _pump(tester, const GroupStatusBadge(deadCount: 1, lowHpCount: 0));
 
       final container = tester.widget<Container>(find.byType(Container));
       final decoration = container.decoration! as BoxDecoration;
@@ -98,23 +77,17 @@ void main() {
     },
   );
 
-  testWidgets(
-    'badge "PV bas" : fond statusUnconsciousBackground, bordure '
-    'statusUnconsciousAccent (même gabarit que `_StatusBadge` pour '
-    '"INCONSCIENT")',
-    (tester) async {
-      await _pump(
-        tester,
-        const GroupStatusBadge(deadCount: 0, lowHpCount: 2),
-      );
+  testWidgets('badge "PV bas" : fond statusUnconsciousBackground, bordure '
+      'statusUnconsciousAccent (même gabarit que `_StatusBadge` pour '
+      '"INCONSCIENT")', (tester) async {
+    await _pump(tester, const GroupStatusBadge(deadCount: 0, lowHpCount: 2));
 
-      final container = tester.widget<Container>(find.byType(Container));
-      final decoration = container.decoration! as BoxDecoration;
-      expect(decoration.color, AppColors.statusUnconsciousBackground);
-      expect(decoration.border!.top.color, AppColors.statusUnconsciousAccent);
+    final container = tester.widget<Container>(find.byType(Container));
+    final decoration = container.decoration! as BoxDecoration;
+    expect(decoration.color, AppColors.statusUnconsciousBackground);
+    expect(decoration.border!.top.color, AppColors.statusUnconsciousAccent);
 
-      final text = tester.widget<Text>(find.text('2 PV BAS'));
-      expect(text.style?.color, AppColors.statusUnconsciousAccent);
-    },
-  );
+    final text = tester.widget<Text>(find.text('2 PV BAS'));
+    expect(text.style?.color, AppColors.statusUnconsciousAccent);
+  });
 }
