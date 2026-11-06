@@ -420,6 +420,73 @@ void main() {
       expect(groups.single.deadCount, 0);
       expect(groups.single.lowHpCount, 0);
     });
+
+    test('la requete group_character_status_overview echoue (ex. vue '
+        'temporairement inaccessible) -> fetchMyGroups retourne quand meme '
+        'la liste des groupes, deadCount/lowHpCount a 0, sans lever '
+        "d'exception (point 1, repli isole)", () async {
+      const ownerId = 'user-1';
+      final client = await _buildSignedInFakeClient(
+        ownerId: ownerId,
+        tableRows: {
+          'group_members': [
+            {
+              'group_id': 'group-1',
+              'groups': {
+                'id': 'group-1',
+                'name': 'Les Lames',
+                'owner_id': ownerId,
+              },
+            },
+            {
+              'group_id': 'group-2',
+              'groups': {
+                'id': 'group-2',
+                'name': 'Les Ombres',
+                'owner_id': ownerId,
+              },
+            },
+          ],
+        },
+        failingTables: {'group_character_status_overview'},
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      final groups = await repository.fetchMyGroups();
+
+      expect(groups, hasLength(2));
+      for (final group in groups) {
+        expect(group.deadCount, 0);
+        expect(group.lowHpCount, 0);
+      }
+    });
+
+    test('aucun groupe (groupIds vide) -> retourne une liste vide sans '
+        "jamais interroger group_character_status_overview (point 2)",
+        () async {
+      const ownerId = 'user-1';
+      final requests = <http.Request>[];
+      final client = await _buildSignedInFakeClient(
+        ownerId: ownerId,
+        onRequest: requests.add,
+        tableRows: const {'group_members': []},
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      final groups = await repository.fetchMyGroups();
+
+      expect(groups, isEmpty);
+      expect(
+        requests.any(
+          (request) =>
+              request.url.path.endsWith('/group_character_status_overview'),
+        ),
+        isFalse,
+        reason:
+            'namesById.isEmpty -> retour anticipe avant toute requete '
+            'groupee (comptage des membres ou statut vital)',
+      );
+    });
   });
 
   group('SupabaseGroupRepository.fetchGroupDetail', () {
@@ -1060,11 +1127,26 @@ Future<SupabaseClient> _buildSignedInFakeClient({
   required String ownerId,
   Map<String, List<Map<String, dynamic>>> tableRows = const {},
   Map<String, dynamic> rpcResults = const {},
+  // Tables dont la requête doit échouer (ex. `PGRST000`, 500) — simule une
+  // vue/table temporairement inaccessible pour le point 1 (résilience de
+  // `fetchMyGroups` face à un échec de `group_character_status_overview`).
+  Set<String> failingTables = const {},
   void Function(http.Request request)? onRequest,
 }) async {
   Future<http.Response> handler(http.Request request) async {
     onRequest?.call(request);
     final key = request.url.pathSegments.last;
+    if (failingTables.contains(key)) {
+      return http.Response(
+        jsonEncode({
+          'message': 'Vue temporairement indisponible (double de test).',
+          'code': 'PGRST000',
+        }),
+        500,
+        request: request,
+        headers: {'content-type': 'application/json'},
+      );
+    }
     if (rpcResults.containsKey(key)) {
       return http.Response(
         jsonEncode(rpcResults[key]),

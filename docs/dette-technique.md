@@ -775,6 +775,18 @@ Characters. Une nouvelle variante est relevée : un échec `data/` (pas seulemen
 |---|---|---|---|---|
 | D147 | Deux classes `domain/`/`data/` sans `BuildContext`, consommées par les widgets migrés dans ce lot, produisent toujours leur texte en dur en français : `CharacterStoryFieldsResolver.resolveRows` (les 9 libellés de carte de l'onglet "Histoire", ex. "APPARENCE PHYSIQUE", "IDÉAUX" — consommés par `character_story_tab_body.dart`, déjà migré) et `JournalEntryDateFormatter.format` (noms de mois français en dur, ex. "9 septembre 2026 · 18:32" — consommé par `character_journal_card.dart`, déjà migré). S'y ajoute une variante du même problème côté `data/` plutôt que `domain/` : `PortraitUrlFetchFailure.message` (`data/portrait_url_fetcher.dart`, ex. "URL invalide.", "Ce fichier n'est pas une image valide.") reste figé en français, affiché tel quel dans le bandeau d'erreur inline des dialogues "Utiliser une URL" de `gallery_photo_upload_sheet.dart`/`portrait_upload_sheet.dart` (déjà migrés) — même rationale que `CharacterFailure.message`/D141, mais côté fetch d'image plutôt que côté repository de personnages. | basse (texte secondaire, pas une donnée fausse — juste une langue qui ne suit pas le réglage de l'app) | Migrer `CharacterStoryFieldsResolver`/`JournalEntryDateFormatter` vers le pattern "fonction `(l10n) => ...`" déjà établi (voir D142/D143/D146) ; pour `PortraitUrlFetchFailure`, introduire un code d'erreur stable (même principe que `CharacterErrorCode`/D141) plutôt qu'un message déjà construit, à résoudre côté `presentation/` | Ouvert, non traité |
 
+## Ajouts liés au badge de statut multi-groupes (F03, 06/11/2026)
+
+Constat relevé par `qa-testeur` en simulation utilisateur sur la branche
+`feat/groups-multi-group-status-overview` : un bug de grammaire préexistant
+(pas introduit par ce chantier) était cité à tort comme « déjà documenté »
+par le commentaire de `group_status_badge.dart`, alors qu'aucune entrée ne le
+traçait avant celle-ci.
+
+| ID | Constat | Gravité | Correction proposée | État |
+|---|---|---|---|---|
+| D148 | `_GroupRow` (`group_list_screen.dart`) affiche `'${group.memberCount} membres'` sans forme singulière : un groupe à 1 membre affiche « 1 membres » plutôt que « 1 membre ». | basse (faute de grammaire, pas une donnée fausse) | Pluriel ICU (`{count, plural, =1{membre} other{membres}}`) si `group_list_screen.dart` se localise un jour (pas encore migré vers `.arb`, voir Phase B) ; en attendant, gestion manuelle du cas `memberCount == 1` (même principe que `GroupStatusBadge.deadCount`/`'1 mort'` vs `'$deadCount morts'`) | Ouvert, non traité (juste tracé) |
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont

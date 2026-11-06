@@ -37,8 +37,9 @@ import '../../../../core/theme/app_typography.dart';
 /// convention que le correctif F01 (`docs/retours-utilisateurs.md`,
 /// `group_create_screen.dart`/`group_join_screen.dart`). Le pluriel
 /// français ("1 mort" / "2 morts") est néanmoins géré correctement en Dart
-/// plutôt que de reproduire le bug déjà documenté de
-/// `_GroupRow`'s member count ("1 membres", toujours au pluriel).
+/// plutôt que de reproduire le bug de `_GroupRow`'s member count ("1
+/// membres", toujours au pluriel) — tracé en D148 (`docs/dette-technique.md`)
+/// à l'occasion de ce même chantier F03, pas corrigé ici.
 class GroupStatusBadge extends StatelessWidget {
   const GroupStatusBadge({
     required this.deadCount,
