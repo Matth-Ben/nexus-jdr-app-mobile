@@ -785,7 +785,7 @@ traçait avant celle-ci.
 
 | ID | Constat | Gravité | Correction proposée | État |
 |---|---|---|---|---|
-| D148 | `_GroupRow` (`group_list_screen.dart`) affiche `'${group.memberCount} membres'` sans forme singulière : un groupe à 1 membre affiche « 1 membres » plutôt que « 1 membre ». | basse (faute de grammaire, pas une donnée fausse) | Pluriel ICU (`{count, plural, =1{membre} other{membres}}`) si `group_list_screen.dart` se localise un jour (pas encore migré vers `.arb`, voir Phase B) ; en attendant, gestion manuelle du cas `memberCount == 1` (même principe que `GroupStatusBadge.deadCount`/`'1 mort'` vs `'$deadCount morts'`) | Ouvert, non traité (juste tracé) |
+| D171 | `_GroupRow` (`group_list_screen.dart`) affiche `'${group.memberCount} membres'` sans forme singulière : un groupe à 1 membre affiche « 1 membres » plutôt que « 1 membre ». | basse (faute de grammaire, pas une donnée fausse) | Pluriel ICU (`{count, plural, =1{membre} other{membres}}`) si `group_list_screen.dart` se localise un jour (pas encore migré vers `.arb`, voir Phase B) ; en attendant, gestion manuelle du cas `memberCount == 1` (même principe que `GroupStatusBadge.deadCount`/`'1 mort'` vs `'$deadCount morts'`) | Ouvert, non traité (juste tracé) |
 
 ## Ce que l'audit n'a pas couvert
 
