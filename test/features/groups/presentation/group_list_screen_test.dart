@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/router/route_observer_provider.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/dashed_border_painter.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
@@ -130,9 +131,10 @@ class _FakeGroupRepository implements GroupRepository {
   }) => throw UnimplementedError();
 }
 
-GoRouter _buildTestRouter() {
+GoRouter _buildTestRouter({List<NavigatorObserver> observers = const []}) {
   return GoRouter(
     initialLocation: '/groups',
+    observers: observers,
     routes: [
       GoRoute(
         path: '/',
@@ -155,9 +157,23 @@ GoRouter _buildTestRouter() {
       ),
       GoRoute(
         path: '/groups/:id',
+        // Bouton "Retour" explicite (plutôt que de compter sur une flèche
+        // `AppBar` par défaut, absente ici) : simule le pop vers
+        // `GroupListScreen` déclenché en vrai depuis `group_screen.dart` —
+        // voir le groupe de tests "RouteAware.didPopNext" plus bas, même
+        // patron que `character_list_screen_test.dart`.
         builder: (context, state) => Scaffold(
           body: Center(
-            child: Text('Écran Groupe ${state.pathParameters['id']}'),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Écran Groupe ${state.pathParameters['id']}'),
+                TextButton(
+                  onPressed: () => context.pop(),
+                  child: const Text('Retour'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -176,13 +192,20 @@ User _fakeUser() {
   );
 }
 
-Widget _buildTestWidget(_FakeGroupRepository groupRepository) {
+Widget _buildTestWidget(
+  _FakeGroupRepository groupRepository, {
+  RouteObserver<PageRoute<dynamic>>? routeObserver,
+}) {
+  final observer = routeObserver ?? RouteObserver<PageRoute<dynamic>>();
   return ProviderScope(
     overrides: [
       groupRepositoryProvider.overrideWithValue(groupRepository),
       currentUserProvider.overrideWithValue(_fakeUser()),
+      routeObserverProvider.overrideWithValue(observer),
     ],
-    child: MaterialApp.router(routerConfig: _buildTestRouter()),
+    child: MaterialApp.router(
+      routerConfig: _buildTestRouter(observers: [observer]),
+    ),
   );
 }
 
@@ -464,5 +487,128 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Liste des personnages'), findsOneWidget);
+  });
+
+  group(
+    'badge de statut priorisé sur _GroupRow (F03, '
+    'docs/retours-utilisateurs.md)',
+    () {
+      testWidgets(
+        'deadCount > 0 : affiche "X MORT(S)", jamais cumulé avec "PV bas"',
+        (tester) async {
+          fakeGroupRepository.groupsToReturn = const [
+            GroupSummary(
+              id: 'group-1',
+              name: 'Les Lames',
+              memberCount: 4,
+              founderId: 'founder-id',
+              deadCount: 1,
+              lowHpCount: 2,
+            ),
+          ];
+
+          await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+          await tester.pumpAndSettle();
+
+          expect(find.text('1 MORT'), findsOneWidget);
+          expect(find.textContaining('PV BAS'), findsNothing);
+        },
+      );
+
+      testWidgets('deadCount == 0 et lowHpCount > 0 : affiche "X PV BAS"', (
+        tester,
+      ) async {
+        fakeGroupRepository.groupsToReturn = const [
+          GroupSummary(
+            id: 'group-1',
+            name: 'Les Lames',
+            memberCount: 4,
+            founderId: 'founder-id',
+            lowHpCount: 3,
+          ),
+        ];
+
+        await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+        await tester.pumpAndSettle();
+
+        expect(find.text('3 PV BAS'), findsOneWidget);
+      });
+
+      testWidgets(
+        'deadCount et lowHpCount à 0 (défaut) : aucun badge affiché',
+        (tester) async {
+          fakeGroupRepository.groupsToReturn = const [
+            GroupSummary(
+              id: 'group-1',
+              name: 'Les Lames',
+              memberCount: 2,
+              founderId: 'founder-id',
+            ),
+          ];
+
+          await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+          await tester.pumpAndSettle();
+
+          expect(find.textContaining('MORT'), findsNothing);
+          expect(find.textContaining('PV BAS'), findsNothing);
+        },
+      );
+    },
+  );
+
+  group('RouteAware.didPopNext (rafraîchissement au retour du détail d\'un '
+      'groupe, F03 qa-testeur)', () {
+    testWidgets(
+      'revenir du détail d\'un groupe (pop) relance myGroupsProvider, met à '
+      'jour le badge de statut sans aucune interaction explicite de '
+      'rafraîchissement',
+      (tester) async {
+        fakeGroupRepository.groupsToReturn = const [
+          GroupSummary(
+            id: 'group-1',
+            name: 'Les Lames',
+            memberCount: 2,
+            founderId: 'founder-id',
+          ),
+        ];
+        final observer = RouteObserver<PageRoute<dynamic>>();
+
+        await tester.pumpWidget(
+          _buildTestWidget(fakeGroupRepository, routeObserver: observer),
+        );
+        await tester.pumpAndSettle();
+        expect(fakeGroupRepository.fetchCallCount, 1);
+        expect(find.textContaining('MORT'), findsNothing);
+
+        await tester.tap(find.text('Les Lames'));
+        await tester.pumpAndSettle();
+        expect(find.text('Écran Groupe group-1'), findsOneWidget);
+
+        // Simule un décès survenu côté serveur pendant que le joueur était
+        // sur le détail du groupe : la prochaine requête renverrait un
+        // dead_count à jour, exactement comme Supabase après une écriture.
+        fakeGroupRepository.groupsToReturn = const [
+          GroupSummary(
+            id: 'group-1',
+            name: 'Les Lames',
+            memberCount: 2,
+            founderId: 'founder-id',
+            deadCount: 1,
+          ),
+        ];
+
+        await tester.tap(find.text('Retour'));
+        await tester.pumpAndSettle();
+
+        expect(
+          fakeGroupRepository.fetchCallCount,
+          2,
+          reason:
+              'le retour du détail (pop) doit déclencher un nouveau fetch, '
+              'sans quoi le badge resterait obsolète (aucun mort affiché)',
+        );
+        expect(find.text('1 MORT'), findsOneWidget);
+      },
+    );
   });
 }

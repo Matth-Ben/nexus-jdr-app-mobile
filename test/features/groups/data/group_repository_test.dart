@@ -328,6 +328,100 @@ void main() {
     });
   });
 
+  group('SupabaseGroupRepository.fetchMyGroups (statut vital agrege -- F03, '
+      "vue group_character_status_overview)", () {
+    test('interroge group_character_status_overview en une seule requete '
+        'groupee (inFilter sur tous les group_id), jamais une boucle par '
+        'groupe, et mappe dead_count/low_hp_count sur le GroupSummary '
+        'correspondant', () async {
+      const ownerId = 'user-1';
+      final requests = <http.Request>[];
+      final client = await _buildSignedInFakeClient(
+        ownerId: ownerId,
+        onRequest: requests.add,
+        tableRows: {
+          'group_members': [
+            {
+              'group_id': 'group-1',
+              'groups': {
+                'id': 'group-1',
+                'name': 'Les Lames',
+                'owner_id': ownerId,
+              },
+            },
+            {
+              'group_id': 'group-2',
+              'groups': {
+                'id': 'group-2',
+                'name': 'Les Ombres',
+                'owner_id': ownerId,
+              },
+            },
+          ],
+          'group_character_status_overview': [
+            {'group_id': 'group-1', 'dead_count': 1, 'low_hp_count': 0},
+            {'group_id': 'group-2', 'dead_count': 0, 'low_hp_count': 2},
+          ],
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      final groups = await repository.fetchMyGroups();
+
+      final statusRequests = requests.where(
+        (request) =>
+            request.url.path.endsWith('/group_character_status_overview'),
+      );
+      expect(
+        statusRequests,
+        hasLength(1),
+        reason:
+            'une seule requete groupee vers la vue, jamais une requete par '
+            'groupe (cout reseau explicitement proscrit par qa-testeur)',
+      );
+      final statusRequest = statusRequests.single;
+      expect(
+        statusRequest.url.queryParameters['group_id'],
+        'in.("group-1","group-2")',
+      );
+
+      final byId = {for (final group in groups) group.id: group};
+      expect(byId['group-1']!.deadCount, 1);
+      expect(byId['group-1']!.lowHpCount, 0);
+      expect(byId['group-2']!.deadCount, 0);
+      expect(byId['group-2']!.lowHpCount, 2);
+    });
+
+    test('aucune ligne de statut renvoyee pour un groupe (vue vide) -> '
+        'deadCount/lowHpCount par defaut a 0, jamais une erreur', () async {
+      const ownerId = 'user-1';
+      final client = await _buildSignedInFakeClient(
+        ownerId: ownerId,
+        tableRows: {
+          'group_members': [
+            {
+              'group_id': 'group-1',
+              'groups': {
+                'id': 'group-1',
+                'name': 'Les Lames',
+                'owner_id': ownerId,
+              },
+            },
+          ],
+          // Pas d'entree 'group_character_status_overview' : la vue
+          // retourne [] (via le repli par defaut de
+          // `_buildSignedInFakeClient`, voir sa doc de classe).
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      final groups = await repository.fetchMyGroups();
+
+      expect(groups.single.deadCount, 0);
+      expect(groups.single.lowHpCount, 0);
+    });
+  });
+
   group('SupabaseGroupRepository.fetchGroupDetail', () {
     const groupId = 'group-1';
     const ownerId = 'owner-1';
