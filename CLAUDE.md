@@ -83,6 +83,7 @@ dehors du cahier des charges.
 | `dette-technique` | Audit de dette technique | Analyser le code en place (périssable, fragile, mort) et produire un registre de dette priorisé — ne corrige rien lui-même |
 | `regles-dnd` | Expert des règles D&D 5e (RAW) | Valider la règle exacte **avant** d'implémenter une mécanique de jeu (sorts, emplacements, multiclassage, dés de vie, préparation), puis vérifier la fidélité RAW du code **après** — ne code pas, ne tranche jamais seul une ambiguïté RAW (remonte à la conversation principale) |
 | `rgpd` | Audit RGPD / confidentialité | Analyser l'app en place (consentement, droits d'accès/export/suppression, sous-traitants tiers, permissions OS, textes légaux vs comportement réel du code) et produire un registre d'écarts priorisé — ne corrige rien lui-même |
+| `simulation-utilisateur` | Simulation joueur/MJ | Utiliser réellement l'app (parcours sur émulateur via `integration_test/` + analyse de code) du point de vue d'un joueur ou d'un MJ, pour juger la pertinence/complétude des fonctionnalités et proposer des axes d'amélioration — ne tranche jamais seul la faisabilité ou la pertinence d'une proposition |
 
 **Tout développement passe par ces sous-agents** (décision du 06/10/2026) :
 la conversation principale n'écrit pas elle-même le code ni les tests d'une
@@ -150,6 +151,45 @@ trois catégories (bloque la production / fait perdre des données ou donne une
 règle fausse au joueur / peut attendre). Quand une entrée est traitée, mettre
 à jour son état en citant la PR plutôt que supprimer la ligne ; un défaut
 découvert en cours de tâche s'y ajoute au lieu d'être corrigé au fil de l'eau.
+
+### Simulation utilisateur (joueur/MJ) et revue croisée des propositions
+
+`simulation-utilisateur` n'entre pas non plus dans la séquence standard
+d'une fonctionnalité : il audite l'app déjà en place du point de vue d'un
+joueur ou d'un MJ qui l'utiliserait réellement — parcours réels sur
+l'émulateur via `integration_test/` (mêmes conventions que les scénarios
+existants : sélecteurs texte/type/clé, jamais par coordonnées d'écran,
+nettoyage systématique des données de test créées dans le projet Supabase
+distant partagé) complétés par une analyse de code pour juger la
+pertinence/complétude de ce qui existe déjà. À invoquer en fin de phase de
+roadmap, avant une version destinée à de vrais joueurs/MJ, ou sur demande.
+Il ne corrige rien lui-même (un bug trouvé se route à `dev-flutter`/
+`dev-backend-supabase` comme d'habitude) et ne tranche jamais seul la
+faisabilité technique ou la pertinence produit d'une proposition de
+fonctionnalité — il la remonte comme fiche à soumettre au comité de revue
+ci-dessous, jamais comme une décision actée.
+
+**Comité de revue des propositions** (décision du 05/11/2026) : toute
+proposition de fonctionnalité significative remontée par
+`simulation-utilisateur` (pas un simple bug/friction, qui part directement
+en correctif) passe par une revue croisée avant toute décision — le chef de
+projet consulte les sous-agents pertinents pour un avis de faisabilité/
+pertinence sur chaque proposition : `direction-artistique` (ajustement
+visuel/UX), `regles-dnd` (conformité RAW si la proposition touche une
+mécanique de jeu), `dev-flutter`/`dev-backend-supabase` (faisabilité
+technique et effort estimé), `qa-testeur` (testabilité, impact sur le mode
+hors-ligne/RLS). Le chef de projet consigne les avis croisés dans
+`docs/retours-utilisateurs.md` à côté de la proposition, puis soumet
+l'ensemble à Matthias pour décision — aucun sous-agent ne tranche seul, et
+le chef de projet n'arbitre pas non plus à la place de Matthias sur une
+question de priorisation produit.
+
+Le registre courant vit dans `docs/retours-utilisateurs.md`. Même logique de
+catégorisation que `docs/dette-technique.md`, adaptée à l'usage : chaque
+entrée est un bug/friction réel, une fonctionnalité manquante, une
+fonctionnalité existante jugée non pertinente/mal calibrée, ou une donnée
+manquante — avec, pour les propositions de fonctionnalité, les avis du
+comité de revue et la décision de Matthias une fois rendue.
 
 ### Découpage par phase (voir `06-roadmap.md`)
 
