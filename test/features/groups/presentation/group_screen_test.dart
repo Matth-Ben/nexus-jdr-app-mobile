@@ -175,10 +175,12 @@ class _FakeGroupRepository implements GroupRepository {
     lastAddedItems = newItems;
   }
 
+  String? lastSavedNoteCharacterId;
+
   @override
   Future<GroupNote> fetchGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
   }) async {
     noteFetchCount++;
     if (noteErrorToThrow != null) throw noteErrorToThrow!;
@@ -189,11 +191,12 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<void> saveGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
     required String body,
   }) async {
     saveNoteCallCount++;
     lastSavedNoteBody = body;
+    lastSavedNoteCharacterId = characterId;
     if (saveNoteError != null) throw saveNoteError!;
   }
 
@@ -1148,22 +1151,104 @@ void main() {
       },
     );
 
-    testWidgets('onglet Notes : état désactivé explicite, jamais vide', (
-      tester,
-    ) async {
-      fakeRepository.detailToReturn = gameMasterViewDetail();
+    testWidgets(
+      'onglet Notes (F02a, comité de revue du 06/11/2026) : accessible '
+      'comme n\'importe quel membre — affiche l\'éditeur, jamais l\'ancien '
+      'état bloquant',
+      (tester) async {
+        fakeRepository.detailToReturn = gameMasterViewDetail();
+        fakeRepository.noteToReturn = const GroupNote(
+          groupId: 'group-1',
+          body: 'Le groupe attaque le donjon ce soir.',
+        );
 
-      await tester.pumpWidget(_buildTestWidget(fakeRepository));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('NOTES'));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('NOTES'));
+        await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining('Le carnet de notes est propre à un personnage'),
-        findsOneWidget,
-      );
-      expect(fakeRepository.noteFetchCount, 0);
-    });
+        expect(
+          find.textContaining('Le carnet de notes est propre à un personnage'),
+          findsNothing,
+        );
+        expect(find.byType(TextField), findsOneWidget);
+        expect(
+          find.text('Le groupe attaque le donjon ce soir.'),
+          findsOneWidget,
+        );
+        expect(fakeRepository.noteFetchCount, 1);
+      },
+    );
+
+    testWidgets(
+      'onglet Notes : enregistrer appelle saveGroupNote avec characterId '
+      'null et affiche la confirmation',
+      (tester) async {
+        fakeRepository.detailToReturn = gameMasterViewDetail();
+        fakeRepository.noteToReturn = const GroupNote(groupId: 'group-1');
+
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('NOTES'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byType(TextField),
+          'Le MJ note une embuscade au pont.',
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('ENREGISTRER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.saveNoteCallCount, 1);
+        expect(fakeRepository.lastSavedNoteCharacterId, isNull);
+        expect(
+          fakeRepository.lastSavedNoteBody,
+          'Le MJ note une embuscade au pont.',
+        );
+        expect(find.text('Notes enregistrées.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'onglet Notes : échec réseau à l\'enregistrement ne perd pas le '
+      'texte saisi (protection anti-perte), jamais "Notes enregistrées."',
+      (tester) async {
+        fakeRepository.detailToReturn = gameMasterViewDetail();
+        fakeRepository.noteToReturn = const GroupNote(groupId: 'group-1');
+        fakeRepository.saveNoteError = const GroupFailure(
+          'Impossible d\'enregistrer : session expirée.',
+        );
+
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('NOTES'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byType(TextField),
+          'Un indice que le MJ ne veut pas perdre.',
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('ENREGISTRER'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Impossible d\'enregistrer : session expirée.'),
+          findsOneWidget,
+        );
+        expect(find.text('Notes enregistrées.'), findsNothing);
+        // Protection anti-perte : `groupNoteProvider` n'est invalidé qu'en
+        // cas de succès (voir `_GroupScreenState._saveNote`) — le texte
+        // saisi reste donc affiché, jamais écrasé par un refetch de l'ancien
+        // corps après un échec.
+        expect(
+          find.text('Un indice que le MJ ne veut pas perdre.'),
+          findsOneWidget,
+        );
+        expect(fakeRepository.noteFetchCount, 1);
+      },
+    );
   });
 
   group('gestion du groupe (owner)', () {

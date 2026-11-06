@@ -103,7 +103,7 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<GroupNote> fetchGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
   }) async {
     final error = fetchGroupNoteErrorToThrow;
     if (error != null) throw error;

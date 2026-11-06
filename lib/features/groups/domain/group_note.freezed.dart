@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$GroupNote {
 
- String get groupId; String get characterId; String get body;
+ String get groupId; String? get characterId; String get body;
 /// Create a copy of GroupNote
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -46,7 +46,7 @@ abstract mixin class $GroupNoteCopyWith<$Res>  {
   factory $GroupNoteCopyWith(GroupNote value, $Res Function(GroupNote) _then) = _$GroupNoteCopyWithImpl;
 @useResult
 $Res call({
- String groupId, String characterId, String body
+ String groupId, String? characterId, String body
 });
 
 
@@ -63,11 +63,11 @@ class _$GroupNoteCopyWithImpl<$Res>
 
 /// Create a copy of GroupNote
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? groupId = null,Object? characterId = null,Object? body = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? groupId = null,Object? characterId = freezed,Object? body = null,}) {
   return _then(GroupNote(
 groupId: null == groupId ? _self.groupId : groupId // ignore: cast_nullable_to_non_nullable
-as String,characterId: null == characterId ? _self.characterId : characterId // ignore: cast_nullable_to_non_nullable
-as String,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String,characterId: freezed == characterId ? _self.characterId : characterId // ignore: cast_nullable_to_non_nullable
+as String?,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -153,7 +153,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String groupId,  String characterId,  String body)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String groupId,  String? characterId,  String body)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _GroupNote() when $default != null:
 return $default(_that.groupId,_that.characterId,_that.body);case _:
@@ -174,7 +174,7 @@ return $default(_that.groupId,_that.characterId,_that.body);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String groupId,  String characterId,  String body)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String groupId,  String? characterId,  String body)  $default,) {final _that = this;
 switch (_that) {
 case _GroupNote():
 return $default(_that.groupId,_that.characterId,_that.body);case _:
@@ -194,7 +194,7 @@ return $default(_that.groupId,_that.characterId,_that.body);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String groupId,  String characterId,  String body)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String groupId,  String? characterId,  String body)?  $default,) {final _that = this;
 switch (_that) {
 case _GroupNote() when $default != null:
 return $default(_that.groupId,_that.characterId,_that.body);case _:
@@ -209,11 +209,11 @@ return $default(_that.groupId,_that.characterId,_that.body);case _:
 
 
 class _GroupNote implements GroupNote {
-  const _GroupNote({required this.groupId, required this.characterId, this.body = ''});
+  const _GroupNote({required this.groupId, this.characterId, this.body = ''});
   
 
 @override final  String groupId;
-@override final  String characterId;
+@override final  String? characterId;
 @override@JsonKey() final  String body;
 
 /// Create a copy of GroupNote
@@ -246,7 +246,7 @@ abstract mixin class _$GroupNoteCopyWith<$Res> implements $GroupNoteCopyWith<$Re
   factory _$GroupNoteCopyWith(_GroupNote value, $Res Function(_GroupNote) _then) = __$GroupNoteCopyWithImpl;
 @override @useResult
 $Res call({
- String groupId, String characterId, String body
+ String groupId, String? characterId, String body
 });
 
 
@@ -263,11 +263,11 @@ class __$GroupNoteCopyWithImpl<$Res>
 
 /// Create a copy of GroupNote
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? groupId = null,Object? characterId = null,Object? body = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? groupId = null,Object? characterId = freezed,Object? body = null,}) {
   return _then(_GroupNote(
 groupId: null == groupId ? _self.groupId : groupId // ignore: cast_nullable_to_non_nullable
-as String,characterId: null == characterId ? _self.characterId : characterId // ignore: cast_nullable_to_non_nullable
-as String,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String,characterId: freezed == characterId ? _self.characterId : characterId // ignore: cast_nullable_to_non_nullable
+as String?,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }

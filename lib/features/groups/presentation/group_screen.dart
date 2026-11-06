@@ -308,7 +308,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     }
   }
 
-  Future<void> _saveNote(String characterId, String body) async {
+  Future<void> _saveNote(String? characterId, String body) async {
     if (_isSavingNote) return;
     setState(() => _isSavingNote = true);
     try {
@@ -447,14 +447,14 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
   }
 
   Widget _buildNotesTab(GroupDetail detail) {
+    // `characterId` est purement informatif depuis la migration web
+    // `20261106090000_group_notes_user_id_pk_and_character_set_null.sql` —
+    // la note est désormais identifiée par `(group_id, user_id)`, jamais par
+    // `character_id` : un MJ sans personnage (voir `GroupMember.isGameMaster`)
+    // a donc lui aussi son propre carnet, comme n'importe quel membre
+    // (décision du comité de revue F02(a), `docs/retours-utilisateurs.md` —
+    // remplace l'ancien état désactivé `_NoNotesForGameMasterState`).
     final characterId = detail.currentMember?.characterId;
-    // Le carnet de notes est propre à un personnage — un MJ sans personnage
-    // (voir `GroupMember.isGameMaster`) n'en a pas ici (`group_notes` est
-    // indexé par `character_id`, jamais applicable à sa propre ligne). Voir
-    // `_NoNotesForGameMasterState` pour l'état désactivé explicite affiché à
-    // la place, ciblé uniquement sur SA PROPRE vue (jamais celle d'un autre
-    // membre, qui n'est jamais représentée par cet onglet).
-    if (characterId == null) return const _NoNotesForGameMasterState();
 
     final noteAsync = ref.watch(
       groupNoteProvider(groupId: widget.groupId, characterId: characterId),
@@ -475,36 +475,6 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             : 'Impossible de charger tes notes. Réessayez.',
         onRetry: () => ref.invalidate(
           groupNoteProvider(groupId: widget.groupId, characterId: characterId),
-        ),
-      ),
-    );
-  }
-}
-
-/// État désactivé explicite de l'onglet "Notes" pour un MJ sans personnage
-/// (voir `_GroupScreenState._buildNotesTab`) — même gabarit que
-/// `group_treasure_tab_body.dart::_EmptyTreasureItemsState` (icône centrée
-/// 56px `text.muted`, texte centré `text.muted`, pas de bouton).
-class _NoNotesForGameMasterState extends StatelessWidget {
-  const _NoNotesForGameMasterState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.edit_note, size: 56, color: AppColors.textMuted),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'Le carnet de notes est propre à un personnage : en tant que '
-              'MJ sans personnage, tu n\'en as pas ici.',
-              textAlign: TextAlign.center,
-              style: AppTypography.body(color: AppColors.textMuted),
-            ),
-          ],
         ),
       ),
     );
