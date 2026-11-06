@@ -168,3 +168,36 @@ disposition.
   conséquence (`findSuggestionChip`/`findAnySuggestionChip` plutôt que
   `find.byType(ActionChip)`), non ré-exécuté sur émulateur après cet
   ajustement purement visuel.
+- Rôle MJ, parcours solo de gestion de groupe (`gm_group_management_solo_test.dart`) :
+  **exécuté avec succès de bout en bout le 06/11/2026**, les 8 étapes du
+  scénario (créer le groupe en rôle "MJ — sans personnage", onglets,
+  code d'invitation, butin, note, renommer, régénérer le code,
+  dissoudre) -- `flutter test integration_test/gm_group_management_solo_test.dart
+  -d emulator-5554 --flavor dev --dart-define-from-file=config/dev.json
+  --dart-define-from-file=config/qa_test_account.json` -> `All tests passed!`
+  (00:02:23, aucune assertion en échec). Confirme en conditions réelles la
+  clôture de D167/D168 (docs/dette-technique.md) : les edge functions
+  `create-group`/`join-group`/`set-group-character` venaient d'être
+  redéployées depuis le code déjà correct de `main` (dépôt web) -- le test
+  n'a jamais atteint "CHOISIR UN NOUVEAU PERSONNAGE", la détection
+  explicite (`fail()`) de ce blocage a donc été retirée du fichier (devenue
+  morte) ; D169 (bouton "Quitter le groupe" invisible dès qu'un personnage
+  existe) reste ouvert mais n'a plus l'occasion de se manifester via ce
+  rôle puisque D167 est clos.
+  - **Observation produit confirmée en conditions réelles (onglet "Notes",
+    MJ sans personnage)** : aucun `TextField` présent ; message d'état figé
+    affiché à la place : « Le carnet de notes est propre à un personnage :
+    en tant que MJ sans personnage, tu n'en as pas ici. » -- le constat
+    porté depuis le début de cette campagne ("le carnet de notes est propre
+    à un personnage, un MJ sans personnage n'en a pas") est donc confirmé,
+    pas seulement par lecture de code mais par exécution réelle de l'écran.
+  - **Nettoyage de cette exécution** : l'étape 8 (dissolution) s'est bien
+    déroulée -- `tapText(tester, 'Dissoudre définitivement')` suivi de
+    l'assertion finale `find.text(groupNameRenamed)` -> `findsNothing`
+    (groupe absent de la liste après dissolution), qui a passé sans échec.
+    Aucune donnée orpheline laissée par cette exécution. Les 5 groupes
+    orphelins des campagnes précédentes (`QA-Sim-Groupe-1793896729575`/
+    `-1793897092942`/`-1793897242426`/`-1793897474458`/`-1793897793775`,
+    lignes `groups` sans membre) restent à supprimer directement par
+    `dev-backend-supabase` -- toujours non traité, voir
+    docs/dette-technique.md.
