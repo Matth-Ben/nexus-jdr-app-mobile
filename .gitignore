@@ -70,3 +70,8 @@ config/integration.json
 # Compte de test confirmé pour integration_test/ (voir
 # integration_test/README.md) — identifiants réels, jamais committés.
 config/qa_test_account.json
+
+# Second compte de test confirmé (rôle "joueur", distinct du compte MJ
+# ci-dessus) pour les scénarios integration_test à deux comptes (invitation
+# de groupe) — identifiants réels, jamais committés.
+config/qa_test_account_joueur.json

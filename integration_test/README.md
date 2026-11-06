@@ -73,6 +73,49 @@ Tant que ce compte n'est pas configuré, les tests qui en dépendent se
 `skip`-ent explicitement (voir `integration_test/support/qa_test_account.dart::hasQaTestAccount`)
 plutôt que d'échouer avec une erreur réseau opaque.
 
+### Scénarios à deux comptes (ex. invitation de groupe MJ ↔ joueur)
+
+Certains scénarios ont besoin de **deux** comptes authentifiés distincts
+dans le même test (par exemple un MJ qui invite un vrai joueur dans un
+groupe) : le compte ci-dessus ne peut pas jouer les deux rôles à la fois
+dans un même `WidgetTester` (une seule session Supabase à la fois côté
+client testé). Un second compte de test confirmé, dédié au rôle **joueur**,
+est prévu pour ces cas :
+
+1. Créer une fois, manuellement, ce second compte (même procédure que
+   ci-dessus — inscription réelle + clic sur le lien de confirmation reçu
+   par e-mail), distinct du compte MJ.
+2. Renseigner ses identifiants dans `config/qa_test_account_joueur.json`
+   (**jamais committé**, déjà dans `.gitignore` comme les autres fichiers de
+   `config/`) :
+
+   ```json
+   {
+     "QA_TEST_EMAIL_JOUEUR": "...",
+     "QA_TEST_PASSWORD_JOUEUR": "..."
+   }
+   ```
+
+   Un gabarit est disponible dans `config/qa_test_account_joueur.json.example`.
+
+3. Lancer avec les **trois** fichiers de `--dart-define-from-file` (le
+   compte MJ existant reste nécessaire en plus de celui-ci) :
+
+   ```bash
+   flutter test integration_test/<fichier>.dart -d emulator-5554 \
+     --dart-define-from-file=config/dev.json \
+     --dart-define-from-file=config/qa_test_account.json \
+     --dart-define-from-file=config/qa_test_account_joueur.json
+   ```
+
+Même règle de `skip` explicite que ci-dessus tant que ce second compte
+n'est pas configuré (voir
+`integration_test/support/qa_test_account.dart::hasQaTestAccountJoueur`/
+`qaTestAccountJoueurMissingReason`). Voir aussi
+`loginWithQaTestAccountJoueur` dans ce même fichier pour se connecter avec
+ce second compte depuis un test — identique à `loginWithQaTestAccount`, à
+l'exception des identifiants utilisés.
+
 ## Données de test laissées en base
 
 Ce dossier parle au projet Supabase **distant partagé** dev/staging/prod —

@@ -38,6 +38,47 @@ const String qaTestAccountMissingReason =
     'integration_test/README.md pour créer/configurer le compte de test '
     'confirmé requis par les scénarios authentifiés.';
 
+/// Second compte de test confirmé, rôle **joueur** (distinct du compte
+/// ci-dessus, utilisable comme MJ ou joueur selon le scénario) — fourni via
+/// `--dart-define` exactement comme [qaTestEmail]/[qaTestPassword], depuis
+/// un fichier séparé (voir `integration_test/README.md`) :
+///
+/// ```
+/// flutter test integration_test/<fichier>.dart -d emulator-5554 \
+///   --dart-define-from-file=config/dev.json \
+///   --dart-define-from-file=config/qa_test_account.json \
+///   --dart-define-from-file=config/qa_test_account_joueur.json
+/// ```
+///
+/// Nécessaire pour tout scénario qui met en scène deux comptes authentifiés
+/// simultanément (ex. invitation de groupe MJ → joueur) : un seul compte de
+/// test ne peut pas jouer les deux rôles à la fois dans un même test (une
+/// session Supabase à la fois côté `WidgetTester`), et — même limite que
+/// [qaTestEmail] — un `signUp` automatisé depuis ce dossier ne reçoit jamais
+/// de session tant que personne n'a cliqué le lien de confirmation reçu par
+/// e-mail, donc ce second compte doit lui aussi être créé et confirmé une
+/// fois manuellement en amont.
+const String qaTestEmailJoueur = String.fromEnvironment(
+  'QA_TEST_EMAIL_JOUEUR',
+);
+const String qaTestPasswordJoueur = String.fromEnvironment(
+  'QA_TEST_PASSWORD_JOUEUR',
+);
+
+/// `true` si [qaTestEmailJoueur]/[qaTestPasswordJoueur] ont été fournis —
+/// même rôle que [hasQaTestAccount], pour les scénarios qui ont en plus
+/// besoin de ce second compte.
+bool get hasQaTestAccountJoueur =>
+    qaTestEmailJoueur.isNotEmpty && qaTestPasswordJoueur.isNotEmpty;
+
+/// Message de `skip` uniforme pour tout test qui dépend en plus du second
+/// compte de test tant que [hasQaTestAccountJoueur] est faux.
+const String qaTestAccountJoueurMissingReason =
+    'QA_TEST_EMAIL_JOUEUR/QA_TEST_PASSWORD_JOUEUR non fournis — voir '
+    'integration_test/support/qa_test_account.dart et '
+    'integration_test/README.md pour créer/configurer le second compte de '
+    'test confirmé requis par les scénarios à deux comptes.';
+
 /// Connecte [tester] avec le compte de test confirmé ([qaTestEmail]/
 /// [qaTestPassword]) depuis l'écran de connexion déjà affiché (voir
 /// [launchApp]), puis attend la redirection post-login pilotée par le
@@ -48,9 +89,40 @@ const String qaTestAccountMissingReason =
 /// [qaTestAccountMissingReason]), pour que l'absence de compte de test
 /// produise un `skip` explicite dans le rapport `flutter test`, jamais un
 /// échec silencieusement confondu avec une vraie régression.
-Future<void> loginWithQaTestAccount(WidgetTester tester) async {
-  await tester.enterText(emailFieldFinder, qaTestEmail);
-  await tester.enterText(passwordFieldFinder, qaTestPassword);
+Future<void> loginWithQaTestAccount(WidgetTester tester) =>
+    _loginWithCredentials(
+      tester,
+      email: qaTestEmail,
+      password: qaTestPassword,
+    );
+
+/// Même connexion que [loginWithQaTestAccount], mais avec le second compte
+/// de test ([qaTestEmailJoueur]/[qaTestPasswordJoueur]) — pour les
+/// scénarios à deux comptes (voir la doc de ces constantes). Même règle :
+/// n'appelle jamais [hasQaTestAccountJoueur] elle-même, c'est à l'appelant
+/// de `skip` le test si ce second compte n'est pas configuré (voir
+/// [qaTestAccountJoueurMissingReason]).
+Future<void> loginWithQaTestAccountJoueur(WidgetTester tester) =>
+    _loginWithCredentials(
+      tester,
+      email: qaTestEmailJoueur,
+      password: qaTestPasswordJoueur,
+    );
+
+/// Logique de connexion partagée par [loginWithQaTestAccount] et
+/// [loginWithQaTestAccountJoueur] : les deux comptes se connectent depuis le
+/// même écran de connexion avec exactement le même enchaînement d'actions,
+/// seuls les identifiants changent — ne pas dupliquer ce corps pour chaque
+/// compte, sous peine de faire diverger silencieusement le comportement de
+/// l'un des deux au prochain correctif (ex. le contournement du bug
+/// "ENTRER" documenté plus bas).
+Future<void> _loginWithCredentials(
+  WidgetTester tester, {
+  required String email,
+  required String password,
+}) async {
+  await tester.enterText(emailFieldFinder, email);
+  await tester.enterText(passwordFieldFinder, password);
   // Le champ mot de passe déclenche déjà la connexion sur l'action IME
   // "done" (`onFieldSubmitted: (_) => onSubmit()`, voir
   // `lib/features/auth/presentation/login_screen.dart`) : cette seule
