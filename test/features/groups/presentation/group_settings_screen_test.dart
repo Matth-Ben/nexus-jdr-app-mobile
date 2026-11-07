@@ -19,7 +19,7 @@ import 'package:personnages/features/groups/domain/created_group.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/features/groups/domain/group_failure.dart';
 import 'package:personnages/features/groups/domain/group_member.dart';
-import 'package:personnages/features/groups/domain/group_note.dart';
+import 'package:personnages/features/groups/domain/group_note_entry.dart';
 import 'package:personnages/features/groups/domain/group_preview.dart';
 import 'package:personnages/features/groups/domain/group_role.dart';
 import 'package:personnages/features/groups/domain/group_summary.dart';
@@ -137,17 +137,26 @@ class _FakeGroupRepository implements GroupRepository {
   }) => throw UnimplementedError();
 
   @override
-  Future<GroupNote> fetchGroupNote({
+  Future<List<GroupNoteEntry>> fetchGroupNoteEntries(String groupId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> addGroupNoteEntry({
     required String groupId,
-    String? characterId,
+    String? title,
+    required String body,
   }) => throw UnimplementedError();
 
   @override
-  Future<void> saveGroupNote({
-    required String groupId,
-    String? characterId,
+  Future<void> updateGroupNoteEntry({
+    required String entryId,
+    String? title,
     required String body,
   }) => throw UnimplementedError();
+
+  @override
+  Future<void> deleteGroupNoteEntry(String entryId) =>
+      throw UnimplementedError();
 }
 
 GroupDetail _ownerDetail({String name = "Les Lames de l'Aube"}) => GroupDetail(

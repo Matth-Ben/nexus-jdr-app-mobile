@@ -39,9 +39,13 @@ import 'widgets/group_treasure_tab_body.dart';
 /// owner.
 ///
 /// Toutes les écritures (exclure un membre, quitter, réclamer de la
-/// monnaie/un objet, ajouter au butin) sont orchestrées ici — les sheets/
-/// onglets ne font que collecter l'action/l'entrée, même architecture que
-/// `CharacterDetailScreen`.
+/// monnaie/un objet, ajouter au butin) sont orchestrées ici — les sheets des
+/// onglets Membres/Butin ne font que collecter l'action/l'entrée, même
+/// architecture que `CharacterDetailScreen`. Exception : l'onglet Notes
+/// (`GroupNotesTabBody`) est un `ConsumerWidget` auto-suffisant qui appelle
+/// lui-même son repository, calque intentionnel de `CharacterJournalCard` et
+/// du patron `character_journal_entries` déjà en place pour ce chantier —
+/// voir sa doc de classe.
 ///
 /// **Membre orphelin** (`GroupMember.isAwaitingCharacter`, voir la migration
 /// web `20261016090000_group_members_orphan_character.sql`) : tant que le
@@ -61,7 +65,6 @@ class GroupScreen extends ConsumerStatefulWidget {
 class _GroupScreenState extends ConsumerState<GroupScreen> {
   GroupTab _tab = GroupTab.members;
   bool _isWritingTreasure = false;
-  bool _isSavingNote = false;
 
   void _goBack() {
     if (context.canPop()) {
@@ -308,31 +311,6 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     }
   }
 
-  Future<void> _saveNote(String? characterId, String body) async {
-    if (_isSavingNote) return;
-    setState(() => _isSavingNote = true);
-    try {
-      await ref
-          .read(groupRepositoryProvider)
-          .saveGroupNote(
-            groupId: widget.groupId,
-            characterId: characterId,
-            body: body,
-          );
-      ref.invalidate(
-        groupNoteProvider(groupId: widget.groupId, characterId: characterId),
-      );
-      if (!mounted) return;
-      _showSnackBar('Notes enregistrées.');
-    } on GroupFailure catch (failure) {
-      _showSnackBar(failure.message);
-    } catch (_) {
-      _showSnackBar('Impossible d\'enregistrer tes notes. Réessayez.');
-    } finally {
-      if (mounted) setState(() => _isSavingNote = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     // Abonnement Realtime silencieux aux membres du groupe — voir
@@ -447,25 +425,19 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
   }
 
   Widget _buildNotesTab(GroupDetail detail) {
-    // `characterId` est purement informatif depuis la migration web
-    // `20261106090000_group_notes_user_id_pk_and_character_set_null.sql` —
-    // la note est désormais identifiée par `(group_id, user_id)`, jamais par
-    // `character_id` : un MJ sans personnage (voir `GroupMember.isGameMaster`)
-    // a donc lui aussi son propre carnet, comme n'importe quel membre
-    // (décision du comité de revue F02(a), `docs/retours-utilisateurs.md` —
-    // remplace l'ancien état désactivé `_NoNotesForGameMasterState`).
-    final characterId = detail.currentMember?.characterId;
-
-    final noteAsync = ref.watch(
-      groupNoteProvider(groupId: widget.groupId, characterId: characterId),
-    );
-    return noteAsync.when(
-      data: (note) => GroupNotesTabBody(
-        initialBody: note.body,
-        isSaving: _isSavingNote,
-        onSave: (body) => _saveNote(characterId, body),
-        onDictationError: _showSnackBar,
-      ),
+    // Fractionné en plusieurs entrées datées (07/11/2026) — `GroupNotesTabBody`
+    // porte elle-même les écritures (ajout/modification/suppression), voir sa
+    // doc de classe ; cet écran ne fait plus que résoudre/invalider la liste.
+    // Plus besoin de résoudre `detail.currentMember?.characterId` ici : la
+    // RLS de `group_journal_entries` filtre déjà par `auth.uid() = user_id`
+    // (un MJ sans personnage, voir `GroupMember.isGameMaster`, a son propre
+    // carnet comme n'importe quel membre, décision du comité de revue
+    // F02(a), `docs/retours-utilisateurs.md` — inchangée par ce
+    // fractionnement).
+    final entriesAsync = ref.watch(groupNoteEntriesProvider(widget.groupId));
+    return entriesAsync.when(
+      data: (entries) =>
+          GroupNotesTabBody(groupId: widget.groupId, entries: entries),
       loading: () => const Center(
         child: CircularProgressIndicator(color: AppColors.woodMedium),
       ),
@@ -473,9 +445,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         message: error is GroupFailure
             ? error.message
             : 'Impossible de charger tes notes. Réessayez.',
-        onRetry: () => ref.invalidate(
-          groupNoteProvider(groupId: widget.groupId, characterId: characterId),
-        ),
+        onRetry: () => ref.invalidate(groupNoteEntriesProvider(widget.groupId)),
       ),
     );
   }
