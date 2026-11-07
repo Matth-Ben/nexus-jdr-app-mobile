@@ -41,11 +41,17 @@ Future<GroupTreasure> groupTreasure(Ref ref, String groupId) {
 /// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
 /// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
 /// que [myGroups].
+///
+/// [characterId] est `null` pour un MJ sans personnage (voir
+/// `GroupRepository.fetchGroupNote` : purement informatif depuis la
+/// migration `(group_id, user_id)`, jamais la clé de lecture réelle) — il a
+/// désormais lui aussi son propre carnet, comme n'importe quel membre
+/// (décision du comité de revue F02(a), `docs/retours-utilisateurs.md`).
 @Riverpod(retry: _noRetry)
 Future<GroupNote> groupNote(
   Ref ref, {
   required String groupId,
-  required String characterId,
+  String? characterId,
 }) {
   return ref
       .watch(groupRepositoryProvider)

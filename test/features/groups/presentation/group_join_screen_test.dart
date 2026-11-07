@@ -497,13 +497,13 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<GroupNote> fetchGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
   }) => throw UnimplementedError();
 
   @override
   Future<void> saveGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
     required String body,
   }) => throw UnimplementedError();
 }
@@ -575,6 +575,26 @@ void main() {
     expect(find.text('REJOINDRE UN GROUPE'), findsOneWidget);
     expect(find.textContaining("Demande le code d'invitation"), findsOneWidget);
   });
+
+  testWidgets(
+    'affiche le sous-texte signalant l\'option "MJ — sans personnage" '
+    '(correctif F01)',
+    (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Qui te représente dans ce groupe ?'), findsOneWidget);
+      expect(
+        find.text(
+          'Choisis ton personnage, ou sélectionne '
+          '« MJ — sans personnage » si tu animes la partie sans fiche.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets(
     '"Rejoindre" désactivé tant que le code fait moins de 6 caractères ou '

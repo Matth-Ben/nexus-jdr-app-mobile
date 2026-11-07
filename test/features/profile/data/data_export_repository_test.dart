@@ -103,7 +103,7 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<GroupNote> fetchGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
   }) async {
     final error = fetchGroupNoteErrorToThrow;
     if (error != null) throw error;
@@ -547,8 +547,45 @@ void main() {
       expect(group.containsKey('note'), isFalse);
     });
 
-    test('MJ sans personnage/membre orphelin (`characterId` null) : jamais '
-        'tenté de lecture de note, `note` omise', () async {
+    test('MJ sans personnage/membre orphelin (`characterId` null) sans note '
+        'enregistrée : lecture de note tentée malgré tout (filtrée côté '
+        'repository sur `user_id`, jamais `character_id` — voir F02a), '
+        '`note` omise faute de corps', () async {
+      final groupRepository = _FakeGroupRepository()
+        ..groups = [
+          const GroupSummary(
+            id: 'group-1',
+            name: 'La Compagnie',
+            memberCount: 1,
+            founderId: 'fake-user-id',
+          ),
+        ]
+        ..detailsByGroupId['group-1'] = GroupDetail(
+          id: 'group-1',
+          name: 'La Compagnie',
+          ownerId: 'fake-user-id',
+          inviteCode: 'ABC123',
+          currentUserId: 'fake-user-id',
+          members: [ownMember(isGameMaster: true)],
+        );
+      final repository = await buildRepository(
+        characterRepository: _FakeCharacterRepository(),
+        groupRepository: groupRepository,
+      );
+
+      final path = await repository.exportMyData();
+      final payload =
+          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+      final group =
+          (payload['groups'] as List<dynamic>).single as Map<String, dynamic>;
+
+      expect(group.containsKey('note'), isFalse);
+    });
+
+    test('MJ sans personnage (`characterId` null) avec une note de groupe '
+        'enregistrée (F02a, note identifiée par `(group_id, user_id)`) : '
+        '`note` incluse avec son corps intégral — régression du trou RGPD '
+        'où cette note était amputée de l\'export', () async {
       final groupRepository = _FakeGroupRepository()
         ..groups = [
           const GroupSummary(
@@ -566,8 +603,11 @@ void main() {
           currentUserId: 'fake-user-id',
           members: [ownMember(isGameMaster: true)],
         )
-        ..fetchGroupNoteErrorToThrow = StateError(
-          'ne devrait jamais être appelé sans characterId',
+        ..notesByKey['group-1/null'] = const GroupNote(
+          groupId: 'group-1',
+          characterId: null,
+          body: 'Penser à préparer la rencontre du donjon pour la prochaine '
+              'séance.',
         );
       final repository = await buildRepository(
         characterRepository: _FakeCharacterRepository(),
@@ -580,7 +620,10 @@ void main() {
       final group =
           (payload['groups'] as List<dynamic>).single as Map<String, dynamic>;
 
-      expect(group.containsKey('note'), isFalse);
+      expect(
+        group['note'],
+        'Penser à préparer la rencontre du donjon pour la prochaine séance.',
+      );
     });
 
     test('plusieurs groupes : un élément de `groups` par groupe, dans l\'ordre '

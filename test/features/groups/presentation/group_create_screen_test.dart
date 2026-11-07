@@ -486,13 +486,13 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<GroupNote> fetchGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
   }) => throw UnimplementedError();
 
   @override
   Future<void> saveGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
     required String body,
   }) => throw UnimplementedError();
 }
@@ -603,7 +603,16 @@ void main() {
       );
       expect(find.text('Nom du groupe'), findsOneWidget);
       expect(find.text('Qui te représente dans ce groupe ?'), findsOneWidget);
-      expect(find.textContaining('représentera ta présence'), findsOneWidget);
+      // Correctif F01 (`docs/retours-utilisateurs.md`) : le sous-texte
+      // signale explicitement l'option "MJ — sans personnage" avant même
+      // d'ouvrir la sheet de choix de rôle.
+      expect(
+        find.text(
+          'Choisis ton personnage, ou sélectionne '
+          '« MJ — sans personnage » si tu animes la partie sans fiche.',
+        ),
+        findsOneWidget,
+      );
       // Aucune sélection : la tuile affiche le placeholder, "Sylvi"
       // n'apparaît nulle part avant l'ouverture de la sheet.
       expect(find.text('Choisir un personnage ou un rôle'), findsOneWidget);
