@@ -1623,6 +1623,28 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   ///
   /// [detail] doit être la fiche effective ([_effectiveDetail]) : le nouveau
   /// total part de l'XP réellement affichée, [_localXp] comprise.
+  ///
+  /// **Attend la résolution effective du refetch de `characterDetailProvider`
+  /// avant de pousser `LevelUpScreen`** (`await _refreshCharacterDetail()`,
+  /// jamais un simple `ref.invalidate` "tire et oublie" ici) — corrige F05
+  /// (`docs/retours-utilisateurs.md`) : `LevelUpScreen` dépend lui-même de
+  /// `characterDetailProvider` (via `levelUpStepDataProvider`, voir
+  /// `providers/level_up_provider.dart`) et, à la fin de la montée de
+  /// niveau, invalide à son tour ce MÊME provider (`_continueFromSummary`,
+  /// `level_up_screen.dart`) avant de revenir sur cette fiche. Pousser
+  /// l'écran avant que CE refetch-ci (déclenché par l'ajout d'XP) n'ait
+  /// résolu laissait deux refetchs non coordonnés en vol sur le même
+  /// provider `autoDispose` ; selon l'ordre d'arrivée des réponses réseau
+  /// (jamais garanti), celui-ci pouvait se résoudre APRÈS celui de la
+  /// montée de niveau et réafficher une fiche au niveau/PV d'avant —
+  /// symptôme confirmé en test réel uniquement avec la méthode de PV
+  /// "moyenne" (aucune interaction entre l'annonce et le récapitulatif,
+  /// contrairement au jet de dé, qui laissait largement le temps à ce
+  /// refetch de résoudre avant que la montée de niveau ne déclenche le
+  /// sien). Fermer cette fenêtre ici, plutôt que de supposer que
+  /// `LevelUpScreen`/`_continueFromSummary` sait réconcilier un refetch
+  /// obsolète, est la correction la plus sûre : aucun appelant de ce
+  /// provider n'a plus besoin d'un refetch de CET ajout d'XP encore en vol.
   Future<void> _addXp(CharacterDetail detail, int amount) async {
     // Capturé avant le premier `await` — voir la doc de
     // [_offlineQueuedMessage].
@@ -1653,7 +1675,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       // fait de nouveau autorité, une éventuelle XP locale plus ancienne
       // (ajout précédent mis en file) n'a plus lieu d'être.
       if (_localXp != null) setState(() => _localXp = null);
-      ref.invalidate(characterDetailProvider(widget.characterId));
+      // Voir la documentation de cette méthode (F05) : attend la résolution
+      // du refetch avant de pousser `LevelUpScreen`, pour ne jamais laisser
+      // deux refetchs non coordonnés en vol sur `characterDetailProvider`.
+      await _refreshCharacterDetail();
+      if (!mounted) return;
 
       final threshold = detail.nextLevelXpThreshold;
       if (threshold != null && newXp >= threshold) {

@@ -861,6 +861,39 @@ void main() {
     expect(find.textContaining('AUCUN AVENTURIER'), findsOneWidget);
   });
 
+  testWidgets(
+    'état vide "aucun personnage" : reste sans débordement quand la '
+    'hauteur disponible est trop juste (F06, `docs/retours-utilisateurs.md`) '
+    '— ex. petit écran + bandeau "Mise à jour suggérée" visible au-dessus, '
+    'texte système agrandi',
+    (WidgetTester tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+      // Hauteur volontairement très réduite : reproduit sans ambiguïté le
+      // débordement VERTICAL confirmé sur le `Column` de [_EmptyState]
+      // (icône 88×88 + titre + corps) quand l'[Expanded] qui l'héberge
+      // devient trop petit — jamais atteint par les tests existants
+      // (`buildTestWidget()` sans surface réduite, 800×600 par défaut).
+      await tester.binding.setSurfaceSize(const Size(375, 300));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      // Avant correctif : `FlutterError` ("A RenderFlex overflowed...") sur
+      // le `Column` de [_EmptyState] — `tester.takeException()` l'aurait
+      // renvoyée ici, faisant échouer ce test tant que le correctif n'est
+      // pas appliqué (la bannière jaune/noire de rendu ne fait pas échouer
+      // le test à elle seule, mais l'erreur de layout sous-jacente, elle,
+      // le fait).
+      expect(tester.takeException(), isNull);
+      // Le texte doit rester intégralement lisible (défilable), pas
+      // seulement "ne plus planter" : un `TextOverflow.clip`/`ellipsis`
+      // masquerait le symptôme sans garantir que le contenu reste
+      // consultable.
+      expect(find.textContaining('AUCUN AVENTURIER'), findsOneWidget);
+    },
+  );
+
   testWidgets('état vide "aucun personnage" : médaillon en bordure pointillée '
       'circulaire, icône explore_outlined en accentTeal (recettage direction '
       'artistique du 13/09)', (WidgetTester tester) async {
