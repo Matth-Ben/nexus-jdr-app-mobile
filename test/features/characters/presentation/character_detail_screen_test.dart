@@ -2059,6 +2059,53 @@ void main() {
     );
 
     testWidgets(
+      'attend la résolution du refetch de la fiche déclenché par l\'ajout '
+      'd\'XP avant de pousser le flux de montée de niveau (F05, '
+      '`docs/retours-utilisateurs.md`) — sans cette attente, ce refetch '
+      'pouvait encore être en vol quand la montée de niveau déclenche à son '
+      'tour le sien sur le même provider, et le réafficher ensuite par-'
+      'dessus avec des valeurs périmées',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(PrimaryButton, '+ XP'));
+        await tester.pumpAndSettle();
+
+        // xp actuelle 7000, seuil niveau 6 = 14000 -> 7500 suffit à le
+        // franchir.
+        await tester.enterText(find.byType(TextFormField), '7500');
+        await tester.pumpAndSettle();
+
+        // Simule un refetch de `characterDetailProvider` encore en vol au
+        // moment où `AJOUTER` est tapé (réseau lent) : `fetchCharacterDetail`
+        // ne résoudra plus qu'au moment choisi ci-dessous.
+        fakeRepository.detailCompleter = Completer<CharacterDetail>();
+
+        await tester.tap(find.text('AJOUTER'));
+        // `pump()`, pas `pumpAndSettle()` : le refetch est volontairement
+        // bloqué sur le `Completer` ci-dessus, `_addXp` reste donc en
+        // attente de son `await _refreshCharacterDetail()` — `pumpAndSettle`
+        // n'a pas besoin d'attendre cette attente (aucune animation en vol)
+        // mais une seule frame suffit à vérifier l'état intermédiaire.
+        await tester.pump();
+
+        // Tant que ce refetch n'a pas résolu, le flux de montée de niveau ne
+        // doit PAS encore être poussé.
+        expect(find.textContaining('Montée de niveau'), findsNothing);
+
+        fakeRepository.detailCompleter!.complete(
+          _baseDetail.copyWith(xp: 14500),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Montée de niveau : 6'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'lien "Monter de niveau manuellement" (feuille "+ XP") visible tant '
       'que l\'XP n\'a pas franchi le seuil, et ouvre le flux ciblant '
       'totalLevel + 1 (demande utilisateur du 15/09 : relogé depuis le '

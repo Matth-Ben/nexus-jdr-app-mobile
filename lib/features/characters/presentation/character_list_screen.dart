@@ -993,50 +993,92 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 88,
-              height: 88,
-              child: CustomPaint(
-                painter: const DashedBorderPainter(
-                  color: AppColors.textOnWoodMuted,
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.explore_outlined,
-                    size: 40,
-                    color: AppColors.accentTeal,
+    // `LayoutBuilder` + `SingleChildScrollView` plutôt qu'un simple `Center`
+    // (bug F06, `docs/retours-utilisateurs.md`) : l'[Expanded] qui héberge
+    // cet état (voir `build()` de `CharacterListScreen`) donne une hauteur
+    // BORNÉE, pas infinie — sur un petit écran, avec le bandeau "Mise à jour
+    // suggérée" visible au-dessus et/ou une taille de texte système
+    // agrandie, cette hauteur peut devenir insuffisante pour l'icône fixe
+    // (88×88) + le titre + le corps, qui débordaient alors silencieusement
+    // en bas (`RenderFlex overflowed... on the bottom`, confirmé en test à
+    // hauteur réduite). `ConstrainedBox(minHeight: ...)` conserve EXACTEMENT
+    // le rendu centré actuel quand tout rentre (le `Center` continue de
+    // centrer verticalement dans cet espace minimal) ; seul le cas qui
+    // débordait auparavant passe désormais par le défilement de
+    // `SingleChildScrollView`, qui garde l'intégralité du texte lisible —
+    // jamais de `TextOverflow.clip`/`ellipsis`, qui aurait seulement masqué
+    // le symptôme en coupant le texte.
+    //
+    // `minHeight` retranche le padding vertical du `SingleChildScrollView`
+    // (`AppSpacing.lg` en haut ET en bas) de la hauteur disponible, sinon la
+    // hauteur minimale demandée dépasserait systématiquement l'espace
+    // disponible d'exactement ce padding — ce qui rendrait le contenu
+    // "défilable" en permanence (de 2×`AppSpacing.lg`) même quand tout
+    // rentrait déjà sans ce correctif. `clamp(0, ...)` : une hauteur
+    // disponible plus petite que le padding lui-même (écran extrêmement
+    // court) ne doit jamais produire une contrainte négative, invalide pour
+    // `BoxConstraints`. `isFinite` : cet état est toujours hébergé dans un
+    // [Expanded] (hauteur bornée) en pratique, mais rester défensif plutôt
+    // que de propager une contrainte infinie à [ConstrainedBox] si ce widget
+    // était un jour réutilisé dans un contexte à hauteur non bornée.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minContentHeight = constraints.maxHeight.isFinite
+            ? (constraints.maxHeight - AppSpacing.lg * 2).clamp(
+                0.0,
+                double.infinity,
+              )
+            : 0.0;
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minContentHeight),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 88,
+                    height: 88,
+                    child: CustomPaint(
+                      painter: const DashedBorderPainter(
+                        color: AppColors.textOnWoodMuted,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.explore_outlined,
+                          size: 40,
+                          color: AppColors.accentTeal,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    l10n.characterListEmptyTitle,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.display(
+                      fontSize: 11,
+                      color: AppColors.textOnWood,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    // "ou rejoins l'histoire d'un ami" volontairement
+                    // retiré : voir le commentaire sur le masquage du bouton
+                    // "Rejoindre une histoire" plus haut dans ce fichier
+                    // (`build`).
+                    l10n.characterListEmptyBody,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.body(color: AppColors.textOnWoodMuted),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              l10n.characterListEmptyTitle,
-              textAlign: TextAlign.center,
-              style: AppTypography.display(
-                fontSize: 11,
-                color: AppColors.textOnWood,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              // "ou rejoins l'histoire d'un ami" volontairement retiré :
-              // voir le commentaire sur le masquage du bouton "Rejoindre
-              // une histoire" plus haut dans ce fichier (`build`).
-              l10n.characterListEmptyBody,
-              textAlign: TextAlign.center,
-              style: AppTypography.body(color: AppColors.textOnWoodMuted),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
