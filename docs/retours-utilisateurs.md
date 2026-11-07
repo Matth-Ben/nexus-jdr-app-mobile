@@ -40,7 +40,43 @@ entrées à la suite, avec sa date.
 
 ## Rôle joueur
 
-*(aucune campagne exécutée encore)*
+### Campagne du 07/11/2026 — Pseudo-session Clerc niveau 1→2 + groupe/butin/notes, scénario RAW de référence (PR #228)
+
+Scénario réel `integration_test/adventure_session_cleric_groups_test.dart` :
+création d'un Clerc Humain (Domaine de la Vie, Acolyte), 7 dégâts, sort de
+soins (domaine, emplacement niveau 1), repos long, montée de niveau 2
+(méthode PV "moyenne", déterministe), puis côté MJ : création d'un groupe
+("MJ — sans personnage"), invitation réelle à deux comptes, butin ajouté/
+réclamé, note de groupe. Exécuté avec succès de bout en bout en conditions
+réelles (toutes les valeurs RAW asserties exactes — voir
+`integration_test/README.md`) ; `flutter test` rapporte néanmoins ce
+fichier en échec à chaque exécution, pour une raison sans rapport avec le
+scénario RAW lui-même (F06 ci-dessous).
+
+| ID | Titre | Catégorie | Preuve | Constat | État |
+|---|---|---|---|---|---|
+| F04 | Équipement de départ standard du Clerc résout sur une armure hors catalogue RAW (CA 17 au lieu de 18) | Bug/friction réel | **R** | Onglet SAC : l'équipement de départ standard du Clerc résout sur "Chemise de mailles" (armure moyenne, CA 13 + mod Dex plafonné à 2) plutôt que sur l'une des 3 options RAW du PHB (armure d'écailles CA14+Dex plafonné à 2 / cuir CA11+Dex / cotte de mailles CA16 sans mod Dex) — "Chemise de mailles" n'est même pas l'une de ces 3 options, ce qui suggère un défaut de mapping/catalogue plutôt qu'un simple choix de valeur par défaut discutable. CA totale observée : 13+2(Dex)+2(bouclier)=17 au lieu de 18 attendu (armure d'écailles+bouclier) — reproduit identiquement sur toutes les exécutions réelles de la campagne. | Ouvert — signalé à `dev-flutter`. |
+| F05 | La fiche personnage affiche encore les valeurs du niveau précédent juste après une montée de niveau en méthode "moyenne" | Bug/friction réel | **R** | Après `runOneLevelUp(useAverageHp: true)` (Clerc niveau 1→2), la fiche reste parfois affichée avec les valeurs du niveau 1 (PV "10 / 10", XP "0 / 300" inchangés) alors que `character_classes.level` est déjà à 2 en base (confirmé par lecture directe via le client Supabase pendant le test) — reproduit 2 fois sur 4 exécutions réelles de la campagne (~50 %). Fermer puis rouvrir la fiche (force un nouveau fetch réseau) corrige l'affichage à chaque fois : défaut de rafraîchissement client après ce type précis de montée de niveau (méthode PV "moyenne"), pas de perte d'écriture réelle côté serveur. | Ouvert — signalé à `dev-flutter`. |
+| F06 | Débordement visuel de 3,7px sur l'état vide de la liste de personnages | Bug/friction réel | **R** | `character_list_screen.dart::_EmptyState` déborde de 3,7px quand le compte connecté n'a aucun personnage (cas systématique du compte MJ de test dans ce scénario) — ce débordement est promu en échec de test par le framework Flutter (`FlutterError` rapportée par `flutter test`), alors qu'aucune assertion du scénario RAW lui-même n'est en cause. Fait échouer `adventure_session_cleric_groups_test.dart` à chaque exécution malgré un déroulé fonctionnel réussi de bout en bout. | Ouvert — signalé à `dev-flutter`. |
+
+**Nettoyage de données en attente -- périmètre revu à la hausse
+(`code-reviewer`, PR #228)** : l'étape 10 de
+`adventure_session_cleric_groups_test.dart` supprimait le personnage de test
+en étant encore connectée sur le compte MJ (dernier changement de compte de
+l'étape 9), alors que le personnage appartient au compte joueur -- la RLS
+Postgres (`auth.uid() = owner_id`) rend une telle suppression un no-op
+SILENCIEUX (pas d'exception), donc le personnage de test n'était EN RÉALITÉ
+JAMAIS supprimé, y compris lors des exécutions rapportées comme réussies
+(corrigé dans le fichier de test : rebascule sur le compte joueur avant
+suppression + vérification `.maybeSingle()` -> `null`). Conséquence : en
+plus du personnage orphelin déjà identifié d'une exécution ratée
+(`QA-Adventure-Clerc-1794059944973480`, caractéristiques fausses — première
+exécution avant la correction de la séquence de `swapUp` dans le fichier de
+test), il existe probablement PLUSIEURS AUTRES personnages de test orphelins
+(préfixe `QA-Adventure-Clerc-`) issus des exécutions antérieures qui
+semblaient réussies — Claude ne pouvant pas écrire en base au-delà de ce que
+le test lui-même exécute, le nombre exact et les identifiants précis restent
+à retrouver et supprimer manuellement par Matthias.
 
 ## Rôle MJ
 

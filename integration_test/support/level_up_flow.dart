@@ -42,6 +42,7 @@ Future<LevelUpOutcome> runOneLevelUp(
   WidgetTester tester, {
   ChoiceStepPicker? choicePicker,
   String? multiclassInto,
+  bool useAverageHp = false,
 }) async {
   // Etape `classDecision` (multiclassage) : passe avant TOUT le reste, y
   // compris l'annonce de niveau (voir level_up_screen.dart, commentaire de
@@ -84,7 +85,44 @@ Future<LevelUpOutcome> runOneLevelUp(
     );
   }
 
-  // Etape "Points de vie" (valeurs par defaut : jet de de, rien a choisir).
+  // Etape "Points de vie" : defaut "jet de de" (_HpMethod.roll, rien a
+  // choisir) -- sauf si [useAverageHp] demande explicitement la methode
+  // "Valeur moyenne ({average})" (`level_up_screen.dart::_HpMethod.average`,
+  // meme SegmentedToggle que l'etape "Points de vie" de la creation, voir
+  // `levelUpScreenAverageHitDieOption`), necessaire pour un resultat
+  // deterministe (ex. verification d'une valeur RAW exacte plutot qu'une
+  // plage) -- jamais tape par defaut (comportement inchange pour tout
+  // appelant existant, qui accepte le jet aleatoire).
+  if (useAverageHp) {
+    // `SegmentedToggle` met TOUJOURS son libellé en majuscules (voir
+    // `core/widgets/segmented_toggle.dart`, `label.toUpperCase()`) --
+    // recherche par "Valeur moyenne" (casse d'origine du libellé
+    // `levelUpScreenAverageHitDieOption`) introuvable en conditions
+    // reelles lors de la toute premiere execution de ce parametre (silence
+    // total, aucune erreur -- le bloc `if` ne faisait rien et la montee de
+    // niveau retombait sur le jet de de par defaut sans le signaler) :
+    // bug de ce helper, pas du produit -- corrige ici en recherchant le
+    // rendu reel ("VALEUR MOYENNE (n)"), jamais la casse source du libelle.
+    final averageOption = find.textContaining('VALEUR MOYENNE');
+    final found = averageOption.evaluate().isNotEmpty;
+    if (!found) {
+      // Echoue explicitement plutot que de retomber en silence sur
+      // "CONTINUER" (jet de de aleatoire au lieu de la moyenne demandee) :
+      // meme mode de defaillance silencieuse que celui corrige ci-dessus
+      // pour la casse source du libelle -- un appelant qui demande
+      // [useAverageHp] explicitement a besoin d'un resultat deterministe,
+      // pas d'un echec muet.
+      fail(
+        'runOneLevelUp(useAverageHp: true) : option "VALEUR MOYENNE" '
+        'introuvable -- texte visible : '
+        '${tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).whereType<String>().toList()}',
+      );
+    }
+    await tester.ensureVisible(averageOption.first);
+    await settleQuickly(tester);
+    await tester.tap(averageOption.first);
+    await settleQuickly(tester);
+  }
   await tapText(tester, 'CONTINUER');
   await pumpUntilSettled(tester, attempts: 4);
 
