@@ -285,9 +285,14 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xs),
+                      // Correctif F01 (`docs/retours-utilisateurs.md`) :
+                      // signale explicitement l'option "MJ — sans
+                      // personnage" avant même d'ouvrir la sheet de choix de
+                      // rôle (voir [_GmOptionRow]).
                       Text(
-                        'Ce personnage représentera ta présence dans le '
-                        'tableau de bord du groupe.',
+                        'Choisis ton personnage, ou sélectionne '
+                        '« MJ — sans personnage » si tu animes la partie '
+                        'sans fiche.',
                         style: AppTypography.body(
                           fontSize: 12,
                           color: AppColors.textMuted,

@@ -360,6 +360,21 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
                           'Qui te représente dans ce groupe ?',
                         ),
                         const SizedBox(height: AppSpacing.xs),
+                        // Correctif F01 (`docs/retours-utilisateurs.md`) :
+                        // signale explicitement l'option "MJ — sans
+                        // personnage" avant même d'ouvrir la sheet de choix
+                        // de rôle (voir [_GmOptionRow]) — même texte que
+                        // `group_create_screen.dart`.
+                        Text(
+                          'Choisis ton personnage, ou sélectionne '
+                          '« MJ — sans personnage » si tu animes la partie '
+                          'sans fiche.',
+                          style: AppTypography.body(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
                         _RoleSelectorTile(
                           character: selectedCharacter,
                           isGameMaster: _joinAsGameMaster,
