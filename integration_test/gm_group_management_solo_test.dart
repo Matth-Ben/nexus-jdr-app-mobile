@@ -236,7 +236,8 @@ void main() {
       expect(
         codeAfterRegenerate,
         isNot(equals(codeBeforeRegenerate)),
-        reason: 'régénérer doit invalider l\'ancien code et en produire un '
+        reason:
+            'régénérer doit invalider l\'ancien code et en produire un '
             'nouveau (GroupRepository.regenerateInviteCode).',
       );
 
@@ -249,10 +250,7 @@ void main() {
       // l'écran "Paramètres" (toujours monté sous la sheet) a lui aussi un
       // TextFormField (le nom du groupe), seul le dernier de l'arbre est
       // celui de la sheet de dissolution.
-      await tester.enterText(
-        find.byType(TextFormField).last,
-        groupNameRenamed,
-      );
+      await tester.enterText(find.byType(TextFormField).last, groupNameRenamed);
       await tester.pump();
       await tapText(tester, 'Dissoudre définitivement');
       await pumpUntilSettled(tester, attempts: 10);
