@@ -606,7 +606,8 @@ void main() {
         ..notesByKey['group-1/null'] = const GroupNote(
           groupId: 'group-1',
           characterId: null,
-          body: 'Penser à préparer la rencontre du donjon pour la prochaine '
+          body:
+              'Penser à préparer la rencontre du donjon pour la prochaine '
               'séance.',
         );
       final repository = await buildRepository(

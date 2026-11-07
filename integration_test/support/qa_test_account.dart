@@ -58,9 +58,7 @@ const String qaTestAccountMissingReason =
 /// de session tant que personne n'a cliqué le lien de confirmation reçu par
 /// e-mail, donc ce second compte doit lui aussi être créé et confirmé une
 /// fois manuellement en amont.
-const String qaTestEmailJoueur = String.fromEnvironment(
-  'QA_TEST_EMAIL_JOUEUR',
-);
+const String qaTestEmailJoueur = String.fromEnvironment('QA_TEST_EMAIL_JOUEUR');
 const String qaTestPasswordJoueur = String.fromEnvironment(
   'QA_TEST_PASSWORD_JOUEUR',
 );
@@ -90,11 +88,7 @@ const String qaTestAccountJoueurMissingReason =
 /// produise un `skip` explicite dans le rapport `flutter test`, jamais un
 /// échec silencieusement confondu avec une vraie régression.
 Future<void> loginWithQaTestAccount(WidgetTester tester) =>
-    _loginWithCredentials(
-      tester,
-      email: qaTestEmail,
-      password: qaTestPassword,
-    );
+    _loginWithCredentials(tester, email: qaTestEmail, password: qaTestPassword);
 
 /// Même connexion que [loginWithQaTestAccount], mais avec le second compte
 /// de test ([qaTestEmailJoueur]/[qaTestPasswordJoueur]) — pour les
