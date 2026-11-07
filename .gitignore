@@ -73,5 +73,6 @@ config/qa_test_account.json
 
 # Second compte de test confirmé (rôle "joueur", distinct du compte MJ
 # ci-dessus) pour les scénarios integration_test à deux comptes (invitation
-# de groupe) — identifiants réels, jamais committés.
+# de groupe) du sous-agent simulation-utilisateur — identifiants réels,
+# jamais committés — voir docs/retours-utilisateurs.md.
 config/qa_test_account_joueur.json
