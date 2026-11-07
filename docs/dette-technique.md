@@ -820,6 +820,20 @@ traçait avant celle-ci.
 |---|---|---|---|---|
 | D171 | `_GroupRow` (`group_list_screen.dart`) affiche `'${group.memberCount} membres'` sans forme singulière : un groupe à 1 membre affiche « 1 membres » plutôt que « 1 membre ». | basse (faute de grammaire, pas une donnée fausse) | Pluriel ICU (`{count, plural, =1{membre} other{membres}}`) si `group_list_screen.dart` se localise un jour (pas encore migré vers `.arb`, voir Phase B) ; en attendant, gestion manuelle du cas `memberCount == 1` (même principe que `GroupStatusBadge.deadCount`/`'1 mort'` vs `'$deadCount morts'`) | Ouvert, non traité (juste tracé) |
 
+## Ajout lié au fractionnement du carnet de notes de groupe en entrées multiples (07/11/2026)
+
+Même constat que la plupart des fichiers de `features/groups/` (ex. `group_treasure_tab_body.dart`,
+`group_notes_tab_body.dart` déjà avant ce chantier) : toute cette feature est restée en dehors de la
+migration Phase B vers `.arb`/`AppLocalizations` — tous les libellés y sont écrits en dur en
+français, contrairement à `features/characters/` (déjà migré, voir D142/D143/D146/D147). Les deux
+nouveaux fichiers de ce chantier suivent la même convention (déjà en place dans tout le dossier
+`groups/`, pas une régression introduite ici) plutôt que de migrer isolément deux fichiers au milieu
+d'une feature entièrement non localisée.
+
+| ID | Constat | Gravité | Correction | État |
+|---|---|---|---|---|
+| D172 | `group_note_entry_edit_sheet.dart` (titres de sheet "AJOUTER UNE NOTE"/"MODIFIER LA NOTE", hints de champs, libellés de boutons, messages d'erreur génériques/de confirmation) et `group_notes_tab_body.dart` (état vide "Aucune note pour l'instant.", libellés "Ajouter une note"/"Modifier"/"Supprimer", dialogue de confirmation de suppression, messages de confirmation/erreur) sont intégralement en français en dur, sans passer par `AppLocalizations` — même limite que le reste de `features/groups/` (`group_screen.dart`, `group_treasure_tab_body.dart`, `group_members_tab_body.dart`...), jamais migré vers le pattern `.arb` établi par la Phase B sur `features/characters/`. | basse (texte secondaire, pas une donnée fausse — juste une feature entière qui ne suit pas le réglage de langue de l'app) | Migrer toute la feature `features/groups/` vers `AppLocalizations` en un seul lot cohérent (comme les lots Phase B déjà faits sur `characters/`), plutôt que fichier par fichier au fil des chantiers — à prioriser par le chef de projet | Ouvert, non traité |
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont

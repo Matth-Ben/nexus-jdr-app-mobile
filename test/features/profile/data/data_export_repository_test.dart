@@ -2,7 +2,7 @@
 // (`features/profile/data/data_export_repository.dart`) : assemble le JSON
 // attendu depuis un `CharacterRepository` factice (`fetchCharacters` +
 // `fetchCharacterDetail`), un `GroupRepository` factice (`fetchMyGroups` +
-// `fetchGroupDetail` + `fetchGroupNote`) et un `SupabaseClient` connecté
+// `fetchGroupNoteEntries`) et un `SupabaseClient` connecté
 // (profil `auth.currentUser`, même double de test que
 // `auth_repository_test.dart` : un vrai `SupabaseClient`/`GoTrueClient`
 // tourne, seule la réponse HTTP `/token` est fabriquée via
@@ -30,11 +30,8 @@ import 'package:personnages/features/characters/domain/character_spell_entry.dar
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
-import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/features/groups/domain/group_failure.dart';
-import 'package:personnages/features/groups/domain/group_member.dart';
-import 'package:personnages/features/groups/domain/group_note.dart';
-import 'package:personnages/features/groups/domain/group_role.dart';
+import 'package:personnages/features/groups/domain/group_note_entry.dart';
 import 'package:personnages/features/groups/domain/group_summary.dart';
 import 'package:personnages/features/profile/data/data_export_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -74,15 +71,14 @@ class _FakeCharacterRepository implements CharacterRepository {
   Never noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
-/// Double minimal — seuls `fetchMyGroups`/`fetchGroupDetail`/`fetchGroupNote`
-/// sont exercés par `DataExportRepository`, le reste lève
-/// `UnimplementedError` (jamais atteint par ces tests).
+/// Double minimal — seuls `fetchMyGroups`/`fetchGroupNoteEntries` sont
+/// exercés par `DataExportRepository`, le reste lève `UnimplementedError`
+/// (jamais atteint par ces tests).
 class _FakeGroupRepository implements GroupRepository {
   List<GroupSummary> groups = const [];
-  final Map<String, GroupDetail> detailsByGroupId = {};
-  final Map<String, GroupNote> notesByKey = {};
+  final Map<String, List<GroupNoteEntry>> entriesByGroupId = {};
   Object? fetchMyGroupsErrorToThrow;
-  Object? fetchGroupNoteErrorToThrow;
+  Object? fetchGroupNoteEntriesErrorToThrow;
 
   @override
   Future<List<GroupSummary>> fetchMyGroups() async {
@@ -92,23 +88,10 @@ class _FakeGroupRepository implements GroupRepository {
   }
 
   @override
-  Future<GroupDetail> fetchGroupDetail(String groupId) async {
-    final detail = detailsByGroupId[groupId];
-    if (detail == null) {
-      throw const GroupFailure('Groupe introuvable.');
-    }
-    return detail;
-  }
-
-  @override
-  Future<GroupNote> fetchGroupNote({
-    required String groupId,
-    String? characterId,
-  }) async {
-    final error = fetchGroupNoteErrorToThrow;
+  Future<List<GroupNoteEntry>> fetchGroupNoteEntries(String groupId) async {
+    final error = fetchGroupNoteEntriesErrorToThrow;
     if (error != null) throw error;
-    return notesByKey['$groupId/$characterId'] ??
-        GroupNote(groupId: groupId, characterId: characterId);
+    return entriesByGroupId[groupId] ?? const [];
   }
 
   @override
@@ -425,17 +408,8 @@ void main() {
     });
   });
 
-  group('LocalFileDataExportRepository.exportMyData — groupes/notes (B1)', () {
-    GroupMember ownMember({String? characterId, bool isGameMaster = false}) {
-      return GroupMember(
-        characterId: characterId,
-        userId: 'fake-user-id',
-        role: GroupRole.membre,
-        name: 'Aranea',
-        isGameMaster: isGameMaster,
-      );
-    }
-
+  group('LocalFileDataExportRepository.exportMyData — groupes/notes (B1, '
+      'fractionnement en entrées multiples)', () {
     test('un groupe par entrée de `fetchMyGroups`, avec `id`/`name`/'
         '`memberCount`/`founderId`', () async {
       final groupRepository = _FakeGroupRepository()
@@ -446,15 +420,7 @@ void main() {
             memberCount: 3,
             founderId: 'owner-1',
           ),
-        ]
-        ..detailsByGroupId['group-1'] = GroupDetail(
-          id: 'group-1',
-          name: 'La Compagnie',
-          ownerId: 'owner-1',
-          inviteCode: 'ABC123',
-          currentUserId: 'fake-user-id',
-          members: [ownMember(characterId: 'char-1')],
-        );
+        ];
       final repository = await buildRepository(
         characterRepository: _FakeCharacterRepository(),
         groupRepository: groupRepository,
@@ -473,8 +439,52 @@ void main() {
       expect(group['founderId'], 'owner-1');
     });
 
-    test('personnage rattaché avec une note non vide enregistrée : `note` '
-        'incluse avec son corps intégral', () async {
+    test('une entrée enregistrée : `notes` incluse avec id/titre/corps/date', (
+      () async {
+        final groupRepository = _FakeGroupRepository()
+          ..groups = [
+            const GroupSummary(
+              id: 'group-1',
+              name: 'La Compagnie',
+              memberCount: 2,
+              founderId: 'owner-1',
+            ),
+          ]
+          ..entriesByGroupId['group-1'] = [
+            GroupNoteEntry(
+              id: 'entry-1',
+              title: 'Chapitre 1 — Le donjon',
+              body: 'Le MJ a mentionné une amulette maudite au donjon.',
+              createdAt: DateTime.utc(2026, 11, 1, 20, 0),
+            ),
+          ];
+        final repository = await buildRepository(
+          characterRepository: _FakeCharacterRepository(),
+          groupRepository: groupRepository,
+        );
+
+        final path = await repository.exportMyData();
+        final payload =
+            jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+        final group =
+            (payload['groups'] as List<dynamic>).single
+                as Map<String, dynamic>;
+        final notes = group['notes'] as List<dynamic>;
+
+        expect(notes, hasLength(1));
+        final note = notes.single as Map<String, dynamic>;
+        expect(note['id'], 'entry-1');
+        expect(note['title'], 'Chapitre 1 — Le donjon');
+        expect(
+          note['body'],
+          'Le MJ a mentionné une amulette maudite au donjon.',
+        );
+        expect(note['createdAt'], '2026-11-01T20:00:00.000Z');
+      }
+    ));
+
+    test('plusieurs entrées, y compris sans titre : `notes` liste TOUTES les '
+        'entrées, dans l\'ordre retourné par le repository', () async {
       final groupRepository = _FakeGroupRepository()
         ..groups = [
           const GroupSummary(
@@ -484,19 +494,19 @@ void main() {
             founderId: 'owner-1',
           ),
         ]
-        ..detailsByGroupId['group-1'] = GroupDetail(
-          id: 'group-1',
-          name: 'La Compagnie',
-          ownerId: 'owner-1',
-          inviteCode: 'ABC123',
-          currentUserId: 'fake-user-id',
-          members: [ownMember(characterId: 'char-1')],
-        )
-        ..notesByKey['group-1/char-1'] = const GroupNote(
-          groupId: 'group-1',
-          characterId: 'char-1',
-          body: 'Le MJ a mentionné une amulette maudite au donjon.',
-        );
+        ..entriesByGroupId['group-1'] = [
+          GroupNoteEntry(
+            id: 'entry-2',
+            title: 'Chapitre 2',
+            body: 'Combat contre les gobelins.',
+            createdAt: DateTime.utc(2026, 11, 8),
+          ),
+          GroupNoteEntry(
+            id: 'entry-1',
+            body: 'Première séance, sans titre.',
+            createdAt: DateTime.utc(2026, 11, 1),
+          ),
+        ];
       final repository = await buildRepository(
         characterRepository: _FakeCharacterRepository(),
         groupRepository: groupRepository,
@@ -507,15 +517,16 @@ void main() {
           jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
       final group =
           (payload['groups'] as List<dynamic>).single as Map<String, dynamic>;
+      final notes = group['notes'] as List<dynamic>;
 
-      expect(
-        group['note'],
-        'Le MJ a mentionné une amulette maudite au donjon.',
-      );
+      expect(notes, hasLength(2));
+      expect((notes[0] as Map<String, dynamic>)['id'], 'entry-2');
+      expect((notes[1] as Map<String, dynamic>)['id'], 'entry-1');
+      expect((notes[1] as Map<String, dynamic>)['title'], isNull);
     });
 
-    test('aucune note enregistrée (`GroupNote` par défaut, corps vide) : la '
-        'clé `note` est omise plutôt qu\'incluse vide', () async {
+    test('aucune entrée enregistrée : la clé `notes` est omise plutôt '
+        'qu\'incluse vide', () async {
       final groupRepository = _FakeGroupRepository()
         ..groups = [
           const GroupSummary(
@@ -524,15 +535,7 @@ void main() {
             memberCount: 2,
             founderId: 'owner-1',
           ),
-        ]
-        ..detailsByGroupId['group-1'] = GroupDetail(
-          id: 'group-1',
-          name: 'La Compagnie',
-          ownerId: 'owner-1',
-          inviteCode: 'ABC123',
-          currentUserId: 'fake-user-id',
-          members: [ownMember(characterId: 'char-1')],
-        );
+        ];
       final repository = await buildRepository(
         characterRepository: _FakeCharacterRepository(),
         groupRepository: groupRepository,
@@ -544,87 +547,62 @@ void main() {
       final group =
           (payload['groups'] as List<dynamic>).single as Map<String, dynamic>;
 
-      expect(group.containsKey('note'), isFalse);
+      expect(group.containsKey('notes'), isFalse);
     });
 
-    test('MJ sans personnage/membre orphelin (`characterId` null) sans note '
-        'enregistrée : lecture de note tentée malgré tout (filtrée côté '
-        'repository sur `user_id`, jamais `character_id` — voir F02a), '
-        '`note` omise faute de corps', () async {
-      final groupRepository = _FakeGroupRepository()
-        ..groups = [
-          const GroupSummary(
-            id: 'group-1',
-            name: 'La Compagnie',
-            memberCount: 1,
-            founderId: 'fake-user-id',
-          ),
-        ]
-        ..detailsByGroupId['group-1'] = GroupDetail(
-          id: 'group-1',
-          name: 'La Compagnie',
-          ownerId: 'fake-user-id',
-          inviteCode: 'ABC123',
-          currentUserId: 'fake-user-id',
-          members: [ownMember(isGameMaster: true)],
+    test(
+      'MJ sans personnage/membre orphelin avec plusieurs entrées (régression '
+      'du trou RGPD F02(a), étendue à ce fractionnement) : `notes` liste '
+      'TOUTES les entrées, pas seulement la première — '
+      '`fetchGroupNoteEntries` est filtrée côté RLS sur `user_id`, jamais '
+      'besoin de résoudre un `characterId`',
+      () async {
+        final groupRepository = _FakeGroupRepository()
+          ..groups = [
+            const GroupSummary(
+              id: 'group-1',
+              name: 'La Compagnie',
+              memberCount: 1,
+              founderId: 'fake-user-id',
+            ),
+          ]
+          ..entriesByGroupId['group-1'] = [
+            GroupNoteEntry(
+              id: 'entry-2',
+              title: 'Embuscade au pont',
+              body: 'Le MJ note une embuscade au pont.',
+              createdAt: DateTime.utc(2026, 11, 8),
+            ),
+            GroupNoteEntry(
+              id: 'entry-1',
+              body: 'Penser à préparer la rencontre du donjon.',
+              createdAt: DateTime.utc(2026, 11, 1),
+            ),
+          ];
+        final repository = await buildRepository(
+          characterRepository: _FakeCharacterRepository(),
+          groupRepository: groupRepository,
         );
-      final repository = await buildRepository(
-        characterRepository: _FakeCharacterRepository(),
-        groupRepository: groupRepository,
-      );
 
-      final path = await repository.exportMyData();
-      final payload =
-          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
-      final group =
-          (payload['groups'] as List<dynamic>).single as Map<String, dynamic>;
+        final path = await repository.exportMyData();
+        final payload =
+            jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+        final group =
+            (payload['groups'] as List<dynamic>).single
+                as Map<String, dynamic>;
+        final notes = group['notes'] as List<dynamic>;
 
-      expect(group.containsKey('note'), isFalse);
-    });
-
-    test('MJ sans personnage (`characterId` null) avec une note de groupe '
-        'enregistrée (F02a, note identifiée par `(group_id, user_id)`) : '
-        '`note` incluse avec son corps intégral — régression du trou RGPD '
-        'où cette note était amputée de l\'export', () async {
-      final groupRepository = _FakeGroupRepository()
-        ..groups = [
-          const GroupSummary(
-            id: 'group-1',
-            name: 'La Compagnie',
-            memberCount: 1,
-            founderId: 'fake-user-id',
-          ),
-        ]
-        ..detailsByGroupId['group-1'] = GroupDetail(
-          id: 'group-1',
-          name: 'La Compagnie',
-          ownerId: 'fake-user-id',
-          inviteCode: 'ABC123',
-          currentUserId: 'fake-user-id',
-          members: [ownMember(isGameMaster: true)],
-        )
-        ..notesByKey['group-1/null'] = const GroupNote(
-          groupId: 'group-1',
-          characterId: null,
-          body: 'Penser à préparer la rencontre du donjon pour la prochaine '
-              'séance.',
+        expect(
+          notes,
+          hasLength(2),
+          reason:
+              'un MJ sans personnage avec plusieurs notes doit voir TOUTES '
+              'ses entrées dans son export, pas seulement la première',
         );
-      final repository = await buildRepository(
-        characterRepository: _FakeCharacterRepository(),
-        groupRepository: groupRepository,
-      );
-
-      final path = await repository.exportMyData();
-      final payload =
-          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
-      final group =
-          (payload['groups'] as List<dynamic>).single as Map<String, dynamic>;
-
-      expect(
-        group['note'],
-        'Penser à préparer la rencontre du donjon pour la prochaine séance.',
-      );
-    });
+        expect((notes[0] as Map<String, dynamic>)['id'], 'entry-2');
+        expect((notes[1] as Map<String, dynamic>)['id'], 'entry-1');
+      },
+    );
 
     test('plusieurs groupes : un élément de `groups` par groupe, dans l\'ordre '
         'de `fetchMyGroups`', () async {
@@ -642,23 +620,7 @@ void main() {
             memberCount: 4,
             founderId: 'owner-2',
           ),
-        ]
-        ..detailsByGroupId['group-1'] = GroupDetail(
-          id: 'group-1',
-          name: 'La Compagnie',
-          ownerId: 'owner-1',
-          inviteCode: 'ABC123',
-          currentUserId: 'fake-user-id',
-          members: [ownMember(characterId: 'char-1')],
-        )
-        ..detailsByGroupId['group-2'] = GroupDetail(
-          id: 'group-2',
-          name: 'Les Rôdeurs',
-          ownerId: 'owner-2',
-          inviteCode: 'DEF456',
-          currentUserId: 'fake-user-id',
-          members: [ownMember(characterId: 'char-2')],
-        );
+        ];
       final repository = await buildRepository(
         characterRepository: _FakeCharacterRepository(),
         groupRepository: groupRepository,

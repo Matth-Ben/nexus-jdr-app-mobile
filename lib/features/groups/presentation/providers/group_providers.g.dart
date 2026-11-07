@@ -276,85 +276,87 @@ final class GroupTreasureFamily extends $Family
   String toString() => r'groupTreasureProvider';
 }
 
-/// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
-/// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
-/// que [myGroups].
+/// Entrées du carnet de notes personnel d'un membre pour un groupe — onglet
+/// "Notes", famille par [groupId]. `autoDispose`, `retry: null` : mêmes
+/// rationales que [myGroups].
 ///
-/// [characterId] est `null` pour un MJ sans personnage (voir
-/// `GroupRepository.fetchGroupNote` : purement informatif depuis la
-/// migration `(group_id, user_id)`, jamais la clé de lecture réelle) — il a
-/// désormais lui aussi son propre carnet, comme n'importe quel membre
-/// (décision du comité de revue F02(a), `docs/retours-utilisateurs.md`).
+/// Remplace l'ancien `groupNoteProvider` (une unique note par membre) —
+/// voir `GroupRepository.fetchGroupNoteEntries` : la RLS filtre déjà par
+/// `auth.uid() = user_id`, donc un MJ sans personnage (voir
+/// `GroupMember.isGameMaster`) a ici aussi son propre carnet, comme
+/// n'importe quel membre (décision du comité de revue F02(a),
+/// `docs/retours-utilisateurs.md`).
 
-@ProviderFor(groupNote)
-final groupNoteProvider = GroupNoteFamily._();
+@ProviderFor(groupNoteEntries)
+final groupNoteEntriesProvider = GroupNoteEntriesFamily._();
 
-/// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
-/// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
-/// que [myGroups].
+/// Entrées du carnet de notes personnel d'un membre pour un groupe — onglet
+/// "Notes", famille par [groupId]. `autoDispose`, `retry: null` : mêmes
+/// rationales que [myGroups].
 ///
-/// [characterId] est `null` pour un MJ sans personnage (voir
-/// `GroupRepository.fetchGroupNote` : purement informatif depuis la
-/// migration `(group_id, user_id)`, jamais la clé de lecture réelle) — il a
-/// désormais lui aussi son propre carnet, comme n'importe quel membre
-/// (décision du comité de revue F02(a), `docs/retours-utilisateurs.md`).
+/// Remplace l'ancien `groupNoteProvider` (une unique note par membre) —
+/// voir `GroupRepository.fetchGroupNoteEntries` : la RLS filtre déjà par
+/// `auth.uid() = user_id`, donc un MJ sans personnage (voir
+/// `GroupMember.isGameMaster`) a ici aussi son propre carnet, comme
+/// n'importe quel membre (décision du comité de revue F02(a),
+/// `docs/retours-utilisateurs.md`).
 
-final class GroupNoteProvider
+final class GroupNoteEntriesProvider
     extends
         $FunctionalProvider<
-          AsyncValue<GroupNote>,
-          GroupNote,
-          FutureOr<GroupNote>
+          AsyncValue<List<GroupNoteEntry>>,
+          List<GroupNoteEntry>,
+          FutureOr<List<GroupNoteEntry>>
         >
-    with $FutureModifier<GroupNote>, $FutureProvider<GroupNote> {
-  /// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
-  /// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
-  /// que [myGroups].
+    with
+        $FutureModifier<List<GroupNoteEntry>>,
+        $FutureProvider<List<GroupNoteEntry>> {
+  /// Entrées du carnet de notes personnel d'un membre pour un groupe — onglet
+  /// "Notes", famille par [groupId]. `autoDispose`, `retry: null` : mêmes
+  /// rationales que [myGroups].
   ///
-  /// [characterId] est `null` pour un MJ sans personnage (voir
-  /// `GroupRepository.fetchGroupNote` : purement informatif depuis la
-  /// migration `(group_id, user_id)`, jamais la clé de lecture réelle) — il a
-  /// désormais lui aussi son propre carnet, comme n'importe quel membre
-  /// (décision du comité de revue F02(a), `docs/retours-utilisateurs.md`).
-  GroupNoteProvider._({
-    required GroupNoteFamily super.from,
-    required ({String groupId, String? characterId}) super.argument,
+  /// Remplace l'ancien `groupNoteProvider` (une unique note par membre) —
+  /// voir `GroupRepository.fetchGroupNoteEntries` : la RLS filtre déjà par
+  /// `auth.uid() = user_id`, donc un MJ sans personnage (voir
+  /// `GroupMember.isGameMaster`) a ici aussi son propre carnet, comme
+  /// n'importe quel membre (décision du comité de revue F02(a),
+  /// `docs/retours-utilisateurs.md`).
+  GroupNoteEntriesProvider._({
+    required GroupNoteEntriesFamily super.from,
+    required String super.argument,
   }) : super(
          retry: _noRetry,
-         name: r'groupNoteProvider',
+         name: r'groupNoteEntriesProvider',
          isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
 
   @override
-  String debugGetCreateSourceHash() => _$groupNoteHash();
+  String debugGetCreateSourceHash() => _$groupNoteEntriesHash();
 
   @override
   String toString() {
-    return r'groupNoteProvider'
+    return r'groupNoteEntriesProvider'
         ''
-        '$argument';
+        '($argument)';
   }
 
   @$internal
   @override
-  $FutureProviderElement<GroupNote> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<List<GroupNoteEntry>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<GroupNote> create(Ref ref) {
-    final argument = this.argument as ({String groupId, String? characterId});
-    return groupNote(
-      ref,
-      groupId: argument.groupId,
-      characterId: argument.characterId,
-    );
+  FutureOr<List<GroupNoteEntry>> create(Ref ref) {
+    final argument = this.argument as String;
+    return groupNoteEntries(ref, argument);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is GroupNoteProvider && other.argument == argument;
+    return other is GroupNoteEntriesProvider && other.argument == argument;
   }
 
   @override
@@ -363,51 +365,46 @@ final class GroupNoteProvider
   }
 }
 
-String _$groupNoteHash() => r'5f2264203ed717a5423718643feb064786e42f7a';
+String _$groupNoteEntriesHash() => r'caae6f6824738bea4e956baf0ad30241bc24954e';
 
-/// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
-/// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
-/// que [myGroups].
+/// Entrées du carnet de notes personnel d'un membre pour un groupe — onglet
+/// "Notes", famille par [groupId]. `autoDispose`, `retry: null` : mêmes
+/// rationales que [myGroups].
 ///
-/// [characterId] est `null` pour un MJ sans personnage (voir
-/// `GroupRepository.fetchGroupNote` : purement informatif depuis la
-/// migration `(group_id, user_id)`, jamais la clé de lecture réelle) — il a
-/// désormais lui aussi son propre carnet, comme n'importe quel membre
-/// (décision du comité de revue F02(a), `docs/retours-utilisateurs.md`).
+/// Remplace l'ancien `groupNoteProvider` (une unique note par membre) —
+/// voir `GroupRepository.fetchGroupNoteEntries` : la RLS filtre déjà par
+/// `auth.uid() = user_id`, donc un MJ sans personnage (voir
+/// `GroupMember.isGameMaster`) a ici aussi son propre carnet, comme
+/// n'importe quel membre (décision du comité de revue F02(a),
+/// `docs/retours-utilisateurs.md`).
 
-final class GroupNoteFamily extends $Family
-    with
-        $FunctionalFamilyOverride<
-          FutureOr<GroupNote>,
-          ({String groupId, String? characterId})
-        > {
-  GroupNoteFamily._()
+final class GroupNoteEntriesFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<GroupNoteEntry>>, String> {
+  GroupNoteEntriesFamily._()
     : super(
         retry: _noRetry,
-        name: r'groupNoteProvider',
+        name: r'groupNoteEntriesProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
         isAutoDispose: true,
       );
 
-  /// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
-  /// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
-  /// que [myGroups].
+  /// Entrées du carnet de notes personnel d'un membre pour un groupe — onglet
+  /// "Notes", famille par [groupId]. `autoDispose`, `retry: null` : mêmes
+  /// rationales que [myGroups].
   ///
-  /// [characterId] est `null` pour un MJ sans personnage (voir
-  /// `GroupRepository.fetchGroupNote` : purement informatif depuis la
-  /// migration `(group_id, user_id)`, jamais la clé de lecture réelle) — il a
-  /// désormais lui aussi son propre carnet, comme n'importe quel membre
-  /// (décision du comité de revue F02(a), `docs/retours-utilisateurs.md`).
+  /// Remplace l'ancien `groupNoteProvider` (une unique note par membre) —
+  /// voir `GroupRepository.fetchGroupNoteEntries` : la RLS filtre déjà par
+  /// `auth.uid() = user_id`, donc un MJ sans personnage (voir
+  /// `GroupMember.isGameMaster`) a ici aussi son propre carnet, comme
+  /// n'importe quel membre (décision du comité de revue F02(a),
+  /// `docs/retours-utilisateurs.md`).
 
-  GroupNoteProvider call({required String groupId, String? characterId}) =>
-      GroupNoteProvider._(
-        argument: (groupId: groupId, characterId: characterId),
-        from: this,
-      );
+  GroupNoteEntriesProvider call(String groupId) =>
+      GroupNoteEntriesProvider._(argument: groupId, from: this);
 
   @override
-  String toString() => r'groupNoteProvider';
+  String toString() => r'groupNoteEntriesProvider';
 }
 
 /// Aperçu d'un groupe (étape 2/3 "Confirmation" du flux "Rejoindre un

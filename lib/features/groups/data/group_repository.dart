@@ -9,7 +9,7 @@ import '../domain/group_detail.dart';
 import '../domain/group_failure.dart';
 import '../domain/group_invite_code_generator.dart';
 import '../domain/group_invite_failure.dart';
-import '../domain/group_note.dart';
+import '../domain/group_note_entry.dart';
 import '../domain/group_preview.dart';
 import '../domain/group_summary.dart';
 import '../domain/group_treasure.dart';
@@ -203,38 +203,41 @@ abstract class GroupRepository {
     required int quantity,
   });
 
-  /// Note personnelle du joueur connecté pour ce groupe — onglet "Notes".
-  /// Retourne une [GroupNote] vide (`body: ''`) tant que rien n'a encore été
-  /// enregistré, même repli que [fetchGroupTreasure].
+  /// Entrées du carnet de notes personnel du joueur connecté pour ce groupe
+  /// (`group_journal_entries`) — onglet "Notes", triées du plus récent au
+  /// plus ancien (même convention que
+  /// `CharacterDetailRowMapper.parseJournalEntries`). Liste vide tant que
+  /// rien n'a encore été enregistré, même repli que [fetchGroupTreasure].
   ///
-  /// Identifiée par `(group_id, user_id)` depuis la migration web
-  /// `20261106090000_group_notes_user_id_pk_and_character_set_null.sql`
-  /// (jamais `character_id`, qui devient purement informatif et nullable) —
-  /// c'est pourquoi [characterId] n'est ici qu'informatif (reporté sur la
-  /// [GroupNote] retournée), `null` pour un MJ sans personnage (voir
-  /// `GroupMember.isGameMaster`), qui a désormais son propre carnet comme
-  /// n'importe quel membre (décision du comité de revue F02(a),
-  /// `docs/retours-utilisateurs.md`).
-  Future<GroupNote> fetchGroupNote({
-    required String groupId,
-    String? characterId,
-  });
+  /// RLS `auth.uid() = user_id` sur `group_journal_entries` : jamais besoin
+  /// de filtrer explicitement par personnage (contrairement à l'ancien
+  /// `group_notes`, voir `group_note.dart`) — un MJ sans personnage (voir
+  /// `GroupMember.isGameMaster`) a son propre carnet comme n'importe quel
+  /// membre (décision du comité de revue F02(a),
+  /// `docs/retours-utilisateurs.md`), toujours vrai avec ce fractionnement.
+  Future<List<GroupNoteEntry>> fetchGroupNoteEntries(String groupId);
 
-  /// Enregistre le texte intégral de la note (pas un diff/append) — même
-  /// principe "un seul appel réseau" que [addToTreasure]. `upsert` (plutôt
-  /// qu'un `update` supposant la ligne déjà créée) : aucune ligne
-  /// `group_notes` n'existe tant que ce membre n'a jamais enregistré de note
-  /// (pas de trigger de création automatique à l'adhésion, contrairement à
-  /// `group_treasure`).
-  ///
-  /// [characterId] n'est que purement informatif (voir [fetchGroupNote]) :
-  /// `null` pour un MJ sans personnage, la ligne est quand même identifiée/
-  /// upsertée par `(group_id, user_id)`.
-  Future<void> saveGroupNote({
+  /// Insère une nouvelle entrée `group_journal_entries` — "Ajouter une
+  /// note" de l'onglet "Notes" (sheet `group_note_entry_edit_sheet.dart`).
+  /// [title] optionnel (`null`/vide : pas de titre pour cette entrée).
+  Future<void> addGroupNoteEntry({
     required String groupId,
-    String? characterId,
+    String? title,
     required String body,
   });
+
+  /// Remplace le titre/corps d'une entrée déjà enregistrée — mode édition de
+  /// [addGroupNoteEntry]. [title] `null` efface le titre existant (texte
+  /// intégral envoyé, jamais un diff — même principe que [addToTreasure]).
+  Future<void> updateGroupNoteEntry({
+    required String entryId,
+    String? title,
+    required String body,
+  });
+
+  /// Supprime une entrée du carnet de notes — action "Supprimer" de la
+  /// sheet d'actions d'une ligne de l'onglet "Notes".
+  Future<void> deleteGroupNoteEntry(String entryId);
 
   /// S'abonne (Supabase Realtime, `postgres_changes` sur `characters`,
   /// filtré à [characterIds]) aux mises à jour des personnages membres du
@@ -747,23 +750,22 @@ class SupabaseGroupRepository implements GroupRepository {
   }
 
   @override
-  Future<GroupNote> fetchGroupNote({
-    required String groupId,
-    String? characterId,
-  }) async {
-    final userId = _requireOwnerId();
+  Future<List<GroupNoteEntry>> fetchGroupNoteEntries(String groupId) async {
     try {
-      final row = await _client
-          .from('group_notes')
-          .select('body')
+      final rows = await _client
+          .from('group_journal_entries')
+          .select('id, title, body, created_at')
           .eq('group_id', groupId)
-          .eq('user_id', userId)
-          .maybeSingle();
-      return GroupNote(
-        groupId: groupId,
-        characterId: characterId,
-        body: (row?['body'] as String?) ?? '',
-      );
+          .order('created_at', ascending: false);
+      return [
+        for (final row in rows)
+          GroupNoteEntry(
+            id: row['id'] as String,
+            title: row['title'] as String?,
+            body: (row['body'] as String?) ?? '',
+            createdAt: DateTime.parse(row['created_at'] as String),
+          ),
+      ];
     } on PostgrestException catch (error) {
       throw mapGroupError(error);
     } catch (_) {
@@ -772,20 +774,51 @@ class SupabaseGroupRepository implements GroupRepository {
   }
 
   @override
-  Future<void> saveGroupNote({
+  Future<void> addGroupNoteEntry({
     required String groupId,
-    String? characterId,
+    String? title,
     required String body,
   }) async {
     final userId = _requireOwnerId();
     try {
-      await _client.from('group_notes').upsert({
+      await _client.from('group_journal_entries').insert({
         'group_id': groupId,
         'user_id': userId,
-        'character_id': ?characterId,
+        if (title != null && title.isNotEmpty) 'title': title,
         'body': body,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      }, onConflict: 'group_id,user_id');
+      });
+    } on PostgrestException catch (error) {
+      throw mapGroupError(error);
+    } catch (_) {
+      throw mapUnknownGroupError();
+    }
+  }
+
+  @override
+  Future<void> updateGroupNoteEntry({
+    required String entryId,
+    String? title,
+    required String body,
+  }) async {
+    try {
+      await _client
+          .from('group_journal_entries')
+          .update({
+            'title': (title != null && title.isNotEmpty) ? title : null,
+            'body': body,
+          })
+          .eq('id', entryId);
+    } on PostgrestException catch (error) {
+      throw mapGroupError(error);
+    } catch (_) {
+      throw mapUnknownGroupError();
+    }
+  }
+
+  @override
+  Future<void> deleteGroupNoteEntry(String entryId) async {
+    try {
+      await _client.from('group_journal_entries').delete().eq('id', entryId);
     } on PostgrestException catch (error) {
       throw mapGroupError(error);
     } catch (_) {

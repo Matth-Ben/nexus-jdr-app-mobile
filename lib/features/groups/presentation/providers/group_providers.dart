@@ -5,7 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../data/group_repository.dart';
 import '../../domain/group_detail.dart';
-import '../../domain/group_note.dart';
+import '../../domain/group_note_entry.dart';
 import '../../domain/group_preview.dart';
 import '../../domain/group_summary.dart';
 import '../../domain/group_treasure.dart';
@@ -38,24 +38,19 @@ Future<GroupTreasure> groupTreasure(Ref ref, String groupId) {
   return ref.watch(groupRepositoryProvider).fetchGroupTreasure(groupId);
 }
 
-/// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
-/// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
-/// que [myGroups].
+/// Entrées du carnet de notes personnel d'un membre pour un groupe — onglet
+/// "Notes", famille par [groupId]. `autoDispose`, `retry: null` : mêmes
+/// rationales que [myGroups].
 ///
-/// [characterId] est `null` pour un MJ sans personnage (voir
-/// `GroupRepository.fetchGroupNote` : purement informatif depuis la
-/// migration `(group_id, user_id)`, jamais la clé de lecture réelle) — il a
-/// désormais lui aussi son propre carnet, comme n'importe quel membre
-/// (décision du comité de revue F02(a), `docs/retours-utilisateurs.md`).
+/// Remplace l'ancien `groupNoteProvider` (une unique note par membre) —
+/// voir `GroupRepository.fetchGroupNoteEntries` : la RLS filtre déjà par
+/// `auth.uid() = user_id`, donc un MJ sans personnage (voir
+/// `GroupMember.isGameMaster`) a ici aussi son propre carnet, comme
+/// n'importe quel membre (décision du comité de revue F02(a),
+/// `docs/retours-utilisateurs.md`).
 @Riverpod(retry: _noRetry)
-Future<GroupNote> groupNote(
-  Ref ref, {
-  required String groupId,
-  String? characterId,
-}) {
-  return ref
-      .watch(groupRepositoryProvider)
-      .fetchGroupNote(groupId: groupId, characterId: characterId);
+Future<List<GroupNoteEntry>> groupNoteEntries(Ref ref, String groupId) {
+  return ref.watch(groupRepositoryProvider).fetchGroupNoteEntries(groupId);
 }
 
 /// Aperçu d'un groupe (étape 2/3 "Confirmation" du flux "Rejoindre un

@@ -1,247 +1,297 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:speech_to_text/speech_recognition_error.dart';
-import 'package:speech_to_text/speech_recognition_result.dart';
-import 'package:speech_to_text/speech_to_text.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/widgets/primary_button.dart';
-
-/// Callback "Enregistrer" de l'onglet "Notes" — voir
-/// `GroupRepository.saveGroupNote`. Reçoit le texte intégral du champ, pas un
-/// diff (même principe que `GroupRepository.addToTreasure`).
-typedef SaveGroupNoteCallback = void Function(String body);
+import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/dashed_add_tile.dart';
+import '../../../../core/widgets/destructive_button.dart';
+import '../../../../core/widgets/secondary_button.dart';
+import '../../../../core/widgets/sheet_action_row.dart';
+import '../../../characters/domain/journal_entry_date_formatter.dart';
+import '../../domain/group_failure.dart';
+import '../../domain/group_note_entry.dart';
+import '../providers/group_providers.dart';
+import 'group_note_entry_edit_sheet.dart';
 
 /// Contenu de l'onglet "Notes" de l'écran "Groupe" (demande utilisateur du
 /// 16/09/2026, hors cahier des charges — carnet personnel pendant la partie,
-/// jamais partagé avec les coéquipiers, voir `group_note.dart`).
+/// jamais partagé avec les coéquipiers, voir `group_note_entry.dart`).
 ///
-/// Ne fait aucun appel réseau lui-même — collecte le texte (saisie clavier
-/// ou dictée au micro via [_DictationButton]) et transmet à [onSave], appelé
-/// par l'écran "Groupe" (même architecture que `GroupTreasureTabBody`, voir
-/// la doc de classe de `GroupRepository` : "les sheets/onglets ne font que
-/// collecter l'action/l'entrée").
-class GroupNotesTabBody extends StatefulWidget {
+/// Fractionné en plusieurs entrées datées (une par étape/chapitre) à partir
+/// du 07/11/2026 — remplace l'ancien `TextField` plein écran unique (texte
+/// intégral collecté, transmis à l'écran "Groupe" pour écriture) par le
+/// patron "tab = `ListView` pleine page" de `GroupTreasureTabBody` (pas de
+/// carte imbriquée type `CharacterJournalCard`), et porte elle-même les
+/// actions d'ajout/modification/suppression — même principe "`ConsumerWidget`
+/// auto-suffisant" que `CharacterJournalCard`
+/// (`features/characters/presentation/widgets/character_journal_card.dart`),
+/// plutôt que l'orchestration habituelle de `group_screen.dart` (voir sa doc
+/// de classe) : ce fractionnement calque délibérément l'architecture déjà
+/// établie pour le journal de personnage plutôt que celle du reste de
+/// l'écran "Groupe", décision de la spec direction-artistique de la tâche.
+class GroupNotesTabBody extends ConsumerWidget {
   const GroupNotesTabBody({
-    required this.initialBody,
-    required this.isSaving,
-    required this.onSave,
-    required this.onDictationError,
+    required this.groupId,
+    required this.entries,
     super.key,
   });
 
-  final String initialBody;
-  final bool isSaving;
-  final SaveGroupNoteCallback onSave;
-
-  /// Micro indisponible/refusé/erreur de reconnaissance — l'écran "Groupe"
-  /// affiche un `SnackBar`, même widget n'ayant pas accès à un
-  /// `ScaffoldMessenger` propre (pas de `Scaffold` imbriqué ici).
-  final ValueChanged<String> onDictationError;
+  final String groupId;
+  final List<GroupNoteEntry> entries;
 
   @override
-  State<GroupNotesTabBody> createState() => _GroupNotesTabBodyState();
-}
-
-class _GroupNotesTabBodyState extends State<GroupNotesTabBody> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.initialBody,
-  )..addListener(_handleChanged);
-  bool _isDirty = false;
-
-  @override
-  void dispose() {
-    _controller.removeListener(_handleChanged);
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(covariant GroupNotesTabBody oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Un enregistrement réussi recharge `initialBody` avec exactement ce qui
-    // vient d'être écrit — sans ce recalcul, `_isDirty` resterait bloqué à
-    // `true` (comparé à l'ancien `initialBody`, jamais rafraîchi) et
-    // "Enregistrer" resterait actif après un enregistrement réussi.
-    if (oldWidget.initialBody != widget.initialBody) {
-      _isDirty = _controller.text != widget.initialBody;
-    }
-  }
-
-  void _handleChanged() {
-    final dirty = _controller.text != widget.initialBody;
-    if (dirty != _isDirty) setState(() => _isDirty = dirty);
-  }
-
-  void _save() {
-    if (!_isDirty || widget.isSaving) return;
-    widget.onSave(_controller.text);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: TextField(
-              controller: _controller,
-              maxLines: null,
-              expands: true,
-              textAlignVertical: TextAlignVertical.top,
-              decoration: const InputDecoration(
-                hintText:
-                    'Prends tes notes pendant la partie : événements, '
-                    'indices, rebondissements…',
-                alignLabelWithHint: true,
-              ),
+        if (entries.isEmpty)
+          const _EmptyNotesState()
+        else
+          for (var i = 0; i < entries.length; i++) ...[
+            if (i > 0)
+              const Divider(height: 1, thickness: 1, color: AppColors.gaugeTrack),
+            _GroupNoteEntryRow(
+              entry: entries[i],
+              onTap: () => _openActions(context, ref, entries[i]),
             ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            0,
-            AppSpacing.lg,
-            AppSpacing.lg,
-          ),
-          child: Row(
-            children: [
-              _DictationButton(
-                controller: _controller,
-                onTextChanged: _handleChanged,
-                onError: widget.onDictationError,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: PrimaryButton(
-                  label: 'Enregistrer',
-                  isLoading: widget.isSaving,
-                  onPressed: (_isDirty && !widget.isSaving) ? _save : null,
-                ),
-              ),
-            ],
-          ),
+          ],
+        const SizedBox(height: AppSpacing.sm),
+        DashedAddTile(
+          label: 'Ajouter une note',
+          onTap: () =>
+              showGroupNoteEntryEditSheet(context, groupId: groupId),
         ),
       ],
     );
   }
-}
 
-/// Bouton micro : dictée vocale via `speech_to_text` (moteur du système,
-/// aucun serveur à nous), append dans [controller] au fil des résultats
-/// partiels. Un tap démarre/arrête l'écoute — pas de transcription continue
-/// de toute la session (voir l'arbitrage chef de projet du 16/09/2026, en
-/// réponse à la demande utilisateur : dictée ponctuelle, pas d'enregistrement
-/// ambiant de plusieurs heures).
-///
-/// [SpeechToText] n'est jamais instancié en dehors d'une vraie interaction
-/// utilisateur (pas d'`initialize()` à l'ouverture de l'onglet) : la première
-/// pression déclenche l'init ET l'écoute, pour ne demander la permission
-/// micro qu'au moment où l'utilisateur en exprime explicitement le besoin.
-class _DictationButton extends StatefulWidget {
-  const _DictationButton({
-    required this.controller,
-    required this.onTextChanged,
-    required this.onError,
-  });
+  Future<void> _openActions(
+    BuildContext context,
+    WidgetRef ref,
+    GroupNoteEntry entry,
+  ) async {
+    final action = await showModalBottomSheet<_GroupNoteEntryAction>(
+      context: context,
+      backgroundColor: AppColors.parchmentCard,
+      builder: (sheetContext) => const _GroupNoteEntryActionSheetContent(),
+    );
+    if (action == null || !context.mounted) return;
 
-  final TextEditingController controller;
-  final VoidCallback onTextChanged;
-  final ValueChanged<String> onError;
-
-  @override
-  State<_DictationButton> createState() => _DictationButtonState();
-}
-
-class _DictationButtonState extends State<_DictationButton> {
-  final SpeechToText _speech = SpeechToText();
-  bool _isListening = false;
-  bool _isBusy = false;
-  String _baseText = '';
-
-  @override
-  void dispose() {
-    if (_isListening) unawaited(_speech.stop());
-    super.dispose();
+    switch (action) {
+      case _GroupNoteEntryAction.edit:
+        await showGroupNoteEntryEditSheet(
+          context,
+          groupId: groupId,
+          entry: entry,
+        );
+      case _GroupNoteEntryAction.remove:
+        await _confirmAndRemove(context, ref, entry);
+    }
   }
 
-  Future<void> _toggle() async {
-    if (_isBusy) return;
-    if (_isListening) {
-      await _speech.stop();
-      if (mounted) setState(() => _isListening = false);
-      return;
-    }
-
-    setState(() => _isBusy = true);
-    final available = await _speech.initialize(
-      onError: (error) => _handleError(error),
-      onStatus: (status) {
-        if ((status == 'done' || status == 'notListening') && mounted) {
-          setState(() => _isListening = false);
-        }
-      },
+  Future<void> _confirmAndRemove(
+    BuildContext context,
+    WidgetRef ref,
+    GroupNoteEntry entry,
+  ) async {
+    final confirmed = await showRemoveGroupNoteEntryConfirmationDialog(
+      context,
     );
-    if (!mounted) return;
-    if (!available) {
-      setState(() => _isBusy = false);
-      widget.onError(
-        'Reconnaissance vocale indisponible sur cet appareil ou accès '
-        'micro refusé.',
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref
+          .read(groupRepositoryProvider)
+          .deleteGroupNoteEntry(entry.id);
+      ref.invalidate(groupNoteEntriesProvider(groupId));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Note supprimée.')));
+    } on GroupFailure catch (failure) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failure.message)));
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible de supprimer cette note. Réessayez.'),
+        ),
       );
-      return;
     }
-
-    _baseText = widget.controller.text;
-    setState(() {
-      _isBusy = false;
-      _isListening = true;
-    });
-    await _speech.listen(onResult: _handleResult);
   }
+}
 
-  void _handleError(SpeechRecognitionError error) {
-    if (mounted) setState(() => _isListening = false);
-    widget.onError('Erreur de reconnaissance vocale : ${error.errorMsg}');
-  }
+class _GroupNoteEntryRow extends StatelessWidget {
+  const _GroupNoteEntryRow({required this.entry, required this.onTap});
 
-  void _handleResult(SpeechRecognitionResult result) {
-    final needsSeparator =
-        _baseText.isNotEmpty &&
-        !_baseText.endsWith('\n') &&
-        !_baseText.endsWith(' ');
-    final newText =
-        '$_baseText${needsSeparator ? ' ' : ''}${result.recognizedWords}';
-    widget.controller.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: newText.length),
-    );
-    widget.onTextChanged();
-  }
+  final GroupNoteEntry entry;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final title = entry.title;
     return Material(
-      color: _isListening ? AppColors.accentBrick : AppColors.parchmentCard,
-      borderRadius: BorderRadius.circular(AppRadius.md),
+      color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        onTap: _isBusy ? null : _toggle,
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Icon(
-            _isListening ? Icons.mic : Icons.mic_none,
-            color: _isListening
-                ? AppColors.parchmentBg
-                : AppColors.textSecondary,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (title != null && title.isNotEmpty) ...[
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.body(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+              ],
+              Text(
+                JournalEntryDateFormatter.format(entry.createdAt),
+                style: AppTypography.body(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(entry.body, style: AppTypography.body(fontSize: 14)),
+            ],
           ),
         ),
       ),
     );
   }
+}
+
+class _EmptyNotesState extends StatelessWidget {
+  const _EmptyNotesState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.edit_note_outlined,
+              size: 56,
+              color: AppColors.textMuted,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Aucune note pour l\'instant.',
+              textAlign: TextAlign.center,
+              style: AppTypography.body(color: AppColors.textMuted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum _GroupNoteEntryAction { edit, remove }
+
+class _GroupNoteEntryActionSheetContent extends StatelessWidget {
+  const _GroupNoteEntryActionSheetContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SheetActionRow(
+            icon: Icons.edit_outlined,
+            label: 'Modifier',
+            onTap: () =>
+                Navigator.of(context).pop(_GroupNoteEntryAction.edit),
+          ),
+          const SheetActionDivider(),
+          SheetActionRow(
+            icon: Icons.delete_outline,
+            label: 'Supprimer',
+            color: AppColors.accentBrick,
+            onTap: () =>
+                Navigator.of(context).pop(_GroupNoteEntryAction.remove),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Dialogue de confirmation "Supprimer cette note ?" — calque exact de
+/// `character_journal_card.dart::showRemoveJournalEntryConfirmationDialog`.
+Future<bool?> showRemoveGroupNoteEntryConfirmationDialog(
+  BuildContext context,
+) {
+  return showDialog<bool>(
+    context: context,
+    builder: (context) => Dialog(
+      backgroundColor: AppColors.parchmentCard,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: const BorderSide(
+          color: AppColors.woodLight,
+          width: AppBorders.card,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Supprimer cette note ?',
+              style: AppTypography.body(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Cette action est définitive.',
+              style: AppTypography.body(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: SecondaryButton(
+                    label: 'Annuler',
+                    surface: SecondaryButtonSurface.parchment,
+                    onPressed: () => Navigator.of(context).pop(false),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: DestructiveButton(
+                    label: 'Supprimer',
+                    onPressed: () => Navigator.of(context).pop(true),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
