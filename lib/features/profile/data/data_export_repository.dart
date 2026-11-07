@@ -34,10 +34,10 @@ abstract class DataExportRepository {
   /// Récupère tous les personnages du joueur connecté (déjà résolus, y
   /// compris inventaire/sorts/histoire) via [CharacterRepository], son
   /// profil de compte (pseudo/avatar/e-mail, déjà résolus par la session
-  /// Supabase Auth courante), ses groupes rejoints et, pour chacun d'eux, sa
-  /// note personnelle s'il en a enregistré une (via [GroupRepository]) ;
-  /// assemble un unique JSON, l'écrit dans un fichier temporaire, et
-  /// retourne son chemin.
+  /// Supabase Auth courante), ses groupes rejoints et, pour chacun d'eux,
+  /// toutes les entrées de son carnet de notes personnel (via
+  /// [GroupRepository.fetchGroupNoteEntries]) ; assemble un unique JSON,
+  /// l'écrit dans un fichier temporaire, et retourne son chemin.
   ///
   /// Exclu volontairement de cet export (registre d'audit RGPD, décision
   /// chef de projet B1) : les signalements de bug (`bug_reports`), déjà
@@ -135,12 +135,22 @@ class LocalFileDataExportRepository implements DataExportRepository {
     };
   }
 
-  /// Un groupe rejoint, avec sa note personnelle quand le joueur en a
-  /// enregistré une pour le personnage qu'il y a rattaché — `note` est omise
-  /// plutôt qu'incluse vide (voir [GroupRepository.fetchGroupNote], qui
-  /// retourne toujours une note même sans rien d'enregistré, corps vide) :
-  /// un export lu par le joueur gagne à ne pas lister une note qui n'existe
-  /// pas, plutôt qu'une clé `note: ""` sans information.
+  /// Un groupe rejoint, avec la liste complète de son carnet de notes
+  /// personnel (`group_journal_entries`) — `notes` est omise plutôt
+  /// qu'incluse vide si le joueur n'a jamais rien enregistré pour ce
+  /// groupe : un export lu par le joueur gagne à ne pas lister une clé
+  /// vide sans information.
+  ///
+  /// [GroupRepository.fetchGroupNoteEntries] filtre déjà par
+  /// `auth.uid() = user_id` côté RLS — contrairement à l'ancien
+  /// `fetchGroupNote`, plus besoin de résoudre le personnage du joueur
+  /// connecté dans ce groupe (`GroupDetail.currentMember`, une requête
+  /// réseau en moins) : un MJ sans personnage (`GroupMember.isGameMaster`)
+  /// ou un membre orphelin (`GroupMember.isAwaitingCharacter`) voit donc
+  /// systématiquement TOUTES ses entrées dans son export, jamais seulement
+  /// la première — point RGPD sensible sur ce module, voir le correctif
+  /// F02(a) qui avait déjà dû corriger un trou similaire sur l'ancienne
+  /// note unique.
   Future<Map<String, dynamic>> _groupSummaryToJson(GroupSummary group) async {
     final json = <String, dynamic>{
       'id': group.id,
@@ -149,26 +159,17 @@ class LocalFileDataExportRepository implements DataExportRepository {
       'founderId': group.founderId,
     };
 
-    // Le personnage du joueur connecté dans CE groupe n'est pas porté par
-    // [GroupSummary] (résumé volontairement léger, voir sa doc de classe) —
-    // il faut le détail complet du groupe pour le retrouver, via
-    // `GroupDetail.currentMember` (voir sa doc de classe). `null` : MJ sans
-    // personnage (depuis F02a, voir `GroupRepository.fetchGroupNote`) ou
-    // membre orphelin (`GroupMember.isAwaitingCharacter`) — dans les deux
-    // cas, `fetchGroupNote` filtre sur `(group_id, user_id)` et non sur
-    // `character_id`, donc un MJ sans personnage peut malgré tout avoir
-    // enregistré une note : ne pas court-circuiter l'appel sur `null`, sous
-    // peine d'amputer l'export RGPD de cette note pourtant bien réelle et
-    // éditable dans l'app.
-    final characterId = (await _groupRepository.fetchGroupDetail(group.id))
-        .currentMember
-        ?.characterId;
-    final note = await _groupRepository.fetchGroupNote(
-      groupId: group.id,
-      characterId: characterId,
-    );
-    if (note.body.isNotEmpty) {
-      json['note'] = note.body;
+    final entries = await _groupRepository.fetchGroupNoteEntries(group.id);
+    if (entries.isNotEmpty) {
+      json['notes'] = [
+        for (final entry in entries)
+          {
+            'id': entry.id,
+            'title': entry.title,
+            'body': entry.body,
+            'createdAt': entry.createdAt.toUtc().toIso8601String(),
+          },
+      ];
     }
 
     return json;

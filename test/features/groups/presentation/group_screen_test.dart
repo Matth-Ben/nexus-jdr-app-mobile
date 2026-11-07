@@ -19,7 +19,7 @@ import 'package:personnages/features/groups/domain/created_group.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/features/groups/domain/group_failure.dart';
 import 'package:personnages/features/groups/domain/group_member.dart';
-import 'package:personnages/features/groups/domain/group_note.dart';
+import 'package:personnages/features/groups/domain/group_note_entry.dart';
 import 'package:personnages/features/groups/domain/group_preview.dart';
 import 'package:personnages/features/groups/domain/group_role.dart';
 import 'package:personnages/features/groups/domain/group_summary.dart';
@@ -70,13 +70,24 @@ class _FakeGroupRepository implements GroupRepository {
   Map<CurrencyKind, int>? lastAddedTotals;
   List<GroupTreasureItem>? lastAddedItems;
 
-  GroupNote? noteToReturn;
-  Object? noteErrorToThrow;
-  int noteFetchCount = 0;
+  List<GroupNoteEntry>? entriesToReturn;
+  Object? entriesErrorToThrow;
+  int entriesFetchCount = 0;
 
-  String? lastSavedNoteBody;
-  Object? saveNoteError;
-  int saveNoteCallCount = 0;
+  String? lastAddedNoteTitle;
+  String? lastAddedNoteBody;
+  Object? addNoteError;
+  int addNoteCallCount = 0;
+
+  String? lastUpdatedNoteEntryId;
+  String? lastUpdatedNoteTitle;
+  String? lastUpdatedNoteBody;
+  Object? updateNoteError;
+  int updateNoteCallCount = 0;
+
+  String? lastDeletedNoteEntryId;
+  Object? deleteNoteError;
+  int deleteNoteCallCount = 0;
 
   @override
   Future<GroupDetail> fetchGroupDetail(String groupId) async {
@@ -175,29 +186,43 @@ class _FakeGroupRepository implements GroupRepository {
     lastAddedItems = newItems;
   }
 
-  String? lastSavedNoteCharacterId;
-
   @override
-  Future<GroupNote> fetchGroupNote({
-    required String groupId,
-    String? characterId,
-  }) async {
-    noteFetchCount++;
-    if (noteErrorToThrow != null) throw noteErrorToThrow!;
-    return noteToReturn ??
-        GroupNote(groupId: groupId, characterId: characterId);
+  Future<List<GroupNoteEntry>> fetchGroupNoteEntries(String groupId) async {
+    entriesFetchCount++;
+    if (entriesErrorToThrow != null) throw entriesErrorToThrow!;
+    return entriesToReturn ?? const [];
   }
 
   @override
-  Future<void> saveGroupNote({
+  Future<void> addGroupNoteEntry({
     required String groupId,
-    String? characterId,
+    String? title,
     required String body,
   }) async {
-    saveNoteCallCount++;
-    lastSavedNoteBody = body;
-    lastSavedNoteCharacterId = characterId;
-    if (saveNoteError != null) throw saveNoteError!;
+    addNoteCallCount++;
+    lastAddedNoteTitle = title;
+    lastAddedNoteBody = body;
+    if (addNoteError != null) throw addNoteError!;
+  }
+
+  @override
+  Future<void> updateGroupNoteEntry({
+    required String entryId,
+    String? title,
+    required String body,
+  }) async {
+    updateNoteCallCount++;
+    lastUpdatedNoteEntryId = entryId;
+    lastUpdatedNoteTitle = title;
+    lastUpdatedNoteBody = body;
+    if (updateNoteError != null) throw updateNoteError!;
+  }
+
+  @override
+  Future<void> deleteGroupNoteEntry(String entryId) async {
+    deleteNoteCallCount++;
+    lastDeletedNoteEntryId = entryId;
+    if (deleteNoteError != null) throw deleteNoteError!;
   }
 
   @override
@@ -936,111 +961,137 @@ void main() {
     });
   });
 
-  group('onglet Notes (16/09/2026, carnet personnel, hors cahier des '
-      'charges)', () {
-    testWidgets('affiche le texte déjà enregistré, bouton ENREGISTRER '
-        'désactivé tant que rien n\'a changé', (tester) async {
+  group('onglet Notes (fractionné en entrées multiples le 07/11/2026, voir '
+      'group_notes_tab_body_test.dart pour le détail ligne/sheet)', () {
+    testWidgets('affiche les entrées déjà enregistrées (plus récent -> plus '
+        'ancien)', (tester) async {
       fakeRepository.detailToReturn = ownerViewDetail();
-      fakeRepository.noteToReturn = const GroupNote(
-        groupId: 'group-1',
-        characterId: 'char-1',
-        body: 'Le MJ a mentionné une amulette bleue.',
-      );
+      fakeRepository.entriesToReturn = [
+        GroupNoteEntry(
+          id: 'entry-2',
+          title: 'Chapitre 2',
+          body: 'Combat contre les gobelins.',
+          createdAt: DateTime(2026, 9, 8, 20, 30),
+        ),
+        GroupNoteEntry(
+          id: 'entry-1',
+          body: 'Le MJ a mentionné une amulette bleue.',
+          createdAt: DateTime(2026, 9, 1, 20, 0),
+        ),
+      ];
 
       await tester.pumpWidget(_buildTestWidget(fakeRepository));
       await tester.pumpAndSettle();
       await tester.tap(find.text('NOTES'));
       await tester.pumpAndSettle();
 
+      expect(find.text('Chapitre 2'), findsOneWidget);
+      expect(find.text('Combat contre les gobelins.'), findsOneWidget);
       expect(
         find.text('Le MJ a mentionné une amulette bleue.'),
         findsOneWidget,
       );
-      final button = tester.widget<PrimaryButton>(find.byType(PrimaryButton));
-      expect(button.onPressed, isNull);
     });
 
-    testWidgets(
-      'modifier le texte active ENREGISTRER ; le tap appelle saveGroupNote '
-      'avec le personnage du membre connecté et affiche la confirmation',
-      (tester) async {
-        fakeRepository.detailToReturn = ownerViewDetail();
-        fakeRepository.noteToReturn = const GroupNote(
-          groupId: 'group-1',
-          characterId: 'char-1',
-        );
-
-        await tester.pumpWidget(_buildTestWidget(fakeRepository));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('NOTES'));
-        await tester.pumpAndSettle();
-
-        await tester.enterText(
-          find.byType(TextField),
-          'Piège découvert dans la crypte.',
-        );
-        await tester.pumpAndSettle();
-
-        final button = tester.widget<PrimaryButton>(find.byType(PrimaryButton));
-        expect(button.onPressed, isNotNull);
-
-        await tester.tap(find.text('ENREGISTRER'));
-        await tester.pumpAndSettle();
-
-        expect(fakeRepository.saveNoteCallCount, 1);
-        expect(
-          fakeRepository.lastSavedNoteBody,
-          'Piège découvert dans la crypte.',
-        );
-        expect(find.text('Notes enregistrées.'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'échec de l\'enregistrement (GroupFailure) : affiche le message '
-      'dédié, jamais "Notes enregistrées."',
-      (tester) async {
-        fakeRepository.detailToReturn = ownerViewDetail();
-        fakeRepository.noteToReturn = const GroupNote(
-          groupId: 'group-1',
-          characterId: 'char-1',
-        );
-        fakeRepository.saveNoteError = const GroupFailure(
-          'Impossible d\'enregistrer : session expirée.',
-        );
-
-        await tester.pumpWidget(_buildTestWidget(fakeRepository));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('NOTES'));
-        await tester.pumpAndSettle();
-
-        await tester.enterText(find.byType(TextField), 'Un indice.');
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('ENREGISTRER'));
-        await tester.pumpAndSettle();
-
-        expect(
-          find.text('Impossible d\'enregistrer : session expirée.'),
-          findsOneWidget,
-        );
-        expect(find.text('Notes enregistrées.'), findsNothing);
-      },
-    );
-
-    testWidgets('note vide/jamais enregistrée : le champ est vide, ENREGISTRER '
-        'désactivé', (tester) async {
+    testWidgets('aucune entrée : état vide, tuile "Ajouter une note" '
+        'toujours visible', (tester) async {
       fakeRepository.detailToReturn = ownerViewDetail();
-      fakeRepository.noteToReturn = null;
+      fakeRepository.entriesToReturn = const [];
 
       await tester.pumpWidget(_buildTestWidget(fakeRepository));
       await tester.pumpAndSettle();
       await tester.tap(find.text('NOTES'));
       await tester.pumpAndSettle();
 
-      final field = tester.widget<TextField>(find.byType(TextField));
-      expect(field.controller?.text, isEmpty);
-      final button = tester.widget<PrimaryButton>(find.byType(PrimaryButton));
-      expect(button.onPressed, isNull);
+      expect(find.text('Aucune note pour l\'instant.'), findsOneWidget);
+      expect(find.text('Ajouter une note'), findsOneWidget);
+    });
+
+    testWidgets(
+      '"Ajouter une note" ouvre la sheet ; saisie + Enregistrer appelle '
+      'addGroupNoteEntry et affiche la confirmation',
+      (tester) async {
+        fakeRepository.detailToReturn = ownerViewDetail();
+        fakeRepository.entriesToReturn = const [];
+
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('NOTES'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Ajouter une note'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('AJOUTER UNE NOTE'), findsOneWidget);
+
+        await tester.enterText(
+          find.byType(TextFormField).last,
+          'Piège découvert dans la crypte.',
+        );
+        await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.addNoteCallCount, 1);
+        expect(
+          fakeRepository.lastAddedNoteBody,
+          'Piège découvert dans la crypte.',
+        );
+        expect(find.text('Note ajoutée.'), findsOneWidget);
+      },
+    );
+
+    testWidgets('échec de l\'enregistrement (GroupFailure) : bandeau d\'erreur '
+        'inline, sheet reste ouverte, jamais "Note ajoutée."', (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.entriesToReturn = const [];
+      fakeRepository.addNoteError = const GroupFailure(
+        'Impossible d\'enregistrer : session expirée.',
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('NOTES'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ajouter une note'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).last, 'Un indice.');
+      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Impossible d\'enregistrer : session expirée.'),
+        findsOneWidget,
+      );
+      expect(find.text('Note ajoutée.'), findsNothing);
+    });
+
+    testWidgets('tap sur une ligne -> "Supprimer" + confirmer appelle '
+        'deleteGroupNoteEntry et affiche la confirmation', (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.entriesToReturn = [
+        GroupNoteEntry(
+          id: 'entry-1',
+          body: 'Le MJ a mentionné une amulette bleue.',
+          createdAt: DateTime(2026, 9, 1, 20, 0),
+        ),
+      ];
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('NOTES'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Le MJ a mentionné une amulette bleue.'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Supprimer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Supprimer').last);
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.deleteNoteCallCount, 1);
+      expect(fakeRepository.lastDeletedNoteEntryId, 'entry-1');
+      expect(find.text('Note supprimée.'), findsOneWidget);
     });
   });
 
@@ -1152,15 +1203,18 @@ void main() {
     );
 
     testWidgets(
-      'onglet Notes (F02a, comité de revue du 06/11/2026) : accessible '
-      'comme n\'importe quel membre — affiche l\'éditeur, jamais l\'ancien '
-      'état bloquant',
+      'onglet Notes (F02a, comité de revue du 06/11/2026 ; inchangé par le '
+      'fractionnement du 07/11/2026) : accessible comme n\'importe quel '
+      'membre — affiche ses entrées, jamais l\'ancien état bloquant',
       (tester) async {
         fakeRepository.detailToReturn = gameMasterViewDetail();
-        fakeRepository.noteToReturn = const GroupNote(
-          groupId: 'group-1',
-          body: 'Le groupe attaque le donjon ce soir.',
-        );
+        fakeRepository.entriesToReturn = [
+          GroupNoteEntry(
+            id: 'entry-1',
+            body: 'Le groupe attaque le donjon ce soir.',
+            createdAt: DateTime(2026, 9, 1),
+          ),
+        ];
 
         await tester.pumpWidget(_buildTestWidget(fakeRepository));
         await tester.pumpAndSettle();
@@ -1171,82 +1225,41 @@ void main() {
           find.textContaining('Le carnet de notes est propre à un personnage'),
           findsNothing,
         );
-        expect(find.byType(TextField), findsOneWidget);
         expect(
           find.text('Le groupe attaque le donjon ce soir.'),
           findsOneWidget,
         );
-        expect(fakeRepository.noteFetchCount, 1);
+        expect(fakeRepository.entriesFetchCount, 1);
       },
     );
 
     testWidgets(
-      'onglet Notes : enregistrer appelle saveGroupNote avec characterId '
-      'null et affiche la confirmation',
+      'onglet Notes : "Ajouter une note" appelle addGroupNoteEntry sans '
+      'dépendre d\'un personnage (RLS filtre déjà sur user_id)',
       (tester) async {
         fakeRepository.detailToReturn = gameMasterViewDetail();
-        fakeRepository.noteToReturn = const GroupNote(groupId: 'group-1');
+        fakeRepository.entriesToReturn = const [];
 
         await tester.pumpWidget(_buildTestWidget(fakeRepository));
         await tester.pumpAndSettle();
         await tester.tap(find.text('NOTES'));
         await tester.pumpAndSettle();
 
+        await tester.tap(find.text('Ajouter une note'));
+        await tester.pumpAndSettle();
         await tester.enterText(
-          find.byType(TextField),
+          find.byType(TextFormField).last,
           'Le MJ note une embuscade au pont.',
         );
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('ENREGISTRER'));
+        await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
         await tester.pumpAndSettle();
 
-        expect(fakeRepository.saveNoteCallCount, 1);
-        expect(fakeRepository.lastSavedNoteCharacterId, isNull);
+        expect(fakeRepository.addNoteCallCount, 1);
         expect(
-          fakeRepository.lastSavedNoteBody,
+          fakeRepository.lastAddedNoteBody,
           'Le MJ note une embuscade au pont.',
         );
-        expect(find.text('Notes enregistrées.'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'onglet Notes : échec réseau à l\'enregistrement ne perd pas le '
-      'texte saisi (protection anti-perte), jamais "Notes enregistrées."',
-      (tester) async {
-        fakeRepository.detailToReturn = gameMasterViewDetail();
-        fakeRepository.noteToReturn = const GroupNote(groupId: 'group-1');
-        fakeRepository.saveNoteError = const GroupFailure(
-          'Impossible d\'enregistrer : session expirée.',
-        );
-
-        await tester.pumpWidget(_buildTestWidget(fakeRepository));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('NOTES'));
-        await tester.pumpAndSettle();
-
-        await tester.enterText(
-          find.byType(TextField),
-          'Un indice que le MJ ne veut pas perdre.',
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('ENREGISTRER'));
-        await tester.pumpAndSettle();
-
-        expect(
-          find.text('Impossible d\'enregistrer : session expirée.'),
-          findsOneWidget,
-        );
-        expect(find.text('Notes enregistrées.'), findsNothing);
-        // Protection anti-perte : `groupNoteProvider` n'est invalidé qu'en
-        // cas de succès (voir `_GroupScreenState._saveNote`) — le texte
-        // saisi reste donc affiché, jamais écrasé par un refetch de l'ancien
-        // corps après un échec.
-        expect(
-          find.text('Un indice que le MJ ne veut pas perdre.'),
-          findsOneWidget,
-        );
-        expect(fakeRepository.noteFetchCount, 1);
+        expect(find.text('Note ajoutée.'), findsOneWidget);
       },
     );
   });

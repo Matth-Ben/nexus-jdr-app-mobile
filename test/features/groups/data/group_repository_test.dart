@@ -1011,95 +1011,72 @@ void main() {
     );
   });
 
-  group('SupabaseGroupRepository.fetchGroupNote', () {
-    // Depuis la migration web
-    // `20261106090000_group_notes_user_id_pk_and_character_set_null.sql`,
-    // `group_notes` est identifié par `(group_id, user_id)` — ce repository
-    // doit filtrer sur l'utilisateur connecté (`auth.currentUser`), jamais
-    // sur `character_id` (devenu purement informatif), donc requiert ici un
-    // client authentifié (`_buildSignedInFakeClient`), contrairement à
-    // l'ancien comportement non authentifié.
+  group('SupabaseGroupRepository.fetchGroupNoteEntries', () {
     test(
-      'ligne existante -> mappe le texte, filtre sur user_id (jamais '
-      'character_id)',
+      'mappe id/title/body/created_at, trie par created_at desc côté requête',
       () async {
         final requests = <http.Request>[];
         final client = await _buildSignedInFakeClient(
           ownerId: 'user-1',
           tableRows: {
-            'group_notes': [
-              {'body': 'Le MJ a mentionné une amulette bleue.'},
+            'group_journal_entries': [
+              {
+                'id': 'entry-2',
+                'title': 'Chapitre 2',
+                'body': 'Combat contre les gobelins.',
+                'created_at': '2026-11-08T20:00:00Z',
+              },
+              {
+                'id': 'entry-1',
+                'title': null,
+                'body': 'Première séance, sans titre.',
+                'created_at': '2026-11-01T20:00:00Z',
+              },
             ],
           },
           onRequest: requests.add,
         );
         final repository = SupabaseGroupRepository(client);
 
-        final note = await repository.fetchGroupNote(
-          groupId: 'group-1',
-          characterId: 'char-1',
-        );
+        final entries = await repository.fetchGroupNoteEntries('group-1');
 
-        expect(note.groupId, 'group-1');
-        expect(note.characterId, 'char-1');
-        expect(note.body, 'Le MJ a mentionné une amulette bleue.');
+        expect(entries, hasLength(2));
+        expect(entries[0].id, 'entry-2');
+        expect(entries[0].title, 'Chapitre 2');
+        expect(entries[0].body, 'Combat contre les gobelins.');
+        expect(entries[1].id, 'entry-1');
+        expect(entries[1].title, isNull);
 
         final selectRequest = requests.firstWhere(
-          (request) => request.url.path.endsWith('/group_notes'),
+          (request) => request.url.path.endsWith('/group_journal_entries'),
         );
-        expect(selectRequest.url.queryParameters['user_id'], 'eq.user-1');
-        expect(selectRequest.url.queryParameters['character_id'], isNull);
+        expect(selectRequest.url.queryParameters['group_id'], 'eq.group-1');
+        expect(
+          selectRequest.url.queryParameters['order'],
+          'created_at.desc.nullslast',
+        );
       },
     );
 
     test(
-      "aucune ligne encore enregistrée -> note vide plutôt qu'une erreur",
+      "aucune ligne encore enregistrée -> liste vide plutôt qu'une erreur",
       () async {
         final client = await _buildSignedInFakeClient(
           ownerId: 'user-1',
-          tableRows: {'group_notes': []},
+          tableRows: const {'group_journal_entries': []},
         );
         final repository = SupabaseGroupRepository(client);
 
-        final note = await repository.fetchGroupNote(
-          groupId: 'group-1',
-          characterId: 'char-1',
-        );
+        final entries = await repository.fetchGroupNoteEntries('group-1');
 
-        expect(note.body, isEmpty);
-      },
-    );
-
-    test(
-      'MJ sans personnage (characterId null) : filtre tout de même sur '
-      'user_id, note vide si rien enregistré',
-      () async {
-        final requests = <http.Request>[];
-        final client = await _buildSignedInFakeClient(
-          ownerId: 'user-mj',
-          tableRows: {'group_notes': []},
-          onRequest: requests.add,
-        );
-        final repository = SupabaseGroupRepository(client);
-
-        final note = await repository.fetchGroupNote(groupId: 'group-1');
-
-        expect(note.groupId, 'group-1');
-        expect(note.characterId, isNull);
-        expect(note.body, isEmpty);
-
-        final selectRequest = requests.firstWhere(
-          (request) => request.url.path.endsWith('/group_notes'),
-        );
-        expect(selectRequest.url.queryParameters['user_id'], 'eq.user-mj');
+        expect(entries, isEmpty);
       },
     );
   });
 
-  group('SupabaseGroupRepository.saveGroupNote', () {
+  group('SupabaseGroupRepository.addGroupNoteEntry', () {
     test(
-      'upsert {group_id, character_id, user_id, body} sur group_notes, '
-      'onConflict group_id,user_id',
+      'insère {group_id, user_id, title, body} sur group_journal_entries',
       () async {
         final requests = <http.Request>[];
         final client = await _buildSignedInFakeClient(
@@ -1108,57 +1085,117 @@ void main() {
         );
         final repository = SupabaseGroupRepository(client);
 
-        await repository.saveGroupNote(
+        await repository.addGroupNoteEntry(
           groupId: 'group-1',
-          characterId: 'char-1',
+          title: 'Chapitre 1',
           body: 'Un indice dans la crypte.',
         );
 
-        final upsertRequest = requests.firstWhere(
-          (request) => request.url.path.endsWith('/group_notes'),
+        final insertRequest = requests.firstWhere(
+          (request) =>
+              request.url.path.endsWith('/group_journal_entries') &&
+              request.method == 'POST',
         );
-        final body = jsonDecode(upsertRequest.body) as Map<String, dynamic>;
+        final body = jsonDecode(insertRequest.body) as Map<String, dynamic>;
         expect(body['group_id'], 'group-1');
-        expect(body['character_id'], 'char-1');
         expect(body['user_id'], 'user-1');
+        expect(body['title'], 'Chapitre 1');
         expect(body['body'], 'Un indice dans la crypte.');
-        expect(
-          upsertRequest.url.queryParameters['on_conflict'],
-          'group_id,user_id',
-        );
       },
     );
 
-    test(
-      'MJ sans personnage (characterId null) : upsert sans character_id, '
-      'toujours identifié par group_id,user_id',
-      () async {
-        final requests = <http.Request>[];
-        final client = await _buildSignedInFakeClient(
-          ownerId: 'user-mj',
-          onRequest: requests.add,
-        );
-        final repository = SupabaseGroupRepository(client);
+    test('title null/vide -> insère sans la clé title', () async {
+      final requests = <http.Request>[];
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'user-1',
+        onRequest: requests.add,
+      );
+      final repository = SupabaseGroupRepository(client);
 
-        await repository.saveGroupNote(
-          groupId: 'group-1',
-          body: 'Un indice dans la crypte.',
-        );
+      await repository.addGroupNoteEntry(
+        groupId: 'group-1',
+        body: 'Sans titre.',
+      );
 
-        final upsertRequest = requests.firstWhere(
-          (request) => request.url.path.endsWith('/group_notes'),
-        );
-        final body = jsonDecode(upsertRequest.body) as Map<String, dynamic>;
-        expect(body['group_id'], 'group-1');
-        expect(body.containsKey('character_id'), isFalse);
-        expect(body['user_id'], 'user-mj');
-        expect(body['body'], 'Un indice dans la crypte.');
-        expect(
-          upsertRequest.url.queryParameters['on_conflict'],
-          'group_id,user_id',
-        );
-      },
-    );
+      final insertRequest = requests.firstWhere(
+        (request) =>
+            request.url.path.endsWith('/group_journal_entries') &&
+            request.method == 'POST',
+      );
+      final body = jsonDecode(insertRequest.body) as Map<String, dynamic>;
+      expect(body.containsKey('title'), isFalse);
+      expect(body['body'], 'Sans titre.');
+    });
+  });
+
+  group('SupabaseGroupRepository.updateGroupNoteEntry', () {
+    test('update {title, body} filtré sur id', () async {
+      final requests = <http.Request>[];
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'user-1',
+        onRequest: requests.add,
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await repository.updateGroupNoteEntry(
+        entryId: 'entry-1',
+        title: 'Titre modifié',
+        body: 'Corps modifié.',
+      );
+
+      final updateRequest = requests.firstWhere(
+        (request) =>
+            request.url.path.endsWith('/group_journal_entries') &&
+            request.method == 'PATCH',
+      );
+      final body = jsonDecode(updateRequest.body) as Map<String, dynamic>;
+      expect(body['title'], 'Titre modifié');
+      expect(body['body'], 'Corps modifié.');
+      expect(updateRequest.url.queryParameters['id'], 'eq.entry-1');
+    });
+
+    test('title null -> efface le titre existant (null explicite)', () async {
+      final requests = <http.Request>[];
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'user-1',
+        onRequest: requests.add,
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await repository.updateGroupNoteEntry(
+        entryId: 'entry-1',
+        body: 'Corps modifié.',
+      );
+
+      final updateRequest = requests.firstWhere(
+        (request) =>
+            request.url.path.endsWith('/group_journal_entries') &&
+            request.method == 'PATCH',
+      );
+      final body = jsonDecode(updateRequest.body) as Map<String, dynamic>;
+      expect(body['title'], isNull);
+      expect(body.containsKey('title'), isTrue);
+    });
+  });
+
+  group('SupabaseGroupRepository.deleteGroupNoteEntry', () {
+    test('delete filtré sur id', () async {
+      final requests = <http.Request>[];
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'user-1',
+        onRequest: requests.add,
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await repository.deleteGroupNoteEntry('entry-1');
+
+      final deleteRequest = requests.firstWhere(
+        (request) =>
+            request.url.path.endsWith('/group_journal_entries') &&
+            request.method == 'DELETE',
+      );
+      expect(deleteRequest.url.queryParameters['id'], 'eq.entry-1');
+    });
   });
 }
 
