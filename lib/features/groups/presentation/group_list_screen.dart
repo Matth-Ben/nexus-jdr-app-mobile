@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/route_observer_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -14,6 +15,7 @@ import '../domain/group_color_assigner.dart';
 import '../domain/group_failure.dart';
 import '../domain/group_summary.dart';
 import 'providers/group_providers.dart';
+import 'widgets/group_status_badge.dart';
 import 'widgets/member_color_chips_row.dart';
 
 /// Écran "Groupes", route `/groups` — point d'entrée UNIQUE du bouton
@@ -25,8 +27,53 @@ import 'widgets/member_color_chips_row.dart';
 /// `showGroupListSheet`) qui, dès qu'un joueur avait exactement 1 groupe,
 /// naviguait directement dedans sans jamais lui laisser la possibilité
 /// d'en créer ou d'en rejoindre un second.
-class GroupListScreen extends ConsumerWidget {
+///
+/// `ConsumerStatefulWidget` + `RouteAware` (plutôt que `ConsumerWidget`) :
+/// un groupe peut changer de statut vital (mort/PV bas, voir
+/// `GroupStatusBadge`) pendant que le joueur consulte son détail
+/// (`group_screen.dart`, poussé par-dessus cette liste au tap sur une
+/// ligne) — [didPopNext] invalide `myGroupsProvider` à chaque retour sur cet
+/// écran, même pattern que `character_list_screen.dart` pour
+/// `charactersProvider`. Un refetch systématique au retour (même si rien n'a
+/// changé) est acceptable ici, même rationale que cet autre écran.
+class GroupListScreen extends ConsumerStatefulWidget {
   const GroupListScreen({super.key});
+
+  @override
+  ConsumerState<GroupListScreen> createState() => _GroupListScreenState();
+}
+
+class _GroupListScreenState extends ConsumerState<GroupListScreen>
+    with RouteAware {
+  // Voir `character_list_screen.dart` pour le rationale complet de ce champ
+  // (`ref` n'est plus utilisable en toute sécurité dans `dispose`).
+  RouteObserver<PageRoute<dynamic>>? _routeObserver;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<dynamic>) {
+      final observer = ref.read(routeObserverProvider);
+      observer.subscribe(this, route);
+      _routeObserver = observer;
+    }
+  }
+
+  @override
+  void dispose() {
+    _routeObserver?.unsubscribe(this);
+    super.dispose();
+  }
+
+  /// Appelé par le `RouteObserver` quand une route poussée par-dessus cet
+  /// écran est dépilée et que celui-ci redevient visible (retour de
+  /// `group_screen.dart`) — voir la documentation de classe de
+  /// [GroupListScreen].
+  @override
+  void didPopNext() {
+    ref.invalidate(myGroupsProvider);
+  }
 
   void _goBack(BuildContext context) {
     if (context.canPop()) {
@@ -37,7 +84,7 @@ class GroupListScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final groupsAsync = ref.watch(myGroupsProvider);
     final currentUserId = ref.watch(currentUserProvider)?.id;
 
@@ -240,12 +287,32 @@ class _GroupRow extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      '${group.memberCount} membres',
-                      style: AppTypography.body(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${group.memberCount} membres',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.body(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                        // Avis direction-artistique (comité de revue F03,
+                        // `docs/retours-utilisateurs.md`) : un seul badge
+                        // priorisé, jamais cumulé avec le nombre de membres
+                        // ni avec un second badge — voir
+                        // [GroupStatusBadge].
+                        if (group.deadCount > 0 || group.lowHpCount > 0) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          GroupStatusBadge(
+                            deadCount: group.deadCount,
+                            lowHpCount: group.lowHpCount,
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
                     MemberColorChipsRow(ids: _placeholderMemberIds(group)),

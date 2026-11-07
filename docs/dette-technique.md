@@ -808,6 +808,18 @@ partagé dev/staging/prod). Voir `integration_test/README.md` pour le détail co
 |---|---|---|---|---|
 | D170 | Edge function/schéma `group_notes` (dépôt web, `supabase/migrations/20260916090000_create_group_notes.sql`) : la FK `character_id` est `on delete cascade` — supprimer son personnage fait perdre silencieusement la note de groupe associée à ce personnage, sans avertissement. Trouvé incidemment par `dev-backend-supabase` en instruisant la faisabilité de F02 (`docs/retours-utilisateurs.md`), distinct de cette proposition. | moyenne (perte de donnée silencieuse, pas de corruption ni de fuite, mais surprenante pour le joueur) | Remplacer `on delete cascade` par `on delete set null` (même pattern déjà appliqué à `group_members.character_id` par `20261016090000_group_members_orphan_character.sql`) — `dev-backend-supabase`, dépôt web. Peut se combiner avec la migration de F02 si celle-ci est retenue (la PK de `group_notes` change de toute façon dans ce cas). | **Fermé (06/11/2026)** — corrigé dans la même migration que F02(a) (`20261106090000_group_notes_user_id_pk_and_character_set_null.sql`, dépôt web), déployée sur le projet distant le 06/11/2026. |
 
+## Ajouts liés au badge de statut multi-groupes (F03, 06/11/2026)
+
+Constat relevé par `qa-testeur` en simulation utilisateur sur la branche
+`feat/groups-multi-group-status-overview` : un bug de grammaire préexistant
+(pas introduit par ce chantier) était cité à tort comme « déjà documenté »
+par le commentaire de `group_status_badge.dart`, alors qu'aucune entrée ne le
+traçait avant celle-ci.
+
+| ID | Constat | Gravité | Correction proposée | État |
+|---|---|---|---|---|
+| D171 | `_GroupRow` (`group_list_screen.dart`) affiche `'${group.memberCount} membres'` sans forme singulière : un groupe à 1 membre affiche « 1 membres » plutôt que « 1 membre ». | basse (faute de grammaire, pas une donnée fausse) | Pluriel ICU (`{count, plural, =1{membre} other{membres}}`) si `group_list_screen.dart` se localise un jour (pas encore migré vers `.arb`, voir Phase B) ; en attendant, gestion manuelle du cas `memberCount == 1` (même principe que `GroupStatusBadge.deadCount`/`'1 mort'` vs `'$deadCount morts'`) | Ouvert, non traité (juste tracé) |
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont

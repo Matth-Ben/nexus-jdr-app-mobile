@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/crash_reporting/crash_reporter.dart';
@@ -58,7 +59,20 @@ abstract class GroupRealtimeSubscription {
 /// simplement une [GroupFailure].
 abstract class GroupRepository {
   /// Groupes dont le joueur connecté est membre — bouton "groupes" de
-  /// `character_list_screen.dart` (0/1/2+ groupes).
+  /// `character_list_screen.dart` (0/1/2+ groupes). Joint aussi la vue
+  /// `group_character_status_overview` (`dead_count`/`low_hp_count`, voir
+  /// la migration `20261106100000_create_group_character_status_overview.sql`
+  /// du dépôt web) en une seule requête groupée (`inFilter` sur tous les
+  /// `group_id` déjà résolus) — jamais une requête par groupe (voir
+  /// `GroupListScreen::GroupStatusBadge` côté UI, qui affiche un badge
+  /// priorisé "X mort(s)"/"X PV bas" sur chaque `_GroupRow`).
+  ///
+  /// Cette requête de statut est isolée dans son propre `try/catch` côté
+  /// implémentation : si la vue est temporairement inaccessible, cette
+  /// méthode retourne quand même la liste complète des groupes, avec
+  /// `deadCount`/`lowHpCount` à 0 pour les groupes concernés — un badge
+  /// accessoire en panne ne doit jamais faire échouer tout l'écran
+  /// "Groupes".
   Future<List<GroupSummary>> fetchMyGroups();
 
   /// `create-group` — écran "Créer un groupe" : crée le groupe, son
@@ -261,14 +275,40 @@ class SupabaseGroupRepository implements GroupRepository {
       }
       if (namesById.isEmpty) return const [];
 
+      final groupIds = namesById.keys.toList();
+
       final allMemberRows = await _client
           .from('group_members')
           .select('group_id')
-          .inFilter('group_id', namesById.keys.toList());
+          .inFilter('group_id', groupIds);
       final counts = <String, int>{};
       for (final row in allMemberRows) {
         final id = row['group_id'] as String;
         counts[id] = (counts[id] ?? 0) + 1;
+      }
+
+      // Repli silencieux dédié (badge accessoire) : un échec de CETTE
+      // requête (ex. vue temporairement inaccessible) ne doit jamais faire
+      // basculer tout l'écran "Groupes" en erreur — seuls les badges
+      // dead/lowHp restent à 0/0 pour les groupes concernés, le reste de la
+      // liste (déjà résolu ci-dessus) continue de s'afficher normalement.
+      final deadCounts = <String, int>{};
+      final lowHpCounts = <String, int>{};
+      try {
+        final statusRows = await _client
+            .from('group_character_status_overview')
+            .select('group_id, dead_count, low_hp_count')
+            .inFilter('group_id', groupIds);
+        for (final row in statusRows) {
+          final id = row['group_id'] as String;
+          deadCounts[id] = (row['dead_count'] as num?)?.toInt() ?? 0;
+          lowHpCounts[id] = (row['low_hp_count'] as num?)?.toInt() ?? 0;
+        }
+      } catch (error) {
+        debugPrint(
+          'SupabaseGroupRepository.fetchMyGroups: statut multi-groupes '
+          'ignoré (badges à 0/0) : $error',
+        );
       }
 
       return [
@@ -278,6 +318,8 @@ class SupabaseGroupRepository implements GroupRepository {
             name: entry.value,
             memberCount: counts[entry.key] ?? 0,
             founderId: founderIdsById[entry.key] ?? '',
+            deadCount: deadCounts[entry.key] ?? 0,
+            lowHpCount: lowHpCounts[entry.key] ?? 0,
           ),
       ];
     } on PostgrestException catch (error) {
