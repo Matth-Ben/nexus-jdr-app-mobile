@@ -48,6 +48,7 @@ Future<void> createCharacter(
   bool autoPickSubclassIfOffered = false,
   required String backgroundName,
   Map<String, int> abilityIncrements = const {},
+  List<String> preferredSkillNames = const [],
 }) async {
   await tapText(tester, '+ CRÉER');
   await pumpUntilSettled(tester, attempts: 6);
@@ -157,7 +158,24 @@ Future<void> createCharacter(
   await tapText(tester, 'SUIVANT');
   await pumpUntilSettled(tester, attempts: 4);
 
-  // Etape 5/9 : Competences et outils.
+  // Etape 5/9 : Competences et outils. [preferredSkillNames] coche d'abord
+  // les competences nommees explicitement (ex. "Histoire"/"Persuasion" pour
+  // verifier des valeurs RAW precises qui dependent du choix exact -- un
+  // Clerc/Acolyte a 2 choix de competence de classe parmi plusieurs
+  // possibles, chacune adossee a une caracteristique differente) avant de
+  // laisser [fillAvailableCheckableTiles] completer tout le reste du quota
+  // (outils de classe/race, competences de race, langues d'historique) avec
+  // les premieres options disponibles -- jamais retouchees ensuite, puisque
+  // deja `checked`. Vide par defaut (aucun effet, comportement inchange pour
+  // tout appelant existant).
+  for (final skillName in preferredSkillNames) {
+    await scrollUntilVisibleThenTap(
+      tester,
+      find.byType(ListView).first,
+      skillName,
+    );
+    await settleQuickly(tester);
+  }
   await fillAvailableCheckableTiles(tester);
   await tapText(tester, 'SUIVANT');
   await pumpUntilSettled(tester, attempts: 4);
