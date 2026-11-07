@@ -105,24 +105,23 @@ Future<LevelUpOutcome> runOneLevelUp(
     // rendu reel ("VALEUR MOYENNE (n)"), jamais la casse source du libelle.
     final averageOption = find.textContaining('VALEUR MOYENNE');
     final found = averageOption.evaluate().isNotEmpty;
-    // ignore: avoid_print
-    print(
-      'DIAGNOSTIC runOneLevelUp(useAverageHp) : option "VALEUR MOYENNE" '
-      'trouvee=$found -- texte visible : '
-      '${tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).whereType<String>().toList()}',
-    );
-    if (found) {
-      await tester.ensureVisible(averageOption.first);
-      await settleQuickly(tester);
-      await tester.tap(averageOption.first);
-      await settleQuickly(tester);
-      // ignore: avoid_print
-      print(
-        'DIAGNOSTIC runOneLevelUp(useAverageHp) : apres tap -- texte '
-        'visible : '
+    if (!found) {
+      // Echoue explicitement plutot que de retomber en silence sur
+      // "CONTINUER" (jet de de aleatoire au lieu de la moyenne demandee) :
+      // meme mode de defaillance silencieuse que celui corrige ci-dessus
+      // pour la casse source du libelle -- un appelant qui demande
+      // [useAverageHp] explicitement a besoin d'un resultat deterministe,
+      // pas d'un echec muet.
+      fail(
+        'runOneLevelUp(useAverageHp: true) : option "VALEUR MOYENNE" '
+        'introuvable -- texte visible : '
         '${tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).whereType<String>().toList()}',
       );
     }
+    await tester.ensureVisible(averageOption.first);
+    await settleQuickly(tester);
+    await tester.tap(averageOption.first);
+    await settleQuickly(tester);
   }
   await tapText(tester, 'CONTINUER');
   await pumpUntilSettled(tester, attempts: 4);

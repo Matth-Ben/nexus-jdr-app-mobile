@@ -261,8 +261,14 @@ disposition.
   scénario RAW lui-même : `character_list_screen.dart::_EmptyState` déborde
   de 3,7px quand le compte MJ n'a aucun personnage (systématiquement le cas
   dans ce scénario), et ce débordement est promu en échec de test par le
-  framework Flutter. Deux écarts produit confirmés au passage, documentés
-  sans être corrigés ici (voir le compte-rendu QA) :
+  framework Flutter. **Correction (`code-reviewer`, PR #228)** : contrairement
+  à ce qu'affirmait une précédente version de ce paragraphe, le rouge CI
+  réellement observé sur cette PR (run `42386866289`) n'était PAS causé par
+  F06, mais par une non-conformité `dart format` de
+  `adventure_session_cleric_groups_test.dart` -- corrigée depuis. F06 reste un
+  écart produit réel et toujours ouvert (voir ci-dessous), mais ne faisait pas
+  échouer la CI de cette PR. Deux écarts produit confirmés au passage,
+  documentés sans être corrigés ici (voir le compte-rendu QA) :
   - 1b (CA) : l'équipement de départ standard du Clerc résout sur "Chemise
     de mailles" (CA13+Dex) plutôt que sur l'une des 3 options RAW (armure
     d'écailles/cuir/cotte de mailles) -- CA 17 observée au lieu de 18 à
@@ -274,14 +280,24 @@ disposition.
     base (confirmé par lecture directe) -- fermer/rouvrir la fiche corrige
     l'affichage à chaque fois : défaut de rafraîchissement client après ce
     type de montée de niveau précis, pas de perte d'écriture réelle.
-  - **Nettoyage** : réussi à la dernière exécution verte-RAW (personnage et
-    groupe supprimés directement en base, même convention que
-    `custom_inventory_item_weapon_details_test.dart`). Une exécution
-    antérieure de cette même campagne (échouée avant d'atteindre l'étape 10,
-    caractéristiques fausses dues à une première séquence de `swapUp`
-    incorrecte dans le fichier de test) a laissé un personnage de test
-    orphelin (`QA-Adventure-Clerc-1794059944973480`) -- à supprimer par
-    `dev-backend-supabase`.
+  - **Nettoyage -- bug de nettoyage corrigé (`code-reviewer`, PR #228)** :
+    l'étape 10 supprimait le personnage de test en étant encore connectée
+    sur le compte MJ (dernier `_switchAccount` de l'étape 9), alors que le
+    personnage appartient au compte joueur -- la RLS Postgres
+    (`auth.uid() = owner_id`) rend cette suppression un no-op SILENCIEUX
+    (pas d'exception), donc le personnage de test n'était EN RÉALITÉ JAMAIS
+    supprimé, y compris lors des exécutions rapportées comme "réussies"
+    ci-dessus, malgré ce qu'affirmait `observe()` et une précédente version
+    de ce paragraphe. Corrigé : rebascule sur le compte joueur avant la
+    suppression, puis vérifie la disparition réelle de la ligne
+    (`.maybeSingle()` -> `null`) au lieu de faire confiance à un appel non
+    vérifié. Consequence : il existe probablement, en plus du personnage
+    orphelin déjà connu d'une exécution ratée
+    (`QA-Adventure-Clerc-1794059944973480`), plusieurs AUTRES personnages de
+    test orphelins (préfixe `QA-Adventure-Clerc-`) issus des exécutions
+    antérieures "réussies" de cette campagne -- à rechercher et supprimer
+    manuellement par Matthias (voir `docs/retours-utilisateurs.md`), le
+    nombre exact n'étant pas connu depuis ce dépôt.
   - **Incident d'environnement sans rapport avec cette campagne** : des
     modifications non commitées sont apparues dans le dépôt partagé en
     cours de session sur des fichiers jamais touchés par ce test
