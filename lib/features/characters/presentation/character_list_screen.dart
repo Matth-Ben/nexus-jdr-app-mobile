@@ -1071,9 +1071,7 @@ class _EmptyState extends StatelessWidget {
                     // (`build`).
                     l10n.characterListEmptyBody,
                     textAlign: TextAlign.center,
-                    style: AppTypography.body(
-                      color: AppColors.textOnWoodMuted,
-                    ),
+                    style: AppTypography.body(color: AppColors.textOnWoodMuted),
                   ),
                 ],
               ),
