@@ -210,8 +210,8 @@ abstract class GroupRepository {
   /// rien n'a encore été enregistré, même repli que [fetchGroupTreasure].
   ///
   /// RLS `auth.uid() = user_id` sur `group_journal_entries` : jamais besoin
-  /// de filtrer explicitement par personnage (contrairement à l'ancien
-  /// `group_notes`, voir `group_note.dart`) — un MJ sans personnage (voir
+  /// de filtrer explicitement par personnage (contrairement à l'ancienne
+  /// table `group_notes`) — un MJ sans personnage (voir
   /// `GroupMember.isGameMaster`) a son propre carnet comme n'importe quel
   /// membre (décision du comité de revue F02(a),
   /// `docs/retours-utilisateurs.md`), toujours vrai avec ce fractionnement.

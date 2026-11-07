@@ -1,8 +1,8 @@
 /// Une entrée du carnet de notes personnel d'un membre pour un groupe
 /// (`group_journal_entries`) — onglet "Notes" de l'écran "Groupe"
 /// (`presentation/group_screen.dart`). Remplace l'ancien champ unique
-/// `group_notes.body` (toujours en place pour compatibilité, voir
-/// `group_note.dart`) par plusieurs entrées datées, une par étape/chapitre.
+/// `group_notes.body` (table historique toujours en place côté base pour
+/// compatibilité) par plusieurs entrées datées, une par étape/chapitre.
 ///
 /// Personnel (décision utilisateur du 16/09/2026, inchangée par ce
 /// fractionnement) : chaque membre ne lit/écrit que ses propres entrées,
