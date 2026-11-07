@@ -1019,38 +1019,35 @@ void main() {
     // sur `character_id` (devenu purement informatif), donc requiert ici un
     // client authentifié (`_buildSignedInFakeClient`), contrairement à
     // l'ancien comportement non authentifié.
-    test(
-      'ligne existante -> mappe le texte, filtre sur user_id (jamais '
-      'character_id)',
-      () async {
-        final requests = <http.Request>[];
-        final client = await _buildSignedInFakeClient(
-          ownerId: 'user-1',
-          tableRows: {
-            'group_notes': [
-              {'body': 'Le MJ a mentionné une amulette bleue.'},
-            ],
-          },
-          onRequest: requests.add,
-        );
-        final repository = SupabaseGroupRepository(client);
+    test('ligne existante -> mappe le texte, filtre sur user_id (jamais '
+        'character_id)', () async {
+      final requests = <http.Request>[];
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'user-1',
+        tableRows: {
+          'group_notes': [
+            {'body': 'Le MJ a mentionné une amulette bleue.'},
+          ],
+        },
+        onRequest: requests.add,
+      );
+      final repository = SupabaseGroupRepository(client);
 
-        final note = await repository.fetchGroupNote(
-          groupId: 'group-1',
-          characterId: 'char-1',
-        );
+      final note = await repository.fetchGroupNote(
+        groupId: 'group-1',
+        characterId: 'char-1',
+      );
 
-        expect(note.groupId, 'group-1');
-        expect(note.characterId, 'char-1');
-        expect(note.body, 'Le MJ a mentionné une amulette bleue.');
+      expect(note.groupId, 'group-1');
+      expect(note.characterId, 'char-1');
+      expect(note.body, 'Le MJ a mentionné une amulette bleue.');
 
-        final selectRequest = requests.firstWhere(
-          (request) => request.url.path.endsWith('/group_notes'),
-        );
-        expect(selectRequest.url.queryParameters['user_id'], 'eq.user-1');
-        expect(selectRequest.url.queryParameters['character_id'], isNull);
-      },
-    );
+      final selectRequest = requests.firstWhere(
+        (request) => request.url.path.endsWith('/group_notes'),
+      );
+      expect(selectRequest.url.queryParameters['user_id'], 'eq.user-1');
+      expect(selectRequest.url.queryParameters['character_id'], isNull);
+    });
 
     test(
       "aucune ligne encore enregistrée -> note vide plutôt qu'une erreur",
@@ -1070,95 +1067,86 @@ void main() {
       },
     );
 
-    test(
-      'MJ sans personnage (characterId null) : filtre tout de même sur '
-      'user_id, note vide si rien enregistré',
-      () async {
-        final requests = <http.Request>[];
-        final client = await _buildSignedInFakeClient(
-          ownerId: 'user-mj',
-          tableRows: {'group_notes': []},
-          onRequest: requests.add,
-        );
-        final repository = SupabaseGroupRepository(client);
+    test('MJ sans personnage (characterId null) : filtre tout de même sur '
+        'user_id, note vide si rien enregistré', () async {
+      final requests = <http.Request>[];
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'user-mj',
+        tableRows: {'group_notes': []},
+        onRequest: requests.add,
+      );
+      final repository = SupabaseGroupRepository(client);
 
-        final note = await repository.fetchGroupNote(groupId: 'group-1');
+      final note = await repository.fetchGroupNote(groupId: 'group-1');
 
-        expect(note.groupId, 'group-1');
-        expect(note.characterId, isNull);
-        expect(note.body, isEmpty);
+      expect(note.groupId, 'group-1');
+      expect(note.characterId, isNull);
+      expect(note.body, isEmpty);
 
-        final selectRequest = requests.firstWhere(
-          (request) => request.url.path.endsWith('/group_notes'),
-        );
-        expect(selectRequest.url.queryParameters['user_id'], 'eq.user-mj');
-      },
-    );
+      final selectRequest = requests.firstWhere(
+        (request) => request.url.path.endsWith('/group_notes'),
+      );
+      expect(selectRequest.url.queryParameters['user_id'], 'eq.user-mj');
+    });
   });
 
   group('SupabaseGroupRepository.saveGroupNote', () {
-    test(
-      'upsert {group_id, character_id, user_id, body} sur group_notes, '
-      'onConflict group_id,user_id',
-      () async {
-        final requests = <http.Request>[];
-        final client = await _buildSignedInFakeClient(
-          ownerId: 'user-1',
-          onRequest: requests.add,
-        );
-        final repository = SupabaseGroupRepository(client);
+    test('upsert {group_id, character_id, user_id, body} sur group_notes, '
+        'onConflict group_id,user_id', () async {
+      final requests = <http.Request>[];
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'user-1',
+        onRequest: requests.add,
+      );
+      final repository = SupabaseGroupRepository(client);
 
-        await repository.saveGroupNote(
-          groupId: 'group-1',
-          characterId: 'char-1',
-          body: 'Un indice dans la crypte.',
-        );
+      await repository.saveGroupNote(
+        groupId: 'group-1',
+        characterId: 'char-1',
+        body: 'Un indice dans la crypte.',
+      );
 
-        final upsertRequest = requests.firstWhere(
-          (request) => request.url.path.endsWith('/group_notes'),
-        );
-        final body = jsonDecode(upsertRequest.body) as Map<String, dynamic>;
-        expect(body['group_id'], 'group-1');
-        expect(body['character_id'], 'char-1');
-        expect(body['user_id'], 'user-1');
-        expect(body['body'], 'Un indice dans la crypte.');
-        expect(
-          upsertRequest.url.queryParameters['on_conflict'],
-          'group_id,user_id',
-        );
-      },
-    );
+      final upsertRequest = requests.firstWhere(
+        (request) => request.url.path.endsWith('/group_notes'),
+      );
+      final body = jsonDecode(upsertRequest.body) as Map<String, dynamic>;
+      expect(body['group_id'], 'group-1');
+      expect(body['character_id'], 'char-1');
+      expect(body['user_id'], 'user-1');
+      expect(body['body'], 'Un indice dans la crypte.');
+      expect(
+        upsertRequest.url.queryParameters['on_conflict'],
+        'group_id,user_id',
+      );
+    });
 
-    test(
-      'MJ sans personnage (characterId null) : upsert sans character_id, '
-      'toujours identifié par group_id,user_id',
-      () async {
-        final requests = <http.Request>[];
-        final client = await _buildSignedInFakeClient(
-          ownerId: 'user-mj',
-          onRequest: requests.add,
-        );
-        final repository = SupabaseGroupRepository(client);
+    test('MJ sans personnage (characterId null) : upsert sans character_id, '
+        'toujours identifié par group_id,user_id', () async {
+      final requests = <http.Request>[];
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'user-mj',
+        onRequest: requests.add,
+      );
+      final repository = SupabaseGroupRepository(client);
 
-        await repository.saveGroupNote(
-          groupId: 'group-1',
-          body: 'Un indice dans la crypte.',
-        );
+      await repository.saveGroupNote(
+        groupId: 'group-1',
+        body: 'Un indice dans la crypte.',
+      );
 
-        final upsertRequest = requests.firstWhere(
-          (request) => request.url.path.endsWith('/group_notes'),
-        );
-        final body = jsonDecode(upsertRequest.body) as Map<String, dynamic>;
-        expect(body['group_id'], 'group-1');
-        expect(body.containsKey('character_id'), isFalse);
-        expect(body['user_id'], 'user-mj');
-        expect(body['body'], 'Un indice dans la crypte.');
-        expect(
-          upsertRequest.url.queryParameters['on_conflict'],
-          'group_id,user_id',
-        );
-      },
-    );
+      final upsertRequest = requests.firstWhere(
+        (request) => request.url.path.endsWith('/group_notes'),
+      );
+      final body = jsonDecode(upsertRequest.body) as Map<String, dynamic>;
+      expect(body['group_id'], 'group-1');
+      expect(body.containsKey('character_id'), isFalse);
+      expect(body['user_id'], 'user-mj');
+      expect(body['body'], 'Un indice dans la crypte.');
+      expect(
+        upsertRequest.url.queryParameters['on_conflict'],
+        'group_id,user_id',
+      );
+    });
   });
 }
 
