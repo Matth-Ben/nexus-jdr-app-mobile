@@ -279,6 +279,12 @@ final class GroupTreasureFamily extends $Family
 /// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
 /// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
 /// que [myGroups].
+///
+/// [characterId] est `null` pour un MJ sans personnage (voir
+/// `GroupRepository.fetchGroupNote` : purement informatif depuis la
+/// migration `(group_id, user_id)`, jamais la clé de lecture réelle) — il a
+/// désormais lui aussi son propre carnet, comme n'importe quel membre
+/// (décision du comité de revue F02(a), `docs/retours-utilisateurs.md`).
 
 @ProviderFor(groupNote)
 final groupNoteProvider = GroupNoteFamily._();
@@ -286,6 +292,12 @@ final groupNoteProvider = GroupNoteFamily._();
 /// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
 /// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
 /// que [myGroups].
+///
+/// [characterId] est `null` pour un MJ sans personnage (voir
+/// `GroupRepository.fetchGroupNote` : purement informatif depuis la
+/// migration `(group_id, user_id)`, jamais la clé de lecture réelle) — il a
+/// désormais lui aussi son propre carnet, comme n'importe quel membre
+/// (décision du comité de revue F02(a), `docs/retours-utilisateurs.md`).
 
 final class GroupNoteProvider
     extends
@@ -298,9 +310,15 @@ final class GroupNoteProvider
   /// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
   /// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
   /// que [myGroups].
+  ///
+  /// [characterId] est `null` pour un MJ sans personnage (voir
+  /// `GroupRepository.fetchGroupNote` : purement informatif depuis la
+  /// migration `(group_id, user_id)`, jamais la clé de lecture réelle) — il a
+  /// désormais lui aussi son propre carnet, comme n'importe quel membre
+  /// (décision du comité de revue F02(a), `docs/retours-utilisateurs.md`).
   GroupNoteProvider._({
     required GroupNoteFamily super.from,
-    required ({String groupId, String characterId}) super.argument,
+    required ({String groupId, String? characterId}) super.argument,
   }) : super(
          retry: _noRetry,
          name: r'groupNoteProvider',
@@ -326,7 +344,7 @@ final class GroupNoteProvider
 
   @override
   FutureOr<GroupNote> create(Ref ref) {
-    final argument = this.argument as ({String groupId, String characterId});
+    final argument = this.argument as ({String groupId, String? characterId});
     return groupNote(
       ref,
       groupId: argument.groupId,
@@ -345,17 +363,23 @@ final class GroupNoteProvider
   }
 }
 
-String _$groupNoteHash() => r'306a217d5c3315c5bf1ba4c16c3599214ba8b131';
+String _$groupNoteHash() => r'5f2264203ed717a5423718643feb064786e42f7a';
 
 /// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
 /// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
 /// que [myGroups].
+///
+/// [characterId] est `null` pour un MJ sans personnage (voir
+/// `GroupRepository.fetchGroupNote` : purement informatif depuis la
+/// migration `(group_id, user_id)`, jamais la clé de lecture réelle) — il a
+/// désormais lui aussi son propre carnet, comme n'importe quel membre
+/// (décision du comité de revue F02(a), `docs/retours-utilisateurs.md`).
 
 final class GroupNoteFamily extends $Family
     with
         $FunctionalFamilyOverride<
           FutureOr<GroupNote>,
-          ({String groupId, String characterId})
+          ({String groupId, String? characterId})
         > {
   GroupNoteFamily._()
     : super(
@@ -369,14 +393,18 @@ final class GroupNoteFamily extends $Family
   /// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
   /// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
   /// que [myGroups].
+  ///
+  /// [characterId] est `null` pour un MJ sans personnage (voir
+  /// `GroupRepository.fetchGroupNote` : purement informatif depuis la
+  /// migration `(group_id, user_id)`, jamais la clé de lecture réelle) — il a
+  /// désormais lui aussi son propre carnet, comme n'importe quel membre
+  /// (décision du comité de revue F02(a), `docs/retours-utilisateurs.md`).
 
-  GroupNoteProvider call({
-    required String groupId,
-    required String characterId,
-  }) => GroupNoteProvider._(
-    argument: (groupId: groupId, characterId: characterId),
-    from: this,
-  );
+  GroupNoteProvider call({required String groupId, String? characterId}) =>
+      GroupNoteProvider._(
+        argument: (groupId: groupId, characterId: characterId),
+        from: this,
+      );
 
   @override
   String toString() => r'groupNoteProvider';

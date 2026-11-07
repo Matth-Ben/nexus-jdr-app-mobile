@@ -153,20 +153,22 @@ class LocalFileDataExportRepository implements DataExportRepository {
     // [GroupSummary] (résumé volontairement léger, voir sa doc de classe) —
     // il faut le détail complet du groupe pour le retrouver, via
     // `GroupDetail.currentMember` (voir sa doc de classe). `null` : MJ sans
-    // personnage ou membre orphelin (`GroupMember.isAwaitingCharacter`),
-    // aucune note possible dans ces deux cas (`group_notes.character_id`
-    // n'a alors aucune ligne).
+    // personnage (depuis F02a, voir `GroupRepository.fetchGroupNote`) ou
+    // membre orphelin (`GroupMember.isAwaitingCharacter`) — dans les deux
+    // cas, `fetchGroupNote` filtre sur `(group_id, user_id)` et non sur
+    // `character_id`, donc un MJ sans personnage peut malgré tout avoir
+    // enregistré une note : ne pas court-circuiter l'appel sur `null`, sous
+    // peine d'amputer l'export RGPD de cette note pourtant bien réelle et
+    // éditable dans l'app.
     final characterId = (await _groupRepository.fetchGroupDetail(group.id))
         .currentMember
         ?.characterId;
-    if (characterId != null) {
-      final note = await _groupRepository.fetchGroupNote(
-        groupId: group.id,
-        characterId: characterId,
-      );
-      if (note.body.isNotEmpty) {
-        json['note'] = note.body;
-      }
+    final note = await _groupRepository.fetchGroupNote(
+      groupId: group.id,
+      characterId: characterId,
+    );
+    if (note.body.isNotEmpty) {
+      json['note'] = note.body;
     }
 
     return json;

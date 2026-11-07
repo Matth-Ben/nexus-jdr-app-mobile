@@ -189,12 +189,21 @@ abstract class GroupRepository {
     required int quantity,
   });
 
-  /// Note personnelle de [characterId] pour ce groupe — onglet "Notes".
+  /// Note personnelle du joueur connecté pour ce groupe — onglet "Notes".
   /// Retourne une [GroupNote] vide (`body: ''`) tant que rien n'a encore été
   /// enregistré, même repli que [fetchGroupTreasure].
+  ///
+  /// Identifiée par `(group_id, user_id)` depuis la migration web
+  /// `20261106090000_group_notes_user_id_pk_and_character_set_null.sql`
+  /// (jamais `character_id`, qui devient purement informatif et nullable) —
+  /// c'est pourquoi [characterId] n'est ici qu'informatif (reporté sur la
+  /// [GroupNote] retournée), `null` pour un MJ sans personnage (voir
+  /// `GroupMember.isGameMaster`), qui a désormais son propre carnet comme
+  /// n'importe quel membre (décision du comité de revue F02(a),
+  /// `docs/retours-utilisateurs.md`).
   Future<GroupNote> fetchGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
   });
 
   /// Enregistre le texte intégral de la note (pas un diff/append) — même
@@ -203,9 +212,13 @@ abstract class GroupRepository {
   /// `group_notes` n'existe tant que ce membre n'a jamais enregistré de note
   /// (pas de trigger de création automatique à l'adhésion, contrairement à
   /// `group_treasure`).
+  ///
+  /// [characterId] n'est que purement informatif (voir [fetchGroupNote]) :
+  /// `null` pour un MJ sans personnage, la ligne est quand même identifiée/
+  /// upsertée par `(group_id, user_id)`.
   Future<void> saveGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
     required String body,
   });
 
@@ -694,14 +707,15 @@ class SupabaseGroupRepository implements GroupRepository {
   @override
   Future<GroupNote> fetchGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
   }) async {
+    final userId = _requireOwnerId();
     try {
       final row = await _client
           .from('group_notes')
           .select('body')
           .eq('group_id', groupId)
-          .eq('character_id', characterId)
+          .eq('user_id', userId)
           .maybeSingle();
       return GroupNote(
         groupId: groupId,
@@ -718,18 +732,18 @@ class SupabaseGroupRepository implements GroupRepository {
   @override
   Future<void> saveGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
     required String body,
   }) async {
     final userId = _requireOwnerId();
     try {
       await _client.from('group_notes').upsert({
         'group_id': groupId,
-        'character_id': characterId,
         'user_id': userId,
+        'character_id': ?characterId,
         'body': body,
         'updated_at': DateTime.now().toUtc().toIso8601String(),
-      }, onConflict: 'group_id,character_id');
+      }, onConflict: 'group_id,user_id');
     } on PostgrestException catch (error) {
       throw mapGroupError(error);
     } catch (_) {

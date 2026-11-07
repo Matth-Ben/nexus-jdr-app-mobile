@@ -119,13 +119,13 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<GroupNote> fetchGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
   }) => throw UnimplementedError();
 
   @override
   Future<void> saveGroupNote({
     required String groupId,
-    required String characterId,
+    String? characterId,
     required String body,
   }) => throw UnimplementedError();
 }
