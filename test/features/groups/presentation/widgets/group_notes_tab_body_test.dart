@@ -121,67 +121,47 @@ void main() {
     expect(find.text('Ajouter une note'), findsOneWidget);
   });
 
-  testWidgets(
-    'plusieurs entrées (avec et sans titre) : une ligne par entrée, '
-    'séparées par un Divider',
-    (tester) async {
-      await _pump(
-        tester,
-        entries: [entry2, entry1],
-        repository: fakeRepository,
-      );
+  testWidgets('plusieurs entrées (avec et sans titre) : une ligne par entrée, '
+      'séparées par un Divider', (tester) async {
+    await _pump(tester, entries: [entry2, entry1], repository: fakeRepository);
 
-      expect(find.text('Chapitre 2'), findsOneWidget);
-      expect(
-        find.text('Combat contre les gobelins de la mine.'),
-        findsOneWidget,
-      );
-      expect(find.text('8 septembre 2026 · 20:30'), findsOneWidget);
-      expect(find.text('Première séance, sans titre.'), findsOneWidget);
-      expect(find.text('1 septembre 2026 · 20:00'), findsOneWidget);
-      expect(find.byType(Divider), findsOneWidget);
-      expect(find.text('Ajouter une note'), findsOneWidget);
-    },
-  );
+    expect(find.text('Chapitre 2'), findsOneWidget);
+    expect(find.text('Combat contre les gobelins de la mine.'), findsOneWidget);
+    expect(find.text('8 septembre 2026 · 20:30'), findsOneWidget);
+    expect(find.text('Première séance, sans titre.'), findsOneWidget);
+    expect(find.text('1 septembre 2026 · 20:00'), findsOneWidget);
+    expect(find.byType(Divider), findsOneWidget);
+    expect(find.text('Ajouter une note'), findsOneWidget);
+  });
 
-  testWidgets(
-    '"Ajouter une note" ouvre la sheet ; titre + corps + Enregistrer '
-    'appelle addGroupNoteEntry',
-    (tester) async {
-      await _pump(tester, entries: const [], repository: fakeRepository);
+  testWidgets('"Ajouter une note" ouvre la sheet ; titre + corps + Enregistrer '
+      'appelle addGroupNoteEntry', (tester) async {
+    await _pump(tester, entries: const [], repository: fakeRepository);
 
-      await tester.tap(find.text('Ajouter une note'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Ajouter une note'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('AJOUTER UNE NOTE'), findsOneWidget);
+    expect(find.text('AJOUTER UNE NOTE'), findsOneWidget);
 
-      await tester.enterText(
-        find.byType(TextFormField).first,
-        'Chapitre 1',
-      );
-      await tester.enterText(
-        find.byType(TextFormField).last,
-        'Butin trouvé : 50 po.',
-      );
-      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Chapitre 1');
+    await tester.enterText(
+      find.byType(TextFormField).last,
+      'Butin trouvé : 50 po.',
+    );
+    await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+    await tester.pumpAndSettle();
 
-      expect(fakeRepository.addCallCount, 1);
-      expect(fakeRepository.lastAddedTitle, 'Chapitre 1');
-      expect(fakeRepository.lastAddedBody, 'Butin trouvé : 50 po.');
-      expect(find.text('Note ajoutée.'), findsOneWidget);
-    },
-  );
+    expect(fakeRepository.addCallCount, 1);
+    expect(fakeRepository.lastAddedTitle, 'Chapitre 1');
+    expect(fakeRepository.lastAddedBody, 'Butin trouvé : 50 po.');
+    expect(find.text('Note ajoutée.'), findsOneWidget);
+  });
 
   testWidgets(
     'tap sur une ligne ouvre "Modifier"/"Supprimer" ; "Modifier" préremplit '
     'titre+corps et appelle updateGroupNoteEntry',
     (tester) async {
-      await _pump(
-        tester,
-        entries: [entry2],
-        repository: fakeRepository,
-      );
+      await _pump(tester, entries: [entry2], repository: fakeRepository);
 
       await tester.tap(find.text('Chapitre 2'));
       await tester.pumpAndSettle();
@@ -200,7 +180,10 @@ void main() {
       final bodyField = tester.widget<TextFormField>(
         find.byType(TextFormField).last,
       );
-      expect(bodyField.controller!.text, 'Combat contre les gobelins de la mine.');
+      expect(
+        bodyField.controller!.text,
+        'Combat contre les gobelins de la mine.',
+      );
 
       await tester.enterText(
         find.byType(TextFormField).last,
@@ -261,19 +244,18 @@ void main() {
     },
   );
 
-  testWidgets(
-    '"Annuler" dans la confirmation ne supprime rien',
-    (tester) async {
-      await _pump(tester, entries: [entry1], repository: fakeRepository);
+  testWidgets('"Annuler" dans la confirmation ne supprime rien', (
+    tester,
+  ) async {
+    await _pump(tester, entries: [entry1], repository: fakeRepository);
 
-      await tester.tap(find.text('Première séance, sans titre.'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Supprimer'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('ANNULER'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Première séance, sans titre.'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Supprimer'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ANNULER'));
+    await tester.pumpAndSettle();
 
-      expect(fakeRepository.deleteCallCount, 0);
-    },
-  );
+    expect(fakeRepository.deleteCallCount, 0);
+  });
 }

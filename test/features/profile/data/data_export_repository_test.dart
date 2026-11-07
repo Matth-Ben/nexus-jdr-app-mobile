@@ -439,8 +439,9 @@ void main() {
       expect(group['founderId'], 'owner-1');
     });
 
-    test('une entrée enregistrée : `notes` incluse avec id/titre/corps/date', (
-      () async {
+    test(
+      'une entrée enregistrée : `notes` incluse avec id/titre/corps/date',
+      (() async {
         final groupRepository = _FakeGroupRepository()
           ..groups = [
             const GroupSummary(
@@ -467,8 +468,7 @@ void main() {
         final payload =
             jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
         final group =
-            (payload['groups'] as List<dynamic>).single
-                as Map<String, dynamic>;
+            (payload['groups'] as List<dynamic>).single as Map<String, dynamic>;
         final notes = group['notes'] as List<dynamic>;
 
         expect(notes, hasLength(1));
@@ -480,8 +480,8 @@ void main() {
           'Le MJ a mentionné une amulette maudite au donjon.',
         );
         expect(note['createdAt'], '2026-11-01T20:00:00.000Z');
-      }
-    ));
+      }),
+    );
 
     test('plusieurs entrées, y compris sans titre : `notes` liste TOUTES les '
         'entrées, dans l\'ordre retourné par le repository', () async {
@@ -588,8 +588,7 @@ void main() {
         final payload =
             jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
         final group =
-            (payload['groups'] as List<dynamic>).single
-                as Map<String, dynamic>;
+            (payload['groups'] as List<dynamic>).single as Map<String, dynamic>;
         final notes = group['notes'] as List<dynamic>;
 
         expect(

@@ -44,9 +44,7 @@ Future<void> showGroupNoteEntryEditSheet(
   );
   if (saved != true || !context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(entry == null ? 'Note ajoutée.' : 'Note modifiée.'),
-    ),
+    SnackBar(content: Text(entry == null ? 'Note ajoutée.' : 'Note modifiée.')),
   );
 }
 

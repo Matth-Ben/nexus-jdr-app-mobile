@@ -50,7 +50,11 @@ class GroupNotesTabBody extends ConsumerWidget {
         else
           for (var i = 0; i < entries.length; i++) ...[
             if (i > 0)
-              const Divider(height: 1, thickness: 1, color: AppColors.gaugeTrack),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: AppColors.gaugeTrack,
+              ),
             _GroupNoteEntryRow(
               entry: entries[i],
               onTap: () => _openActions(context, ref, entries[i]),
@@ -59,8 +63,7 @@ class GroupNotesTabBody extends ConsumerWidget {
         const SizedBox(height: AppSpacing.sm),
         DashedAddTile(
           label: 'Ajouter une note',
-          onTap: () =>
-              showGroupNoteEntryEditSheet(context, groupId: groupId),
+          onTap: () => showGroupNoteEntryEditSheet(context, groupId: groupId),
         ),
       ],
     );
@@ -95,25 +98,19 @@ class GroupNotesTabBody extends ConsumerWidget {
     WidgetRef ref,
     GroupNoteEntry entry,
   ) async {
-    final confirmed = await showRemoveGroupNoteEntryConfirmationDialog(
-      context,
-    );
+    final confirmed = await showRemoveGroupNoteEntryConfirmationDialog(context);
     if (confirmed != true || !context.mounted) return;
 
     try {
-      await ref
-          .read(groupRepositoryProvider)
-          .deleteGroupNoteEntry(entry.id);
+      await ref.read(groupRepositoryProvider).deleteGroupNoteEntry(entry.id);
       ref.invalidate(groupNoteEntriesProvider(groupId));
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Note supprimée.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Note supprimée.')));
     } on GroupFailure catch (failure) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(failure.message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(failure.message)));
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -216,8 +213,7 @@ class _GroupNoteEntryActionSheetContent extends StatelessWidget {
           SheetActionRow(
             icon: Icons.edit_outlined,
             label: 'Modifier',
-            onTap: () =>
-                Navigator.of(context).pop(_GroupNoteEntryAction.edit),
+            onTap: () => Navigator.of(context).pop(_GroupNoteEntryAction.edit),
           ),
           const SheetActionDivider(),
           SheetActionRow(
@@ -235,9 +231,7 @@ class _GroupNoteEntryActionSheetContent extends StatelessWidget {
 
 /// Dialogue de confirmation "Supprimer cette note ?" — calque exact de
 /// `character_journal_card.dart::showRemoveJournalEntryConfirmationDialog`.
-Future<bool?> showRemoveGroupNoteEntryConfirmationDialog(
-  BuildContext context,
-) {
+Future<bool?> showRemoveGroupNoteEntryConfirmationDialog(BuildContext context) {
   return showDialog<bool>(
     context: context,
     builder: (context) => Dialog(

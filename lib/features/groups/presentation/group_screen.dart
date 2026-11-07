@@ -39,9 +39,13 @@ import 'widgets/group_treasure_tab_body.dart';
 /// owner.
 ///
 /// Toutes les écritures (exclure un membre, quitter, réclamer de la
-/// monnaie/un objet, ajouter au butin) sont orchestrées ici — les sheets/
-/// onglets ne font que collecter l'action/l'entrée, même architecture que
-/// `CharacterDetailScreen`.
+/// monnaie/un objet, ajouter au butin) sont orchestrées ici — les sheets des
+/// onglets Membres/Butin ne font que collecter l'action/l'entrée, même
+/// architecture que `CharacterDetailScreen`. Exception : l'onglet Notes
+/// (`GroupNotesTabBody`) est un `ConsumerWidget` auto-suffisant qui appelle
+/// lui-même son repository, calque intentionnel de `CharacterJournalCard` et
+/// du patron `character_journal_entries` déjà en place pour ce chantier —
+/// voir sa doc de classe.
 ///
 /// **Membre orphelin** (`GroupMember.isAwaitingCharacter`, voir la migration
 /// web `20261016090000_group_members_orphan_character.sql`) : tant que le
@@ -441,8 +445,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         message: error is GroupFailure
             ? error.message
             : 'Impossible de charger tes notes. Réessayez.',
-        onRetry: () =>
-            ref.invalidate(groupNoteEntriesProvider(widget.groupId)),
+        onRetry: () => ref.invalidate(groupNoteEntriesProvider(widget.groupId)),
       ),
     );
   }

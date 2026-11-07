@@ -1040,67 +1040,59 @@ void main() {
       },
     );
 
-    testWidgets(
-      'échec de l\'enregistrement (GroupFailure) : bandeau d\'erreur '
-      'inline, sheet reste ouverte, jamais "Note ajoutée."',
-      (tester) async {
-        fakeRepository.detailToReturn = ownerViewDetail();
-        fakeRepository.entriesToReturn = const [];
-        fakeRepository.addNoteError = const GroupFailure(
-          'Impossible d\'enregistrer : session expirée.',
-        );
+    testWidgets('échec de l\'enregistrement (GroupFailure) : bandeau d\'erreur '
+        'inline, sheet reste ouverte, jamais "Note ajoutée."', (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.entriesToReturn = const [];
+      fakeRepository.addNoteError = const GroupFailure(
+        'Impossible d\'enregistrer : session expirée.',
+      );
 
-        await tester.pumpWidget(_buildTestWidget(fakeRepository));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('NOTES'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Ajouter une note'));
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('NOTES'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ajouter une note'));
+      await tester.pumpAndSettle();
 
-        await tester.enterText(find.byType(TextFormField).last, 'Un indice.');
-        await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
-        await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).last, 'Un indice.');
+      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+      await tester.pumpAndSettle();
 
-        expect(
-          find.text('Impossible d\'enregistrer : session expirée.'),
-          findsOneWidget,
-        );
-        expect(find.text('Note ajoutée.'), findsNothing);
-      },
-    );
+      expect(
+        find.text('Impossible d\'enregistrer : session expirée.'),
+        findsOneWidget,
+      );
+      expect(find.text('Note ajoutée.'), findsNothing);
+    });
 
-    testWidgets(
-      'tap sur une ligne -> "Supprimer" + confirmer appelle '
-      'deleteGroupNoteEntry et affiche la confirmation',
-      (tester) async {
-        fakeRepository.detailToReturn = ownerViewDetail();
-        fakeRepository.entriesToReturn = [
-          GroupNoteEntry(
-            id: 'entry-1',
-            body: 'Le MJ a mentionné une amulette bleue.',
-            createdAt: DateTime(2026, 9, 1, 20, 0),
-          ),
-        ];
+    testWidgets('tap sur une ligne -> "Supprimer" + confirmer appelle '
+        'deleteGroupNoteEntry et affiche la confirmation', (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.entriesToReturn = [
+        GroupNoteEntry(
+          id: 'entry-1',
+          body: 'Le MJ a mentionné une amulette bleue.',
+          createdAt: DateTime(2026, 9, 1, 20, 0),
+        ),
+      ];
 
-        await tester.pumpWidget(_buildTestWidget(fakeRepository));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('NOTES'));
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('NOTES'));
+      await tester.pumpAndSettle();
 
-        await tester.tap(
-          find.text('Le MJ a mentionné une amulette bleue.'),
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Supprimer'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Supprimer').last);
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Le MJ a mentionné une amulette bleue.'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Supprimer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Supprimer').last);
+      await tester.pumpAndSettle();
 
-        expect(fakeRepository.deleteNoteCallCount, 1);
-        expect(fakeRepository.lastDeletedNoteEntryId, 'entry-1');
-        expect(find.text('Note supprimée.'), findsOneWidget);
-      },
-    );
+      expect(fakeRepository.deleteNoteCallCount, 1);
+      expect(fakeRepository.lastDeletedNoteEntryId, 'entry-1');
+      expect(find.text('Note supprimée.'), findsOneWidget);
+    });
   });
 
   group('MJ sans personnage (décision du 12-13/10/2026)', () {

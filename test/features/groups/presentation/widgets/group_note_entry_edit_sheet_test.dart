@@ -110,9 +110,7 @@ void main() {
     await _pumpSheet(tester);
 
     expect(find.text('AJOUTER UNE NOTE'), findsOneWidget);
-    final fields = tester.widgetList<TextFormField>(
-      find.byType(TextFormField),
-    );
+    final fields = tester.widgetList<TextFormField>(find.byType(TextFormField));
     for (final field in fields) {
       expect(field.controller!.text, isEmpty);
     }
@@ -137,23 +135,19 @@ void main() {
     },
   );
 
-  testWidgets(
-    'titre vide (optionnel) : addGroupNoteEntry reçoit title null',
-    (tester) async {
-      final repository = await _pumpSheet(tester);
+  testWidgets('titre vide (optionnel) : addGroupNoteEntry reçoit title null', (
+    tester,
+  ) async {
+    final repository = await _pumpSheet(tester);
 
-      await tester.enterText(
-        find.byType(TextFormField).last,
-        'Note sans titre.',
-      );
-      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).last, 'Note sans titre.');
+    await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+    await tester.pumpAndSettle();
 
-      expect(repository.addCallCount, 1);
-      expect(repository.lastAddedTitle, isNull);
-      expect(repository.lastAddedBody, 'Note sans titre.');
-    },
-  );
+    expect(repository.addCallCount, 1);
+    expect(repository.lastAddedTitle, isNull);
+    expect(repository.lastAddedBody, 'Note sans titre.');
+  });
 
   testWidgets('corps vide : Enregistrer ne fait rien (aucun appel, sheet '
       'reste ouverte)', (tester) async {
@@ -220,23 +214,22 @@ void main() {
     },
   );
 
-  testWidgets(
-    'échec inattendu (pas une GroupFailure) : bandeau générique',
-    (tester) async {
-      final repository = await _pumpSheet(tester);
-      repository.addError = Exception('boom');
+  testWidgets('échec inattendu (pas une GroupFailure) : bandeau générique', (
+    tester,
+  ) async {
+    final repository = await _pumpSheet(tester);
+    repository.addError = Exception('boom');
 
-      await tester.enterText(find.byType(TextFormField).last, 'Note.');
-      await tester.pump();
-      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).last, 'Note.');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Impossible d\'enregistrer cette note. Réessayez.'),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(
+      find.text('Impossible d\'enregistrer cette note. Réessayez.'),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('"Annuler" ferme la sheet sans appeler addGroupNoteEntry', (
     tester,
@@ -250,53 +243,48 @@ void main() {
     expect(find.byType(TextFormField), findsNothing);
   });
 
-  testWidgets(
-    'mode édition (entry non nul) : titre "MODIFIER LA NOTE", champs '
-    'préremplis, appelle updateGroupNoteEntry',
-    (tester) async {
-      final repository = _FakeGroupRepository();
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            groupRepositoryProvider.overrideWithValue(repository),
-          ],
-          child: MaterialApp(
-            home: Builder(
-              builder: (context) => Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    onPressed: () => showGroupNoteEntryEditSheet(
-                      context,
-                      groupId: 'group-1',
-                      entry: GroupNoteEntry(
-                        id: 'entry-1',
-                        title: 'Chapitre 1',
-                        body: 'Note existante.',
-                        createdAt: DateTime(2026, 9, 1),
-                      ),
+  testWidgets('mode édition (entry non nul) : titre "MODIFIER LA NOTE", champs '
+      'préremplis, appelle updateGroupNoteEntry', (tester) async {
+    final repository = _FakeGroupRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [groupRepositoryProvider.overrideWithValue(repository)],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => showGroupNoteEntryEditSheet(
+                    context,
+                    groupId: 'group-1',
+                    entry: GroupNoteEntry(
+                      id: 'entry-1',
+                      title: 'Chapitre 1',
+                      body: 'Note existante.',
+                      createdAt: DateTime(2026, 9, 1),
                     ),
-                    child: const Text('Ouvrir'),
                   ),
+                  child: const Text('Ouvrir'),
                 ),
               ),
             ),
           ),
         ),
-      );
-      await tester.tap(find.text('Ouvrir'));
-      await tester.pumpAndSettle();
+      ),
+    );
+    await tester.tap(find.text('Ouvrir'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('MODIFIER LA NOTE'), findsOneWidget);
-      expect(find.text('Chapitre 1'), findsOneWidget);
-      expect(find.text('Note existante.'), findsOneWidget);
+    expect(find.text('MODIFIER LA NOTE'), findsOneWidget);
+    expect(find.text('Chapitre 1'), findsOneWidget);
+    expect(find.text('Note existante.'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+    await tester.pumpAndSettle();
 
-      expect(repository.updateCallCount, 1);
-      expect(repository.lastUpdatedEntryId, 'entry-1');
-      expect(repository.lastUpdatedTitle, 'Chapitre 1');
-      expect(repository.lastUpdatedBody, 'Note existante.');
-    },
-  );
+    expect(repository.updateCallCount, 1);
+    expect(repository.lastUpdatedEntryId, 'entry-1');
+    expect(repository.lastUpdatedTitle, 'Chapitre 1');
+    expect(repository.lastUpdatedBody, 'Note existante.');
+  });
 }
