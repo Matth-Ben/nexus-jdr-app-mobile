@@ -244,3 +244,55 @@ disposition.
     lignes `groups` sans membre) restent à supprimer directement par
     `dev-backend-supabase` -- toujours non traité, voir
     docs/dette-technique.md.
+- Pseudo-session complète Clerc (joueur) + groupe/butin/notes (MJ), scénario
+  RAW de référence `regles-dnd` (`adventure_session_cleric_groups_test.dart`,
+  07/11/2026) : **exécuté avec succès de bout en bout en conditions
+  réelles** (toutes les valeurs RAW vérifiées exactes : PV/CA/mods/JS/
+  compétences/emplacements à la création, 7 dégâts, "Soins" consomme un
+  emplacement, repos long restaure tout, montée de niveau 2 méthode PV
+  "moyenne" déterministe -> PV max 17/emplacements 3/3/"Conduit divin",
+  invitation réelle à deux comptes, butin ajouté par le MJ et réclamé par le
+  joueur jusque dans son inventaire, note de groupe du MJ sans personnage
+  F02a) -- a nécessité 12 itérations réelles sur émulateur pour stabiliser
+  le fichier (détail complet des bugs de sélecteur/casse trouvés et corrigés
+  dans les commentaires du fichier et le compte-rendu QA correspondant,
+  `docs/retours-utilisateurs.md`). `flutter test` rapporte néanmoins ce
+  fichier en échec à chaque exécution, pour une raison SANS RAPPORT avec le
+  scénario RAW lui-même : `character_list_screen.dart::_EmptyState` déborde
+  de 3,7px quand le compte MJ n'a aucun personnage (systématiquement le cas
+  dans ce scénario), et ce débordement est promu en échec de test par le
+  framework Flutter. Deux écarts produit confirmés au passage, documentés
+  sans être corrigés ici (voir le compte-rendu QA) :
+  - 1b (CA) : l'équipement de départ standard du Clerc résout sur "Chemise
+    de mailles" (CA13+Dex) plutôt que sur l'une des 3 options RAW (armure
+    d'écailles/cuir/cotte de mailles) -- CA 17 observée au lieu de 18 à
+    chaque exécution, écart de catalogue/mapping suspecté plutôt qu'un
+    simple choix par défaut.
+  - 5b (PV max après montée de niveau 2) : la fiche affiche encore,
+    environ une exécution sur deux, les valeurs du niveau 1 juste après la
+    montée de niveau alors que `character_classes.level` est déjà à jour en
+    base (confirmé par lecture directe) -- fermer/rouvrir la fiche corrige
+    l'affichage à chaque fois : défaut de rafraîchissement client après ce
+    type de montée de niveau précis, pas de perte d'écriture réelle.
+  - **Nettoyage** : réussi à la dernière exécution verte-RAW (personnage et
+    groupe supprimés directement en base, même convention que
+    `custom_inventory_item_weapon_details_test.dart`). Une exécution
+    antérieure de cette même campagne (échouée avant d'atteindre l'étape 10,
+    caractéristiques fausses dues à une première séquence de `swapUp`
+    incorrecte dans le fichier de test) a laissé un personnage de test
+    orphelin (`QA-Adventure-Clerc-1794059944973480`) -- à supprimer par
+    `dev-backend-supabase`.
+  - **Incident d'environnement sans rapport avec cette campagne** : des
+    modifications non commitées sont apparues dans le dépôt partagé en
+    cours de session sur des fichiers jamais touchés par ce test
+    (`lib/features/groups/data/group_repository.dart`,
+    `lib/features/groups/presentation/providers/group_providers.dart`,
+    `lib/features/profile/data/data_export_repository.dart`,
+    `test/features/profile/data/data_export_repository_test.dart`, et un
+    nouveau fichier `lib/features/groups/domain/group_note_entry.dart`),
+    cassant la compilation de plusieurs `test/features/groups/presentation/
+    *_test.dart` (interface `GroupRepository` étendue, doublures de test non
+    mises à jour) -- cohérent avec le risque déjà noté dans la mémoire du
+    projet ("agents parallèles même dépôt sans worktree"). Ni ces fichiers ni
+    leur cause ne relèvent de cette campagne : laissés strictement intacts,
+    signalé au chef de projet plutôt que corrigé ici.
