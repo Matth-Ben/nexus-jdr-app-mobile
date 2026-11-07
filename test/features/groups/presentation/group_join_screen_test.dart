@@ -577,6 +577,26 @@ void main() {
   });
 
   testWidgets(
+    'affiche le sous-texte signalant l\'option "MJ — sans personnage" '
+    '(correctif F01)',
+    (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Qui te représente dans ce groupe ?'), findsOneWidget);
+      expect(
+        find.text(
+          'Choisis ton personnage, ou sélectionne '
+          '« MJ — sans personnage » si tu animes la partie sans fiche.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
     '"Rejoindre" désactivé tant que le code fait moins de 6 caractères ou '
     "qu'aucun personnage n'est sélectionné",
     (tester) async {
