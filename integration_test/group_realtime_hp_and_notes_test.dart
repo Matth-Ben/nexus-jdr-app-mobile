@@ -290,7 +290,8 @@ void main() {
         sawUpdatedHp = find.text(damagedHpText).evaluate().isNotEmpty;
       }
       await settleQuickly(tester);
-      sawUpdatedHp = sawUpdatedHp || find.text(damagedHpText).evaluate().isNotEmpty;
+      sawUpdatedHp =
+          sawUpdatedHp || find.text(damagedHpText).evaluate().isNotEmpty;
       observe(
         'Etape6 - onglet Membres (MJ) apres modification PV joueur '
         '(sans navigation)',
@@ -392,13 +393,17 @@ void main() {
       await pumpUntilSettled(tester, attempts: 4);
       await tapText(tester, 'Modifier');
       await pumpUntilSettled(tester, attempts: 4);
-      const noteBody2Edited = 'Deuxième note, MODIFIÉE : le marchand était un '
+      const noteBody2Edited =
+          'Deuxième note, MODIFIÉE : le marchand était un '
           'imposteur.';
       await tester.enterText(find.byType(TextFormField).last, noteBody2Edited);
       await tester.pump();
       await tapText(tester, 'ENREGISTRER');
       await pumpUntilSettled(tester, attempts: 6);
-      observe('Etape7 - carnet apres modification de Chapitre 2', visibleTexts());
+      observe(
+        'Etape7 - carnet apres modification de Chapitre 2',
+        visibleTexts(),
+      );
       if (find.textContaining(noteBody2Edited).evaluate().isEmpty) {
         fail(
           'ECART : note "$noteTitle2" modifiée absente ("$noteBody2Edited") '
@@ -422,7 +427,10 @@ void main() {
       await pumpUntilSettled(tester, attempts: 4);
       await tapText(tester, 'Supprimer');
       await pumpUntilSettled(tester, attempts: 6);
-      observe('Etape7 - carnet apres suppression de Chapitre 3', visibleTexts());
+      observe(
+        'Etape7 - carnet apres suppression de Chapitre 3',
+        visibleTexts(),
+      );
       if (find.text(noteTitle3).evaluate().isNotEmpty) {
         fail(
           'ECART : la note "$noteTitle3" est toujours visible après sa '
