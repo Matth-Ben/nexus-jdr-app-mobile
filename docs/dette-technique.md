@@ -845,6 +845,12 @@ du carnet de notes de groupe de la section précédente.
 |---|---|---|---|---|
 | D174 | `_Header` (`lib/features/characters/presentation/character_list_screen.dart`, ligne ~533, `Row` titre + boutons groupes/profil) déborde horizontalement à largeur de surface très étroite (320px) et/ou `textScaleFactor` élevé — trouvé en reproduisant le débordement vertical de `_EmptyState` (F06, corrigé) avec `tester.binding.setSurfaceSize`, hors périmètre de ce correctif donc non traité. `_SearchEmptyState` (même fichier, juste au-dessus de `_EmptyState`) a une structure identique à l'ancien `_EmptyState` (avant le correctif F06) et est donc probablement exposé au même risque de débordement vertical — pas vérifié ni corrigé non plus. | basse (accessibilité réglages système extrêmes, pas un cas d'usage courant) | Appliquer à `_Header` et `_SearchEmptyState` le même traitement que `_EmptyState` (`LayoutBuilder`/`Flexible` selon le cas) si confirmé reproductible | Ouvert, non traité (juste tracé) |
 
+## Ajout lié à la campagne de vérification des correctifs F04-F06 (08/11/2026)
+
+| ID | Constat | Gravité | Correction | État |
+|---|---|---|---|---|
+| D175 | `integration_test/adventure_session_cleric_groups_test.dart`, étape 9 : cherche un champ de saisie visible directement sur l'onglet Notes, modèle devenu obsolète depuis la PR #230 (ancien carnet "un seul champ" remplacé par l'UI à tuiles/feuille modale `GroupNoteEntryEditSheet`). Trouvé par `simulation-utilisateur` en vérifiant que le carnet multi-entrées fonctionne (confirmé fonctionnel via un nouveau test dédié) — ce n'est pas une régression de PR #230, juste ce fichier existant qui n'a pas été mis à jour en même temps. | basse (faux signal d'échec sur un test existant, pas un bug produit) | Mettre à jour l'étape 9 de ce fichier pour utiliser le flux "Ajouter une note" → feuille modale actuel, au lieu du champ de saisie direct | Ouvert, non traité (juste tracé) |
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont

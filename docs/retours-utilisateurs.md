@@ -105,6 +105,29 @@ puis exécuté avec succès de bout en bout.
 (PR #224, mergée) — le parcours d'invitation réelle MJ↔joueur peut être
 écrit dans une prochaine campagne.
 
+### Campagne du 08/11/2026 — vérification ciblée des correctifs F04-F06 + temps réel + notes multi-entrées
+
+Scénario réel `integration_test/group_realtime_hp_and_notes_test.dart` (nouveau,
+pas encore committé) : vérifie en conditions réelles les 5 correctifs/fonctionnalités
+livrés depuis la campagne précédente (F04 équipement Clerc, F05 rafraîchissement
+après montée de niveau, F06 débordement état vide, synchro Realtime des PV de
+groupe, carnet de notes multi-entrées) — **les 5 points confirmés conformes**.
+A révélé au passage un 6ᵉ constat (F07 ci-dessous), non lié à une régression des
+correctifs vérifiés.
+
+| ID | Titre | Catégorie | Preuve | Constat | État |
+|---|---|---|---|---|---|
+| F07 | L'arrivée d'un nouveau membre dans un groupe n'est pas poussée en temps réel au MJ déjà sur l'écran Groupe | Bug/friction réel | **R** | `groupMembersRealtimeWatcherProvider` (`lib/features/groups/presentation/providers/group_providers.dart`) ne souscrit qu'aux changements de la table `characters` filtrés sur `memberCharacterIds` déjà connus — jamais à la table `group_members` elle-même. Un MJ qui garde l'écran Groupe ouvert pendant que des joueurs rejoignent un par un (scénario plausible de début de séance) ne voit pas apparaître le nouveau membre sans quitter/rouvrir l'écran, alors que la mise à jour des PV d'un membre déjà connu, elle, est bien poussée en direct depuis le correctif Realtime (`20261107090000`) — incohérence d'expérience entre les deux cas. | Ouvert — signalé à `dev-flutter`/`dev-backend-supabase` (complète un mécanisme déjà décidé et partiellement implémenté, pas une nouvelle proposition nécessitant le comité de revue). |
+
+**Nettoyage** : personnage et groupe de test créés pendant cette campagne
+confirmés supprimés (`addTearDown`, vérifié par requête REST directe
+post-run, y compris sur le run raté précédant l'ajustement de protocole).
+
+**Dette de test signalée (non traitée)** : `adventure_session_cleric_groups_test.dart`
+a une étape 9 obsolète depuis la PR #230 (ancien carnet "un seul champ visible"
+remplacé par l'UI à tuiles/feuille modale actuelle) — à mettre à jour pour éviter
+un faux signal d'échec lors d'une prochaine exécution complète de ce fichier.
+
 ## Propositions de fonctionnalité (comité de revue)
 
 ### F02 — Carnet de notes accessible à un MJ sans personnage
