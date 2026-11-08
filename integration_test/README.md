@@ -116,6 +116,57 @@ n'est pas configuré (voir
 ce second compte depuis un test — identique à `loginWithQaTestAccount`, à
 l'exception des identifiants utilisés.
 
+### Simuler une écriture concurrente sans démonter l'app (second `SupabaseClient` indépendant)
+
+Le patron `_switchAccount` ci-dessus change de compte en **démontant** l'app
+testée (retour à la liste, déconnexion, reconnexion) — inadapté dès qu'un
+scénario doit observer un écran précis **sans aucune navigation** pendant
+qu'un second compte agit en base (ex. vérifier une synchro Realtime déclenchée
+par l'écriture d'un autre utilisateur). Pour ce cas, ouvrir un second
+`SupabaseClient` indépendant de celui de l'app testée, authentifié
+directement avec les identifiants du second compte de test (voir
+`group_realtime_hp_and_notes_test.dart` pour l'exemple de référence) :
+
+```dart
+final playerClient = SupabaseClient(
+  EnvConfig.supabaseUrl,
+  EnvConfig.supabaseAnonKey,
+);
+addTearDown(() async {
+  await playerClient.dispose();
+});
+final signInResponse = await playerClient.auth.signInWithPassword(
+  email: qaTestEmailJoueur,
+  password: qaTestPasswordJoueur,
+);
+```
+
+Ce second client peut ensuite lire/écrire en base (`playerClient.from(...)`,
+`playerClient.functions.invoke(...)`) exactement comme le ferait l'app du
+second compte, sans jamais démonter ni déconnecter l'app réellement pilotée
+par `WidgetTester` (`Supabase.instance.client`, resté sur le premier compte).
+Points d'attention :
+
+- **Fermeture obligatoire** : `addTearDown(() => playerClient.dispose())`
+  dès sa création — ferme sa connexion Realtime et libère ses ressources ;
+  ne jamais laisser ce second client ouvert en fin de test.
+- **Ordre des `addTearDown`** : `flutter_test` les exécute en LIFO (le
+  dernier enregistré s'exécute en premier) — enregistrer la fermeture du
+  client (`dispose`) en PREMIER dans le test, pour qu'elle s'exécute EN
+  DERNIER, après tout nettoyage de données qui a encore besoin de ce client
+  (ex. suppression d'un personnage dont ce second compte est propriétaire).
+- **Propriétaire réel pour les suppressions** : si ce second compte est
+  propriétaire d'une ligne créée pendant le test (ex. un personnage), sa
+  suppression doit passer par CE client (`playerClient`), jamais par celui
+  de l'app testée restée sur l'autre compte — même piège RLS déjà documenté
+  plus haut (voir l'état de couverture d'`adventure_session_cleric_groups_test.dart`
+  ci-dessous : une suppression appelée par le mauvais compte échoue en
+  silence, RLS oblige, sans lever d'exception).
+- Ce second client n'est pas un repli de confort pour éviter
+  `_switchAccount` : à réserver aux scénarios qui ont explicitement besoin
+  qu'un écran reste affiché sans navigation pendant qu'un autre compte agit
+  en base.
+
 ## Données de test laissées en base
 
 Ce dossier parle au projet Supabase **distant partagé** dev/staging/prod —
