@@ -86,6 +86,17 @@ Duration? _noRetry(int retryCount, Object error) => null;
 /// [groupDetailProvider] : on utilise donc `ref.listen` (effet de bord) et on
 /// ne recrée l'abonnement que lorsque la liste de personnages à surveiller a
 /// réellement changé (un membre rejoint/quitte le groupe).
+///
+/// Depuis la correction du bug F07 (`docs/retours-utilisateurs.md`), le
+/// même canal Realtime écoute aussi `INSERT`/`DELETE` sur `group_members`
+/// pour [groupId] (voir `GroupRepository.subscribeToMemberUpdates`) : sans
+/// ce second flux, l'arrivée d'un nouveau membre (qui ne modifie jamais la
+/// table `characters` déjà surveillée) ne déclenchait jamais `onChanged`
+/// pour le MJ déjà sur cet écran — il fallait quitter/rouvrir l'écran pour
+/// voir le nouveau membre. **Effectif uniquement une fois la migration web
+/// `fix/enable-realtime-group-members` déployée** (publication de
+/// `group_members` sur `supabase_realtime`) — tant que ce n'est pas le cas,
+/// ce flux ne reçoit simplement jamais d'évènement, sans régression.
 @riverpod
 void groupMembersRealtimeWatcher(Ref ref, String groupId) {
   final repository = ref.watch(groupRepositoryProvider);
@@ -107,6 +118,7 @@ void groupMembersRealtimeWatcher(Ref ref, String groupId) {
     final previousSubscription = subscription;
     subscribedCharacterIds = characterIds;
     subscription = repository.subscribeToMemberUpdates(
+      groupId: groupId,
       characterIds: characterIds,
       onChanged: () {
         if (ref.mounted) ref.invalidate(groupDetailProvider(groupId));

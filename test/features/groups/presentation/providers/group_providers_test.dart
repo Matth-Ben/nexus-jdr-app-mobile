@@ -11,6 +11,20 @@
 //   loading -> data de `groupDetailProvider` (ex. un membre dont les PV
 //   changent), voir problème B ;
 // - `cancel()` doit être appelé à la disposition du `ProviderContainer`.
+//
+// Bug F07 (`docs/retours-utilisateurs.md`) : `GroupRepository
+// .subscribeToMemberUpdates` écoute désormais aussi `INSERT`/`DELETE` sur
+// `group_members` (filtré par `groupId`) en plus de `UPDATE` sur
+// `characters` — la construction réelle du filtre Postgres est du ressort
+// de `SupabaseGroupRepository` (non testée ici, pas de mock du SDK Realtime
+// dans ce dépôt), mais ce fichier vérifie : (1) que `groupId` est bien
+// transmis au repository (sans quoi celui-ci ne pourrait pas construire ce
+// second filtre) et (2) que l'arrivée d'un nouveau membre — simulée par le
+// même `onChanged` générique, puisque le double de `GroupRepository` ne
+// distingue pas la source du changement, exactement comme la vraie
+// implémentation qui relaie les deux canaux sur le même callback — invalide
+// bien `groupDetailProvider` et fait apparaître le nouveau membre sans que
+// le MJ ait besoin de quitter/rouvrir l'écran "Groupe".
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -57,6 +71,13 @@ void main() {
 
       expect(fakeRepository.subscribeCallCount, 1);
       expect(fakeRepository.lastSubscribedCharacterIds, ['char-a', 'char-b']);
+      expect(
+        fakeRepository.subscribedGroupIds,
+        ['group-1'],
+        reason:
+            'groupId doit être transmis au repository (F07) pour qu\'il '
+            'puisse filtrer le canal group_members',
+      );
       expect(fakeRepository.fetchGroupDetailCallCount, 1);
 
       fakeRepository.lastOnChanged!();
@@ -66,6 +87,55 @@ void main() {
         fakeRepository.fetchGroupDetailCallCount,
         2,
         reason: 'onChanged doit invalider groupDetailProvider(groupId)',
+      );
+    });
+
+    test('un évènement de type "nouveau membre" (INSERT group_members, F07) '
+        'invalide groupDetailProvider et fait apparaître le membre sans '
+        'quitter l\'écran', () async {
+      // Au départ, le MJ est seul sur l'écran "Groupe" : un seul membre
+      // résolu par groupDetailProvider.
+      var memberIds = const ['char-a'];
+      fakeRepository.detailBuilder = () => _detail(memberIds: memberIds);
+
+      final states = <GroupDetail>[];
+      container.listen(groupDetailProvider(groupId), (previous, next) {
+        final value = next.value;
+        if (value != null) states.add(value);
+      }, fireImmediately: true);
+
+      container.listen(
+        groupMembersRealtimeWatcherProvider(groupId),
+        (previous, next) {},
+        fireImmediately: true,
+      );
+      await pumpEventQueue();
+
+      expect(states, hasLength(1));
+      expect(states.single.members, hasLength(1));
+
+      // Un nouveau membre rejoint le groupe (INSERT sur `group_members`,
+      // non déployé en prod au moment de ce correctif — voir la doc de
+      // `GroupRepository.subscribeToMemberUpdates`) : côté client, cet
+      // évènement arrive sur le même `onChanged` que les mises à jour de
+      // PV, puisque les deux canaux relaient vers le même callback.
+      memberIds = const ['char-a', 'char-b'];
+      fakeRepository.lastOnChanged!();
+      await pumpEventQueue();
+
+      expect(
+        fakeRepository.fetchGroupDetailCallCount,
+        2,
+        reason:
+            'un évènement group_members doit invalider groupDetailProvider '
+            'exactement comme un évènement characters',
+      );
+      expect(
+        states.last.members,
+        hasLength(2),
+        reason:
+            'le MJ déjà sur l\'écran "Groupe" doit voir apparaître le '
+            'nouveau membre sans quitter/rouvrir l\'écran (F07)',
       );
     });
 
@@ -220,13 +290,17 @@ class _FakeGroupRepository implements GroupRepository {
     return detailBuilder!();
   }
 
+  List<String> subscribedGroupIds = [];
+
   @override
   GroupRealtimeSubscription subscribeToMemberUpdates({
+    required String groupId,
     required List<String> characterIds,
     required void Function() onChanged,
   }) {
     subscribeCallCount++;
     lastSubscribedCharacterIds = characterIds;
+    subscribedGroupIds.add(groupId);
     lastOnChanged = onChanged;
     final subscription = _RecordingSubscription();
     subscriptions.add(subscription);

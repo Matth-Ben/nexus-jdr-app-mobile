@@ -239,14 +239,24 @@ abstract class GroupRepository {
   /// sheet d'actions d'une ligne de l'onglet "Notes".
   Future<void> deleteGroupNoteEntry(String entryId);
 
-  /// S'abonne (Supabase Realtime, `postgres_changes` sur `characters`,
-  /// filtré à [characterIds]) aux mises à jour des personnages membres du
-  /// groupe courant — voir `presentation/providers/group_providers.dart` pour
-  /// l'abonnement/désabonnement à l'entrée/la sortie de l'écran "Groupe".
-  /// [onChanged] est appelé sans argument à chaque évènement `UPDATE` reçu :
-  /// c'est à l'appelant de rafraîchir sa propre source de vérité (jamais de
-  /// mise à jour optimiste construite depuis le payload brut ici).
+  /// S'abonne (Supabase Realtime, `postgres_changes`) à deux sources sur le
+  /// même canal — voir `presentation/providers/group_providers.dart` pour
+  /// l'abonnement/désabonnement à l'entrée/la sortie de l'écran "Groupe" :
+  /// - `UPDATE` sur `characters`, filtré à [characterIds] : mises à jour des
+  ///   personnages déjà membres (PV, statut...) ;
+  /// - `INSERT`/`DELETE` sur `group_members`, filtré à [groupId] : arrivée/
+  ///   départ d'un membre (bug F07, `docs/retours-utilisateurs.md`) — table
+  ///   publiée sur `supabase_realtime` par la migration web
+  ///   `fix/enable-realtime-group-members` ; **sans effet tant que cette
+  ///   migration n'est pas déployée**, Postgres Changes ne diffusant que les
+  ///   tables explicitement publiées.
+  ///
+  /// [onChanged] est appelé sans argument à chaque évènement reçu (des deux
+  /// sources) : c'est à l'appelant de rafraîchir sa propre source de vérité
+  /// (jamais de mise à jour optimiste construite depuis le payload brut
+  /// ici).
   GroupRealtimeSubscription subscribeToMemberUpdates({
+    required String groupId,
     required List<String> characterIds,
     required void Function() onChanged,
   });
@@ -828,12 +838,14 @@ class SupabaseGroupRepository implements GroupRepository {
 
   @override
   GroupRealtimeSubscription subscribeToMemberUpdates({
+    required String groupId,
     required List<String> characterIds,
     required void Function() onChanged,
   }) {
-    if (characterIds.isEmpty) {
-      return _NoopGroupRealtimeSubscription();
-    }
+    // Contrairement au canal `characters` ci-dessous, le canal
+    // `group_members` reste utile même sans aucun membre déjà connu (groupe
+    // qui vient d'être créé/rejoint) : c'est justement l'arrivée d'un
+    // premier membre qu'il doit signaler. Jamais de retour anticipé ici.
 
     // Nom de canal unique par abonnement (horodaté) : évite toute collision
     // si un abonnement précédent n'a pas encore fini de se désabonner (ex.
@@ -841,17 +853,41 @@ class SupabaseGroupRepository implements GroupRepository {
     final channel = _client.channel(
       'group-members-${DateTime.now().microsecondsSinceEpoch}',
     );
-    channel.onPostgresChanges(
-      event: PostgresChangeEvent.update,
-      schema: 'public',
-      table: 'characters',
-      filter: PostgresChangeFilter(
-        type: PostgresChangeFilterType.inFilter,
-        column: 'id',
-        value: characterIds,
-      ),
-      callback: (payload) => onChanged(),
-    );
+    if (characterIds.isNotEmpty) {
+      channel.onPostgresChanges(
+        event: PostgresChangeEvent.update,
+        schema: 'public',
+        table: 'characters',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.inFilter,
+          column: 'id',
+          value: characterIds,
+        ),
+        callback: (payload) => onChanged(),
+      );
+    }
+    // Bug F07 (`docs/retours-utilisateurs.md`) : l'arrivée (INSERT) ou le
+    // départ (DELETE, exclusion/désertion) d'un membre n'est détectable que
+    // sur `group_members` elle-même — un `INSERT` ne touche jamais la table
+    // `characters` déjà surveillée ci-dessus. Deux souscriptions distinctes
+    // (événement unique chacune) sur le même canal plutôt qu'une regroupée :
+    // `PostgresChangeEvent` ne porte qu'une seule valeur par appel côté SDK.
+    for (final event in [
+      PostgresChangeEvent.insert,
+      PostgresChangeEvent.delete,
+    ]) {
+      channel.onPostgresChanges(
+        event: event,
+        schema: 'public',
+        table: 'group_members',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'group_id',
+          value: groupId,
+        ),
+        callback: (payload) => onChanged(),
+      );
+    }
     channel.subscribe();
     return _RealtimeChannelSubscription(_client, channel);
   }
@@ -922,11 +958,4 @@ class _RealtimeChannelSubscription implements GroupRealtimeSubscription {
   Future<void> cancel() async {
     await _client.removeChannel(_channel);
   }
-}
-
-/// Aucun canal ouvert (liste de personnages vide, ex. groupe sans membre
-/// résolu) — `cancel()` ne fait rien.
-class _NoopGroupRealtimeSubscription implements GroupRealtimeSubscription {
-  @override
-  Future<void> cancel() async {}
 }
