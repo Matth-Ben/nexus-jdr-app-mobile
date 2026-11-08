@@ -842,10 +842,14 @@ class SupabaseGroupRepository implements GroupRepository {
     required List<String> characterIds,
     required void Function() onChanged,
   }) {
-    // Contrairement au canal `characters` ci-dessous, le canal
-    // `group_members` reste utile même sans aucun membre déjà connu (groupe
-    // qui vient d'être créé/rejoint) : c'est justement l'arrivée d'un
-    // premier membre qu'il doit signaler. Jamais de retour anticipé ici.
+    // Pas de retour anticipé sur `characterIds` vide ici : en pratique ce
+    // cas n'est jamais atteint. L'unique appelant, `groupMembersRealtimeWatcher`
+    // (`group_providers.dart`), retourne lui-même avant d'appeler cette
+    // méthode dès que `characterIds` est null ou vide, et `GroupDetail`
+    // ne peut de toute façon jamais exposer de liste vide une fois chargé
+    // (le créateur du groupe en est toujours membre). Le bloc
+    // `if (characterIds.isNotEmpty)` ci-dessous reste donc une garde
+    // défensive, pas un cas réellement exercé.
 
     // Nom de canal unique par abonnement (horodaté) : évite toute collision
     // si un abonnement précédent n'a pas encore fini de se désabonner (ex.
