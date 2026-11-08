@@ -11,6 +11,7 @@ Map<String, dynamic> _row({
   Map<String, dynamic>? character,
 }) {
   return {
+    'id': 'row-$userId',
     'character_id': characterId,
     'user_id': userId,
     'role': role,
@@ -58,6 +59,22 @@ void main() {
   });
 
   group('GroupMemberRowMapper.toGroupMember', () {
+    test('lit group_members.id dans membershipId (F08)', () {
+      final withCharacter = GroupMemberRowMapper.toGroupMember(
+        _row(character: {}),
+        raceNames: const {},
+        classNames: const {},
+      );
+      final withoutCharacter = GroupMemberRowMapper.toGroupMember(
+        _row(characterId: null, userId: 'user-2', isGameMaster: true),
+        raceNames: const {},
+        classNames: const {},
+      );
+
+      expect(withCharacter.membershipId, 'row-user-1');
+      expect(withoutCharacter.membershipId, 'row-user-2');
+    });
+
     test('mappe une ligne complète, classe primaire résolue', () {
       final row = _row(
         role: 'owner',

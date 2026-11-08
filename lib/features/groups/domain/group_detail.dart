@@ -36,6 +36,12 @@ abstract class GroupDetail with _$GroupDetail {
 
   GroupRole get currentUserRole => currentMember?.role ?? GroupRole.membre;
 
+  /// Identifiants des lignes `group_members` ([GroupMember.membershipId])
+  /// des membres actuels — voir `GroupRepository.subscribeToMemberUpdates`.
+  Set<String> get memberRowIds => {
+    for (final member in members) ?member.membershipId,
+  };
+
   /// Identifiants de personnage de tous les membres — voir
   /// `GroupRepository.subscribeToMemberUpdates`. Un membre MJ sans
   /// personnage ([GroupMember.isGameMaster]) n'a pas de `characterId` : on

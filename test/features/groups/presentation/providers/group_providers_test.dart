@@ -139,6 +139,54 @@ void main() {
       );
     });
 
+    test('un DELETE group_members (F08) dont l\'id est celui d\'un membre '
+        'connu invalide groupDetailProvider : le membre disparaît', () async {
+      var memberIds = const ['char-a', 'char-b'];
+      fakeRepository.detailBuilder = () => _detail(memberIds: memberIds);
+
+      final states = <GroupDetail>[];
+      container.listen(groupDetailProvider(groupId), (previous, next) {
+        final value = next.value;
+        if (value != null) states.add(value);
+      }, fireImmediately: true);
+      container.listen(
+        groupMembersRealtimeWatcherProvider(groupId),
+        (previous, next) {},
+        fireImmediately: true,
+      );
+      await pumpEventQueue();
+      expect(states.last.members, hasLength(2));
+
+      // Le joueur 'row-1' quitte le groupe : Realtime ne fournit que l'id
+      // (REPLICA IDENTITY DEFAULT), jamais group_id.
+      memberIds = const ['char-a'];
+      fakeRepository.simulateMemberDelete({'id': 'row-1'});
+      await pumpEventQueue();
+
+      expect(fakeRepository.fetchGroupDetailCallCount, 2);
+      expect(states.last.members, hasLength(1));
+    });
+
+    test('un DELETE group_members (F08) dont l\'id est inconnu (autre '
+        'groupe) ou absent n\'invalide pas groupDetailProvider', () async {
+      fakeRepository.detailBuilder = () =>
+          _detail(memberIds: const ['char-a', 'char-b']);
+
+      container.listen(
+        groupMembersRealtimeWatcherProvider(groupId),
+        (previous, next) {},
+        fireImmediately: true,
+      );
+      await pumpEventQueue();
+      expect(fakeRepository.fetchGroupDetailCallCount, 1);
+
+      fakeRepository.simulateMemberDelete({'id': 'row-other-group'});
+      fakeRepository.simulateMemberDelete(<String, dynamic>{});
+      await pumpEventQueue();
+
+      expect(fakeRepository.fetchGroupDetailCallCount, 1);
+    });
+
     test('onChanged appelé après démontage du provider ne lève pas '
         '(garde ref.mounted, problème A)', () async {
       fakeRepository.detailBuilder = () => _detail(memberIds: const ['char-a']);
@@ -247,6 +295,7 @@ GroupDetail _detail({required List<String> memberIds, int firstMemberHp = 10}) {
     members: [
       for (var i = 0; i < memberIds.length; i++)
         GroupMember(
+          membershipId: 'row-$i',
           characterId: memberIds[i],
           userId: 'user-$i',
           role: i == 0 ? GroupRole.owner : GroupRole.membre,
@@ -282,6 +331,7 @@ class _FakeGroupRepository implements GroupRepository {
   int subscribeCallCount = 0;
   List<String>? lastSubscribedCharacterIds;
   void Function()? lastOnChanged;
+  bool Function(String)? lastIsKnownMembershipId;
   final List<_RecordingSubscription> subscriptions = [];
 
   @override
@@ -296,15 +346,25 @@ class _FakeGroupRepository implements GroupRepository {
   GroupRealtimeSubscription subscribeToMemberUpdates({
     required String groupId,
     required List<String> characterIds,
+    required bool Function(String membershipId) isKnownMembershipId,
     required void Function() onChanged,
   }) {
     subscribeCallCount++;
     lastSubscribedCharacterIds = characterIds;
     subscribedGroupIds.add(groupId);
     lastOnChanged = onChanged;
+    lastIsKnownMembershipId = isKnownMembershipId;
     final subscription = _RecordingSubscription();
     subscriptions.add(subscription);
     return subscription;
+  }
+
+  /// Reproduit le callback `DELETE` de `SupabaseGroupRepository` (même
+  /// fonction de décision), le SDK Realtime n'étant pas mockable (D176).
+  void simulateMemberDelete(Map<String, dynamic> oldRecord) {
+    if (shouldRefreshOnMemberDelete(oldRecord, lastIsKnownMembershipId!)) {
+      lastOnChanged!();
+    }
   }
 
   @override

@@ -135,4 +135,28 @@ void main() {
 
     expect(detail.memberCharacterIds, ['char-1', 'user-mj']);
   });
+
+  test('memberRowIds expose les group_members.id connus, sans les null', () {
+    final detail = GroupDetail(
+      id: 'group-1',
+      name: 'Les Lames',
+      ownerId: 'user-owner',
+      inviteCode: 'AB3F7K2M',
+      currentUserId: 'user-owner',
+      members: [
+        _member(
+          characterId: 'char-1',
+          userId: 'user-1',
+          role: GroupRole.owner,
+        ).copyWith(membershipId: 'row-1'),
+        _member(
+          characterId: 'char-2',
+          userId: 'user-2',
+          role: GroupRole.membre,
+        ),
+      ],
+    );
+
+    expect(detail.memberRowIds, {'row-1'});
+  });
 }

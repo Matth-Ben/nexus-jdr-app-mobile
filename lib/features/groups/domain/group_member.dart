@@ -42,6 +42,13 @@ abstract class GroupMember with _$GroupMember {
   const GroupMember._();
 
   const factory GroupMember({
+    /// `group_members.id` (clé primaire de la ligne d'adhésion). Seule
+    /// information que Supabase Realtime fournit pour un `DELETE` de cette
+    /// table (REPLICA IDENTITY DEFAULT, voir
+    /// `GroupRepository.subscribeToMemberUpdates`) : sert à reconnaître le
+    /// départ d'un membre du groupe courant. `null` si la ligne source ne
+    /// l'exposait pas.
+    String? membershipId,
     String? characterId,
     required String userId,
     required GroupRole role,
