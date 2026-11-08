@@ -851,6 +851,12 @@ du carnet de notes de groupe de la section précédente.
 |---|---|---|---|---|
 | D175 | `integration_test/adventure_session_cleric_groups_test.dart`, étape 9 : cherche un champ de saisie visible directement sur l'onglet Notes, modèle devenu obsolète depuis la PR #230 (ancien carnet "un seul champ" remplacé par l'UI à tuiles/feuille modale `GroupNoteEntryEditSheet`). Trouvé par `simulation-utilisateur` en vérifiant que le carnet multi-entrées fonctionne (confirmé fonctionnel via un nouveau test dédié) — ce n'est pas une régression de PR #230, juste ce fichier existant qui n'a pas été mis à jour en même temps. | basse (faux signal d'échec sur un test existant, pas un bug produit) | Mettre à jour l'étape 9 de ce fichier pour utiliser le flux "Ajouter une note" → feuille modale actuel, au lieu du champ de saisie direct | Ouvert, non traité (juste tracé) |
 
+## Ajout lié au correctif F07 (détection temps réel arrivée/départ d'un membre, 08/11/2026)
+
+| ID | Constat | Gravité | Correction | État |
+|---|---|---|---|---|
+| D176 | `SupabaseGroupRepository.subscribeToMemberUpdates` (`lib/features/groups/data/group_repository.dart`) : la logique Realtime ajoutée par F07 (boucle `INSERT`/`DELETE` sur `group_members`, filtre `eq group_id`) n'est testée à aucun niveau — ce dépôt n'a pas de mock du SDK Realtime Supabase (`RealtimeChannel`/`onPostgresChanges`). Signalé par `code-reviewer` en relisant la PR #232. | basse (pas de perte de données ni de faille de sécurité, juste un manque de test unitaire sur une mécanique déjà en production) | Introduire un double/mock du SDK Realtime Supabase (même esprit que D17/D80 pour `CharacterRepository`/`GroupRepository`) permettant de vérifier l'abonnement aux événements `insert`/`delete` et le filtre `group_id`, sans dépendre d'une vraie connexion Realtime | Ouvert, non traité (juste tracé) |
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont

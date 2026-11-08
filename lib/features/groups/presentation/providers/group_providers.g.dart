@@ -533,6 +533,17 @@ final class GroupInvitePreviewFamily extends $Family
 /// [groupDetailProvider] : on utilise donc `ref.listen` (effet de bord) et on
 /// ne recrée l'abonnement que lorsque la liste de personnages à surveiller a
 /// réellement changé (un membre rejoint/quitte le groupe).
+///
+/// Depuis la correction du bug F07 (`docs/retours-utilisateurs.md`), le
+/// même canal Realtime écoute aussi `INSERT`/`DELETE` sur `group_members`
+/// pour [groupId] (voir `GroupRepository.subscribeToMemberUpdates`) : sans
+/// ce second flux, l'arrivée d'un nouveau membre (qui ne modifie jamais la
+/// table `characters` déjà surveillée) ne déclenchait jamais `onChanged`
+/// pour le MJ déjà sur cet écran — il fallait quitter/rouvrir l'écran pour
+/// voir le nouveau membre. **Effectif uniquement une fois la migration web
+/// `fix/enable-realtime-group-members` déployée** (publication de
+/// `group_members` sur `supabase_realtime`) — tant que ce n'est pas le cas,
+/// ce flux ne reçoit simplement jamais d'évènement, sans régression.
 
 @ProviderFor(groupMembersRealtimeWatcher)
 final groupMembersRealtimeWatcherProvider =
@@ -559,6 +570,17 @@ final groupMembersRealtimeWatcherProvider =
 /// [groupDetailProvider] : on utilise donc `ref.listen` (effet de bord) et on
 /// ne recrée l'abonnement que lorsque la liste de personnages à surveiller a
 /// réellement changé (un membre rejoint/quitte le groupe).
+///
+/// Depuis la correction du bug F07 (`docs/retours-utilisateurs.md`), le
+/// même canal Realtime écoute aussi `INSERT`/`DELETE` sur `group_members`
+/// pour [groupId] (voir `GroupRepository.subscribeToMemberUpdates`) : sans
+/// ce second flux, l'arrivée d'un nouveau membre (qui ne modifie jamais la
+/// table `characters` déjà surveillée) ne déclenchait jamais `onChanged`
+/// pour le MJ déjà sur cet écran — il fallait quitter/rouvrir l'écran pour
+/// voir le nouveau membre. **Effectif uniquement une fois la migration web
+/// `fix/enable-realtime-group-members` déployée** (publication de
+/// `group_members` sur `supabase_realtime`) — tant que ce n'est pas le cas,
+/// ce flux ne reçoit simplement jamais d'évènement, sans régression.
 
 final class GroupMembersRealtimeWatcherProvider
     extends $FunctionalProvider<void, void, void>
@@ -584,6 +606,17 @@ final class GroupMembersRealtimeWatcherProvider
   /// [groupDetailProvider] : on utilise donc `ref.listen` (effet de bord) et on
   /// ne recrée l'abonnement que lorsque la liste de personnages à surveiller a
   /// réellement changé (un membre rejoint/quitte le groupe).
+  ///
+  /// Depuis la correction du bug F07 (`docs/retours-utilisateurs.md`), le
+  /// même canal Realtime écoute aussi `INSERT`/`DELETE` sur `group_members`
+  /// pour [groupId] (voir `GroupRepository.subscribeToMemberUpdates`) : sans
+  /// ce second flux, l'arrivée d'un nouveau membre (qui ne modifie jamais la
+  /// table `characters` déjà surveillée) ne déclenchait jamais `onChanged`
+  /// pour le MJ déjà sur cet écran — il fallait quitter/rouvrir l'écran pour
+  /// voir le nouveau membre. **Effectif uniquement une fois la migration web
+  /// `fix/enable-realtime-group-members` déployée** (publication de
+  /// `group_members` sur `supabase_realtime`) — tant que ce n'est pas le cas,
+  /// ce flux ne reçoit simplement jamais d'évènement, sans régression.
   GroupMembersRealtimeWatcherProvider._({
     required GroupMembersRealtimeWatcherFamily super.from,
     required String super.argument,
@@ -637,7 +670,7 @@ final class GroupMembersRealtimeWatcherProvider
 }
 
 String _$groupMembersRealtimeWatcherHash() =>
-    r'8ee5a634d5951a399219bd9deeb2083d0ab0935c';
+    r'29b2a25b87651424e917a1a8e6cd73b83e4d979f';
 
 /// Abonnement Realtime aux membres du groupe [groupId] (voir
 /// `GroupRepository.subscribeToMemberUpdates`) — provider "à effet de bord
@@ -660,6 +693,17 @@ String _$groupMembersRealtimeWatcherHash() =>
 /// [groupDetailProvider] : on utilise donc `ref.listen` (effet de bord) et on
 /// ne recrée l'abonnement que lorsque la liste de personnages à surveiller a
 /// réellement changé (un membre rejoint/quitte le groupe).
+///
+/// Depuis la correction du bug F07 (`docs/retours-utilisateurs.md`), le
+/// même canal Realtime écoute aussi `INSERT`/`DELETE` sur `group_members`
+/// pour [groupId] (voir `GroupRepository.subscribeToMemberUpdates`) : sans
+/// ce second flux, l'arrivée d'un nouveau membre (qui ne modifie jamais la
+/// table `characters` déjà surveillée) ne déclenchait jamais `onChanged`
+/// pour le MJ déjà sur cet écran — il fallait quitter/rouvrir l'écran pour
+/// voir le nouveau membre. **Effectif uniquement une fois la migration web
+/// `fix/enable-realtime-group-members` déployée** (publication de
+/// `group_members` sur `supabase_realtime`) — tant que ce n'est pas le cas,
+/// ce flux ne reçoit simplement jamais d'évènement, sans régression.
 
 final class GroupMembersRealtimeWatcherFamily extends $Family
     with $FunctionalFamilyOverride<void, String> {
@@ -693,6 +737,17 @@ final class GroupMembersRealtimeWatcherFamily extends $Family
   /// [groupDetailProvider] : on utilise donc `ref.listen` (effet de bord) et on
   /// ne recrée l'abonnement que lorsque la liste de personnages à surveiller a
   /// réellement changé (un membre rejoint/quitte le groupe).
+  ///
+  /// Depuis la correction du bug F07 (`docs/retours-utilisateurs.md`), le
+  /// même canal Realtime écoute aussi `INSERT`/`DELETE` sur `group_members`
+  /// pour [groupId] (voir `GroupRepository.subscribeToMemberUpdates`) : sans
+  /// ce second flux, l'arrivée d'un nouveau membre (qui ne modifie jamais la
+  /// table `characters` déjà surveillée) ne déclenchait jamais `onChanged`
+  /// pour le MJ déjà sur cet écran — il fallait quitter/rouvrir l'écran pour
+  /// voir le nouveau membre. **Effectif uniquement une fois la migration web
+  /// `fix/enable-realtime-group-members` déployée** (publication de
+  /// `group_members` sur `supabase_realtime`) — tant que ce n'est pas le cas,
+  /// ce flux ne reçoit simplement jamais d'évènement, sans régression.
 
   GroupMembersRealtimeWatcherProvider call(String groupId) =>
       GroupMembersRealtimeWatcherProvider._(argument: groupId, from: this);

@@ -106,6 +106,7 @@ class _FakeGroupRepository implements GroupRepository {
 
   @override
   GroupRealtimeSubscription subscribeToMemberUpdates({
+    required String groupId,
     required List<String> characterIds,
     required void Function() onChanged,
   }) => _NoopSubscription();
