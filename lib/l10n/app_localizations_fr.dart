@@ -1401,6 +1401,9 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get characterVitalsCardZeroHpLabel => 'À 0 PV';
+
+  @override
   String get characterVitalsCardXpLabel => 'EXPÉRIENCE';
 
   @override
@@ -3067,18 +3070,18 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucun sort sur cette fiche pour l\'instant. Pour les classes qui lancent des sorts, ils se choisissent depuis l\'assistant de création ou à la montée de niveau.';
 
   @override
-  String get characterSpellsTabBodyNonCasterTitle =>
-      'Cette classe ne lance pas de sorts';
+  String get characterSpellsTabBodyNonCasterMessage =>
+      'Ce personnage ne lance pas de sorts.';
 
   @override
-  String get characterSpellsTabBodyNonCasterDefaultClassName => 'cette classe';
+  String get characterSpellsTabBodyResourcesTitle => 'RESSOURCES';
 
   @override
-  String characterSpellsTabBodyNonCasterBody(
-    String characterName,
-    String className,
-  ) {
-    return '$characterName est $className — hors archétype dédié (ex. Chevalier occulte), cette classe ne dispose pas d\'emplacements de sorts. Cet onglet reste accessible par cohérence de navigation, mais restera vide pour ce personnage.';
+  String get characterSpellsTabBodySlotsCardTitle => 'EMPLACEMENTS DE SORTS';
+
+  @override
+  String characterSpellsTabBodySlotsLevelLabel(int level) {
+    return 'Niv. $level';
   }
 
   @override

@@ -16,9 +16,9 @@ import 'spell_action_sheet.dart';
 import 'spell_info_panel.dart';
 
 /// Section "SORTS" de l'onglet "Sorts" : les sorts connus/préparés du
-/// personnage, groupés par niveau (0 = "Sorts mineurs"), avec les
-/// emplacements disponibles du niveau affichés en pastilles à côté du titre
-/// de chaque niveau ≥ 1.
+/// personnage, groupés par niveau (0 = "Sorts mineurs"). Les
+/// emplacements de chaque niveau ne sont plus ici : ils vivent dans la carte
+/// "Emplacements de sorts" de `character_spells_tab_body.dart`.
 ///
 /// Chaque sort (`_SpellRow`) est cliquable, ouvrant directement le panneau
 /// "Infos" ([showSpellInfoPanel], qui porte déjà son propre bouton
@@ -50,9 +50,8 @@ class CharacterSpellsSection extends StatelessWidget {
 
   final List<SpellLevelGroup> groups;
 
-  /// Emplacements de sorts par niveau — indexé par niveau dans [build] pour
-  /// afficher les pastilles du bon niveau à côté de chaque titre de groupe,
-  /// et transmis tel quel à [showSpellInfoPanel] (calcul d'éligibilité).
+  /// Emplacements de sorts par niveau, transmis tels quels à
+  /// [showSpellInfoPanel] (calcul d'éligibilité).
   final List<CharacterSpellSlot> spellSlots;
 
   /// Magie de pacte de l'Occultiste (`CharacterDetail.pactSpellSlot`), `null`
@@ -87,7 +86,6 @@ class CharacterSpellsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final slotsByLevel = {for (final slot in spellSlots) slot.level: slot};
     final hasPact = pactSlot != null && pactSlot!.total > 0;
     // La carte "SORTS" ne porte plus que le bloc "Magie de pacte" (le
     // compteur de sorts préparés vit désormais dans
@@ -140,7 +138,6 @@ class CharacterSpellsSection extends StatelessWidget {
           if (hasPact || i > 0) const SizedBox(height: AppSpacing.md),
           _SpellLevelGroupSection(
             group: groups[i],
-            slot: slotsByLevel[groups[i].level],
             spellSlots: spellSlots,
             pactSlot: pactSlot,
             onCastSpell: onCastSpell,
@@ -190,7 +187,6 @@ class _PactSlotBanner extends StatelessWidget {
 class _SpellLevelGroupSection extends StatelessWidget {
   const _SpellLevelGroupSection({
     required this.group,
-    required this.slot,
     required this.spellSlots,
     this.pactSlot,
     required this.onCastSpell,
@@ -199,7 +195,6 @@ class _SpellLevelGroupSection extends StatelessWidget {
   });
 
   final SpellLevelGroup group;
-  final CharacterSpellSlot? slot;
   final List<CharacterSpellSlot> spellSlots;
   final CharacterSpellSlot? pactSlot;
   final CastSpellCallback onCastSpell;
@@ -208,13 +203,11 @@ class _SpellLevelGroupSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Les pastilles d'emplacement n'ont de sens qu'à partir du niveau 1 (les
-    // sorts mineurs, niveau 0, ne consomment jamais d'emplacement) et
-    // seulement si des emplacements existent réellement pour ce niveau
-    // (`character_spell_slots` peut ne porter aucune ligne pour un niveau
-    // donné, ex. personnage pas encore assez haut niveau).
-    final showPips = group.level > 0 && slot != null && slot!.total > 0;
-
+    // Les pastilles d'emplacement ne sont plus rattachées au groupe de sorts
+    // de chaque niveau (elles n'apparaissaient que si un sort de ce niveau
+    // était connu, bug F15) : elles vivent dans la carte "Emplacements de
+    // sorts" de `character_spells_tab_body.dart`, une ligne par niveau
+    // réellement disponible.
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -234,10 +227,6 @@ class _SpellLevelGroupSection extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              if (showPips) ...[
-                const SizedBox(width: AppSpacing.xs),
-                SpellSlotDots(slot: slot!),
-              ],
             ],
           ),
           const SizedBox(height: AppSpacing.xs / 2),

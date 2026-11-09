@@ -1682,6 +1682,10 @@
       }
     }
   },
+  "characterVitalsCardZeroHpLabel": "À 0 PV",
+  "@characterVitalsCardZeroHpLabel": {
+    "description": "Libellé d'état affiché sous la jauge PV quand les PV actuels valent exactement 0."
+  },
   "characterVitalsCardXpLabel": "EXPÉRIENCE",
   "@characterVitalsCardXpLabel": {
     "description": "Libellé du bandeau XP, déjà en majuscules."
@@ -4091,23 +4095,24 @@
   "@characterSpellsTabBodyEmptyStateBody": {
     "description": "Sous-titre de `_EmptySpellsState`."
   },
-  "characterSpellsTabBodyNonCasterTitle": "Cette classe ne lance pas de sorts",
-  "@characterSpellsTabBodyNonCasterTitle": {
-    "description": "Titre de `_NonCasterEmptyState` (classe structurellement non lanceuse de sorts)."
+  "characterSpellsTabBodyNonCasterMessage": "Ce personnage ne lance pas de sorts.",
+  "@characterSpellsTabBodyNonCasterMessage": {
+    "description": "Message de `_NonCasterEmptyState` (classe sans emplacements de sorts)."
   },
-  "characterSpellsTabBodyNonCasterDefaultClassName": "cette classe",
-  "@characterSpellsTabBodyNonCasterDefaultClassName": {
-    "description": "Repli de `className` quand le personnage n'a aucune classe (`detail.primaryClass?.className`), transmis à `characterSpellsTabBodyNonCasterBody`."
+  "characterSpellsTabBodyResourcesTitle": "RESSOURCES",
+  "@characterSpellsTabBodyResourcesTitle": {
+    "description": "Titre de la carte des aptitudes à usage limité quand le personnage ne lance pas de sorts."
   },
-  "characterSpellsTabBodyNonCasterBody": "{characterName} est {className} — hors archétype dédié (ex. Chevalier occulte), cette classe ne dispose pas d'emplacements de sorts. Cet onglet reste accessible par cohérence de navigation, mais restera vide pour ce personnage.",
-  "@characterSpellsTabBodyNonCasterBody": {
-    "description": "Sous-titre de `_NonCasterEmptyState`.",
+  "characterSpellsTabBodySlotsCardTitle": "EMPLACEMENTS DE SORTS",
+  "@characterSpellsTabBodySlotsCardTitle": {
+    "description": "Titre de la carte listant les emplacements de sorts de chaque niveau disponible."
+  },
+  "characterSpellsTabBodySlotsLevelLabel": "Niv. {level}",
+  "@characterSpellsTabBodySlotsLevelLabel": {
+    "description": "Libellé d'une ligne de pastilles de la carte des emplacements de sorts.",
     "placeholders": {
-      "characterName": {
-        "type": "String"
-      },
-      "className": {
-        "type": "String"
+      "level": {
+        "type": "int"
       }
     }
   },

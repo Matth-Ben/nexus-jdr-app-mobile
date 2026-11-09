@@ -185,6 +185,10 @@ class _HpSection extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             _HpGauge(ratio: detail.hpRatio),
+            if (detail.currentHp == 0) ...[
+              const SizedBox(height: AppSpacing.xs),
+              const _ZeroHpIndicator(),
+            ],
             if (detail.temporaryHp > 0) ...[
               const SizedBox(height: AppSpacing.xs),
               _TemporaryHpChip(amount: detail.temporaryHp),
@@ -238,6 +242,49 @@ class _HpGauge extends StatelessWidget {
     }
     return const LinearGradient(
       colors: [AppColors.hpCriticalStart, AppColors.hpCriticalEnd],
+    );
+  }
+}
+
+/// Signal d'état "À 0 PV" (décision du 09/11/2026) : icône + libellé, jamais
+/// la couleur seule (accessibilité) — mêmes tokens que `AlertBanner`
+/// (fond [AppColors.alertBannerBackground], bordure/icône
+/// [AppColors.accentBrick]) mais texte en [AppColors.textPrimary] pour un
+/// contraste AA. Constat d'état uniquement : aucune règle de jeu.
+class _ZeroHpIndicator extends StatelessWidget {
+  const _ZeroHpIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.alertBannerBackground,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.accentBrick, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.heart_broken_outlined,
+            size: 16,
+            color: AppColors.accentBrick,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            AppLocalizations.of(context)!.characterVitalsCardZeroHpLabel,
+            style: AppTypography.body(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

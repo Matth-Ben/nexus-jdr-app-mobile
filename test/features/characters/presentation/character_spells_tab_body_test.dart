@@ -200,8 +200,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Cette classe ne lance pas de sorts'), findsOneWidget);
-      expect(find.textContaining('Test est Guerrier'), findsOneWidget);
+      expect(find.text('Ce personnage ne lance pas de sorts.'), findsOneWidget);
+      expect(find.textContaining('archétype'), findsNothing);
       expect(find.text('AUCUN SORT'), findsNothing);
     },
   );
@@ -1519,6 +1519,9 @@ void main() {
         'toujours à préparer', (tester) async {
       await _pump(tester, detailFor([barde, clerc], sources: mixedSources));
 
+      // La carte "Emplacements de sorts" pousse la ligne hors écran.
+      await tester.ensureVisible(find.text('Soins'));
+      await tester.pump();
       await tester.tap(find.text('Soins'));
       await tester.pumpAndSettle();
       expect(find.text('Préparer ce sort'), findsOneWidget);
@@ -1579,8 +1582,7 @@ void main() {
         locale: const Locale('en'),
       );
 
-      expect(find.text("This class doesn't cast spells"), findsOneWidget);
-      expect(find.textContaining('Test is Guerrier'), findsOneWidget);
+      expect(find.text("This character doesn't cast spells."), findsOneWidget);
     });
 
     testWidgets(

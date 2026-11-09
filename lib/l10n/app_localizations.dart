@@ -2444,6 +2444,12 @@ abstract class AppLocalizations {
   /// **'+{amount} PV temp.'**
   String characterVitalsCardTemporaryHpChip(int amount);
 
+  /// Libellé d'état affiché sous la jauge PV quand les PV actuels valent exactement 0.
+  ///
+  /// In fr, this message translates to:
+  /// **'À 0 PV'**
+  String get characterVitalsCardZeroHpLabel;
+
   /// Libellé du bandeau XP, déjà en majuscules.
   ///
   /// In fr, this message translates to:
@@ -5003,26 +5009,29 @@ abstract class AppLocalizations {
   /// **'Aucun sort sur cette fiche pour l\'instant. Pour les classes qui lancent des sorts, ils se choisissent depuis l\'assistant de création ou à la montée de niveau.'**
   String get characterSpellsTabBodyEmptyStateBody;
 
-  /// Titre de `_NonCasterEmptyState` (classe structurellement non lanceuse de sorts).
+  /// Message de `_NonCasterEmptyState` (classe sans emplacements de sorts).
   ///
   /// In fr, this message translates to:
-  /// **'Cette classe ne lance pas de sorts'**
-  String get characterSpellsTabBodyNonCasterTitle;
+  /// **'Ce personnage ne lance pas de sorts.'**
+  String get characterSpellsTabBodyNonCasterMessage;
 
-  /// Repli de `className` quand le personnage n'a aucune classe (`detail.primaryClass?.className`), transmis à `characterSpellsTabBodyNonCasterBody`.
+  /// Titre de la carte des aptitudes à usage limité quand le personnage ne lance pas de sorts.
   ///
   /// In fr, this message translates to:
-  /// **'cette classe'**
-  String get characterSpellsTabBodyNonCasterDefaultClassName;
+  /// **'RESSOURCES'**
+  String get characterSpellsTabBodyResourcesTitle;
 
-  /// Sous-titre de `_NonCasterEmptyState`.
+  /// Titre de la carte listant les emplacements de sorts de chaque niveau disponible.
   ///
   /// In fr, this message translates to:
-  /// **'{characterName} est {className} — hors archétype dédié (ex. Chevalier occulte), cette classe ne dispose pas d\'emplacements de sorts. Cet onglet reste accessible par cohérence de navigation, mais restera vide pour ce personnage.'**
-  String characterSpellsTabBodyNonCasterBody(
-    String characterName,
-    String className,
-  );
+  /// **'EMPLACEMENTS DE SORTS'**
+  String get characterSpellsTabBodySlotsCardTitle;
+
+  /// Libellé d'une ligne de pastilles de la carte des emplacements de sorts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niv. {level}'**
+  String characterSpellsTabBodySlotsLevelLabel(int level);
 
   /// Titre de la sheet de choix d'emplacement (`_SpellSlotChoiceSheetContent`), `castSpellFlow`.
   ///
