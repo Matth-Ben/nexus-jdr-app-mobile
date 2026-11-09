@@ -663,6 +663,7 @@ void main() {
     RouteObserver<PageRoute<dynamic>>? routeObserver,
     AppVersionRepository? appVersionRepository,
     Locale locale = const Locale('fr'),
+    double textScale = 1.0,
   }) {
     final observer = routeObserver ?? RouteObserver<PageRoute<dynamic>>();
     return ProviderScope(
@@ -683,6 +684,13 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: locale,
+        // Police système agrandie (F21) : simule le réglage d'accessibilité
+        // de l'OS sans dépendre de la plateforme d'exécution.
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         routerConfig: buildTestRouter(observers: [observer]),
       ),
     );
@@ -2379,5 +2387,200 @@ void main() {
       expect(find.text('Connection failed'), findsOneWidget);
       expect(find.text('Continue offline'), findsOneWidget);
     });
+  });
+
+  group('police système agrandie (F21, `docs/retours-utilisateurs.md`)', () {
+    const surfaces = <Size>[
+      Size(360, 640),
+      Size(320, 568),
+      Size(480, 800),
+      Size(320, 533),
+    ];
+    const scales = <double>[1.3, 2.0];
+
+    for (final surface in surfaces) {
+      for (final scale in scales) {
+        final label =
+            '${surface.width.toInt()}x${surface.height.toInt()} '
+            'police x$scale';
+
+        testWidgets('liste + bandeau de mise à jour, $label : aucun '
+            'débordement', (tester) async {
+          fakeCharacterRepository.charactersToReturn = const [
+            CharacterSummary(
+              id: '1',
+              name: 'Halltesse Ambrelune',
+              raceName: 'Elfe',
+              className: 'Magicienne',
+              level: 5,
+              xp: 7000,
+            ),
+            CharacterSummary(
+              id: '2',
+              name: 'Borgan Pierrefort',
+              raceName: 'Nain',
+              className: 'Guerrier',
+              level: 3,
+              xp: 1200,
+            ),
+          ];
+          await tester.binding.setSurfaceSize(surface);
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+
+          await tester.pumpWidget(
+            buildTestWidget(
+              textScale: scale,
+              appVersionRepository: _FakeAppVersionRepository(
+                const AppVersionRow(
+                  minimumSupportedVersion: '0.1.0',
+                  latestVersion: '0.5.0',
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          expect(find.text('Mettre à jour'), findsOneWidget);
+        });
+
+        testWidgets('état vide + bandeau, $label : aucun débordement', (
+          tester,
+        ) async {
+          fakeCharacterRepository.charactersToReturn = const [];
+          await tester.binding.setSurfaceSize(surface);
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+
+          await tester.pumpWidget(
+            buildTestWidget(
+              textScale: scale,
+              appVersionRepository: _FakeAppVersionRepository(
+                const AppVersionRow(
+                  minimumSupportedVersion: '0.1.0',
+                  latestVersion: '0.5.0',
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+
+    // Plafond du bloc d en-tête : seulement quand il est nécessaire, pour ne
+    // pas créer deux zones de défilement indépendantes dans les cas courants.
+    Finder headerScroll() => find.ancestor(
+      of: find.byType(TextField),
+      matching: find.byType(SingleChildScrollView),
+    );
+
+    const twoCharacters = [
+      CharacterSummary(
+        id: '1',
+        name: 'Halltesse Ambrelune',
+        raceName: 'Elfe',
+        className: 'Magicienne',
+        level: 5,
+        xp: 7000,
+      ),
+      CharacterSummary(
+        id: '2',
+        name: 'Borgan Pierrefort',
+        raceName: 'Nain',
+        className: 'Guerrier',
+        level: 3,
+        xp: 1200,
+      ),
+    ];
+
+    for (final scale in <double>[1.0, 1.3]) {
+      testWidgets('x$scale sur 360x640 : bloc d en-tête non plafonné, aucun '
+          'défilement imbriqué', (tester) async {
+        fakeCharacterRepository.charactersToReturn = twoCharacters;
+        await tester.binding.setSurfaceSize(const Size(360, 640));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(buildTestWidget(textScale: scale));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(headerScroll(), findsNothing);
+      });
+    }
+
+    for (final surface in const [Size(360, 640), Size(320, 568)]) {
+      testWidgets('x2.0 sur ${surface.width.toInt()}x${surface.height.toInt()} '
+          ': aucune exception, bloc d en-tête défilant', (tester) async {
+        fakeCharacterRepository.charactersToReturn = twoCharacters;
+        await tester.binding.setSurfaceSize(surface);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            textScale: 2,
+            appVersionRepository: _FakeAppVersionRepository(
+              const AppVersionRow(
+                minimumSupportedVersion: '0.1.0',
+                latestVersion: '0.5.0',
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(headerScroll(), findsOneWidget);
+      });
+    }
+
+    for (final scale in <double>[1.0, 1.3]) {
+      testWidgets('clavier ouvert (x$scale, 360x640) : aucun débordement, la '
+          'recherche garde le focus', (tester) async {
+        fakeCharacterRepository.charactersToReturn = twoCharacters;
+        await tester.binding.setSurfaceSize(const Size(360, 640));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            textScale: scale,
+            appVersionRepository: _FakeAppVersionRepository(
+              const AppVersionRow(
+                minimumSupportedVersion: '0.1.0',
+                latestVersion: '0.5.0',
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(TextField));
+        await tester.pumpAndSettle();
+
+        tester.view.viewInsets = const FakeViewPadding(bottom: 300 * 3);
+        addTearDown(tester.view.resetViewInsets);
+        await tester.pumpAndSettle();
+        // Le clavier réduit la hauteur sous le seuil : le bloc bascule dans le
+        // conteneur plafonné.
+        expect(headerScroll(), findsOneWidget);
+
+        expect(tester.takeException(), isNull);
+        expect(
+          find.descendant(
+            of: find.byType(TextField),
+            matching: find.byType(EditableText),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          tester
+              .state<EditableTextState>(find.byType(EditableText))
+              .widget
+              .focusNode
+              .hasFocus,
+          isTrue,
+        );
+      });
+    }
   });
 }

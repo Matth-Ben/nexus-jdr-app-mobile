@@ -28,38 +28,57 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // `LayoutBuilder` + défilement (F21) : sur un petit écran avec une police
+    // système très agrandie, le contenu centré peut dépasser la hauteur
+    // disponible — il défile alors au lieu de déborder, et reste centré
+    // (`minHeight`) dans le cas normal.
     return SceneScaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const AppBrandBadge(size: 96),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'NEXUS JDR',
-                style: AppTypography.display(
-                  fontSize: 15,
-                  color: AppColors.textOnWood,
+      body: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const AppBrandBadge(size: 96),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'NEXUS JDR',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.display(
+                        fontSize: 15,
+                        color: AppColors.textOnWood,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'PERSONNAGES',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.display(
+                        fontSize: 10,
+                        color: AppColors.goldEnd,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const _ThreeDotLoader(),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'Préparation de la taverne…',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.body(
+                        color: AppColors.textOnWoodMuted,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'PERSONNAGES',
-                style: AppTypography.display(
-                  fontSize: 10,
-                  color: AppColors.goldEnd,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              const _ThreeDotLoader(),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Préparation de la taverne…',
-                style: AppTypography.body(color: AppColors.textOnWoodMuted),
-              ),
-            ],
+            ),
           ),
         ),
       ),
