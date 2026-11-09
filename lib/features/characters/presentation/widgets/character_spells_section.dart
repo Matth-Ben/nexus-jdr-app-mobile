@@ -207,7 +207,20 @@ class _SpellLevelGroupSection extends StatelessWidget {
     // de chaque niveau (elles n'apparaissaient que si un sort de ce niveau
     // était connu, bug F15) : elles vivent dans la carte "Emplacements de
     // sorts" de `character_spells_tab_body.dart`, une ligne par niveau
-    // réellement disponible.
+    // réellement disponible. Seul un compteur `restants/total` discret (sans
+    // pastilles, pas de doublon visuel) reste dans le titre, pour lire les
+    // emplacements du niveau sans remonter à la carte.
+    final l10n = AppLocalizations.of(context)!;
+    CharacterSpellSlot? levelSlot;
+    for (final slot in spellSlots) {
+      if (!slot.isPact && slot.level == group.level && slot.level >= 1) {
+        levelSlot = slot;
+        break;
+      }
+    }
+    final counterSlot = (levelSlot != null && levelSlot.total > 0)
+        ? levelSlot
+        : null;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -218,7 +231,9 @@ class _SpellLevelGroupSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.sm,
             children: [
               Text(
                 group.label,
@@ -227,6 +242,23 @@ class _SpellLevelGroupSection extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              if (counterSlot != null)
+                Semantics(
+                  container: true,
+                  excludeSemantics: true,
+                  label: l10n.characterSpellsSectionSlotLevelSemanticLabel(
+                    counterSlot.level,
+                    counterSlot.remaining,
+                    counterSlot.total,
+                  ),
+                  child: Text(
+                    '${counterSlot.remaining}/${counterSlot.total}',
+                    style: AppTypography.body(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: AppSpacing.xs / 2),

@@ -12,12 +12,18 @@ Future<void> _pump(
   WidgetTester tester,
   int currentHp, {
   Locale locale = const Locale('fr'),
+  double textScale = 1,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: locale,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
       home: Scaffold(
         body: SingleChildScrollView(
           child: CharacterVitalsCard(
@@ -63,5 +69,41 @@ void main() {
     await _pump(tester, 0, locale: const Locale('en'));
 
     expect(find.text('At 0 HP'), findsOneWidget);
+  });
+
+  testWidgets('320 px et texte x2 : la pastille passe à la ligne sans '
+      'débordement', (tester) async {
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    // Les autres rangées de la carte (hors périmètre) débordent déjà à x2 :
+    // on collecte les erreurs de mise en page et on vérifie que la pastille
+    // n'en fait pas partie.
+    final reported = <String>[];
+    final previous = FlutterError.onError;
+    FlutterError.onError = (details) => reported.add(details.toString());
+    await _pump(tester, 0, textScale: 2);
+    FlutterError.onError = previous;
+
+    expect(find.text('À 0 PV'), findsOneWidget);
+    expect(reported.where((m) => m.contains('_ZeroHpIndicator')), isEmpty);
+  });
+
+  testWidgets('sémantique : libellé annoncé une seule fois, icône exclue', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await _pump(tester, 0);
+
+    expect(find.bySemanticsLabel(RegExp('À 0 PV')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ExcludeSemantics),
+        matching: find.byIcon(Icons.heart_broken_outlined),
+      ),
+      findsOneWidget,
+    );
+    handle.dispose();
   });
 }

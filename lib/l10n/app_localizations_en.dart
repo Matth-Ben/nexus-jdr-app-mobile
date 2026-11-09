@@ -2976,6 +2976,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String characterSpellsSectionSlotLevelSemanticLabel(
+    int level,
+    int remaining,
+    int total,
+  ) {
+    return 'Level $level: $remaining of $total slots available';
+  }
+
+  @override
   String characterSpellsSectionGrantBadgeSemanticLabel(String sourceLabel) {
     return 'Always prepared, granted by: $sourceLabel';
   }
@@ -3053,7 +3062,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String characterSpellsTabBodySlotsLevelLabel(int level) {
-    return 'Lvl $level';
+    return 'Level $level';
   }
 
   @override

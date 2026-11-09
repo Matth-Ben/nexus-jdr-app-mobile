@@ -266,21 +266,28 @@ class _ZeroHpIndicator extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: AppColors.accentBrick, width: 1),
       ),
+      // `Flexible` : le libellé passe à la ligne (texte système agrandi,
+      // 320 px) au lieu de déborder ; icône purement décorative.
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.heart_broken_outlined,
-            size: 16,
-            color: AppColors.accentBrick,
+          const ExcludeSemantics(
+            child: Icon(
+              Icons.heart_broken_outlined,
+              size: 16,
+              color: AppColors.accentBrick,
+            ),
           ),
           const SizedBox(width: AppSpacing.xs),
-          Text(
-            AppLocalizations.of(context)!.characterVitalsCardZeroHpLabel,
-            style: AppTypography.body(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+          Flexible(
+            child: Text(
+              AppLocalizations.of(context)!.characterVitalsCardZeroHpLabel,
+              style: AppTypography.body(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
         ],

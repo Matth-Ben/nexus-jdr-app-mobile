@@ -151,7 +151,7 @@ void main() {
     expect(find.text('SORTS'), findsNothing);
     expect(find.text('Sorts mineurs'), findsOneWidget);
     expect(find.text('Lumière'), findsOneWidget);
-    expect(find.text('Niveau 1'), findsOneWidget);
+    expect(find.text('Niveau 1'), findsNWidgets(2));
     expect(find.text('Bouclier'), findsOneWidget);
     // L'école ("(Évocation)"/"(Abjuration)") n'est plus affichée en bout de
     // ligne depuis le recettage direction-artistique du 13/09.
@@ -163,8 +163,8 @@ void main() {
     // `character_spells_section.dart::_SpellSlotDots`) : on vérifie le
     // libellé d'accessibilité plutôt qu'un `find.text` sur un caractère.
     expect(
-      find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 3'),
-      findsOneWidget,
+      find.bySemanticsLabel('Niveau 1 : 2 sur 3 emplacements disponibles'),
+      findsNWidgets(2),
     );
 
     semanticsHandle.dispose();

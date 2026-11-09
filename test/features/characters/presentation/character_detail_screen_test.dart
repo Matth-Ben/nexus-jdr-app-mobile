@@ -2520,12 +2520,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(fakeRepository.castSpellCallCount, 1);
       expect(
-        find.bySemanticsLabel('Emplacements de sorts : 1 restants sur 4'),
-        findsOneWidget,
+        find.bySemanticsLabel('Niveau 1 : 1 sur 4 emplacements disponibles'),
+        findsNWidgets(2),
       );
       expect(
-        find.bySemanticsLabel('Emplacements de sorts : 0 restants sur 2'),
-        findsOneWidget,
+        find.bySemanticsLabel('Niveau 2 : 0 sur 2 emplacements disponibles'),
+        findsNWidgets(2),
       );
 
       await tester.tap(find.text('PERSO'));
@@ -2542,12 +2542,12 @@ void main() {
       await tester.tap(find.text('SORTS'));
       await tester.pumpAndSettle();
       expect(
-        find.bySemanticsLabel('Emplacements de sorts : 4 restants sur 4'),
-        findsOneWidget,
+        find.bySemanticsLabel('Niveau 1 : 4 sur 4 emplacements disponibles'),
+        findsNWidgets(2),
       );
       expect(
-        find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 2'),
-        findsOneWidget,
+        find.bySemanticsLabel('Niveau 2 : 2 sur 2 emplacements disponibles'),
+        findsNWidgets(2),
       );
     });
 
@@ -2958,8 +2958,8 @@ void main() {
         // Conservé : l'état optimiste (1 restant) reste affiché puisqu'il
         // sera rejoué au retour du réseau.
         expect(
-          find.bySemanticsLabel('Emplacements de sorts : 1 restants sur 3'),
-          findsOneWidget,
+          find.bySemanticsLabel('Niveau 1 : 1 sur 3 emplacements disponibles'),
+          findsNWidgets(2),
         );
       },
     );
@@ -2992,14 +2992,14 @@ void main() {
         // l'échec, doit revenir à 2 restants sur 3 (état d'avant), pas rester
         // sur la valeur optimiste jamais confirmée.
         expect(
-          find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 3'),
-          findsOneWidget,
+          find.bySemanticsLabel('Niveau 1 : 2 sur 3 emplacements disponibles'),
+          findsNWidgets(2),
           reason:
               "L'état optimiste (1 restant) ne doit pas rester affiché après "
               "l'échec de l'appel réseau.",
         );
         expect(
-          find.bySemanticsLabel('Emplacements de sorts : 1 restants sur 3'),
+          find.bySemanticsLabel('Niveau 1 : 1 sur 3 emplacements disponibles'),
           findsNothing,
         );
       },

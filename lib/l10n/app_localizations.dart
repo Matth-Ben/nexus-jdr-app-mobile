@@ -4916,6 +4916,16 @@ abstract class AppLocalizations {
   /// **'Emplacements de sorts : {remaining} restants sur {total}'**
   String characterSpellsSectionSlotsSemanticLabel(int remaining, int total);
 
+  /// `Semantics.label` d'une ligne d'emplacements d'un niveau (carte des emplacements, compteur du titre de groupe de sorts).
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {level} : {remaining} sur {total} emplacements disponibles'**
+  String characterSpellsSectionSlotLevelSemanticLabel(
+    int level,
+    int remaining,
+    int total,
+  );
+
   /// `Semantics.label` de `_GrantBadge` — `sourceLabel` reste `SpellGrantSource.label` (domain, non traduit, voir le registre de dette technique).
   ///
   /// In fr, this message translates to:
@@ -5030,7 +5040,7 @@ abstract class AppLocalizations {
   /// Libellé d'une ligne de pastilles de la carte des emplacements de sorts.
   ///
   /// In fr, this message translates to:
-  /// **'Niv. {level}'**
+  /// **'Niveau {level}'**
   String characterSpellsTabBodySlotsLevelLabel(int level);
 
   /// Titre de la sheet de choix d'emplacement (`_SpellSlotChoiceSheetContent`), `castSpellFlow`.

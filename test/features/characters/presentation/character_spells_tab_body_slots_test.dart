@@ -110,9 +110,10 @@ void main() {
       );
 
       expect(find.text('EMPLACEMENTS DE SORTS'), findsOneWidget);
-      expect(find.text('Niv. 1'), findsOneWidget);
-      expect(find.text('Niv. 2'), findsOneWidget);
-      expect(find.text('Niv. 3'), findsNothing);
+      // « Niveau 1 » : ligne de la carte + titre du groupe du sort connu.
+      expect(find.text('Niveau 1'), findsNWidgets(2));
+      expect(find.text('Niveau 2'), findsOneWidget);
+      expect(find.text('Niveau 3'), findsNothing);
       expect(find.byType(SpellSlotDots), findsNWidgets(2));
     });
 
@@ -126,8 +127,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Niv. 1'), findsOneWidget);
-      expect(find.text('Niv. 2'), findsNothing);
+      expect(find.text('Niveau 1'), findsNWidgets(2));
+      expect(find.text('Niveau 2'), findsNothing);
       expect(find.byType(SpellSlotDots), findsOneWidget);
     });
 
@@ -146,7 +147,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Niv. 2'), findsNothing);
+      expect(find.text('Niveau 2'), findsNothing);
     });
 
     testWidgets('multiclasse : la table combinée fournie est affichée telle '
@@ -164,9 +165,9 @@ void main() {
         ),
       );
 
-      expect(find.text('Niv. 1'), findsOneWidget);
-      expect(find.text('Niv. 2'), findsOneWidget);
-      expect(find.text('Niv. 3'), findsOneWidget);
+      expect(find.text('Niveau 1'), findsNWidgets(2));
+      expect(find.text('Niveau 2'), findsOneWidget);
+      expect(find.text('Niveau 3'), findsOneWidget);
       expect(find.byType(SpellSlotDots), findsNWidgets(3));
     });
 
@@ -230,7 +231,7 @@ void main() {
       );
 
       expect(find.text('AUCUN SORT'), findsOneWidget);
-      expect(find.text('Niv. 1'), findsOneWidget);
+      expect(find.text('Niveau 1'), findsOneWidget);
     });
   });
 
@@ -244,9 +245,7 @@ void main() {
       restType: 'repos_long',
     );
 
-    testWidgets('Barbare : message simple + ressources au-dessus', (
-      tester,
-    ) async {
+    testWidgets('Barbare : message simple puis ressources', (tester) async {
       await _pump(
         tester,
         _detail(classes: [_class('Barbare', 1)], classFeatures: const [rage]),
@@ -257,9 +256,10 @@ void main() {
       expect(find.textContaining('archétype'), findsNothing);
       expect(find.text('RESSOURCES'), findsOneWidget);
       expect(find.text('Rage'), findsOneWidget);
+      // Message court d'abord, puis la carte de ressources.
       expect(
-        tester.getTopLeft(find.text('RESSOURCES')).dy,
-        lessThan(tester.getTopLeft(find.text(message)).dy),
+        tester.getTopLeft(find.text(message)).dy,
+        lessThan(tester.getTopLeft(find.text('RESSOURCES')).dy),
       );
       expect(find.text('AUCUN SORT'), findsNothing);
     });
@@ -284,8 +284,109 @@ void main() {
 
       expect(find.text('AUCUN SORT'), findsOneWidget);
       expect(find.text('Ce personnage ne lance pas de sorts.'), findsNothing);
-      expect(find.text('Niv. 1'), findsOneWidget);
+      expect(find.text('Niveau 1'), findsOneWidget);
       expect(find.text('RESSOURCES'), findsNothing);
     });
+  });
+
+  group('compteur restants/total du titre de groupe', () {
+    CharacterDetail detailWith(int used) => _detail(
+      classes: [_class('Magicien', 3)],
+      spells: const [_cantrip, _level1Spell],
+      spellSlots: [
+        CharacterSpellSlot(level: 1, total: 3, used: used),
+        const CharacterSpellSlot(level: 2, total: 2, used: 0),
+      ],
+    );
+
+    testWidgets('présent pour un niveau avec emplacements, sans pastilles '
+        'en double', (tester) async {
+      await _pump(tester, detailWith(1));
+
+      expect(find.text('2/3'), findsOneWidget);
+      // Les pastilles ne vivent que dans la carte : une par niveau.
+      expect(find.byType(SpellSlotDots), findsNWidgets(2));
+    });
+
+    testWidgets("absent quand le niveau du groupe n'a pas d'emplacement", (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _detail(
+          classes: [_class('Magicien', 1)],
+          spells: const [_cantrip, _level1Spell],
+          spellSlots: const [CharacterSpellSlot(level: 1, total: 0, used: 0)],
+        ),
+      );
+
+      expect(find.textContaining(RegExp(r'\d/\d')), findsNothing);
+    });
+
+    testWidgets("mis à jour après consommation d'un emplacement", (
+      tester,
+    ) async {
+      await _pump(tester, detailWith(1));
+      expect(find.text('2/3'), findsOneWidget);
+
+      await _pump(tester, detailWith(2));
+      expect(find.text('1/3'), findsOneWidget);
+      expect(find.text('2/3'), findsNothing);
+    });
+
+    testWidgets('sémantique : une annonce par ligne et pour le compteur', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _pump(tester, detailWith(1));
+
+      // Carte (ligne niveau 1) + compteur du groupe niveau 1.
+      expect(
+        find.bySemanticsLabel('Niveau 1 : 2 sur 3 emplacements disponibles'),
+        findsNWidgets(2),
+      );
+      expect(
+        find.bySemanticsLabel('Niveau 2 : 2 sur 2 emplacements disponibles'),
+        findsOneWidget,
+      );
+      // Pastilles exclues de l'arbre sémantique de la carte.
+      expect(
+        find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 3'),
+        findsNothing,
+      );
+      handle.dispose();
+    });
+
+    testWidgets('titre de carte long à 320 px et texte x2 : sans exception', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await _pump(tester, detailWith(1), textScale: 2);
+
+      expect(find.text('EMPLACEMENTS DE SORTS'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  testWidgets('Occultiste avec seulement des emplacements de pacte et aucun '
+      'sort : lanceur, pas de message non-lanceur', (tester) async {
+    await _pump(
+      tester,
+      _detail(
+        classes: [_class('Occultiste', 3)],
+        pactSpellSlot: const CharacterSpellSlot(
+          level: 2,
+          total: 2,
+          used: 0,
+          isPact: true,
+        ),
+      ),
+    );
+
+    expect(find.text('AUCUN SORT'), findsOneWidget);
+    expect(find.text('Ce personnage ne lance pas de sorts.'), findsNothing);
   });
 }

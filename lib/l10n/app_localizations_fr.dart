@@ -3004,6 +3004,15 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String characterSpellsSectionSlotLevelSemanticLabel(
+    int level,
+    int remaining,
+    int total,
+  ) {
+    return 'Niveau $level : $remaining sur $total emplacements disponibles';
+  }
+
+  @override
   String characterSpellsSectionGrantBadgeSemanticLabel(String sourceLabel) {
     return 'Toujours préparé, accordé par : $sourceLabel';
   }
@@ -3081,7 +3090,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String characterSpellsTabBodySlotsLevelLabel(int level) {
-    return 'Niv. $level';
+    return 'Niveau $level';
   }
 
   @override

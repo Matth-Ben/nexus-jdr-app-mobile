@@ -180,16 +180,16 @@ class _CharacterSpellsTabBodyState
         return ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
+            const _NonCasterEmptyState(),
             if (showLimitedUseCard) ...[
+              const SizedBox(height: AppSpacing.md),
               CharacterClassFeaturesCard(
                 features: limitedUseFeatures,
                 onUseFeature: onUseFeature,
                 actionsDisabled: widget.actionsDisabled,
                 title: l10n.characterSpellsTabBodyResourcesTitle,
               ),
-              const SizedBox(height: AppSpacing.md),
             ],
-            const _NonCasterEmptyState(),
           ],
         );
       }
@@ -419,7 +419,7 @@ class _EmptySpellsState extends StatelessWidget {
 
 /// État d'un personnage sans emplacements de sorts (ex. Barbare, Guerrier) :
 /// une phrase simple, les compteurs d'aptitudes (carte "Ressources") étant
-/// affichés au-dessus par l'appelant.
+/// affichés en dessous par l'appelant.
 class _NonCasterEmptyState extends StatelessWidget {
   const _NonCasterEmptyState();
 
@@ -490,20 +490,31 @@ class _SpellSlotsCard extends StatelessWidget {
           ),
           for (final slot in slots) ...[
             const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.xs,
-              children: [
-                Text(
-                  l10n.characterSpellsTabBodySlotsLevelLabel(slot.level),
-                  style: AppTypography.body(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+            // Une seule annonce par ligne ; libellé + pastilles décoratifs
+            // pour le lecteur d'écran (`excludeSemantics`).
+            Semantics(
+              container: true,
+              excludeSemantics: true,
+              label: l10n.characterSpellsSectionSlotLevelSemanticLabel(
+                slot.level,
+                slot.remaining,
+                slot.total,
+              ),
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                children: [
+                  Text(
+                    l10n.characterSpellsTabBodySlotsLevelLabel(slot.level),
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                SpellSlotDots(slot: slot),
-              ],
+                  SpellSlotDots(slot: slot),
+                ],
+              ),
             ),
           ],
         ],
