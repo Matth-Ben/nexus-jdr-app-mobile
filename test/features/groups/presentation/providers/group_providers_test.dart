@@ -14,7 +14,10 @@
 //
 // Bug F07 (`docs/retours-utilisateurs.md`) : `GroupRepository
 // .subscribeToMemberUpdates` écoute désormais aussi `INSERT`/`DELETE` sur
-// `group_members` (filtré par `groupId`) en plus de `UPDATE` sur
+// `group_members` (seul `INSERT` est filtré par `group_id` ; `DELETE` est
+// écouté sans filtre, REPLICA IDENTITY DEFAULT : l'ancienne ligne ne porte que
+// l'`id`, et le client n'actualise que si l'`id` supprimé est celui d'un
+// membre connu, `shouldRefreshOnMemberDelete`) en plus de `UPDATE` sur
 // `characters` — la construction réelle du filtre Postgres est du ressort
 // de `SupabaseGroupRepository` (non testée ici, pas de mock du SDK Realtime
 // dans ce dépôt), mais ce fichier vérifie : (1) que `groupId` est bien
