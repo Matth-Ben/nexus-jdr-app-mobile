@@ -737,7 +737,7 @@ abstract class AppLocalizations {
   /// Réponse 3 de `profile_faq_screen.dart`.
   ///
   /// In fr, this message translates to:
-  /// **'Oui. Tous tes personnages restent consultables et modifiables sans connexion : les changements (points de vie, XP, inventaire...) sont mis en file d\'attente sur ton appareil puis synchronisés automatiquement avec le serveur dès que la connexion revient. Aucune donnée n\'est perdue en cas de coupure réseau.'**
+  /// **'En partie. Sans connexion, tu peux consulter ta liste et les fiches déjà ouvertes, et modifier les points de vie, l\'XP, les emplacements de sorts, les sorts innés, les aptitudes à usage limité et les repos : ces changements sont mis en attente sur ton appareil, puis envoyés automatiquement au retour du réseau. Le reste (inventaire, monnaies, journal, préparation des sorts, ajout d\'un objet depuis le catalogue...) demande une connexion : hors ligne, l\'action est refusée et il faut la refaire une fois reconnecté.'**
   String get profileFaqAnswer3;
 
   /// Question 4 de `profile_faq_screen.dart` (`_faqItems`, id 4).

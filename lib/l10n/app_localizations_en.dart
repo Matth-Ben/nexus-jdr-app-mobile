@@ -370,7 +370,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileFaqAnswer3 =>
-      'Yes. All your characters stay viewable and editable without a connection: changes (hit points, XP, inventory...) are queued on your device and automatically synced with the server as soon as the connection comes back. No data is lost in case of a network outage.';
+      'Partly. Without a connection you can view your list and the sheets you have already opened, and edit hit points, XP, spell slots, innate spells, limited-use features and rests: these changes are held on your device, then sent automatically when the network is back. Everything else (inventory, currency, journal, spell preparation, adding an item from the catalog...) needs a connection: offline, the action is refused and you have to redo it once reconnected.';
 
   @override
   String get profileFaqQuestion4 => 'How does leveling up work?';
