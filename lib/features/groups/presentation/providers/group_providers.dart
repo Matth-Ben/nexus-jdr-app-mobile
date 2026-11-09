@@ -87,13 +87,19 @@ Duration? _noRetry(int retryCount, Object error) => null;
 /// ne recrée l'abonnement que lorsque la liste de personnages à surveiller a
 /// réellement changé (un membre rejoint/quitte le groupe).
 ///
-/// Depuis la correction du bug F07 (`docs/retours-utilisateurs.md`), le
-/// même canal Realtime écoute aussi `INSERT`/`DELETE` sur `group_members`
-/// pour [groupId] (voir `GroupRepository.subscribeToMemberUpdates`) : sans
-/// ce second flux, l'arrivée d'un nouveau membre (qui ne modifie jamais la
-/// table `characters` déjà surveillée) ne déclenchait jamais `onChanged`
-/// pour le MJ déjà sur cet écran — il fallait quitter/rouvrir l'écran pour
-/// voir le nouveau membre. **Effectif uniquement une fois la migration web
+/// Depuis les corrections des bugs F07/F08 (`docs/retours-utilisateurs.md`),
+/// le même canal Realtime écoute aussi `group_members` (voir
+/// `GroupRepository.subscribeToMemberUpdates`) : `INSERT` filtré sur
+/// [groupId] (arrivée d'un membre, qui ne modifie jamais la table
+/// `characters` déjà surveillée), et `DELETE` **sans filtre `group_id`**
+/// (départ/exclusion). Pourquoi : `group_members` est en REPLICA IDENTITY
+/// DEFAULT, l'ancienne ligne d'un `DELETE` ne contient que la clé primaire
+/// `id`, donc un filtre `group_id` ne correspondrait jamais ; REPLICA
+/// IDENTITY FULL est refusé car Realtime n'applique pas la RLS aux `DELETE`
+/// (tout utilisateur authentifié lirait `user_id`/`character_id` des départs
+/// d'autres groupes). Le tri se fait donc ici : un `DELETE` n'invalide
+/// [groupDetailProvider] que si son `id` est celui d'un membre actuellement
+/// affiché ([GroupDetail.memberRowIds]). **Effectif uniquement une fois la migration web
 /// `fix/enable-realtime-group-members` déployée** (publication de
 /// `group_members` sur `supabase_realtime`) — tant que ce n'est pas le cas,
 /// ce flux ne reçoit simplement jamais d'évènement, sans régression.
@@ -120,6 +126,13 @@ void groupMembersRealtimeWatcher(Ref ref, String groupId) {
     subscription = repository.subscribeToMemberUpdates(
       groupId: groupId,
       characterIds: characterIds,
+      isKnownMembershipId: (membershipId) =>
+          ref
+              .read(groupDetailProvider(groupId))
+              .value
+              ?.memberRowIds
+              .contains(membershipId) ??
+          false,
       onChanged: () {
         if (ref.mounted) ref.invalidate(groupDetailProvider(groupId));
       },

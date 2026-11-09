@@ -244,22 +244,47 @@ abstract class GroupRepository {
   /// l'abonnement/désabonnement à l'entrée/la sortie de l'écran "Groupe" :
   /// - `UPDATE` sur `characters`, filtré à [characterIds] : mises à jour des
   ///   personnages déjà membres (PV, statut...) ;
-  /// - `INSERT`/`DELETE` sur `group_members`, filtré à [groupId] : arrivée/
-  ///   départ d'un membre (bug F07, `docs/retours-utilisateurs.md`) — table
-  ///   publiée sur `supabase_realtime` par la migration web
-  ///   `fix/enable-realtime-group-members` ; **sans effet tant que cette
-  ///   migration n'est pas déployée**, Postgres Changes ne diffusant que les
-  ///   tables explicitement publiées.
+  /// - `INSERT` sur `group_members`, filtré à [groupId] : arrivée d'un
+  ///   membre (bug F07, `docs/retours-utilisateurs.md`) ;
+  /// - `DELETE` sur `group_members`, **sans filtre `group_id`** : départ/
+  ///   exclusion d'un membre (bug F08). `group_members` est en REPLICA
+  ///   IDENTITY DEFAULT : l'ancienne ligne d'un `DELETE` ne porte que la clé
+  ///   primaire `id`, jamais `group_id`, donc un filtre sur `group_id` ne
+  ///   correspond jamais et aucun évènement n'est délivré. Supabase Realtime
+  ///   n'applique pas la RLS aux `DELETE` (la ligne n'existe plus) : passer
+  ///   en REPLICA IDENTITY FULL laisserait n'importe quel utilisateur
+  ///   authentifié lire `user_id`/`character_id` des joueurs qui partent
+  ///   d'un autre groupe — refusé. On écoute donc tous les `DELETE` (seul
+  ///   l'`id` est reçu, rien de sensible) et on ne déclenche [onChanged] que
+  ///   si cet `id` satisfait [isKnownMembershipId] (voir
+  ///   [shouldRefreshOnMemberDelete]).
   ///
-  /// [onChanged] est appelé sans argument à chaque évènement reçu (des deux
-  /// sources) : c'est à l'appelant de rafraîchir sa propre source de vérité
-  /// (jamais de mise à jour optimiste construite depuis le payload brut
-  /// ici).
+  /// Les deux flux sur `group_members` exigent que la table soit publiée sur
+  /// `supabase_realtime` (migration web `fix/enable-realtime-group-members`).
+  ///
+  /// [onChanged] est appelé sans argument à chaque évènement pertinent : c'est
+  /// à l'appelant de rafraîchir sa propre source de vérité (jamais de mise à
+  /// jour optimiste construite depuis le payload brut ici).
+  /// [isKnownMembershipId] dit si un `group_members.id` appartient au groupe
+  /// courant (évalué à chaque `DELETE`, donc toujours à jour).
   GroupRealtimeSubscription subscribeToMemberUpdates({
     required String groupId,
     required List<String> characterIds,
+    required bool Function(String membershipId) isKnownMembershipId,
     required void Function() onChanged,
   });
+}
+
+/// Décide si un `DELETE` Realtime sur `group_members` concerne le groupe
+/// courant : [oldRecord] (REPLICA IDENTITY DEFAULT) ne contient que `id`, qui
+/// doit satisfaire [isKnownMembershipId]. Un `id` absent/non textuel ou
+/// inconnu est ignoré (suppression sans rapport, d'un autre groupe).
+bool shouldRefreshOnMemberDelete(
+  Map<String, dynamic> oldRecord,
+  bool Function(String membershipId) isKnownMembershipId,
+) {
+  final id = oldRecord['id'];
+  return id is String && isKnownMembershipId(id);
 }
 
 class SupabaseGroupRepository implements GroupRepository {
@@ -437,6 +462,7 @@ class SupabaseGroupRepository implements GroupRepository {
       final memberRows = await _client
           .from('group_members')
           .select('''
+            id,
             character_id,
             user_id,
             role,
@@ -840,6 +866,7 @@ class SupabaseGroupRepository implements GroupRepository {
   GroupRealtimeSubscription subscribeToMemberUpdates({
     required String groupId,
     required List<String> characterIds,
+    required bool Function(String membershipId) isKnownMembershipId,
     required void Function() onChanged,
   }) {
     // Pas de retour anticipé sur `characterIds` vide ici : en pratique ce
@@ -870,28 +897,43 @@ class SupabaseGroupRepository implements GroupRepository {
         callback: (payload) => onChanged(),
       );
     }
-    // Bug F07 (`docs/retours-utilisateurs.md`) : l'arrivée (INSERT) ou le
-    // départ (DELETE, exclusion/désertion) d'un membre n'est détectable que
-    // sur `group_members` elle-même — un `INSERT` ne touche jamais la table
-    // `characters` déjà surveillée ci-dessus. Deux souscriptions distinctes
-    // (événement unique chacune) sur le même canal plutôt qu'une regroupée :
-    // `PostgresChangeEvent` ne porte qu'une seule valeur par appel côté SDK.
-    for (final event in [
-      PostgresChangeEvent.insert,
-      PostgresChangeEvent.delete,
-    ]) {
-      channel.onPostgresChanges(
-        event: event,
-        schema: 'public',
-        table: 'group_members',
-        filter: PostgresChangeFilter(
-          type: PostgresChangeFilterType.eq,
-          column: 'group_id',
-          value: groupId,
-        ),
-        callback: (payload) => onChanged(),
-      );
-    }
+    // Bug F07 (`docs/retours-utilisateurs.md`) : l'arrivée d'un membre n'est
+    // détectable que sur `group_members` elle-même — un `INSERT` ne touche
+    // jamais la table `characters` déjà surveillée ci-dessus. Le nouvel
+    // enregistrement porte `group_id` : filtre serveur possible (et RLS
+    // appliquée par Realtime sur les INSERT).
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.insert,
+      schema: 'public',
+      table: 'group_members',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'group_id',
+        value: groupId,
+      ),
+      callback: (payload) => onChanged(),
+    );
+    // Bug F08 : le départ (DELETE) ne peut PAS être filtré sur `group_id`.
+    // `group_members` est en REPLICA IDENTITY DEFAULT : `oldRecord` ne
+    // contient que la PK `id`, donc un filtre `group_id=eq.…` ne correspond
+    // jamais et rien n'est délivré. REPLICA IDENTITY FULL est refusé : Realtime
+    // n'applique pas la RLS aux DELETE, tout utilisateur authentifié pourrait
+    // alors lire `user_id`/`character_id` des départs d'un autre groupe. On
+    // écoute donc tous les DELETE (seul `id` transite) et on filtre côté
+    // client sur les `id` des membres du groupe courant.
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.delete,
+      schema: 'public',
+      table: 'group_members',
+      callback: (payload) {
+        if (shouldRefreshOnMemberDelete(
+          payload.oldRecord,
+          isKnownMembershipId,
+        )) {
+          onChanged();
+        }
+      },
+    );
     channel.subscribe();
     return _RealtimeChannelSubscription(_client, channel);
   }

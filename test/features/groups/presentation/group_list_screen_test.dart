@@ -115,6 +115,7 @@ class _FakeGroupRepository implements GroupRepository {
   GroupRealtimeSubscription subscribeToMemberUpdates({
     required String groupId,
     required List<String> characterIds,
+    required bool Function(String membershipId) isKnownMembershipId,
     required void Function() onChanged,
   }) => throw UnimplementedError();
 

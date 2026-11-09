@@ -120,6 +120,7 @@ abstract final class GroupMemberRowMapper {
     Map<String, String> subclassNames = const {},
     Map<String, String> classFeatureNames = const {},
   }) {
+    final membershipId = row['id'] as String?;
     final characterId = row['character_id'] as String?;
     final userId = row['user_id'] as String;
     final role = GroupRoleRaw.fromRaw(row['role'] as String?);
@@ -127,6 +128,7 @@ abstract final class GroupMemberRowMapper {
 
     if (characterId == null) {
       return GroupMember(
+        membershipId: membershipId,
         userId: userId,
         role: role,
         isGameMaster: isGameMaster,
@@ -162,6 +164,7 @@ abstract final class GroupMemberRowMapper {
     );
 
     return GroupMember(
+      membershipId: membershipId,
       characterId: characterId,
       userId: userId,
       role: role,

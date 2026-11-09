@@ -208,47 +208,30 @@ void main() {
       }
 
       // ---------------------------------------------------------------
-      // Étape 3bis : un retour/réouverture UNIQUE de l'écran "Groupe" --
-      // nécessaire ici parce que l'arrivée d'un nouveau membre n'est
-      // couverte par AUCUN canal Realtime existant (`groupMembersRealtime
-      // Watcher` ne surveille que les lignes `characters` déjà connues de
-      // `memberCharacterIds`, jamais la table `group_members` elle-même ;
-      // voir `group_providers.dart`). Un MJ réel découvrirait ce nouveau
-      // membre de la même façon, en rouvrant l'écran Groupe après avoir été
-      // informé que le joueur a rejoint. Cette navigation est volontairement
-      // isolée ICI, avant la partie du scénario qui doit, elle, se dérouler
-      // SANS aucune navigation (la mise à jour des PV d'un membre déjà
-      // visible, étapes 5-6 ci-dessous) -- elle ne contredit donc pas
-      // l'objectif du test.
-      await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
-      await pumpUntilSettled(tester, attempts: 6);
-      await tester.tap(find.byIcon(Icons.groups_outlined));
-      await pumpUntilSettled(tester, attempts: 4);
-      await tapText(tester, groupName);
-      await pumpUntilSettled(tester, attempts: 6);
-
+      // Étape 4 (F07) : SANS AUCUNE navigation (aucun tap, aucun retour
+      // d'écran, aucune réouverture), le MJ resté sur l'onglet Membres doit
+      // voir arriver le joueur qui vient de rejoindre (`group_members`
+      // INSERT, voir `GroupRepository.subscribeToMemberUpdates`). Seulement
+      // des `pump` en boucle ; le délai est mesuré.
       // ---------------------------------------------------------------
-      // Étape 4 : l'écran "Groupe" du MJ (fraîchement rouvert) doit
-      // désormais afficher le joueur qui vient de rejoindre.
-      // ---------------------------------------------------------------
+      observe('Etape4 - Membres (MJ) juste apres join-group', visibleTexts());
+      final joinWatch = Stopwatch()..start();
       var sawMember = false;
-      for (var attempt = 0; attempt < 10 && !sawMember; attempt++) {
+      for (var attempt = 0; attempt < 30 && !sawMember; attempt++) {
         await tester.pump(const Duration(milliseconds: 500));
         sawMember = find.textContaining(characterName).evaluate().isNotEmpty;
       }
-      if (!sawMember) {
-        await tapText(tester, 'MEMBRES');
-        await pumpUntilSettled(tester, attempts: 6);
-      }
+      joinWatch.stop();
       observe(
-        'Etape4 - onglet Membres (MJ) avant modification PV joueur',
-        visibleTexts(),
+        "Etape4 - delai d'apparition du nouveau membre (sans navigation)",
+        sawMember ? '${joinWatch.elapsedMilliseconds} ms' : 'JAMAIS (15 s)',
       );
-      if (find.textContaining(characterName).evaluate().isEmpty) {
+      observe('Etape4 - Membres (MJ) apres attente', visibleTexts());
+      if (!sawMember) {
         fail(
-          'ECART : le personnage "$characterName" n\'apparaît pas dans '
-          'l\'onglet Membres côté MJ après que le joueur a rejoint le '
-          'groupe. Texte visible : ${visibleTexts()}',
+          'ECART F07 : le personnage "$characterName" n\'apparaît pas dans '
+          "l'onglet Membres côté MJ, sans navigation, 15 s après que le "
+          'joueur a rejoint le groupe. Texte visible : ${visibleTexts()}',
         );
       }
       final initialHpText = '$initialCurrentHp/$initialMaxHp';
@@ -303,6 +286,38 @@ void main() {
           'apparu dans l\'onglet Membres côté MJ sans navigation, après '
           '10 secondes d\'attente (20×500ms) -- la synchro Realtime ne '
           'fonctionne pas comme attendu. Texte visible : ${visibleTexts()}',
+        );
+      }
+
+      // ---------------------------------------------------------------
+      // Étape 6bis (F07, DELETE) : le joueur quitte le groupe via
+      // `playerClient` -- même requête que `GroupRepository.leaveGroup`
+      // (suppression de sa propre ligne `group_members`, RLS du joueur). Le
+      // MJ, toujours sans navigation, doit voir le membre disparaître.
+      // ---------------------------------------------------------------
+      final playerUserId = playerClient.auth.currentUser!.id;
+      await playerClient
+          .from('group_members')
+          .delete()
+          .eq('group_id', groupId)
+          .eq('user_id', playerUserId);
+      final leaveWatch = Stopwatch()..start();
+      var memberGone = false;
+      for (var attempt = 0; attempt < 30 && !memberGone; attempt++) {
+        await tester.pump(const Duration(milliseconds: 500));
+        memberGone = find.textContaining(characterName).evaluate().isEmpty;
+      }
+      leaveWatch.stop();
+      observe(
+        'Etape6bis - delai de disparition du membre (sans navigation)',
+        memberGone ? '${leaveWatch.elapsedMilliseconds} ms' : 'JAMAIS (15 s)',
+      );
+      observe('Etape6bis - Membres (MJ) apres depart', visibleTexts());
+      if (!memberGone) {
+        fail(
+          'ECART F07 (DELETE) : "$characterName" est toujours affiché côté '
+          'MJ, sans navigation, 15 s après son départ du groupe. Texte '
+          'visible : ${visibleTexts()}',
         );
       }
 
