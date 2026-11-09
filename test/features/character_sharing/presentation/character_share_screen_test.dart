@@ -6,6 +6,7 @@
 // `_FakeCharacterSharingRepository` pour `characterSharingRepositoryProvider`
 // (les 3 opérations d'écriture du partage).
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -45,9 +46,16 @@ import 'package:personnages/features/characters/presentation/providers/character
 class _FakeCharacterRepository implements CharacterRepository {
   CharacterDetail? detailToReturn;
 
+  /// Si non `null`, [fetchCharacterDetail] attend ce `Completer` (réseau
+  /// lent) au lieu de répondre tout de suite.
+  Completer<CharacterDetail>? detailCompleter;
+
   @override
-  Future<CharacterDetail> fetchCharacterDetail(String characterId) async =>
-      detailToReturn ?? _baseDetail;
+  Future<CharacterDetail> fetchCharacterDetail(String characterId) async {
+    final completer = detailCompleter;
+    if (completer != null) return completer.future;
+    return detailToReturn ?? _baseDetail;
+  }
 
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
@@ -509,8 +517,58 @@ void main() {
       expect(fakeSharingRepository.regenerateCallCount, 1);
       expect(find.text('Partage actif'), findsOneWidget);
       expect(find.textContaining('nexus-jdr.app/p/tok-xyz'), findsOneWidget);
+      // F23 : première activation, pas une régénération.
+      expect(find.text('Partage activé.'), findsOneWidget);
+      expect(find.text('Lien de partage régénéré.'), findsNothing);
     },
   );
+
+  testWidgets('tap "Régénérer le lien" sur un partage déjà actif : message '
+      '« Lien de partage régénéré. »', (tester) async {
+    fakeCharacterRepository.detailToReturn = _baseDetail.copyWith(
+      shareToken: 'existing-token',
+    );
+
+    await pumpShareScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Régénérer le lien'));
+    await tester.pumpAndSettle();
+
+    expect(fakeSharingRepository.regenerateCallCount, 1);
+    expect(find.text('Lien de partage régénéré.'), findsOneWidget);
+    expect(find.text('Partage activé.'), findsNothing);
+  });
+
+  testWidgets("activation : le bouton n'est pas réactivable tant que la fiche "
+      "rafraîchie n'est pas arrivée (pas de second tap sur un état périmé)", (
+    tester,
+  ) async {
+    fakeCharacterRepository.detailToReturn = _baseDetail;
+    await pumpShareScreen(tester);
+    await tester.pumpAndSettle();
+
+    // Réseau lent pour le refetch qui suit l'activation.
+    final completer = Completer<CharacterDetail>();
+    fakeCharacterRepository.detailCompleter = completer;
+
+    await tester.tap(find.text('ACTIVER LE PARTAGE'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(fakeSharingRepository.regenerateCallCount, 1);
+    // Fiche périmée encore affichée, mais le bouton reste en chargement
+    // (libellé remplacé par l'indicateur) : aucun second tap possible.
+    expect(find.text('ACTIVER LE PARTAGE'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('Partage activé.'), findsNothing);
+
+    completer.complete(_baseDetail.copyWith(shareToken: 'tok-xyz'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Partage actif'), findsOneWidget);
+    expect(find.text('Partage activé.'), findsOneWidget);
+  });
 
   testWidgets('partage actif : affiche le lien, "Régénérer le lien" et la zone '
       'dangereuse avec "Désactiver le partage"', (tester) async {
