@@ -2964,6 +2964,141 @@ void main() {
       },
     );
 
+    // F18 (campagne « simulation utilisateur » du 09/11/2026) : hors ligne, le
+    // compteur d'emplacements doit refléter la consommation en attente, sur
+    // les trois surfaces (carte, titre de groupe, pastilles) et pour
+    // plusieurs lancers d'affilée.
+    group('hors ligne (F18) : consommation en attente affichée', () {
+      Future<void> openSpellsTab(WidgetTester tester) async {
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SORTS'));
+        await tester.pumpAndSettle();
+      }
+
+      Future<void> castBouclier(WidgetTester tester) async {
+        await tester.tap(find.text('Bouclier'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+        await tester.pumpAndSettle();
+      }
+
+      CharacterDetail detailWithSlots(List<CharacterSpellSlot> slots) =>
+          _baseDetail.copyWith(
+            spells: const [
+              CharacterSpellEntry(
+                id: 1,
+                name: 'Bouclier',
+                level: 1,
+                school: 'Abjuration',
+                status: SpellStatus.prepared,
+              ),
+            ],
+            spellSlots: slots,
+          );
+
+      testWidgets(
+        "deux lancers hors ligne d'affilée : 2/2 -> 1/2 -> 0/2 sur la carte, "
+        'le titre du groupe et les pastilles, sans retour en arrière',
+        (tester) async {
+          fakeRepository.castSpellOutcomeToReturn = WriteOutcome.queued;
+          fakeRepository.detailToReturn = detailWithSlots(const [
+            CharacterSpellSlot(level: 1, total: 2, used: 0),
+          ]);
+          await openSpellsTab(tester);
+
+          expect(find.text('2/2'), findsOneWidget);
+
+          await castBouclier(tester);
+          expect(fakeRepository.lastCastSlotsUsed, 1);
+          expect(find.text('1/2'), findsOneWidget);
+          expect(
+            find.bySemanticsLabel(
+              'Niveau 1 : 1 sur 2 emplacements disponibles',
+            ),
+            findsNWidgets(2),
+          );
+
+          await castBouclier(tester);
+          expect(
+            fakeRepository.lastCastSlotsUsed,
+            2,
+            reason:
+                'Le second lancer part de la valeur affichée (1), pas '
+                'de la valeur serveur périmée (0) : pas de double décompte '
+                'ni de perte.',
+          );
+          expect(find.text('0/2'), findsOneWidget);
+          expect(
+            find.bySemanticsLabel(
+              'Niveau 1 : 0 sur 2 emplacements disponibles',
+            ),
+            findsNWidgets(2),
+          );
+        },
+      );
+
+      testWidgets(
+        'lancer mis en file puis synchronisation réussie (fiche relue avec '
+        'la valeur serveur) : pas de double décompte, pas de retour en arrière',
+        (tester) async {
+          fakeRepository.castSpellOutcomeToReturn = WriteOutcome.queued;
+          fakeRepository.detailToReturn = detailWithSlots(const [
+            CharacterSpellSlot(level: 1, total: 2, used: 0),
+          ]);
+          await openSpellsTab(tester);
+          await castBouclier(tester);
+          expect(find.text('1/2'), findsOneWidget);
+
+          // Retour du réseau : le serveur porte désormais la valeur envoyée.
+          fakeRepository.detailToReturn = detailWithSlots(const [
+            CharacterSpellSlot(level: 1, total: 2, used: 1),
+          ]);
+          invalidateDetail(tester);
+          await tester.pumpAndSettle();
+
+          expect(find.text('1/2'), findsOneWidget);
+          expect(find.text('0/2'), findsNothing);
+
+          // Un lancer ultérieur repart bien de la valeur confirmée.
+          await castBouclier(tester);
+          expect(fakeRepository.lastCastSlotsUsed, 2);
+          expect(find.text('0/2'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'surclassement hors ligne : seul le niveau supérieur consommé est '
+        'décompté (niveau 1 épuisé -> niveau 2)',
+        (tester) async {
+          fakeRepository.castSpellOutcomeToReturn = WriteOutcome.queued;
+          fakeRepository.detailToReturn = detailWithSlots(const [
+            CharacterSpellSlot(level: 1, total: 1, used: 1),
+            CharacterSpellSlot(level: 2, total: 2, used: 0),
+          ]);
+          await openSpellsTab(tester);
+
+          // Deux niveaux éligibles (le niveau 1, épuisé, reste listé) : la
+          // feuille de choix s'ouvre, le niveau 2 y est présélectionné.
+          await tester.tap(find.text('Bouclier'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+          await tester.pumpAndSettle();
+
+          expect(fakeRepository.lastCastSlotLevel, 2);
+          expect(fakeRepository.lastCastSlotsUsed, 1);
+          expect(
+            find.bySemanticsLabel(
+              'Niveau 2 : 1 sur 2 emplacements disponibles',
+            ),
+            findsOneWidget,
+          );
+        },
+      );
+    });
+
     testWidgets('échec : affiche un message d\'erreur dédié', (tester) async {
       fakeRepository.castSpellErrorToThrow = const CharacterFailure(
         'Impossible de lancer ce sort. Réessayez.',
