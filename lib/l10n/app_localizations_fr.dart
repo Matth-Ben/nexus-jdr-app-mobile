@@ -357,14 +357,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileFaqAnswer1 =>
-      'Sur aidedd.org, ouvre la fiche de ton personnage puis utilise son export XML (bouton d\'export du site). Dans Nexus JDR, va dans Personnages > « + » > Importer un fichier XML, puis sélectionne ce fichier. L\'app pré-remplit automatiquement la fiche (caractéristiques, classe, race, sorts, inventaire...) et te montre un écran de vérification avant de l\'enregistrer, avec les champs qu\'elle n\'a pas reconnus signalés d\'une pastille pour que tu les complètes toi-même.';
+      'Sur aidedd.org, ouvre la fiche de ton personnage puis utilise son export XML (bouton d\'export du site). Dans Nexus JDR, va dans la liste des Personnages et appuie sur « Importer XML », en bas de l\'écran à côté de « + Créer », puis sélectionne ce fichier .xml. L\'app pré-remplit automatiquement la fiche (caractéristiques, classe, race, sorts, inventaire...) et te montre un écran de vérification avant de l\'enregistrer, avec un badge sur les champs qu\'elle n\'a pas reconnus pour que tu les complètes toi-même.';
 
   @override
   String get profileFaqQuestion2 => 'Comment rejoindre l\'histoire de mon MJ ?';
 
   @override
   String get profileFaqAnswer2 =>
-      'Ton MJ te partage un code d\'invitation ou un lien depuis l\'app « Histoires ». Dans Nexus JDR, ouvre ce lien ou saisis le code dans l\'écran « Rejoindre une histoire », puis choisis le personnage à rattacher (un existant ou un nouveau). Le personnage reste ensuite synchronisé avec cette histoire tant que le MJ ne retire pas l\'accès.';
+      'Ton MJ t\'envoie un lien d\'invitation depuis l\'app « Histoires ». Sur Android, ouvre ce lien sur ton téléphone : Nexus JDR s\'ouvre sur l\'invitation et tu choisis le personnage à rattacher. Il n\'y a pas encore de saisie manuelle du code dans l\'app, et l\'ouverture du lien dans l\'app n\'est pas encore disponible sur iPhone/iPad.';
 
   @override
   String get profileFaqQuestion3 =>
@@ -372,7 +372,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileFaqAnswer3 =>
-      'Oui. Tous tes personnages restent consultables et modifiables sans connexion : les changements (points de vie, XP, inventaire...) sont mis en file d\'attente sur ton appareil puis synchronisés automatiquement avec le serveur dès que la connexion revient. Aucune donnée n\'est perdue en cas de coupure réseau.';
+      'En partie. Sans connexion, tu peux consulter ta liste et les fiches déjà ouvertes, et modifier les points de vie, l\'XP, les emplacements de sorts, les sorts innés, les aptitudes à usage limité et le repos : ces changements sont mis en attente sur ton appareil, puis envoyés automatiquement au retour du réseau. Attention, un seul repos est mis en attente à la fois par personnage : si tu enchaînes un repos court puis un repos long hors ligne, seul le dernier sera envoyé. Le reste (création de personnage, montée de niveau, inventaire, monnaies, journal, préparation des sorts, ajout d\'un objet depuis le catalogue...) demande une connexion : hors ligne, l\'action est refusée et il faut la refaire une fois reconnecté.';
 
   @override
   String get profileFaqQuestion4 => 'Comment fonctionne la montée de niveau ?';

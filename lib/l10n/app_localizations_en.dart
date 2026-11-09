@@ -356,21 +356,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileFaqAnswer1 =>
-      'On aidedd.org, open your character sheet and use its XML export (the site\'s export button). In Nexus JDR, go to Characters > \"+\" > Import an XML file, then select that file. The app automatically pre-fills the sheet (stats, class, race, spells, inventory...) and shows you a review screen before saving it, with any fields it couldn\'t recognize flagged with a badge so you can fill them in yourself.';
+      'On aidedd.org, open your character sheet and use its XML export (the site\'s export button). In Nexus JDR, go to the Characters list and tap \"Import XML\" at the bottom of the screen, next to \"+ Create\", then select that .xml file. The app automatically pre-fills the sheet (stats, class, race, spells, inventory...) and shows you a review screen before saving it, with a badge on any fields it couldn\'t recognize so you can fill them in yourself.';
 
   @override
   String get profileFaqQuestion2 => 'How do I join my GM\'s story?';
 
   @override
   String get profileFaqAnswer2 =>
-      'Your GM shares an invitation code or link from the Histoires app. In Nexus JDR, open that link or enter the code on the \"Join a story\" screen, then choose the character to attach (an existing one or a new one). The character then stays synced with that story until the GM revokes access.';
+      'Your GM sends you an invitation link from the Histoires app. On Android, open that link on your phone: Nexus JDR opens on the invitation and you choose the character to attach. There is no manual code entry in the app yet, and opening the link in the app is not yet available on iPhone/iPad.';
 
   @override
   String get profileFaqQuestion3 => 'Are my characters saved offline?';
 
   @override
   String get profileFaqAnswer3 =>
-      'Yes. All your characters stay viewable and editable without a connection: changes (hit points, XP, inventory...) are queued on your device and automatically synced with the server as soon as the connection comes back. No data is lost in case of a network outage.';
+      'Partly. Without a connection you can view your list and the sheets you have already opened, and edit hit points, XP, spell slots, innate spells, limited-use features and rest: these changes are held on your device, then sent automatically when the network is back. Note that only one rest is held at a time per character: if you take a short rest then a long rest offline, only the last one is sent. Everything else (character creation, level-up, inventory, currency, journal, spell preparation, adding an item from the catalog...) needs a connection: offline, the action is refused and you have to redo it once reconnected.';
 
   @override
   String get profileFaqQuestion4 => 'How does leveling up work?';
