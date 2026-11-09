@@ -2486,11 +2486,11 @@ abstract class AppLocalizations {
   /// **'INSP.'**
   String get characterStatPillsInspirationLabel;
 
-  /// Valeur de la tuile "Vitesse" quand `speed` est résolu — unité métrique (mètres) volontairement gardée telle quelle en anglais aussi (même unité conservée dans app_en.arb, qui ne porte pas sa propre description de clé : ce fichier app_fr.arb est le template) : les données de vitesse de ce dépôt sont stockées en mètres, jamais converties en pieds.
+  /// Valeur de la tuile "Vitesse" quand `speed` est résolu — unité métrique (mètres) volontairement gardée telle quelle en anglais aussi (même unité conservée dans app_en.arb, qui ne porte pas sa propre description de clé : ce fichier app_fr.arb est le template) : `speed` est reçu DÉJÀ converti en mètres (`SpeedConverter.feetToMetres`, la base `races.speed` reste en pieds), formaté selon la locale (7,5 en français, 7.5 en anglais).
   ///
   /// In fr, this message translates to:
   /// **'{speed} m'**
-  String characterStatPillsSpeedValue(int speed);
+  String characterStatPillsSpeedValue(double speed);
 
   /// Abréviation de la caractéristique Force, partagée par `character_saving_throws_card.dart` et `character_skills_card.dart` (chacun garde sa propre table de correspondance `Dart`, intentionnellement dupliquée — voir leur doc de classe respective — mais réutilise ces mêmes clés `.arb`, même principe que `characterLevelAbbreviation`).
   ///

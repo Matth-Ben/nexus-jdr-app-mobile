@@ -17,6 +17,7 @@ Future<void> _pump(
   required int armorClassBonus,
   VoidCallback? onTapArmorClass,
   Locale locale = const Locale('fr'),
+  int speed = 30,
 }) {
   return tester.pumpWidget(
     MaterialApp(
@@ -30,7 +31,7 @@ Future<void> _pump(
       locale: locale,
       home: Scaffold(
         body: CharacterStatPillsRow(
-          speed: 9,
+          speed: speed,
           armorClass: armorClass,
           armorClassBonus: armorClassBonus,
           // Modificateur d'initiative volontairement à 0 (`+0`) : ne
@@ -115,6 +116,24 @@ void main() {
     },
   );
 
+  testWidgets('vitesse de 25 pieds -> "7,5 m" en français (virgule décimale)', (
+    tester,
+  ) async {
+    await _pump(tester, armorClass: 12, armorClassBonus: 0, speed: 25);
+    expect(find.text('7,5 m'), findsOneWidget);
+  });
+
+  testWidgets('vitesse de 25 pieds -> "7.5 m" en anglais', (tester) async {
+    await _pump(
+      tester,
+      armorClass: 12,
+      armorClassBonus: 0,
+      speed: 25,
+      locale: const Locale('en'),
+    );
+    expect(find.text('7.5 m'), findsOneWidget);
+  });
+
   group('locale anglaise', () {
     // Même rationale que `character_card_test.dart` (chantier "traduction
     // de l'app" Phase B) : vérifie qu'un texte anglais s'affiche réellement.
@@ -132,10 +151,8 @@ void main() {
         expect(find.text('AC'), findsOneWidget);
         expect(find.text('INIT.'), findsOneWidget);
         expect(find.text('INSP.'), findsOneWidget);
-        // Vitesse en mètres volontairement identique dans les deux langues
-        // (voir `@characterStatPillsSpeedValue` dans `app_fr.arb`) : les
-        // données de ce dépôt sont stockées en mètres, jamais converties en
-        // pieds.
+        // Vitesse stockée en pieds (30), affichée en mètres (9) dans les deux
+        // langues (voir `SpeedConverter`).
         expect(find.text('9 m'), findsOneWidget);
       },
     );

@@ -149,7 +149,8 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// (`CharacterStatPillsRow`) — voir `CharacterRepository.setInspiration`.
     @Default(false) bool inspiration,
 
-    /// Vitesse de déplacement en mètres (`races.speed`), `null` si la race
+    /// Vitesse de déplacement en PIEDS (`races.speed`, convertie en mètres à
+    /// l'affichage par `SpeedConverter`), `null` si la race
     /// n'a pas pu être résolue (race personnalisée/non renseignée) — voir
     /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
     /// "Onglet Personnage". Affichée telle quelle sans ajustement (armure

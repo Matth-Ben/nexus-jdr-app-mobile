@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/signed_modifier_formatter.dart';
+import '../../domain/speed_converter.dart';
 
 /// Rangée "VIT. / CA / INIT. / INSP." en tête de l'onglet
 /// "Personnage", juste sous la carte d'identité — voir
@@ -32,7 +33,8 @@ class CharacterStatPillsRow extends StatelessWidget {
     super.key,
   });
 
-  /// Vitesse de déplacement en mètres (`CharacterDetail.speed`), `null` si
+  /// Vitesse de déplacement en PIEDS (`CharacterDetail.speed`, convertie en
+  /// mètres à l'affichage par `SpeedConverter`), `null` si
   /// la race n'a pas pu être résolue — affiche un tiret plutôt qu'une
   /// fausse valeur.
   final int? speed;
@@ -76,7 +78,9 @@ class CharacterStatPillsRow extends StatelessWidget {
           child: _StatPill(
             label: l10n.characterStatPillsSpeedLabel,
             value: speed != null
-                ? l10n.characterStatPillsSpeedValue(speed!)
+                ? l10n.characterStatPillsSpeedValue(
+                    SpeedConverter.feetToMetres(speed!),
+                  )
                 : '—',
           ),
         ),

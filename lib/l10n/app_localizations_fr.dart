@@ -1424,8 +1424,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get characterStatPillsInspirationLabel => 'INSP.';
 
   @override
-  String characterStatPillsSpeedValue(int speed) {
-    return '$speed m';
+  String characterStatPillsSpeedValue(double speed) {
+    final intl.NumberFormat speedNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String speedString = speedNumberFormat.format(speed);
+
+    return '$speedString m';
   }
 
   @override
