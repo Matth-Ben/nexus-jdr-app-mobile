@@ -30,30 +30,13 @@
 // note) sont documentées par des `print` d'observation, pas des `fail` --
 // voir le compte-rendu QA correspondant pour l'interprétation.
 //
-// **État au 07/11/2026 (campagne d'origine)** : les 10 étapes s'exécutent
-// avec succès de bout en bout en conditions réelles (toutes les valeurs RAW
-// 1a/1c-1j/2/3/4/5b/5c/5h vérifiées exactes) -- mais `flutter test` rapporte
-// ce fichier en échec à cause d'un défaut produit mineur, PAS d'un écart RAW
-// (voir le compte-rendu QA pour le détail complet des 3 constats, consignés
-// dans `docs/retours-utilisateurs.md`) :
-// - `character_list_screen.dart::_EmptyState` déborde de 3,7px quand le
-//   compte MJ n'a aucun personnage (toujours le cas ici) -- ce débordement
-//   est promu en échec de test par le framework Flutter (`FlutterError`
-//   rapportée), même si rien dans CE fichier n'y réagit.
-// - 1b (CA 18 attendue) : l'équipement de départ standard résout sur
-//   "Chemise de mailles" (CA13+Dex) au lieu d'"Armure d'écailles" (CA14+Dex)
-//   -- CA 17 observée au lieu de 18, écart documenté, pas corrigé ici.
-// - 5b (PV max après montée de niveau 2, méthode moyenne) : la fiche affiche
-//   parfois (observé ~50% des exécutions) encore les valeurs du niveau 1
-//   juste après `runOneLevelUp` alors que `character_classes.level` est déjà
-//   à jour en base -- fermer/rouvrir la fiche corrige l'affichage à chaque
-//   fois (voir le bloc de récupération ci-dessous) : défaut de
-//   rafraîchissement client, pas de perte d'écriture réelle.
-// Un personnage de test orphelin (`QA-Adventure-Clerc-1794059944973480`,
-// caractéristiques fausses -- première exécution avant la correction de la
-// séquence de `swapUp`) reste en base, jamais nettoyé (le test a échoué
-// avant d'atteindre l'étape 10 cette fois-là) -- à supprimer par
-// `dev-backend-supabase`, même limite que les autres fichiers de ce dossier.
+// Toutes les étapes s'exécutent avec des assertions strictes : CA 18 à la
+// création (armure d'écailles CA 14 + Dex 14 plafonné à +2 + bouclier +2),
+// PV max 17 affichés immédiatement après la montée de niveau 2 (sans
+// fermer/rouvrir la fiche), note de groupe du MJ via le carnet multi-entrées
+// (« Ajouter une note » -> feuille modale -> « Enregistrer »). Le nettoyage
+// final supprime le personnage (compte joueur, propriétaire RLS) puis le
+// groupe (compte MJ) et vérifie la disparition réelle des lignes.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -156,22 +139,12 @@ void main() {
         'l\'onglet PERSO. Texte visible : ${visibleTexts()}',
       );
     }
-    // ECART 1b CONFIRMÉ (reproduit de façon identique sur toutes les
-    // exécutions réelles de cette campagne) : CA 17 observée au lieu de
-    // 18. Cause identifiée via l'onglet SAC -- l'équipement de départ
-    // standard du Clerc résout sur "Chemise de mailles" (armure moyenne,
-    // CA 13 + mod Dex plafonné à 2) plutôt que sur l'une des 3 options
-    // RAW (armure d'écailles CA14/cuir CA11/cotte de mailles CA16, voir le
-    // PHB) -- "Chemise de mailles" n'est même pas l'une de ces 3 options,
-    // ce qui suggère un défaut de mapping/catalogue plutôt qu'un simple
-    // choix de valeur par défaut discutable. CA 13+2(Dex)+2(bouclier)=17,
-    // cohérent avec la CA observée -- confirme le mécanisme, pas juste la
-    // valeur finale. Jamais corrigé ici (signalé à dev-flutter).
-    if (find.text('17').evaluate().isEmpty) {
-      observe(
-        'Etape1 - ECART POSSIBLE 1b',
-        'CA attendue 18 (RAW) ou 17 (défaut observé, voir commentaire), '
-            'aucune des deux trouvée -- texte visible : ${visibleTexts()}',
+    // 1b : CA RAW = armure d'écailles (14 + mod Dex 14 -> +2, plafond armure
+    // moyenne) + bouclier (+2) = 18.
+    if (find.text('18').evaluate().isEmpty) {
+      fail(
+        'ECART 1b : CA attendue "18" (écailles 14 + Dex +2 + bouclier +2) '
+        'absente de l\'onglet PERSO. Texte visible : ${visibleTexts()}',
       );
     }
 
@@ -390,39 +363,10 @@ void main() {
       classRowsAfterLevelUp,
     );
     if (find.text('17 / 17').evaluate().isEmpty) {
-      // BUG trouvé et reproduit 2 fois sur 4 exécutions réelles pendant
-      // cette campagne (character_classes.level déjà à 2 en base -- voir
-      // le diagnostic ci-dessus -- mais la fiche reste affichée comme au
-      // niveau 1, PV "10 / 10"/XP "0 / 300" inchangés) : avant de le
-      // signaler comme un échec définitif, referme puis rouvre la fiche
-      // (force un nouveau fetch réseau, même geste qu'un joueur qui
-      // quitterait l'écran -- voir
-      // `custom_inventory_item_weapon_details_test.dart` pour le même
-      // principe de vérification "persistance réelle") : si cela corrige
-      // l'affichage, le défaut est un rafraîchissement client manquant
-      // après ce type de montée de niveau précis (PV méthode moyenne),
-      // pas une perte réelle d'écriture -- distinction importante pour
-      // dev-flutter.
-      observe(
-        'Etape5 - ECART 5b (avant réouverture)',
-        'PV max attendus "17 / 17" absents juste après runOneLevelUp -- '
-            'texte visible : ${visibleTexts()}',
-      );
-      await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
-      await pumpUntilSettled(tester, attempts: 6);
-      await openCharacterByName(tester, characterName);
-      await pumpUntilSettled(tester, attempts: 6);
-      observe(
-        'Etape5 - onglet PERSO apres fermeture/reouverture',
-        visibleTexts(),
-      );
-    }
-    if (find.text('17 / 17').evaluate().isEmpty) {
       fail(
-        'ECART 5b CONFIRMÉ : PV max attendus "17 / 17" après la montée de '
+        'ECART 5b : PV max attendus "17 / 17" juste après la montée de '
         'niveau 2 (méthode moyenne, 10 + 5 [moyenne d8] + 2 [mod CON]), '
-        'toujours absents même après fermeture/réouverture de la fiche '
-        '(nouveau fetch réseau forcé). Texte visible : ${visibleTexts()}',
+        'sans fermer/rouvrir la fiche. Texte visible : ${visibleTexts()}',
       );
     }
     await tapText(tester, 'APT.');
@@ -436,39 +380,42 @@ void main() {
     }
     await tapText(tester, 'SORTS');
     await pumpUntilSettled(tester, attempts: 4);
-    // 5f : le quota "SORTS PRÉPARÉS" passe de 4 à 5 à la montée de niveau
-    // 2 (mod SAG +3 + niveau 2), mais l'étape "Sorts" de l'assistant de
-    // montée de niveau ne fait QUE recalculer les emplacements -- elle ne
-    // propose aucun choix de préparation (voir
-    // `level_up_screen.dart::_buildSpellsStep`, branche sans
-    // `requiresSpellSelection` pour un lanceur qui PRÉPARE ses sorts
-    // plutôt que d'en "apprendre" de nouveaux) : le quota reste donc sous
-    // rempli ("4 / 5, Encore 1 sort à préparer") jusqu'à ce que le joueur
-    // prépare lui-même un 5e sort niveau 1 depuis cet onglet, exactement
-    // comme un vrai joueur le ferait -- documenté comme friction UX dans
-    // le compte-rendu QA plutôt que corrigé ici.
-    if (find.textContaining('Encore 1 sort à préparer').evaluate().isNotEmpty) {
-      observe(
-        'Etape5 - ECART/FRICTION 5f',
-        'quota "SORTS PRÉPARÉS" sous-rempli (4/5) après la montée de '
-            'niveau -- préparation manuelle du 5e sort pour atteindre l\'état '
-            'RAW attendu.',
+    // 5f : le quota "SORTS PRÉPARÉS" passe de 4 à 5 à la montée de niveau 2
+    // (RAW : mod SAG +3 + niveau 2 = 5). Les sorts de domaine (Bénédiction,
+    // Soins) ne comptent pas dans ce quota. L'assistant de montée de niveau
+    // ne propose aucune préparation (le joueur choisit lui-même) : on attend
+    // donc "4 / 5, Encore 1 sort à préparer", puis on prépare un sort non
+    // préparé et non de domaine ("Mot de guérison") et on exige 5 / 5.
+    // Comportement observé conforme à la règle (formule SAG + niveau dans
+    // `PreparedSpellsLimit.limitFor`, domaine exclu par
+    // `_countsTowardPreparedLimit`).
+    if (find.text('4 / 5').evaluate().isEmpty ||
+        find.textContaining('Encore 1 sort à préparer').evaluate().isEmpty) {
+      fail(
+        'ECART 5f : quota "SORTS PRÉPARÉS" attendu "4 / 5" + "Encore 1 sort à '
+        'préparer" juste après la montée de niveau 2. Texte visible : '
+        '${visibleTexts()}',
       );
-      await scrollUntilVisibleThenTap(
-        tester,
-        find.byType(ListView).first,
-        'Mot de guérison',
+    }
+    await scrollUntilVisibleThenTap(
+      tester,
+      find.byType(ListView).first,
+      'Mot de guérison',
+    );
+    await pumpUntilSettled(tester, attempts: 4);
+    await tapText(tester, 'Préparer ce sort');
+    await pumpUntilSettled(tester, attempts: 6);
+    // Le compteur est en tête de liste : la liste paresseuse l'a retiré de
+    // l'arbre après le défilement jusqu'à "Mot de guérison".
+    for (var i = 0; i < 6 && find.text('5 / 5').evaluate().isEmpty; i++) {
+      await tester.drag(find.byType(ListView).first, const Offset(0, 600));
+      await pumpUntilSettled(tester, attempts: 2);
+    }
+    if (find.text('5 / 5').evaluate().isEmpty) {
+      fail(
+        'ECART 5f : quota "SORTS PRÉPARÉS" attendu "5 / 5" après avoir '
+        'préparé "Mot de guérison". Texte visible : ${visibleTexts()}',
       );
-      await pumpUntilSettled(tester, attempts: 4);
-      await tapText(tester, 'Préparer ce sort');
-      await pumpUntilSettled(tester, attempts: 6);
-      if (find.text('5 / 5').evaluate().isEmpty) {
-        observe(
-          'Etape5 - ECART POSSIBLE 5f',
-          'quota "SORTS PRÉPARÉS" toujours pas a 5/5 apres preparation '
-              'manuelle -- texte visible : ${visibleTexts()}',
-        );
-      }
     }
     final level1SlotsAfterLevelUp = tester
         .widgetList<SpellSlotDots>(find.byType(SpellSlotDots))
@@ -653,27 +600,32 @@ void main() {
     const sessionNote =
         'Session 1 : le groupe a exploré la crypte oubliée et vaincu un '
         'mort-vivant.';
-    if (find.byType(TextField).evaluate().isEmpty) {
+    if (find.text('Ajouter une note').evaluate().isEmpty) {
       fail(
-        'ECART 9 : aucun champ de saisie sur l\'onglet NOTES pour un MJ '
-        'sans personnage (F02a attendu livré) -- texte visible : '
-        '${visibleTexts()}',
+        'ECART 9 : bouton « Ajouter une note » absent de l\'onglet NOTES '
+        'pour un MJ sans personnage -- texte visible : ${visibleTexts()}',
       );
     }
-    await tester.enterText(find.byType(TextField), sessionNote);
+    await tapText(tester, 'Ajouter une note');
+    await pumpUntilSettled(tester, attempts: 4);
+    // Feuille `GroupNoteEntryEditSheet` : champ titre (premier) + champ
+    // contenu (dernier).
+    await tester.enterText(find.byType(TextFormField).first, 'Session 1');
     await tester.pump();
+    await tester.enterText(find.byType(TextFormField).last, sessionNote);
+    await tester.pump();
+    // `PrimaryButton` affiche son libellé en majuscules.
     await tapText(tester, 'ENREGISTRER');
     await pumpUntilSettled(tester, attempts: 6);
     observe(
       'Etape9 - onglet NOTES (MJ sans personnage) apres saisie',
       visibleTexts(),
     );
-    if (find.text('Notes enregistrées.').evaluate().isEmpty) {
-      observe(
-        'Etape9 - ECART POSSIBLE',
-        'SnackBar de confirmation "Notes enregistrées." non observé '
-            '(peut être déjà disparu au moment du pump) -- texte visible : '
-            '${visibleTexts()}',
+    if (find.text('Session 1').evaluate().isEmpty ||
+        find.textContaining(sessionNote).evaluate().isEmpty) {
+      fail(
+        'ECART 9 : la note « Session 1 » est absente du carnet du MJ juste '
+        'après l\'enregistrement -- texte visible : ${visibleTexts()}',
       );
     }
 
