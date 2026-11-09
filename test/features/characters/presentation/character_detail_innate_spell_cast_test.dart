@@ -33,7 +33,7 @@ const _innateSpellId = 10;
 // (jamais mis en file) ne s'affiche plus pour cette méthode.
 const _offlineQueuedMessage =
     'Hors ligne : sera synchronisé dès que la connexion revient.';
-const _slotsLabel = 'Emplacements de sorts : 2 restants sur 2';
+const _slotsLabel = 'Niveau 2 : 2 sur 2 emplacements disponibles';
 
 CharacterSpellEntry _innate({int spent = 0}) => CharacterSpellEntry(
   id: _innateSpellId,
@@ -277,7 +277,7 @@ void main() {
     await _openSpellsTab(tester);
     expect(find.text('INNÉ'), findsOneWidget);
     expect(find.text('Épuisé'), findsNothing);
-    expect(find.bySemanticsLabel(_slotsLabel), findsOneWidget);
+    expect(find.bySemanticsLabel(_slotsLabel), findsNWidgets(2));
 
     await _cast(tester, 'Ténèbres');
 
@@ -292,7 +292,7 @@ void main() {
     expect(find.text('Ténèbres lancé (sort inné).'), findsOneWidget);
     expect(find.text('Épuisé'), findsOneWidget);
     // Les pastilles d'emplacements du titre de groupe n'ont pas bougé.
-    expect(find.bySemanticsLabel(_slotsLabel), findsOneWidget);
+    expect(find.bySemanticsLabel(_slotsLabel), findsNWidgets(2));
 
     semanticsHandle.dispose();
   });

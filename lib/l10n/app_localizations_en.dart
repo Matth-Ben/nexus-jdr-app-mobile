@@ -1384,6 +1384,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get characterVitalsCardZeroHpLabel => 'At 0 HP';
+
+  @override
   String get characterVitalsCardXpLabel => 'EXPERIENCE';
 
   @override
@@ -2973,6 +2976,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String characterSpellsSectionSlotLevelSemanticLabel(
+    int level,
+    int remaining,
+    int total,
+  ) {
+    return 'Level $level: $remaining of $total slots available';
+  }
+
+  @override
   String characterSpellsSectionGrantBadgeSemanticLabel(String sourceLabel) {
     return 'Always prepared, granted by: $sourceLabel';
   }
@@ -3039,18 +3051,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'No spell on this sheet yet. For classes that cast spells, they\'re chosen from the creation wizard or when leveling up.';
 
   @override
-  String get characterSpellsTabBodyNonCasterTitle =>
-      'This class doesn\'t cast spells';
+  String get characterSpellsTabBodyNonCasterMessage =>
+      'This character doesn\'t cast spells.';
 
   @override
-  String get characterSpellsTabBodyNonCasterDefaultClassName => 'this class';
+  String get characterSpellsTabBodyResourcesTitle => 'RESOURCES';
 
   @override
-  String characterSpellsTabBodyNonCasterBody(
-    String characterName,
-    String className,
-  ) {
-    return '$characterName is $className — outside a dedicated archetype (e.g. Eldritch Knight), this class has no spell slots. This tab stays accessible for navigation consistency, but will remain empty for this character.';
+  String get characterSpellsTabBodySlotsCardTitle => 'SPELL SLOTS';
+
+  @override
+  String characterSpellsTabBodySlotsLevelLabel(int level) {
+    return 'Level $level';
   }
 
   @override

@@ -9,6 +9,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
+import '../../domain/character_spell_slot.dart';
 import '../../domain/spell_name_filter.dart';
 import '../../domain/spell_preparation_filter.dart';
 import '../../domain/spell_status_formatter.dart';
@@ -158,23 +159,48 @@ class _CharacterSpellsTabBodyState
     final showLimitedUseCard =
         onUseFeature != null && limitedUseFeatures.isNotEmpty;
 
+    final availableSlots = _availableSlotLevels(detail.spellSlots);
+    final hasPactSlots = (detail.pactSpellSlot?.total ?? 0) > 0;
+
     if (detail.spells.isEmpty) {
-      final isSpellcaster = detail.classes.any(
-        (classRow) =>
-            ClassSpellcastingRegistry.ruleForFrenchName(classRow.className)
-                .isCaster,
-      );
+      // Un personnage qui a des emplacements (sous-classe lanceuse du
+      // Guerrier/Roublard, multiclassage...) se comporte comme un lanceur
+      // même si sa classe n'en est pas un par défaut ; la règle partagée
+      // `ClassSpellcastingRegistry` (création/montée de niveau) n'est pas
+      // modifiée.
+      final isSpellcaster =
+          availableSlots.isNotEmpty ||
+          hasPactSlots ||
+          detail.classes.any(
+            (classRow) =>
+                ClassSpellcastingRegistry.ruleForFrenchName(classRow.className)
+                    .isCaster,
+          );
+      if (!isSpellcaster) {
+        return ListView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          children: [
+            const _NonCasterEmptyState(),
+            if (showLimitedUseCard) ...[
+              const SizedBox(height: AppSpacing.md),
+              CharacterClassFeaturesCard(
+                features: limitedUseFeatures,
+                onUseFeature: onUseFeature,
+                actionsDisabled: widget.actionsDisabled,
+                title: l10n.characterSpellsTabBodyResourcesTitle,
+              ),
+            ],
+          ],
+        );
+      }
       return ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
-          isSpellcaster
-              ? const _EmptySpellsState()
-              : _NonCasterEmptyState(
-                  characterName: detail.name,
-                  className:
-                      detail.primaryClass?.className ??
-                      l10n.characterSpellsTabBodyNonCasterDefaultClassName,
-                ),
+          if (availableSlots.isNotEmpty) ...[
+            _SpellSlotsCard(slots: availableSlots),
+            const SizedBox(height: AppSpacing.md),
+          ],
+          const _EmptySpellsState(),
           if (showLimitedUseCard) ...[
             const SizedBox(height: AppSpacing.md),
             CharacterClassFeaturesCard(
@@ -231,6 +257,10 @@ class _CharacterSpellsTabBodyState
       children: [
         _SpellSearchField(controller: _searchController, focusNode: _focusNode),
         const SizedBox(height: AppSpacing.md),
+        if (availableSlots.isNotEmpty) ...[
+          _SpellSlotsCard(slots: availableSlots),
+          const SizedBox(height: AppSpacing.md),
+        ],
         if (hasPreparation) ...[
           SpellPreparationCard(
             filter: preparationFilter,
@@ -387,55 +417,107 @@ class _EmptySpellsState extends StatelessWidget {
   }
 }
 
-/// État vide d'une classe structurellement non lanceuse de sorts (ex.
-/// Guerrier, Roublard) — distinct de [_EmptySpellsState] (voir maquette
-/// `docs/cahier-des-charges/09-maquettes-captures.md`, section "État vide —
-/// Sorts") : l'onglet reste accessible par cohérence de navigation entre
-/// personnages, mais ce message précise que ce n'est pas juste "pas encore
-/// choisi".
+/// État d'un personnage sans emplacements de sorts (ex. Barbare, Guerrier) :
+/// une phrase simple, les compteurs d'aptitudes (carte "Ressources") étant
+/// affichés en dessous par l'appelant.
 class _NonCasterEmptyState extends StatelessWidget {
-  const _NonCasterEmptyState({
-    required this.characterName,
-    required this.className,
-  });
-
-  final String characterName;
-  final String className;
+  const _NonCasterEmptyState();
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.description_outlined,
-              size: 48,
-              color: AppColors.textMuted,
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.description_outlined,
+            size: 48,
+            color: AppColors.textMuted,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            l10n.characterSpellsTabBodyNonCasterMessage,
+            textAlign: TextAlign.center,
+            style: AppTypography.body(color: AppColors.textMuted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Niveaux d'emplacements réellement disponibles (niveau >= 1, `total > 0`,
+/// hors magie de pacte, triés) — du niveau 1 jusqu'au niveau maximum du
+/// personnage, y compris ceux dont tous les emplacements sont dépensés.
+/// `detail.spellSlots` est déjà la table combinée en cas de multiclassage.
+List<CharacterSpellSlot> _availableSlotLevels(List<CharacterSpellSlot> slots) {
+  return [
+    for (final slot in slots)
+      if (!slot.isPact && slot.level >= 1 && slot.total > 0) slot,
+  ]..sort((a, b) => a.level.compareTo(b.level));
+}
+
+/// Carte "Emplacements de sorts" : une ligne de pastilles par niveau
+/// d'emplacement disponible (voir [_availableSlotLevels]), indépendamment
+/// des sorts connus (bug F15). `Wrap` pour ne jamais déborder à 320 px ou
+/// avec un texte système agrandi.
+class _SpellSlotsCard extends StatelessWidget {
+  const _SpellSlotsCard({required this.slots});
+
+  final List<CharacterSpellSlot> slots;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.parchmentCard,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.characterSpellsTabBodySlotsCardTitle,
+            style: AppTypography.display(
+              fontSize: 11,
+              color: AppColors.textSecondary,
             ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              l10n.characterSpellsTabBodyNonCasterTitle,
-              textAlign: TextAlign.center,
-              style: AppTypography.body(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+          ),
+          for (final slot in slots) ...[
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              l10n.characterSpellsTabBodyNonCasterBody(
-                characterName,
-                className,
+            // Une seule annonce par ligne ; libellé + pastilles décoratifs
+            // pour le lecteur d'écran (`excludeSemantics`).
+            Semantics(
+              container: true,
+              excludeSemantics: true,
+              label: l10n.characterSpellsSectionSlotLevelSemanticLabel(
+                slot.level,
+                slot.remaining,
+                slot.total,
               ),
-              textAlign: TextAlign.center,
-              style: AppTypography.body(color: AppColors.textMuted),
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                children: [
+                  Text(
+                    l10n.characterSpellsTabBodySlotsLevelLabel(slot.level),
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SpellSlotDots(slot: slot),
+                ],
+              ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }

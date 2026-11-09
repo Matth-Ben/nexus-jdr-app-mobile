@@ -294,8 +294,8 @@ void main() {
       for (final spell in const [_innate, _innateSpent]) {
         await _pump(tester, _detail([spell], spellSlots: slots));
         expect(
-          find.bySemanticsLabel('Emplacements de sorts : 1 restants sur 2'),
-          findsOneWidget,
+          find.bySemanticsLabel('Niveau 2 : 1 sur 2 emplacements disponibles'),
+          findsNWidgets(2),
         );
       }
 
