@@ -171,3 +171,70 @@ que tu proposes, tu peux lancer le dev") :
 3. **F03** : retenu avec l'approche "vue SQL" dès la v1 (pas d'agrégation
    côté client), conformément à la convergence qa-testeur/dev-backend-supabase.
 4. **F01** : traité directement, sans attendre — voir tableau ci-dessus.
+
+## Campagne complète du 09/11/2026 (passes A et B1, rôle joueur)
+
+Campagne demandée par Matthias : tester l'app comme un vrai joueur sur l'ensemble de
+ses fonctionnalités, juger si elles sont concrètes à la table et ce qui manque, avec
+un angle qualité de vie. Passe A : création de 3 profils (Magicien, Barbare, Occultiste),
+lecture de la fiche, le reste lu dans le code. Passe B1 : interactions de la fiche
+exécutées sur émulateur (PV, repos, sorts, inventaire, progression jusqu'au niveau 4,
+journal). La passe B2 (import/export XML, hors-ligne, partage, profil, groupes,
+accessibilité) est en cours : ses constats seront ajoutés ici.
+
+Conforme et vérifié en conditions réelles (aucun écart) : PV et PV temporaires (plafonds,
+non-cumul, absorption), repos court (dés de vie, aperçu) et long, CA avec armure et
+bouclier, charge et capacité, progression des PV niveaux 2 à 4, quota de sorts préparés,
+journal (ajout, modification, suppression avec confirmation), harmonisation jusqu'à 3.
+
+### Bugs et écarts trouvés
+
+| ID | Titre | Catégorie | Preuve | Constat | État |
+|---|---|---|---|---|---|
+| F09 | Bonus de maîtrise des armes non appliqué pour 8 armes (noms périmés dans le calculateur) | Écart RAW | **R** + base | `weapon_attack_calculator.dart` listait « Hache à deux mains », « Serpe », « Coutille »… alors que le catalogue contient « Grande hache », « Faucille », « Glaive » : un Barbare FOR 16 affichait « Grande hache +3 » (attendu +5). 8 armes sur 37 touchées. | **Corrigé (PR #237)** — `isProficient` délègue à `WeaponProficiencyCategoryRules`, une seule liste de référence ; test sur les 37 noms du catalogue. |
+| F10 | Vitesse affichée « 30 m » alors que la valeur est en pieds | Bug/friction réel | **R** + base | `races.speed` vaut 25/30/35/40 (pieds), affiché avec le suffixe « m ». | **Corrigé (PR #238)** — `SpeedConverter.feetToMetres` (30 → 9 m, 25 → 7,5 m), la base reste en pieds. |
+| F11 | Libellés d'armes, armures et équipement de l'import/export XML ne correspondent pas au catalogue | Bug/friction réel | **L** + base | Une arme importée comme « Bâton » devenait un objet personnalisé sans stats (`itemId` nul) ; une « Grande hache » exportée partait en texte libre. 8 armes, 5 armures et 11 objets d'équipement concernés. | **Corrigé (PR #239)** — libellés alignés sur le catalogue, ids aidedd inchangés, garde-fou de test. Les ids d'armures 9, 11 et 12 sont déduits de l'ordre PHB (aucune source dans le dépôt) : à confirmer avec un export aidedd réel. Lignes ambiguës laissées en objets personnalisés (Sacoche, Gourde, Sac, focaliseurs…). |
+| F12 | Grimoire du Magicien au niveau 3 : sorts déjà connus proposés, rien de nouveau persisté | Bug/friction réel | **R** (3 runs, lecture en base) | Écran « NOUVEAUX SORTS CONNUS 0 / 2 » : les tuiles proposées incluent des sorts déjà au grimoire ; le récapitulatif annonce « Nouveaux sorts appris » mais `character_spells` reste à 11 lignes (attendu 13 : 3 sorts mineurs + 10 au grimoire, RAW 6 + 2 + 2). Réserve : le helper de test prend les deux premières tuiles actives, à reproduire avec des sorts réellement nouveaux. | Ouvert — gravité haute, à instruire par `dev-flutter` (reproduire d'abord avec de vrais nouveaux sorts, puis corriger). |
+| F13 | Dés de vie : récupération perdue quand un repos long suit un repos court de moins d'une seconde ; feuille « Repos court » périmée | Bug/friction réel | **R** (4 runs) | Run 9 : repos long immédiatement après un court, `hit_dice_spent` reste à 2 (0 dé récupéré). Run 5 : affichage « 0/2 » périmé alors que la base est correcte. Cause non établie (verrou `_isApplyingRest` ?). Rare en vraie partie. | Ouvert — à instruire par `dev-flutter`. |
+| F14 | Repos long sans retour sur les dés de vie récupérés | Fonctionnalité mal calibrée | **R** | La feuille et le snackbar ne mentionnent que PV, emplacements et aptitudes, rien sur la moitié des dés de vie récupérés. | Ouvert — petit complément à traiter avec F13. |
+| F15 | Emplacements de niveau 2 et plus invisibles sur l'onglet Sorts tant qu'aucun sort de ce niveau n'est connu | Bug/friction réel | **R** + **L** | Magicien niveau 3 : seules les pastilles du niveau 1 sont affichées, alors que la feuille « Lancer » propose déjà le niveau 2. Pastilles rattachées au groupe de sorts de chaque niveau (`_SpellLevelGroupSection`). Avis direction artistique : traiter comme un bug, afficher les niveaux 1 à max de la classe. | Ouvert — à traiter dans la vague « onglet Sorts » (proposition P14). |
+| F16 | Armure non maîtrisée : aucun avertissement | Écart RAW / fonctionnalité manquante | **R** | Un Magicien équipe une cotte de mailles : CA 16 correcte, snackbar « Cotte de mailles équipé » (accord masculin fautif), aucun avertissement. | Ouvert — voir proposition P10 ci-dessous. |
+
+### Propositions de fonctionnalité — synthèse du comité de revue (09/11/2026)
+
+Avis croisés : direction artistique (DA), règles D&D (RAW, rédigé de mémoire, points
+douteux marqués), `dev-flutter` (effort), `dev-backend-supabase` (données, lu dans les
+migrations seulement), `qa-testeur` (testabilité). Chiffres réels vérifiés en base le
+09/11/2026 : 518 sorts (33 rituels, 232 à concentration, aucune école manquante, aucun
+sort incomplet) ; 250 objets magiques, tous avec une rareté ; 247 objets sur 445 sans
+poids ; 116 dons (44 sans prérequis structuré, 34 avec un niveau) ; 7 paquetages.
+
+| ID | Proposition | Preuve | DA | RAW | Effort / backend | Risque (QA) | Recommandation du chef de projet |
+|---|---|---|---|---|---|---|---|
+| P1 | Saisie numérique des PV et des monnaies (champ éditable, appui long, boutons Dégâts/Soins) | R | Forte, priorité haute (reprendre la feuille d'XP) | Aucun | S (1 j), pas de backend | Élevé : `StepperCounter` partagé par 12 fichiers pour 5 tests, donc variante opt-in | Vague 1 |
+| P2 | Lanceur de dés étendu (sauvegardes, attaques, dégâts, avantage/désavantage, lanceur libre) | L | Moyenne, par étapes | Avantage/désavantage à 3 états saisis par le joueur ; critique manuel plutôt qu'automatique ; ne jamais simuler la sauvegarde adverse | M, 2 temps (sauvegardes et lanceur libre d'abord) ; RNG injectable | Faible | Vague 3 |
+| P3 | Concentration active + marqueur Rituel | L | Concentration forte, rituel faible | Concentration : jet de Con DD 10 ou moitié des dégâts, ne pas rompre automatiquement ; rituel : règles par classe, 2014 différent de 2024 | 3a avertissement concentration S/M (local) ; 3b rituel M, donnée mobile absente | Le plus risqué (état persisté, Realtime) | 3a en vague 2 ; 3b repoussé |
+| P4 | Filtres de sorts (niveau, école, concentration, rituel, favoris) + contrôle favori | R+L | Forte, puces défilantes | Aucun | M ; favoris déjà en base et en vue partagée | Modéré | Vague 2 (sans filtre rituel) |
+| P5 | Signal visuel « À 0 PV » sur sa fiche | R | Haute, libellé + icône, jamais la couleur seule | Aucun (jets contre la mort hors V1) | S (0,5 j) | Très faible | Vague 1 |
+| P6 | Marqueurs d'états/conditions informatifs | L | Basse | Liste de 15, textes changés en 2024 : étiqueter l'édition ; ne rien automatiser ; épuisement hors V1 | M ; colonne `conditions` sur `characters` (migration S) + fiche partagée | Moyen (donnée persistée) | À trancher par Matthias |
+| P7 | Objet personnalisé enrichi (poids, bonus magique, CA, harmonisation, types de dégâts) | L | Basse (sections « Avancé » repliées) | Bonus +1/+2/+3, harmonisation max 3 ; charges et malédictions non automatisables | M, L avec bonus au catalogue ; migration d'inventaire + fiche partagée | Élevé (calcul de CA partagé) | Repoussé ; poids seul d'abord |
+| P8 | Conversion de pièces | R+L | Basse (bouton « Changer » dans la feuille de P1) | 1 PP = 10 PO = 100 PA… ; électrum retiré en 2024 | S, aucun backend | Faible | Vague 1, après décision sur l'électrum |
+| P9 | Corriger un lancer de sort (snackbar « Annuler », ajustement manuel d'un emplacement) | R | Forte, priorité haute | Aucune règle d'annulation : libeller « correction » ; ajustements légitimes (Récupération arcanique, Perle de pouvoir, pacte) | M (2 j) ; file `spellSlot` à ne pas casser | Modéré | Vague 2 |
+| P10 | Avertissement informatif armure/bouclier non maîtrisé | R | Moyenne, pastille « Non maîtrisé » sur l'objet | Désavantage For/Dex et incantation impossible, 2014 = 2024 ; ne pas appliquer le désavantage | S (1 j) ; union des maîtrises en multiclasse | Faible | Vague 3 |
+| P11 | Onglet Sorts d'un non-lanceur : message simple, ressources visibles | R | Moyenne | Aucun | S | Moyen (sous-classes lanceuses : Chevalier occulte) | Vague 1 |
+| P12 | Éclater les paquetages en objets avec poids | R | Aucun changement d'écran | Contenus différents 2014/2024 : une source par édition | Côté app S, côté contenu M (migration, les 7 paquetages sont dans `equipment_packs`) | Moyen | Vague 4 (donnée) |
+| P13 | Filtrer ou étiqueter les dons proposés au niveau 4 | R | Basse-moyenne, tag « Campagne/Épique », pas de masquage | Catégories 2024 : origine, général, style de combat, épopée (niveau 19) ; griser plutôt que masquer | M ; colonne `category`/`source` sur `feats` + backfill | Faible | Vague 4 (donnée) |
+| P14 | Pastilles d'emplacements de tous les niveaux disponibles | R | Haute, à traiter comme un bug | Aucun | S (0,5 j) | Moyen (multiclasse, pacte, 320 px) | = F15, vague « onglet Sorts » |
+
+Conceptions à mener ensemble : P3 + P4 + P9 + P14 (onglet Sorts), P1 + P8 (feuille de
+monnaies), P5 + P6 (zone d'état de l'en-tête). Dettes de test à combler avant :
+`StepperCounter` (5 tests pour 12 usages), `SpellSlotDots` (2 tests pour 6 usages),
+calculateur de CA avant P7. Toute nouvelle donnée persistée impose la mise à jour de
+`data_export_repository.dart` (RGPD) et signale la fonction partagée
+`build_character_sheet_json` à l'équipe web.
+
+Vagues proposées (`dev-flutter`, validées par la DA et le QA) : **vague 1** P5, P11, P1, P8,
+F15/P14 (environ 5 jours) ; **vague 2** onglet Sorts : P4, P9, P3a ; **vague 3** P2, P10 ;
+**vague 4** dépendantes d'une donnée ou d'une décision : P6, P7, P12, P13, P3b.
+
+Décisions de Matthias : en attente.
