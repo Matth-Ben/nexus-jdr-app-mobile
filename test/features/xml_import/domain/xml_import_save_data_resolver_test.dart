@@ -16,6 +16,7 @@ import 'package:personnages/features/character_creation/domain/skill_catalog.dar
 import 'package:personnages/features/character_creation/domain/skill_option.dart';
 import 'package:personnages/features/character_creation/domain/spell_option.dart';
 import 'package:personnages/features/character_creation/domain/subrace_option.dart';
+import 'package:personnages/features/xml_import/domain/aidedd_reference_tables.dart';
 import 'package:personnages/features/xml_import/domain/xml_character_import_resolved.dart';
 import 'package:personnages/features/xml_import/domain/xml_field_resolution.dart';
 import 'package:personnages/features/xml_import/domain/xml_import_save_data.dart';
@@ -342,6 +343,39 @@ void main() {
       expect(data.inventoryLines.single.itemId, 10);
       expect(data.inventoryLines.single.customName, isNull);
       expect(data.inventoryLines.single.equipped, isTrue);
+    });
+
+    test('weapon=2 aidedd (Bâton de combat) -> item_id réel du catalogue, '
+        'pas un custom_name', () {
+      const catalog = ItemCatalog(
+        items: [
+          ItemOption(
+            id: 2,
+            name: 'Bâton de combat',
+            category: 'arme',
+            costAmount: 0.2,
+          ),
+        ],
+      );
+      final data = XmlImportSaveDataResolver.resolve(
+        resolved: _resolved(
+          weapons: [
+            (
+              resolution: XmlFieldResolution.recognized(
+                AideddReferenceTables.weapons[2]!,
+              ),
+              quantity: 1,
+            ),
+          ],
+        ),
+        itemCatalog: catalog,
+        skillCatalog: _skillCatalog,
+        alignmentCatalog: _alignmentCatalog,
+      );
+
+      expect(data.inventoryLines, hasLength(1));
+      expect(data.inventoryLines.single.itemId, 2);
+      expect(data.inventoryLines.single.customName, isNull);
     });
 
     test('un objet sans correspondance interne -> custom_name (le libellé '

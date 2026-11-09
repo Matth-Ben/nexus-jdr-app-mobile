@@ -618,7 +618,7 @@ void main() {
       items: [
         ItemOption(
           id: 55,
-          name: 'Rations/1 jour',
+          name: 'Rations de voyage (1 jour)',
           category: 'equipement_general',
           costAmount: 0.5,
         ),
@@ -662,7 +662,7 @@ void main() {
           CharacterInventoryItem(
             id: 'inv-1',
             itemId: 55,
-            name: 'Rations/1 jour',
+            name: 'Rations de voyage (1 jour)',
             category: 'equipement_general',
             quantity: 5,
             equipped: false,
@@ -724,7 +724,7 @@ void main() {
         alignmentCatalog: alignmentCatalog,
       );
 
-      // Rations/1 jour x5 : reconnues par `AideddReferenceTables.items`,
+      // Rations de voyage (1 jour) x5 : reconnues par `AideddReferenceTables.items`,
       // quantité exacte préservée.
       expect(
         data.inventoryLines.any(
@@ -845,6 +845,60 @@ void main() {
         data.inventoryLines.single.customName,
         'Amulette de grand-mère; héritage familial',
       );
+    });
+  });
+
+  group('armes du catalogue réel', () {
+    CharacterDetail detailWith(List<CharacterInventoryItem> inventory) {
+      return CharacterDetail(
+        id: 'char-w',
+        name: 'Gorn',
+        xp: 0,
+        currentHp: 10,
+        maxHp: 10,
+        temporaryHp: 0,
+        abilityScores: const {'con': 10},
+        classes: const [],
+        inventory: inventory,
+      );
+    }
+
+    test('"Grande hache" du catalogue sort dans weapon/weaponQ (id aidedd 23), '
+        'pas en texte libre', () {
+      final xml = XmlCharacterExporter.export(
+        detailWith(const [
+          CharacterInventoryItem(
+            id: 'inv-1',
+            itemId: 30,
+            name: 'Grande hache',
+            category: 'arme',
+            quantity: 2,
+            equipped: true,
+          ),
+        ]),
+      );
+
+      expect(xml, contains('<weapon>23</weapon>'));
+      expect(xml, contains('<weaponQ>2</weaponQ>'));
+      expect(xml, isNot(contains('Grande hache')));
+    });
+
+    test('Faucille, Épieu et Glaive du catalogue sont reconnus', () {
+      final xml = XmlCharacterExporter.export(
+        detailWith([
+          for (final (i, name) in ['Faucille', 'Épieu', 'Glaive'].indexed)
+            CharacterInventoryItem(
+              id: 'inv-$i',
+              itemId: 100 + i,
+              name: name,
+              category: 'arme',
+              quantity: 1,
+              equipped: false,
+            ),
+        ]),
+      );
+
+      expect(xml, contains('<weapon>11,7,17</weapon>'));
     });
   });
 
