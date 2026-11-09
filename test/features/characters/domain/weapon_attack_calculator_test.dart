@@ -215,4 +215,90 @@ void main() {
       expect(bonus, 4); // Force +2 + maîtrise +2 (toujours compétent).
     });
   });
+
+  group('catalogue réel des armes (items.category = arme)', () {
+    const catalogNames = <String>[
+      'Gourdin',
+      'Dague',
+      'Gourdin à deux mains',
+      'Hachette',
+      'Javeline',
+      'Marteau léger',
+      "Masse d'armes",
+      'Faucille',
+      'Épieu',
+      'Bâton de combat',
+      'Arc court',
+      'Arbalète légère',
+      'Dard',
+      'Fronde',
+      "Hache d'armes",
+      "Fléau d'armes",
+      'Glaive',
+      'Grande hache',
+      'Épée à deux mains',
+      'Hallebarde',
+      'Lance de cavalerie',
+      'Épée longue',
+      'Maillet',
+      'Morgenstern',
+      'Pique',
+      'Rapière',
+      'Cimeterre',
+      'Épée courte',
+      'Trident',
+      'Pic de guerre',
+      'Marteau de guerre',
+      'Fouet',
+      'Sarbacane',
+      'Arbalète de poing',
+      'Arbalète lourde',
+      'Arc long',
+      'Filet',
+    ];
+
+    test('le catalogue de référence compte 37 armes', () {
+      expect(catalogNames, hasLength(37));
+    });
+
+    for (final name in catalogNames) {
+      test('"$name" est classée courante ou martiale (jamais inconnue)', () {
+        final common = WeaponAttackCalculator.isProficient(
+          weaponName: name,
+          proficiencyTokens: const ['courantes'],
+        );
+        final martial = WeaponAttackCalculator.isProficient(
+          weaponName: name,
+          proficiencyTokens: const ['martiales'],
+        );
+        expect(common != martial, isTrue, reason: '$name: exactement une');
+      });
+    }
+
+    test('Barbare FOR 16 (+3), maîtrise +2, martiales, Grande hache -> +5', () {
+      expect(
+        WeaponAttackCalculator.attackBonus(
+          weaponName: 'Grande hache',
+          weaponProperties: const ['lourde', 'à deux mains'],
+          abilityScores: const {'str': 16, 'dex': 10},
+          proficiencyTokens: const ['courantes', 'martiales'],
+          proficiencyBonus: 2,
+        ),
+        5,
+      );
+    });
+
+    test('Faucille avec "courantes" -> compétent (maîtrise ajoutée)', () {
+      expect(
+        WeaponAttackCalculator.attackBonus(
+          weaponName: 'Faucille',
+          weaponProperties: const ['légère'],
+          abilityScores: const {'str': 10, 'dex': 10},
+          proficiencyTokens: const ['courantes'],
+          proficiencyBonus: 2,
+        ),
+        2,
+      );
+    });
+  });
 }

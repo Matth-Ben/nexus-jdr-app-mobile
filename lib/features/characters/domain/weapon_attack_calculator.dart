@@ -1,5 +1,6 @@
 import '../../character_creation/domain/ability_score_rules.dart';
 import 'pact_weapon_rules.dart';
+import 'weapon_proficiency_category_rules.dart';
 
 /// Calcul pur du bonus d'attaque (`+n` ajouté au d20 pour toucher) et du
 /// modificateur de dégâts (`+n` ajouté au(x) dé(s) de dégâts) d'une arme —
@@ -23,55 +24,6 @@ import 'pact_weapon_rules.dart';
 /// — uniquement le modificateur de caractéristique standard est calculable
 /// aujourd'hui.
 abstract final class WeaponAttackCalculator {
-  /// Armes courantes (simples) du SRD 5e — noms canoniques français tels que
-  /// résolus dans le catalogue réel (voir
-  /// `xml_import/domain/aidedd_reference_tables.dart::AideddReferenceTables
-  /// .weapons`, ids 2 à 38).
-  static const List<String> _simpleWeaponNames = [
-    'Bâton',
-    'Dague',
-    'Gourdin',
-    'Hachette',
-    'Javeline',
-    'Lance',
-    'Marteau léger',
-    "Masse d'armes",
-    'Massue',
-    'Serpe',
-    'Arbalète légère',
-    'Arc court',
-    'Fléchette',
-    'Fronde',
-  ];
-
-  /// Armes de guerre (martiales) du SRD 5e — même rationale que
-  /// [_simpleWeaponNames].
-  static const List<String> _martialWeaponNames = [
-    'Cimeterre',
-    'Coutille',
-    'Épée à deux mains',
-    'Épée courte',
-    'Épée longue',
-    "Fléau d'armes",
-    'Fouet',
-    'Hache à deux mains',
-    "Hache d'armes",
-    'Hallebarde',
-    "Lance d'arçon",
-    'Maillet',
-    'Marteau de guerre',
-    'Morgenstern',
-    'Pic de guerre',
-    'Pique',
-    'Rapière',
-    'Trident',
-    'Arbalète de poing',
-    'Arbalète lourde',
-    'Arc long',
-    'Filet',
-    'Sarbacane',
-  ];
-
   /// `true` si le personnage est compétent avec l'arme [weaponName], d'après
   /// [proficiencyTokens] (`CharacterDetail.weaponProficiencyNames` : tokens
   /// de catégorie 'courantes'/'martiales' et/ou noms d'armes spécifiques,
@@ -105,21 +57,15 @@ abstract final class WeaponAttackCalculator {
       final normalizedToken = PactWeaponRules.normalize(token);
       if (_singularize(normalizedToken) == normalizedWeaponName) return true;
 
+      // Source de vérité unique de la répartition courantes/martiales :
+      // `WeaponProficiencyCategoryRules` (noms exacts du catalogue `items`).
       if (normalizedToken == 'courantes' &&
-          _simpleWeaponNames.any(
-            (name) =>
-                _singularize(PactWeaponRules.normalize(name)) ==
-                normalizedWeaponName,
-          )) {
+          WeaponProficiencyCategoryRules.isCommon(weaponName)) {
         return true;
       }
 
       if (normalizedToken == 'martiales' &&
-          _martialWeaponNames.any(
-            (name) =>
-                _singularize(PactWeaponRules.normalize(name)) ==
-                normalizedWeaponName,
-          )) {
+          WeaponProficiencyCategoryRules.isMartial(weaponName)) {
         return true;
       }
     }
