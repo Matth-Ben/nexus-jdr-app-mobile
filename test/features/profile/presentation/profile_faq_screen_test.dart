@@ -117,7 +117,7 @@ void main() {
 
       expect(find.byIcon(Icons.expand_less), findsOneWidget);
       expect(
-        find.textContaining("Ton MJ te partage un code d'invitation"),
+        find.textContaining("Ton MJ t'envoie un lien d'invitation"),
         findsOneWidget,
       );
 
@@ -198,6 +198,24 @@ void main() {
     expect(find.byIcon(Icons.arrow_back_ios_new), findsOneWidget);
   });
 
+  testWidgets("les réponses 1 à 3 corrigées s'affichent en français", (
+    tester,
+  ) async {
+    await tester.pumpWidget(_wrap(const ProfileFaqScreen()));
+    for (final i in [0, 1, 2]) {
+      await tester.ensureVisible(find.text(_questions[i]));
+      await tester.tap(find.text(_questions[i]));
+      await tester.pumpAndSettle();
+    }
+
+    expect(find.textContaining('« Importer XML »'), findsOneWidget);
+    expect(find.textContaining("Ton MJ t'envoie un lien"), findsOneWidget);
+    expect(
+      find.textContaining('un seul repos est mis en attente'),
+      findsOneWidget,
+    );
+  });
+
   group('locale anglaise', () {
     testWidgets('affiche le bandeau bois et les questions en anglais', (
       tester,
@@ -212,6 +230,30 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('How do I delete my account?'), findsOneWidget);
+    });
+
+    testWidgets("les réponses 1 à 3 corrigées s'affichent en anglais", (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(const ProfileFaqScreen(), locale: const Locale('en')),
+      );
+      for (final question in [
+        'How do I import a character from aidedd.org?',
+        "How do I join my GM's story?",
+        'Are my characters saved offline?',
+      ]) {
+        await tester.ensureVisible(find.text(question));
+        await tester.tap(find.text(question));
+        await tester.pumpAndSettle();
+      }
+
+      expect(find.textContaining('tap "Import XML"'), findsOneWidget);
+      expect(
+        find.textContaining('sends you an invitation link'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('only one rest is held'), findsOneWidget);
     });
   });
 }
