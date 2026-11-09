@@ -57,14 +57,19 @@ class CharacterSkillsCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                AppLocalizations.of(context)!.characterSkillsCardTitle,
-                style: AppTypography.display(
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
+              // `Expanded`/`Flexible` (F21) : titre et légende passent à la
+              // ligne au lieu de déborder à droite avec une police agrandie.
+              Expanded(
+                child: Text(
+                  AppLocalizations.of(context)!.characterSkillsCardTitle,
+                  style: AppTypography.display(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
-              const _MasteredLegend(),
+              const SizedBox(width: AppSpacing.sm),
+              const Flexible(child: _MasteredLegend()),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -85,9 +90,11 @@ class _MasteredLegend extends StatelessWidget {
       children: [
         const _SkillDot(filled: true),
         const SizedBox(width: AppSpacing.xs),
-        Text(
-          AppLocalizations.of(context)!.characterSkillsCardMasteredLegend,
-          style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
+        Flexible(
+          child: Text(
+            AppLocalizations.of(context)!.characterSkillsCardMasteredLegend,
+            style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
+          ),
         ),
       ],
     );
@@ -136,8 +143,8 @@ class _SkillRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              SizedBox(
-                width: 28,
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 28),
                 child: Text(
                   SignedModifierFormatter.format(result.bonus),
                   textAlign: TextAlign.right,

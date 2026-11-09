@@ -328,119 +328,135 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
 
     return SceneScaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.md,
-              ),
-              child: Column(
-                children: [
-                  const _Header(),
-                  const SizedBox(height: AppSpacing.sm),
-                  // Bandeau "Mise à jour suggérée" (recettage
-                  // direction-artistique du 13/09/2026) — inséré
-                  // inconditionnellement : le widget se réduit lui-même à
-                  // `SizedBox.shrink()` tant qu'aucune mise à jour n'est
-                  // suggérée ou que sa version a déjà été refermée, voir sa
-                  // documentation de classe.
-                  const UpdateSuggestedBanner(),
-                  _SearchRow(
-                    controller: _searchController,
-                    filterActive:
-                        _selectedClassNames.isNotEmpty ||
-                        _selectedStatuses.isNotEmpty,
-                    // `null` (chargement) : bouton filtre sans effet, rien à
-                    // filtrer tant que la liste n'a pas résolu.
-                    onTapFilter: characters == null
-                        ? null
-                        : () => _openFilterSheet(characters),
-                    selectionMode: _selectionMode,
-                    // Désactivé tant que la liste charge ou que la liste
-                    // visible est vide (spec de la tâche) : rien à
-                    // sélectionner dans les deux cas.
-                    onTapSelectionMode: (visible == null || visible.isEmpty)
-                        ? null
-                        : _enterSelectionMode,
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              // `maybeWhen` plutôt que `when` : l'erreur est déjà interceptée
-              // plus haut par le retour anticipé sur `charactersAsync.hasError`
-              // — seuls `data`/`loading` restent possibles ici.
-              child: charactersAsync.maybeWhen(
-                data: (_) {
-                  if (characters!.isNotEmpty && visible!.isEmpty) {
-                    return _SearchEmptyState(
-                      query: _searchController.text.trim(),
-                      onReset: _resetSearch,
-                    );
-                  }
-                  return _CharacterList(
-                    characters: visible!,
-                    selectionMode: _selectionMode,
-                    selectedCharacterIds: _selectedCharacterIds,
-                    isDeletingSelection: _isDeletingSelection,
-                    onToggleSelected: _toggleCharacterSelected,
-                  );
-                },
-                orElse: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.goldEnd),
+        // `LayoutBuilder` + hauteur plafonnée du bloc d'en-tête (F21) : avec
+        // une police système très agrandie, en-tête + bandeau + recherche
+        // dépassaient à eux seuls la hauteur de l'écran (débordement vertical
+        // du `Column`). Le bloc reste à sa hauteur naturelle tant qu'elle
+        // tient dans la moitié de l'écran (apparence inchangée à la police
+        // normale), sinon il défile — la liste garde toujours de la place.
+        child: LayoutBuilder(
+          builder: (context, constraints) => Column(
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: constraints.maxHeight * 0.5,
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                0,
-                AppSpacing.lg,
-                AppSpacing.lg,
-              ),
-              child: _selectionMode
-                  ? CharacterSelectionActionBar(
-                      selectedCount: _selectedCharacterIds.length,
-                      isDeleting: _isDeletingSelection,
-                      onCancel: _exitSelectionMode,
-                      onDelete: _selectedCharacterIds.isEmpty
-                          ? null
-                          : () => _deleteSelectedCharacters(characters ?? []),
-                    )
-                  // Le bouton "Rejoindre une histoire" (`_JoinStoryButton`,
-                  // flux `features/join_story/`) est volontairement masqué
-                  // ici : cette fonctionnalité est mise de côté le temps de
-                  // terminer le reste du recettage direction-artistique
-                  // (section non encore traitée). Le flux et ses routes
-                  // (`/join`, `/join/step-2`, `/join/step-3`, `/join/:code`)
-                  // restent en place dans le code, simplement plus
-                  // atteignables depuis l'UI — aucune configuration native
-                  // de deep link n'est de toute façon encore branchée pour
-                  // `/join/:code` (voir `app_router.dart`), donc ce retrait
-                  // masque bien intégralement la fonctionnalité pour
-                  // l'instant.
-                  : Row(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                    ),
+                    child: Column(
                       children: [
-                        Expanded(
-                          child: PrimaryButton(
-                            label: l10n.characterListCreateButton,
-                            onPressed: () => _startCreation(context, ref),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: SecondaryButton(
-                            label: l10n.characterListImportXmlButton,
-                            onPressed: () => _startXmlImport(context),
-                          ),
+                        const _Header(),
+                        const SizedBox(height: AppSpacing.sm),
+                        // Bandeau "Mise à jour suggérée" (recettage
+                        // direction-artistique du 13/09/2026) — inséré
+                        // inconditionnellement : le widget se réduit lui-même à
+                        // `SizedBox.shrink()` tant qu'aucune mise à jour n'est
+                        // suggérée ou que sa version a déjà été refermée, voir sa
+                        // documentation de classe.
+                        const UpdateSuggestedBanner(),
+                        _SearchRow(
+                          controller: _searchController,
+                          filterActive:
+                              _selectedClassNames.isNotEmpty ||
+                              _selectedStatuses.isNotEmpty,
+                          // `null` (chargement) : bouton filtre sans effet, rien à
+                          // filtrer tant que la liste n'a pas résolu.
+                          onTapFilter: characters == null
+                              ? null
+                              : () => _openFilterSheet(characters),
+                          selectionMode: _selectionMode,
+                          // Désactivé tant que la liste charge ou que la liste
+                          // visible est vide (spec de la tâche) : rien à
+                          // sélectionner dans les deux cas.
+                          onTapSelectionMode:
+                              (visible == null || visible.isEmpty)
+                              ? null
+                              : _enterSelectionMode,
                         ),
                       ],
                     ),
-            ),
-          ],
+                  ),
+                ),
+              ),
+              Expanded(
+                // `maybeWhen` plutôt que `when` : l'erreur est déjà interceptée
+                // plus haut par le retour anticipé sur `charactersAsync.hasError`
+                // — seuls `data`/`loading` restent possibles ici.
+                child: charactersAsync.maybeWhen(
+                  data: (_) {
+                    if (characters!.isNotEmpty && visible!.isEmpty) {
+                      return _SearchEmptyState(
+                        query: _searchController.text.trim(),
+                        onReset: _resetSearch,
+                      );
+                    }
+                    return _CharacterList(
+                      characters: visible!,
+                      selectionMode: _selectionMode,
+                      selectedCharacterIds: _selectedCharacterIds,
+                      isDeletingSelection: _isDeletingSelection,
+                      onToggleSelected: _toggleCharacterSelected,
+                    );
+                  },
+                  orElse: () => const Center(
+                    child: CircularProgressIndicator(color: AppColors.goldEnd),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  0,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                ),
+                child: _selectionMode
+                    ? CharacterSelectionActionBar(
+                        selectedCount: _selectedCharacterIds.length,
+                        isDeleting: _isDeletingSelection,
+                        onCancel: _exitSelectionMode,
+                        onDelete: _selectedCharacterIds.isEmpty
+                            ? null
+                            : () => _deleteSelectedCharacters(characters ?? []),
+                      )
+                    // Le bouton "Rejoindre une histoire" (`_JoinStoryButton`,
+                    // flux `features/join_story/`) est volontairement masqué
+                    // ici : cette fonctionnalité est mise de côté le temps de
+                    // terminer le reste du recettage direction-artistique
+                    // (section non encore traitée). Le flux et ses routes
+                    // (`/join`, `/join/step-2`, `/join/step-3`, `/join/:code`)
+                    // restent en place dans le code, simplement plus
+                    // atteignables depuis l'UI — aucune configuration native
+                    // de deep link n'est de toute façon encore branchée pour
+                    // `/join/:code` (voir `app_router.dart`), donc ce retrait
+                    // masque bien intégralement la fonctionnalité pour
+                    // l'instant.
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: PrimaryButton(
+                              label: l10n.characterListCreateButton,
+                              onPressed: () => _startCreation(context, ref),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: SecondaryButton(
+                              label: l10n.characterListImportXmlButton,
+                              onPressed: () => _startXmlImport(context),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -533,13 +549,18 @@ class _Header extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          l10n.characterListHeaderTitle,
-          style: AppTypography.display(
-            fontSize: 15,
-            color: AppColors.textOnWood,
+        // `Expanded` : le titre passe à la ligne au lieu de pousser les
+        // boutons groupes/profil hors de l'écran avec une police agrandie.
+        Expanded(
+          child: Text(
+            l10n.characterListHeaderTitle,
+            style: AppTypography.display(
+              fontSize: 15,
+              color: AppColors.textOnWood,
+            ),
           ),
         ),
+        const SizedBox(width: AppSpacing.sm),
         const Row(
           children: [
             _GroupsButton(),

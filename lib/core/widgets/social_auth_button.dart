@@ -80,12 +80,18 @@ class SocialAuthButton extends StatelessWidget {
                           children: [
                             icon,
                             const SizedBox(width: AppSpacing.xs),
-                            Text(
-                              label,
-                              style: AppTypography.body(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textSecondary,
+                            // `Flexible` (F21) : le libellé passe à la ligne
+                            // au lieu de déborder avec une police agrandie
+                            // (la hauteur du bouton suit, `minHeight` 48).
+                            Flexible(
+                              child: Text(
+                                label,
+                                textAlign: TextAlign.center,
+                                style: AppTypography.body(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ),
                           ],

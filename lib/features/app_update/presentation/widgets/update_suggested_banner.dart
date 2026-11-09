@@ -37,6 +37,12 @@ class UpdateSuggestedBanner extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
+    // Police système agrandie (F21) : le message et le lien « Mettre à jour »
+    // ne tiennent plus côte à côte — le lien passe sous le message au lieu de
+    // déborder à droite. Apparence inchangée à la taille de police normale.
+    final stacked = MediaQuery.textScalerOf(context).scale(14) > 14 * 1.15;
+    const message = _UpdateMessage();
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Container(
@@ -58,26 +64,20 @@ class UpdateSuggestedBanner extends ConsumerWidget {
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: Text(
-                'Nouvelle version disponible',
-                style: AppTypography.body(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-            InkWell(
-              onTap: () => openAppStorePage(context, storeUrl: result.storeUrl),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                child: Text(
-                  'Mettre à jour',
-                  style: AppTypography.body(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.accentBrick,
-                  ),
-                ),
-              ),
+              child: stacked
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        message,
+                        _UpdateLink(storeUrl: result.storeUrl, minHeight: 44),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(child: message),
+                        _UpdateLink(storeUrl: result.storeUrl),
+                      ],
+                    ),
             ),
             SizedBox(
               width: 44,
@@ -92,6 +92,50 @@ class UpdateSuggestedBanner extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Lien « Mettre à jour » de [UpdateSuggestedBanner] (zone de tap d'au moins
+/// 44 px de haut, section 7 "Accessibilité" du design system).
+class _UpdateLink extends StatelessWidget {
+  const _UpdateLink({required this.storeUrl, this.minHeight = 0});
+
+  final String? storeUrl;
+  final double minHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => openAppStorePage(context, storeUrl: storeUrl),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: minHeight),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Text(
+            'Mettre à jour',
+            style: AppTypography.body(
+              fontWeight: FontWeight.w800,
+              color: AppColors.accentBrick,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UpdateMessage extends StatelessWidget {
+  const _UpdateMessage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'Nouvelle version disponible',
+      style: AppTypography.body(
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
       ),
     );
   }
