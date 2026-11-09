@@ -1718,10 +1718,11 @@
   },
   "characterStatPillsSpeedValue": "{speed} m",
   "@characterStatPillsSpeedValue": {
-    "description": "Valeur de la tuile \"Vitesse\" quand `speed` est résolu — unité métrique (mètres) volontairement gardée telle quelle en anglais aussi (même unité conservée dans app_en.arb, qui ne porte pas sa propre description de clé : ce fichier app_fr.arb est le template) : les données de vitesse de ce dépôt sont stockées en mètres, jamais converties en pieds.",
+    "description": "Valeur de la tuile \"Vitesse\" quand `speed` est résolu — unité métrique (mètres) volontairement gardée telle quelle en anglais aussi (même unité conservée dans app_en.arb, qui ne porte pas sa propre description de clé : ce fichier app_fr.arb est le template) : `speed` est reçu DÉJÀ converti en mètres (`SpeedConverter.feetToMetres`, la base `races.speed` reste en pieds), formaté selon la locale (7,5 en français, 7.5 en anglais).",
     "placeholders": {
       "speed": {
-        "type": "int"
+        "type": "double",
+        "format": "decimalPattern"
       }
     }
   },

@@ -223,7 +223,7 @@ void main() {
       '"Inspiration" non tappable (lecture seule, aucun repository de '
       'partage n\'expose de setInspiration)', (tester) async {
     fakeRepository.detailToReturn = _baseDetail.copyWith(
-      speed: 9,
+      speed: 30,
       inspiration: true,
     );
 

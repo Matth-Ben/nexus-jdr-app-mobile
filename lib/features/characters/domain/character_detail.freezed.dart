@@ -89,12 +89,13 @@ mixin _$CharacterDetail {
 /// modélisation d'une transaction MJ↔joueur. Bascule via la pastille
 /// "Inspiration" de l'onglet "Personnage"
 /// (`CharacterStatPillsRow`) — voir `CharacterRepository.setInspiration`.
- bool get inspiration;/// Vitesse de déplacement en mètres (`races.speed`), `null` si la race
+ bool get inspiration;/// Vitesse de déplacement en PIEDS (`races.speed`, convertie en mètres à
+/// l'affichage par `SpeedConverter`), `null` si la race
 /// n'a pas pu être résolue (race personnalisée/non renseignée) — voir
 /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
-/// "Onglet Personnage". Affichée telle quelle sans ajustement (armure
-/// lourde trop forte pour la Force, traits raciaux conditionnels...),
-/// même principe que [isDead] ("reste un simple affichage, sans
+/// "Onglet Personnage". Valeur brute de la race en pieds, sans ajustement de règles (armure
+/// lourde trop forte pour la Force, traits raciaux conditionnels...) : seule la conversion
+/// en mètres s'applique à l'affichage. Même principe que [isDead] ("reste un simple affichage, sans
 /// simulation des règles complètes").
  int? get speed;/// `characters.armor_class_bonus` — ajustement manuel de Classe
 /// d'Armure, saisi par le joueur pour un effet temporaire que l'app ne
@@ -628,12 +629,13 @@ class _CharacterDetail extends CharacterDetail {
 /// "Inspiration" de l'onglet "Personnage"
 /// (`CharacterStatPillsRow`) — voir `CharacterRepository.setInspiration`.
 @override@JsonKey() final  bool inspiration;
-/// Vitesse de déplacement en mètres (`races.speed`), `null` si la race
+/// Vitesse de déplacement en PIEDS (`races.speed`, convertie en mètres à
+/// l'affichage par `SpeedConverter`), `null` si la race
 /// n'a pas pu être résolue (race personnalisée/non renseignée) — voir
 /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
-/// "Onglet Personnage". Affichée telle quelle sans ajustement (armure
-/// lourde trop forte pour la Force, traits raciaux conditionnels...),
-/// même principe que [isDead] ("reste un simple affichage, sans
+/// "Onglet Personnage". Valeur brute de la race en pieds, sans ajustement de règles (armure
+/// lourde trop forte pour la Force, traits raciaux conditionnels...) : seule la conversion
+/// en mètres s'applique à l'affichage. Même principe que [isDead] ("reste un simple affichage, sans
 /// simulation des règles complètes").
 @override final  int? speed;
 /// `characters.armor_class_bonus` — ajustement manuel de Classe

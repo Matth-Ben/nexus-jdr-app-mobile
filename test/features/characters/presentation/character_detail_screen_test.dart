@@ -1514,7 +1514,7 @@ void main() {
       'armure équipée (10 + modificateur), et "—" pour une inspiration '
       'inactive',
       (tester) async {
-        fakeRepository.detailToReturn = _baseDetail.copyWith(speed: 9);
+        fakeRepository.detailToReturn = _baseDetail.copyWith(speed: 30);
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
