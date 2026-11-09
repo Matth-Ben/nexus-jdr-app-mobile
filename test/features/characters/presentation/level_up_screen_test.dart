@@ -2479,6 +2479,161 @@ void main() {
     });
   });
 
+  group('étape "Sorts" — grimoire du Magicien niveau 2 -> 3 (F12 : sorts '
+      'déjà connus jamais proposés comme « nouveaux »)', () {
+    CharacterDetailClassRow magicienClass() => const CharacterDetailClassRow(
+      classId: 4,
+      hitDie: 6,
+      className: 'Magicien',
+      level: 2,
+      isPrimary: true,
+      savingThrowProficiencies: [],
+    );
+
+    CharacterSpellEntry known(int id, String name, int level) =>
+        CharacterSpellEntry(
+          id: id,
+          name: name,
+          level: level,
+          school: 'Evocation',
+          status: SpellStatus.prepared,
+        );
+
+    SpellOption option(int id, String name, int level) => SpellOption(
+      id: id,
+      name: name,
+      level: level,
+      school: 'Evocation',
+      castingTime: '1 action',
+    );
+
+    Future<void> goToSpellsStep(WidgetTester tester) async {
+      await pushPastAnnouncement(tester, 3);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+    }
+
+    void arrange({
+      required List<CharacterSpellEntry> spells,
+      required List<SpellOption> catalog,
+    }) {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [magicienClass()],
+        spells: spells,
+        xp: 0,
+      );
+      fakeRepository.levelDataByLevel = {
+        3: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
+      fakeRepository.applyResultToReturn = const LevelUpApplyResult(
+        newLevel: 3,
+        newMaxHp: 30,
+        newCurrentHp: 26,
+      );
+      fakeCreationRepository.spellCatalogByClassId = {
+        4: SpellCatalog(spells: catalog),
+      };
+    }
+
+    testWidgets('les sorts déjà au grimoire ne sont pas proposés ; choisir 2 '
+        'vrais nouveaux sorts envoie exactement ces 2 identifiants à '
+        "l'écriture", (tester) async {
+      arrange(
+        spells: [known(1, 'Absorption des elements', 1), known(2, 'Alarme', 1)],
+        catalog: [
+          option(1, 'Absorption des elements', 1),
+          option(2, 'Alarme', 1),
+          option(3, 'Bouclier', 1),
+          option(4, 'Armure de mage', 1),
+          option(5, 'Foulee brumeuse', 2),
+        ],
+      );
+
+      await goToSpellsStep(tester);
+
+      expect(find.text('NOUVEAUX SORTS CONNUS'), findsOneWidget);
+      expect(find.text('0 / 2'), findsOneWidget);
+      // Déjà au grimoire : jamais proposés.
+      expect(find.text('Absorption des elements'), findsNothing);
+      expect(find.text('Alarme'), findsNothing);
+      expect(find.text('Bouclier'), findsOneWidget);
+      expect(find.text('Armure de mage'), findsOneWidget);
+      expect(find.text('Foulee brumeuse'), findsOneWidget);
+
+      await tester.tap(find.text('Bouclier'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Foulee brumeuse'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 / 2'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Bouclier, Foulee brumeuse'),
+        findsOneWidget,
+        reason: 'le récapitulatif ne liste que de vrais ajouts',
+      );
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      final applied = fakeRepository.applyLevelUpCalls.single;
+      expect(applied.className, 'Magicien');
+      expect(applied.initialSpellIds.toSet(), {3, 5});
+    });
+
+    testWidgets("quota plafonné quand il ne reste qu'un seul sort nouveau : "
+        'badge « 0 / 1 », étape franchissable, un seul ajout écrit', (
+      tester,
+    ) async {
+      arrange(
+        spells: [known(1, 'Absorption des elements', 1), known(2, 'Alarme', 1)],
+        catalog: [
+          option(1, 'Absorption des elements', 1),
+          option(2, 'Alarme', 1),
+          option(3, 'Bouclier', 1),
+        ],
+      );
+
+      await goToSpellsStep(tester);
+      expect(find.text('0 / 1'), findsOneWidget);
+      await tester.tap(find.text('Bouclier'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyLevelUpCalls.single.initialSpellIds, [3]);
+    });
+
+    testWidgets('seulement des sorts déjà connus disponibles : aucune tuile, '
+        'étape franchissable, aucun sort annoncé ni écrit', (tester) async {
+      arrange(
+        spells: [known(1, 'Absorption des elements', 1), known(2, 'Alarme', 1)],
+        catalog: [
+          option(1, 'Absorption des elements', 1),
+          option(2, 'Alarme', 1),
+        ],
+      );
+
+      await goToSpellsStep(tester);
+      expect(find.text('Absorption des elements'), findsNothing);
+      expect(find.text('Alarme'), findsNothing);
+      expect(find.text('0 / 0'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nouveaux sorts appris'), findsNothing);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      expect(fakeRepository.applyLevelUpCalls.single.initialSpellIds, isEmpty);
+    });
+  });
+
   group('étape classDecision (multiclassage)', () {
     testWidgets(
       'invisible (saut direct à l\'annonce) quand aucune classe n\'est '
