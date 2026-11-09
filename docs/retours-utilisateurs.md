@@ -237,4 +237,67 @@ Vagues proposées (`dev-flutter`, validées par la DA et le QA) : **vague 1** P5
 F15/P14 (environ 5 jours) ; **vague 2** onglet Sorts : P4, P9, P3a ; **vague 3** P2, P10 ;
 **vague 4** dépendantes d'une donnée ou d'une décision : P6, P7, P12, P13, P3b.
 
-Décisions de Matthias : en attente.
+### Décisions de Matthias (09/11/2026)
+
+- **Vague 1 seulement** retenue : P5 (signal à 0 PV), P11 (onglet Sorts du non-lanceur), P1 (saisie
+  numérique des PV et des monnaies), P8 (conversion de pièces), F15/P14 (emplacements de tous
+  les niveaux). PR #241 (P5, P11, F15/P14) et PR #242 (P1, P8). Les vagues 2, 3 et 4 restent à
+  décider.
+- **P6 retenu** : marqueurs d'états persistés et visibles du MJ (colonne `conditions` sur
+  `characters`, migration web, fiche partagée, export RGPD), purement informatifs, aucun effet
+  sur les jets. Chantier distinct, planifié après la vague 1.
+- **P8, électrum** : masqué tant que le solde est à 0 (comme PE et PP aujourd'hui), valable pour
+  les deux éditions.
+- Choix de conception retenus par le chef de projet sur avis de la direction artistique, que
+  Matthias peut inverser : compteur `restants/total` dans le titre de chaque groupe de sorts
+  (sans pastilles), « Niveau N » dans la carte d'emplacements, message du non-lanceur avant
+  « RESSOURCES », bouton principal de la feuille PV qui suit le mode (Infliger / Soigner /
+  Ajouter).
+
+### Passes B2 et B3 (hors fiche : liste, hors-ligne, partage, profil, accessibilité)
+
+Passe B2 : 3 parcours sur 10 exécutés (connexion/session, liste des personnages, début du
+hors-ligne). Passe B3 : 4 parcours sur 7 exécutés (hors-ligne, partage, langue anglaise,
+accessibilité). **Non exécutés** : import XML par l'interface (sélecteur de fichier natif non
+pilotable, seuls les tests unitaires ont tourné), export « Mes données » généré, groupes à
+deux comptes (le second compte n'a pas pu s'authentifier en REST), vue partagée ouverte par un
+autre compte, utiliser une aptitude / préparer un sort / équiper un objet hors-ligne.
+
+Vérifié conforme en conditions réelles : PV, emplacements et repos court mis en file se
+resynchronisent au retour du réseau sans doublon ; un kill de l'app avec une écriture en
+attente est rejoué au relancement ; un double tap sur « Appliquer » ne crée qu'une écriture ;
+la session survit au kill ; le partage de personnage fonctionne de bout en bout (activation,
+vue partagée en mètres, désactivation avec confirmation, lien révoqué) ; mauvais mot de passe
+et compte inconnu donnent le même message (pas d'énumération de comptes) ; la suppression de
+compte s'ouvre jusqu'à l'avertissement « Action irréversible » (jamais confirmée).
+
+| ID | Titre | Catégorie | Preuve | Constat | État |
+|---|---|---|---|---|---|
+| F17 | Le FAQ promet un hors-ligne que l'app ne tient pas pour l'inventaire, les monnaies et le journal | Écart doc/comportement | **R** + **L** | `profileFaqAnswer3` : « modifiables sans connexion : PV, XP, inventaire… Aucune donnée n'est perdue ». Seuls `updateHp`, `addXp`, `castSpell`, sorts innés, `useClassFeature` et `applyRest` sont mis en file (`PendingCharacterWriteKind`). Hors-ligne : +5 PO → « Hors ligne : cette action n'a pas pu être enregistrée », les PO restent à 20 ; une note de journal donne le même message (le texte saisi est conservé tant que la feuille reste ouverte) ; l'ajout depuis le catalogue donne « Impossible de contacter le serveur » (catalogue non mis en cache). | Ouvert — correction du texte du FAQ à faire sans attendre (information fausse donnée au joueur) ; extension de la file = proposition P15. |
+| F18 | Hors-ligne, le compteur d'emplacements ne baisse pas à l'écran après un lancer de sort | Bug/friction réel | **R** | Magicien niveau 1, hors-ligne, « Graisse » : le message « sera synchronisé » s'affiche mais le compteur reste `2 / 2` ; au retour du réseau la base montre `slots_used=1`. L'action est bien partie, mais le joueur croit qu'elle a échoué et relance, consommant le second emplacement. Les PV, eux, s'affichent de façon optimiste. | Ouvert — à corriger directement (affichage optimiste comme pour les PV). |
+| F19 | La resynchronisation hors-ligne écrase silencieusement une modification faite ailleurs | Bug/friction réel | **R** (`passe_b3_hors_ligne_test.dart`) | Hors-ligne, PV 8 puis −3 (5 en file) ; pendant ce temps un autre client écrit `current_hp = 2` ; au retour du réseau la base finit à 5, l'écriture de l'autre client est perdue, sans message ni alerte. L'écriture en file est un PV **absolu** rejoué, pas un delta. Cas réel : un MJ soigne un joueur en zone blanche. | Ouvert — décision de conception à instruire (rejouer en delta, ou prévenir quand la valeur serveur a changé) : proposition P17. |
+| F20 | Après une erreur de catalogue hors-ligne, la feuille reste bloquée | Bug/friction réel | **R** | « Impossible de contacter le serveur… RÉESSAYER » est resté affiché plus de 80 s après le retour du réseau, sans relance automatique ; les contrôles suivants sont inaccessibles tant que la feuille n'est pas fermée. | Ouvert — relance automatique au retour du réseau, ou bouton plus visible. |
+| F21 | Débordements de mise en page avec la police agrandie et sur petit écran, y compris l'écran de connexion | Bug/friction réel | **R** (`passe_b3_a11y_test.dart`) | Police 1,3 : débordement de 14 px (`character_list_screen.dart:533`) et 31 px (`character_skills_card.dart:57`). Police 2,0 + écran 480×800 : 7 débordements, dont le splash (`splash_screen.dart:35`, 375 px), **l'écran de connexion** (`login_screen.dart:580`, 462 px ; `social_auth_button.dart:78`, 304 px), la bannière de mise à jour et la liste (jusqu'à 1356 px). Un joueur avec une police agrandie ne peut pas se connecter. Inclut B2-5 (34 px sur une feuille de la liste). Autres débordements déjà connus : D174 et les rangées de `CharacterVitalsCard` (lignes ~161 et ~305). | Ouvert — gravité haute pour l'écran de connexion ; à corriger directement. |
+| F22 | Groupes, partage, rejoindre une histoire, revue d'import XML non traduits en anglais | Bug/friction réel | **R** + **L** | App en EN : tout l'écran de partage, la liste et les écrans de groupe, « REJOINDRE UN GROUPE », « Étape 1 / 4 », la bannière « Nouvelle version disponible », « Compte lié à l'app Histoires », « Historique : Acolyte », « 1d4+3 perforant » de la vue partagée restent en français ; 0 occurrence d'`AppLocalizations` dans `features/groups/presentation/*`, `character_share_screen.dart`, `xml_import_review_screen.dart` (2 199 lignes) et `join_story/`. Périmètre bien plus large que D172. « 1 membres » (D171). Profil, confidentialité, FAQ, mentions légales et notifications sont bien en EN. | Ouvert — chantier de localisation à décider (même méthode que la Phase B), voir D172. |
+| F23 | Partage : message « Lien de partage régénéré » à la première activation | Bug/friction réel | **R** | Libellé de la régénération réutilisé pour l'activation ; au premier run l'écran montrait encore « ACTIVER LE PARTAGE » alors que le jeton existait (non reproduit au second run). | Ouvert — petit correctif de libellé. |
+| F24 | Retour Android depuis la liste racine ferme l'app sans garde | Bug/friction réel | **R** | Comportement Android standard, mais sans confirmation alors que des écritures peuvent être en attente. | Ouvert — confort, à rapprocher de P16. |
+
+### Propositions de fonctionnalité — passes B2 et B3 (à soumettre au comité de revue)
+
+| ID | Proposition | Preuve | Constat | État |
+|---|---|---|---|---|
+| P15 | Étendre la file hors-ligne à l'inventaire, aux monnaies, au journal, à la préparation de sorts et à l'équipement ; mettre le catalogue d'objets en cache | R | Aujourd'hui seuls PV, XP, emplacements, sorts innés, aptitudes et repos sont mis en file. Pendant une session sans réseau, le joueur ne peut ni dépenser de l'or, ni ramasser un objet, ni noter. | Ouvert — à instruire par le comité (effort, risque de conflit, RGPD). |
+| P16 | Indicateur permanent d'état réseau, de file d'attente (« N en attente ») et de dernière synchronisation | R | Hors-ligne, la fiche est strictement identique, aucun repère ; la resynchronisation est silencieuse. | Ouvert — à instruire. |
+| P17 | Résolution des conflits hors-ligne (rejouer en delta, ou prévenir quand la valeur serveur a changé) | R | Voir F19. | Ouvert — à instruire, dépend de P15/P16. |
+| P18 | Liste des personnages : tri (nom, dernière ouverture), duplication, PV/CA sur la carte, « Archivé · Annuler » | R + L | Tri figé (en jeu, archivés, morts, par date de création) ; la carte n'affiche que « Race · Classe · Niv. » et l'XP ; archiver fait disparaître le personnage sans confirmation ni annulation ; pas de favori/épinglé ; recherche par nom et suppression avec confirmation OK, mode sélection multiple présent. | Ouvert — confort. |
+| P19 | « Rejoindre une histoire » masqué dans l'UI alors que le FAQ le décrit | L | Le bouton est « volontairement masqué » (`character_list_screen.dart`) ; `profileFaqAnswer2` décrit toujours cet écran. | Ouvert — aligner le FAQ ou rendre l'écran accessible. |
+
+### Bilan de la campagne complète
+
+Constats de cette campagne : 3 bugs corrigés et mergés (F09, F10, F11), 1 corrigé en attente de
+merge (F12, PR #240), 12 constats ouverts (F13 à F24) et 19 propositions (P1 à P19), dont la
+vague 1 (P1, P5, P8, P11, P14) en cours de merge (PR #241 et #242). Priorités suggérées par le
+chef de projet, à valider : (1) corriger le FAQ (F17), l'affichage optimiste des emplacements
+(F18) et les débordements de l'écran de connexion (F21), sans attendre ; (2) décider du chantier
+hors-ligne (P15, P16, P17), qui conditionne l'usage réel à la table ; (3) décider du chantier de
+localisation (F22).
