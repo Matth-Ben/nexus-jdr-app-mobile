@@ -57,6 +57,38 @@ void main() {
     expect(incremented, isFalse);
   });
 
+  testWidgets('non-régression : comportement par défaut inchangé (pas de '
+      'champ éditable, un tap = un seul appel, pas de répétition sur appui '
+      'long)', (WidgetTester tester) async {
+    var increments = 0;
+
+    await tester.pumpWidget(
+      _wrap(
+        StepperCounter(
+          value: 4,
+          onIncrement: () => increments++,
+          onDecrement: () {},
+        ),
+      ),
+    );
+
+    expect(find.byType(TextField), findsNothing);
+    expect(find.byType(EditableText), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.add));
+    expect(increments, 1);
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byIcon(Icons.add)),
+    );
+    await tester.pump(const Duration(seconds: 3));
+    await gesture.up();
+    await tester.pump();
+    // L'appui long ne répète rien : un seul appel de plus (le tap du relâchement
+    // ne compte pas après un appui long, donc 1 ou 2 au plus, jamais N).
+    expect(increments, lessThanOrEqualTo(2));
+  });
+
   testWidgets('onDecrement null désactive le bouton "-"', (
     WidgetTester tester,
   ) async {

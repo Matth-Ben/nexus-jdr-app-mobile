@@ -4876,6 +4876,101 @@ abstract class AppLocalizations {
   /// **'Appliquer'**
   String get currencyAdjustmentSheetApplyButton;
 
+  /// Bouton secondaire de la sheet d'ajustement de monnaie qui ouvre la conversion entre pièces.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer'**
+  String get currencyAdjustmentSheetConvertButton;
+
+  /// Libellé d'accessibilité du bouton moins du champ de montant (PV, monnaies).
+  ///
+  /// In fr, this message translates to:
+  /// **'Diminuer'**
+  String get numericAmountDecreaseLabel;
+
+  /// Libellé d'accessibilité du bouton plus du champ de montant (PV, monnaies).
+  ///
+  /// In fr, this message translates to:
+  /// **'Augmenter'**
+  String get numericAmountIncreaseLabel;
+
+  /// Libellé d'accessibilité du champ de montant de la feuille d'ajustement des PV.
+  ///
+  /// In fr, this message translates to:
+  /// **'Montant de PV'**
+  String get hpAdjustmentSheetAmountFieldLabel;
+
+  /// Libellé d'accessibilité du champ de montant de la feuille d'ajustement de monnaie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Montant'**
+  String get currencyAdjustmentSheetAmountFieldLabel;
+
+  /// Titre de la sheet de conversion de pièces.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer des pièces'**
+  String get currencyConversionSheetTitle;
+
+  /// Intitulé du choix de la pièce source.
+  ///
+  /// In fr, this message translates to:
+  /// **'PIÈCE À CHANGER'**
+  String get currencyConversionSheetFromLabel;
+
+  /// Intitulé du choix de la pièce cible.
+  ///
+  /// In fr, this message translates to:
+  /// **'CONTRE'**
+  String get currencyConversionSheetToLabel;
+
+  /// Intitulé du champ de montant de la conversion.
+  ///
+  /// In fr, this message translates to:
+  /// **'MONTANT À CHANGER'**
+  String get currencyConversionSheetAmountLabel;
+
+  /// Aperçu du résultat de la conversion avant validation.
+  ///
+  /// In fr, this message translates to:
+  /// **'{spent} {fromUnit} contre {obtained} {toUnit}'**
+  String currencyConversionSheetPreview(
+    int spent,
+    String fromUnit,
+    int obtained,
+    String toUnit,
+  );
+
+  /// Précise la part du montant qui n'est pas convertie (jamais perdue).
+  ///
+  /// In fr, this message translates to:
+  /// **'{unconverted} {fromUnit} non converties restent dans votre bourse.'**
+  String currencyConversionSheetRemainder(int unconverted, String fromUnit);
+
+  /// Erreur : le montant est trop faible pour une seule pièce cible.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce montant ne suffit pas pour obtenir une pièce entière.'**
+  String get currencyConversionSheetTooSmall;
+
+  /// Message quand tous les soldes sont à zéro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune pièce à changer.'**
+  String get currencyConversionSheetNothingToConvert;
+
+  /// Bouton secondaire d'annulation de la sheet de conversion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get currencyConversionSheetCancelButton;
+
+  /// Bouton primaire de validation de la conversion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer'**
+  String get currencyConversionSheetApplyButton;
+
   /// Titre de la sheet "Filtrer par catégorie" de l'onglet "Inventaire".
   ///
   /// In fr, this message translates to:

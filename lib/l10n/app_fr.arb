@@ -3961,6 +3961,76 @@
   "@currencyAdjustmentSheetApplyButton": {
     "description": "Bouton primaire \"Appliquer\" de la sheet d'ajustement de monnaie."
   },
+  "currencyAdjustmentSheetConvertButton": "Changer",
+  "@currencyAdjustmentSheetConvertButton": {
+    "description": "Bouton secondaire de la sheet d'ajustement de monnaie qui ouvre la conversion entre pièces."
+  },
+  "numericAmountDecreaseLabel": "Diminuer",
+  "@numericAmountDecreaseLabel": {
+    "description": "Libellé d'accessibilité du bouton moins du champ de montant (PV, monnaies)."
+  },
+  "numericAmountIncreaseLabel": "Augmenter",
+  "@numericAmountIncreaseLabel": {
+    "description": "Libellé d'accessibilité du bouton plus du champ de montant (PV, monnaies)."
+  },
+  "hpAdjustmentSheetAmountFieldLabel": "Montant de PV",
+  "@hpAdjustmentSheetAmountFieldLabel": {
+    "description": "Libellé d'accessibilité du champ de montant de la feuille d'ajustement des PV."
+  },
+  "currencyAdjustmentSheetAmountFieldLabel": "Montant",
+  "@currencyAdjustmentSheetAmountFieldLabel": {
+    "description": "Libellé d'accessibilité du champ de montant de la feuille d'ajustement de monnaie."
+  },
+  "currencyConversionSheetTitle": "Changer des pièces",
+  "@currencyConversionSheetTitle": {
+    "description": "Titre de la sheet de conversion de pièces."
+  },
+  "currencyConversionSheetFromLabel": "PIÈCE À CHANGER",
+  "@currencyConversionSheetFromLabel": {
+    "description": "Intitulé du choix de la pièce source."
+  },
+  "currencyConversionSheetToLabel": "CONTRE",
+  "@currencyConversionSheetToLabel": {
+    "description": "Intitulé du choix de la pièce cible."
+  },
+  "currencyConversionSheetAmountLabel": "MONTANT À CHANGER",
+  "@currencyConversionSheetAmountLabel": {
+    "description": "Intitulé du champ de montant de la conversion."
+  },
+  "currencyConversionSheetPreview": "{spent} {fromUnit} contre {obtained} {toUnit}",
+  "@currencyConversionSheetPreview": {
+    "description": "Aperçu du résultat de la conversion avant validation.",
+    "placeholders": {
+      "spent": {"type": "int"},
+      "fromUnit": {"type": "String"},
+      "obtained": {"type": "int"},
+      "toUnit": {"type": "String"}
+    }
+  },
+  "currencyConversionSheetRemainder": "{unconverted} {fromUnit} non converties restent dans votre bourse.",
+  "@currencyConversionSheetRemainder": {
+    "description": "Précise la part du montant qui n'est pas convertie (jamais perdue).",
+    "placeholders": {
+      "unconverted": {"type": "int"},
+      "fromUnit": {"type": "String"}
+    }
+  },
+  "currencyConversionSheetTooSmall": "Ce montant ne suffit pas pour obtenir une pièce entière.",
+  "@currencyConversionSheetTooSmall": {
+    "description": "Erreur : le montant est trop faible pour une seule pièce cible."
+  },
+  "currencyConversionSheetNothingToConvert": "Aucune pièce à changer.",
+  "@currencyConversionSheetNothingToConvert": {
+    "description": "Message quand tous les soldes sont à zéro."
+  },
+  "currencyConversionSheetCancelButton": "Annuler",
+  "@currencyConversionSheetCancelButton": {
+    "description": "Bouton secondaire d'annulation de la sheet de conversion."
+  },
+  "currencyConversionSheetApplyButton": "Changer",
+  "@currencyConversionSheetApplyButton": {
+    "description": "Bouton primaire de validation de la conversion."
+  },
   "inventoryCategoryFilterSheetTitle": "FILTRER PAR CATÉGORIE",
   "@inventoryCategoryFilterSheetTitle": {
     "description": "Titre de la sheet \"Filtrer par catégorie\" de l'onglet \"Inventaire\"."

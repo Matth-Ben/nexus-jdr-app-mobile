@@ -2948,6 +2948,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String get currencyAdjustmentSheetApplyButton => 'Apply';
 
   @override
+  String get currencyAdjustmentSheetConvertButton => 'Exchange';
+
+  @override
+  String get numericAmountDecreaseLabel => 'Decrease';
+
+  @override
+  String get numericAmountIncreaseLabel => 'Increase';
+
+  @override
+  String get hpAdjustmentSheetAmountFieldLabel => 'HP amount';
+
+  @override
+  String get currencyAdjustmentSheetAmountFieldLabel => 'Amount';
+
+  @override
+  String get currencyConversionSheetTitle => 'Exchange coins';
+
+  @override
+  String get currencyConversionSheetFromLabel => 'COIN TO EXCHANGE';
+
+  @override
+  String get currencyConversionSheetToLabel => 'FOR';
+
+  @override
+  String get currencyConversionSheetAmountLabel => 'AMOUNT TO EXCHANGE';
+
+  @override
+  String currencyConversionSheetPreview(
+    int spent,
+    String fromUnit,
+    int obtained,
+    String toUnit,
+  ) {
+    return '$spent $fromUnit for $obtained $toUnit';
+  }
+
+  @override
+  String currencyConversionSheetRemainder(int unconverted, String fromUnit) {
+    return '$unconverted unconverted $fromUnit stay in your purse.';
+  }
+
+  @override
+  String get currencyConversionSheetTooSmall =>
+      'This amount is not enough to get a whole coin.';
+
+  @override
+  String get currencyConversionSheetNothingToConvert => 'No coins to exchange.';
+
+  @override
+  String get currencyConversionSheetCancelButton => 'Cancel';
+
+  @override
+  String get currencyConversionSheetApplyButton => 'Exchange';
+
+  @override
   String get inventoryCategoryFilterSheetTitle => 'FILTER BY CATEGORY';
 
   @override

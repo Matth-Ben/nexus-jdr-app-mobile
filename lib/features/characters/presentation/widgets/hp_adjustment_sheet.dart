@@ -6,7 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/segmented_toggle.dart';
-import '../../../../core/widgets/stepper_counter.dart';
+import '../../../../core/widgets/numeric_amount_stepper.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/hp_adjustment.dart';
 
@@ -43,6 +43,11 @@ class _HpAdjustmentSheetContent extends StatefulWidget {
 }
 
 class _HpAdjustmentSheetContentState extends State<_HpAdjustmentSheetContent> {
+  /// Borne haute de la saisie (4 chiffres : bien au-delà de tout total de PV
+  /// réaliste ; les dégâts/soins sont de toute façon bornés à 0..max PV par
+  /// `HpAdjustmentCalculator`).
+  static const int _maxAmount = 9999;
+
   _HpAdjustmentMode _mode = _HpAdjustmentMode.damage;
   int _amount = 0;
 
@@ -69,73 +74,77 @@ class _HpAdjustmentSheetContentState extends State<_HpAdjustmentSheetContent> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.lg,
-          AppSpacing.lg + MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.hpAdjustmentSheetTitle,
-              style: AppTypography.body(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.lg + MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.hpAdjustmentSheetTitle,
+                style: AppTypography.body(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            SegmentedToggle<_HpAdjustmentMode>(
-              options: [
-                SegmentedToggleOption(
-                  value: _HpAdjustmentMode.damage,
-                  label: l10n.hpAdjustmentSheetDamageOption,
-                ),
-                SegmentedToggleOption(
-                  value: _HpAdjustmentMode.heal,
-                  label: l10n.hpAdjustmentSheetHealOption,
-                ),
-                SegmentedToggleOption(
-                  value: _HpAdjustmentMode.temporary,
-                  label: l10n.hpAdjustmentSheetTemporaryOption,
-                ),
-              ],
-              value: _mode,
-              onChanged: (mode) => setState(() => _mode = mode),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Center(
-              child: StepperCounter(
-                value: _amount,
-                onIncrement: () => setState(() => _amount++),
-                onDecrement: _amount > 0
-                    ? () => setState(() => _amount--)
-                    : null,
+              const SizedBox(height: AppSpacing.md),
+              SegmentedToggle<_HpAdjustmentMode>(
+                options: [
+                  SegmentedToggleOption(
+                    value: _HpAdjustmentMode.damage,
+                    label: l10n.hpAdjustmentSheetDamageOption,
+                  ),
+                  SegmentedToggleOption(
+                    value: _HpAdjustmentMode.heal,
+                    label: l10n.hpAdjustmentSheetHealOption,
+                  ),
+                  SegmentedToggleOption(
+                    value: _HpAdjustmentMode.temporary,
+                    label: l10n.hpAdjustmentSheetTemporaryOption,
+                  ),
+                ],
+                value: _mode,
+                onChanged: (mode) => setState(() => _mode = mode),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: l10n.hpAdjustmentSheetCancelButton,
-                    surface: SecondaryButtonSurface.parchment,
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
+              const SizedBox(height: AppSpacing.md),
+              Center(
+                child: NumericAmountStepper(
+                  value: _amount,
+                  max: _maxAmount,
+                  autofocus: true,
+                  fieldLabel: l10n.hpAdjustmentSheetAmountFieldLabel,
+                  decrementLabel: l10n.numericAmountDecreaseLabel,
+                  incrementLabel: l10n.numericAmountIncreaseLabel,
+                  onChanged: (value) => setState(() => _amount = value),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: PrimaryButton(
-                    label: l10n.hpAdjustmentSheetApplyButton,
-                    onPressed: _amount > 0 ? _apply : null,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: SecondaryButton(
+                      label: l10n.hpAdjustmentSheetCancelButton,
+                      surface: SecondaryButtonSurface.parchment,
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: PrimaryButton(
+                      label: l10n.hpAdjustmentSheetApplyButton,
+                      onPressed: _amount > 0 ? _apply : null,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
