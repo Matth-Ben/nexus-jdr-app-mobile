@@ -63,15 +63,38 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Invalide [characterDetailProvider] puis attend la résolution du refetch
+  /// avant de rendre la main — sans cela, `skipLoadingOnRefresh` laisse
+  /// l'ancienne fiche (sans jeton) affichée le temps du refetch, avec
+  /// [_isBusy] déjà relâché : le bouton « ACTIVER LE PARTAGE » réapparaissait
+  /// alors que le jeton existait déjà en base (campagne du 09/11/2026, F23),
+  /// et un second tap en régénérait un autre. Une erreur du refetch est
+  /// avalée : `characterDetailProvider` la porte déjà pour l'écran.
+  Future<void> _refreshDetail() async {
+    ref.invalidate(characterDetailProvider(widget.characterId));
+    try {
+      await ref.read(characterDetailProvider(widget.characterId).future);
+    } catch (_) {
+      // Voir ci-dessus : ignoré volontairement.
+    }
+  }
+
+  /// Génère un jeton : première activation du partage (aucun jeton actif
+  /// avant l'appel, message « Partage activé. ») ou régénération d'un lien
+  /// déjà actif (message « Lien de partage régénéré. »).
   Future<void> _regenerate() async {
+    final current = ref.read(characterDetailProvider(widget.characterId)).value;
+    final wasActive = (current?.shareToken ?? '').isNotEmpty;
     setState(() => _isBusy = true);
     try {
       await ref
           .read(characterSharingRepositoryProvider)
           .regenerateShareToken(widget.characterId);
-      ref.invalidate(characterDetailProvider(widget.characterId));
+      await _refreshDetail();
       if (!mounted) return;
-      _showSnackBar('Lien de partage régénéré.');
+      _showSnackBar(
+        wasActive ? 'Lien de partage régénéré.' : 'Partage activé.',
+      );
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
@@ -123,7 +146,7 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
       await ref
           .read(characterSharingRepositoryProvider)
           .disableShareToken(widget.characterId);
-      ref.invalidate(characterDetailProvider(widget.characterId));
+      await _refreshDetail();
       if (!mounted) return;
       _showSnackBar('Partage désactivé.');
     } on CharacterFailure catch (failure) {
