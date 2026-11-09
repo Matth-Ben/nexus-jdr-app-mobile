@@ -12,6 +12,11 @@ void main() {
     Size(480, 800),
     Size(320, 533),
     Size(240, 400),
+    Size(320, 400),
+    Size(320, 480),
+    // Plus grande surface testée où l'ancien splash (sans défilement) déborde
+    // à x2,0 (contenu ~350 dp) ; 320x400 et plus passaient déjà.
+    Size(320, 340),
   ];
   const scales = <double>[1.3, 2.0];
 

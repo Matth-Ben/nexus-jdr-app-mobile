@@ -144,7 +144,11 @@ class _SkillRow extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 28),
+                // Largeur minimale qui suit l'échelle de police (F21) : garde
+                // l'alignement vertical des bonus à police agrandie.
+                constraints: BoxConstraints(
+                  minWidth: MediaQuery.textScalerOf(context).scale(28),
+                ),
                 child: Text(
                   SignedModifierFormatter.format(result.bonus),
                   textAlign: TextAlign.right,
