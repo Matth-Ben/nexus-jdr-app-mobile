@@ -67,4 +67,167 @@ void main() {
       2: 'Non binaire',
     });
   });
+
+  group('libellés alignés sur le catalogue réel (garde-fou anti-dérive)', () {
+    // Noms réels de la table `items` en production (armes, armures,
+    // bouclier, équipement général).
+    const catalogWeapons = {
+      'Bâton de combat',
+      'Dague',
+      'Gourdin',
+      'Hachette',
+      'Javeline',
+      'Épieu',
+      'Marteau léger',
+      "Masse d'armes",
+      'Gourdin à deux mains',
+      'Faucille',
+      'Arbalète légère',
+      'Arc court',
+      'Dard',
+      'Fronde',
+      'Cimeterre',
+      'Glaive',
+      'Épée à deux mains',
+      'Épée courte',
+      'Épée longue',
+      "Fléau d'armes",
+      'Fouet',
+      'Grande hache',
+      "Hache d'armes",
+      'Hallebarde',
+      'Lance de cavalerie',
+      'Maillet',
+      'Marteau de guerre',
+      'Morgenstern',
+      'Pic de guerre',
+      'Pique',
+      'Rapière',
+      'Trident',
+      'Arbalète de poing',
+      'Arbalète lourde',
+      'Arc long',
+      'Filet',
+      'Sarbacane',
+    };
+    const catalogArmors = {
+      'Armure rembourrée',
+      'Armure de cuir',
+      'Armure de cuir clouté',
+      'Armure de peau',
+      'Chemise de mailles',
+      "Armure d'écailles",
+      'Cuirasse',
+      'Demi-plate',
+      'Cotte à anneaux',
+      'Cotte de mailles',
+      'Harnois à lattes',
+      'Armure complète',
+    };
+    const catalogEquipment = {
+      'Sac à dos',
+      'Corde en chanvre (15 mètres)',
+      'Torche',
+      'Silex et briquet',
+      'Rations de voyage (1 jour)',
+      'Outre',
+      'Couverture',
+      'Sac de couchage',
+      'Grappin',
+      'Lanterne à capote',
+      'Lanterne sourde',
+      "Flacon d'huile",
+      'Bougie',
+      'Parchemin (feuille)',
+      'Papier (feuille)',
+      "Flacon d'encre",
+      'Plume',
+      'Sacoche à composants',
+      'Symbole sacré',
+      'Focaliseur druidique',
+      'Focaliseur arcanique',
+      'Kit de soins',
+      'Miroir en acier poli',
+      'Gamelle',
+      'Pied-de-biche',
+      'Marteau',
+      'Piton',
+      'Cadenas',
+      'Sac (grand)',
+      'Sifflet',
+      'Tente (deux personnes)',
+      'Vêtements communs',
+      'Vêtements de voyage',
+      'Vêtements fins',
+      'Costume de déguisement',
+      'Bourse',
+    };
+
+    test('chaque arme de la table existe au catalogue (sauf emplacements '
+        'vide/mains nues)', () {
+      final labels = AideddReferenceTables.weapons.entries
+          .where((e) => e.key > 1)
+          .map((e) => e.value);
+      expect(labels.toSet().difference(catalogWeapons), isEmpty);
+      expect(AideddReferenceTables.weapons, hasLength(39));
+    });
+
+    test('chaque armure (hors "Sans armure") existe au catalogue', () {
+      final labels = AideddReferenceTables.armor.entries
+          .where((e) => e.key > 0)
+          .map((e) => e.value);
+      expect(labels.toSet().difference(catalogArmors), isEmpty);
+      expect(AideddReferenceTables.shield[1], 'Bouclier');
+    });
+
+    test('les objets d\'équipement à équivalent exact existent au '
+        'catalogue', () {
+      const idsWithExactEquivalent = [
+        6,
+        9,
+        17,
+        19,
+        23,
+        38,
+        40,
+        42,
+        44,
+        45,
+        49,
+        60,
+        61,
+        65,
+        66,
+        70,
+        71,
+        76,
+        80,
+        81,
+        82,
+        85,
+        89,
+        90,
+        91,
+        92,
+        94,
+        95,
+      ];
+      final labels = {
+        for (final id in idsWithExactEquivalent)
+          AideddReferenceTables.items[id],
+      };
+      expect(labels.difference(catalogEquipment), isEmpty);
+    });
+
+    test('les ids aidedd des armes renommées restent inchangés', () {
+      expect(AideddReferenceTables.weapons[2], 'Bâton de combat');
+      expect(AideddReferenceTables.weapons[7], 'Épieu');
+      expect(AideddReferenceTables.weapons[10], 'Gourdin à deux mains');
+      expect(AideddReferenceTables.weapons[11], 'Faucille');
+      expect(AideddReferenceTables.weapons[14], 'Dard');
+      expect(AideddReferenceTables.weapons[17], 'Glaive');
+      expect(AideddReferenceTables.weapons[23], 'Grande hache');
+      expect(AideddReferenceTables.weapons[26], 'Lance de cavalerie');
+    });
+  });
 }
