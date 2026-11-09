@@ -3315,11 +3315,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     final patronMerge = _patronMergeFor(data);
     final catalog = patronMerge?.catalog ?? data.spellSelectionCatalog;
     final patronOnlyIds = patronMerge?.patronOnlySpellIds ?? const <int>{};
-    final cantripQuota = data.requiresSpellSelection ? data.newCantripQuota : 0;
-    final spellQuota = data.requiresSpellSelection ? data.newSpellQuota : 0;
+    final rawCantripQuota = data.requiresSpellSelection
+        ? data.newCantripQuota
+        : 0;
+    final rawSpellQuota = data.requiresSpellSelection ? data.newSpellQuota : 0;
     final pactQuota = _pactCantripQuota(data);
-    final showCantripTab = cantripQuota > 0;
-    final showSpellsTab = spellQuota > 0;
+    final showCantripTab = rawCantripQuota > 0;
+    final showSpellsTab = rawSpellQuota > 0;
     final showPactTab = pactQuota > 0;
     final visibleTabs = [
       if (showCantripTab) _SpellSelectionTab.cantrip,
@@ -3337,9 +3339,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     final showTabSelector = visibleTabs.length > 1;
     final pactSelected = _effectivePactCantrips(data);
 
+    // F12 : un sort déjà connu par sa route ordinaire n'est jamais proposé
+    // comme « nouveau » (l'écriture l'ignorerait silencieusement).
     final cantrips = [
       for (final spell in catalog?.spells ?? const <SpellOption>[])
-        if (spell.level == 0) spell,
+        if (spell.level == 0 && !data.ordinaryKnownSpellIds.contains(spell.id))
+          spell,
     ];
     // Liste PLATE couvrant tous les niveaux de sort castables à ce niveau de
     // classe (pas de sous-onglets par niveau de sort, spec visuelle
@@ -3348,7 +3353,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     final spells =
         [
           for (final spell in catalog?.spells ?? const <SpellOption>[])
-            if (spell.level >= 1 && spell.level <= data.maxCastableSpellLevel)
+            if (spell.level >= 1 &&
+                spell.level <= data.maxCastableSpellLevel &&
+                !data.ordinaryKnownSpellIds.contains(spell.id))
               spell,
         ]..sort((a, b) {
           final byLevel = a.level.compareTo(b.level);
@@ -3356,6 +3363,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
               ? byLevel
               : FrenchTextNormalizer.compare(a.name, b.name);
         });
+    // Quotas effectifs plafonnés au nombre de candidats réellement
+    // nouveaux : si le joueur connaît déjà tout ce qui est proposé, l'étape
+    // ne doit pas rester bloquée sur un quota inatteignable.
+    final cantripQuota = math.min(rawCantripQuota, cantrips.length);
+    final spellQuota = math.min(rawSpellQuota, spells.length);
 
     // Le joueur a pu revenir changer de patron : un sort d'une liste de patron
     // qui n'est plus proposé est retiré de la sélection (jamais compté à tort

@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../character_creation/domain/ability_score_rules.dart';
 import '../../../character_creation/domain/spell_catalog.dart';
+import '../../../../core/rules/spell_status.dart';
 import '../../../character_creation/domain/spell_option.dart';
 import '../../../character_creation/presentation/providers/character_creation_providers.dart';
 import '../../domain/arcane_shots_known_progression.dart';
@@ -475,6 +476,16 @@ typedef LevelUpStepData = ({
   /// évite les doublons des sorts accordés par la faveur de pacte.
   Set<int> knownSpellIds,
 
+  /// `spells.id` des sorts déjà connus par leur route ORDINAIRE
+  /// (`connu`/`préparé`, donc déjà au grimoire/dans la liste de la classe) —
+  /// sous-ensemble de [knownSpellIds] qui exclut un sort connu UNIQUEMENT par
+  /// sa route innée (trait racial, D43 : il garde le droit à sa ligne
+  /// ordinaire). Sert à ne plus proposer comme « nouveau » (étape « Sorts »)
+  /// un sort que l'écriture ignorerait silencieusement (`applyLevelUp` et la
+  /// RPC `apply_level_up` filtrent déjà contre ces lignes ordinaires) : bug
+  /// F12 du 09/11/2026.
+  Set<int> ordinaryKnownSpellIds,
+
   /// Sorts mineurs du catalogue (TOUTES classes) pas encore connus, proposés
   /// par le Pacte du grimoire — non vide seulement quand [choiceKind] est
   /// [LevelUpChoiceKind.pact] (aucune requête réseau supplémentaire sinon).
@@ -870,6 +881,13 @@ Future<LevelUpStepData> levelUpStepData(
       if (spell.level == 0) spell.id,
   };
   final knownSpellIds = {for (final spell in detail.spells) spell.id};
+  // `status` retient toujours la ligne ordinaire quand un sort a aussi une
+  // ligne 'inné' (voir `CharacterSpellEntry.hasInnateRoute`) : seul un sort
+  // dont le statut affiché est 'inné' n'a PAS de route ordinaire.
+  final ordinaryKnownSpellIds = {
+    for (final spell in detail.spells)
+      if (spell.status != SpellStatus.innate) spell.id,
+  };
 
   // Sorts innés raciaux (`racial_innate_spells`, lignes sans choix de
   // lignée) — voir la doc de [LevelUpStepData.newRacialInnateSpells]. Aucune
@@ -1413,6 +1431,7 @@ Future<LevelUpStepData> levelUpStepData(
     knownPact: knownPact,
     knownCantripSpellIds: knownCantripSpellIds,
     knownSpellIds: knownSpellIds,
+    ordinaryKnownSpellIds: ordinaryKnownSpellIds,
     pactCantripCandidates: pactCantripCandidates,
     familiarSpellId: familiarSpellId,
     knownSubclassId: knownSubclassId,
