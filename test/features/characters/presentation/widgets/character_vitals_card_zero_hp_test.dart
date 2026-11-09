@@ -71,23 +71,38 @@ void main() {
     expect(find.text('At 0 HP'), findsOneWidget);
   });
 
-  testWidgets('320 px et texte x2 : la pastille passe à la ligne sans '
-      'débordement', (tester) async {
-    tester.view.physicalSize = const Size(320, 800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-
-    // Les autres rangées de la carte (hors périmètre) débordent déjà à x2 :
-    // on collecte les erreurs de mise en page et on vérifie que la pastille
-    // n'en fait pas partie.
+  testWidgets('largeur très étroite et texte x2 : le libellé passe à la ligne '
+      'sans débordement (isolé, discrimine le Flexible)', (tester) async {
+    // Le signal est testé isolé : dans la carte, le libellé court ne déborde
+    // jamais et les autres rangées (hors périmètre) débordent déjà à x2.
     final reported = <String>[];
     final previous = FlutterError.onError;
     FlutterError.onError = (details) => reported.add(details.toString());
-    await _pump(tester, 0, textScale: 2);
+    addTearDown(() => FlutterError.onError = previous);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: const Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(width: 90, child: ZeroHpIndicator()),
+          ),
+        ),
+      ),
+    );
     FlutterError.onError = previous;
 
     expect(find.text('À 0 PV'), findsOneWidget);
-    expect(reported.where((m) => m.contains('_ZeroHpIndicator')), isEmpty);
+    expect(reported, isEmpty);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('sémantique : libellé annoncé une seule fois, icône exclue', (

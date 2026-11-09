@@ -187,7 +187,7 @@ class _HpSection extends StatelessWidget {
             _HpGauge(ratio: detail.hpRatio),
             if (detail.currentHp == 0) ...[
               const SizedBox(height: AppSpacing.xs),
-              const _ZeroHpIndicator(),
+              const ZeroHpIndicator(),
             ],
             if (detail.temporaryHp > 0) ...[
               const SizedBox(height: AppSpacing.xs),
@@ -251,8 +251,9 @@ class _HpGauge extends StatelessWidget {
 /// (fond [AppColors.alertBannerBackground], bordure/icône
 /// [AppColors.accentBrick]) mais texte en [AppColors.textPrimary] pour un
 /// contraste AA. Constat d'état uniquement : aucune règle de jeu.
-class _ZeroHpIndicator extends StatelessWidget {
-  const _ZeroHpIndicator();
+@visibleForTesting
+class ZeroHpIndicator extends StatelessWidget {
+  const ZeroHpIndicator();
 
   @override
   Widget build(BuildContext context) {

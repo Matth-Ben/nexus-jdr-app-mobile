@@ -334,6 +334,52 @@ void main() {
       expect(find.text('2/3'), findsNothing);
     });
 
+    testWidgets('surclassement : un sort de niveau 1 lancé avec un '
+        'emplacement de niveau 3 ne décrémente que le niveau 3', (
+      tester,
+    ) async {
+      // Le flux de lancer (feuille de choix d'emplacement puis écriture) est
+      // porté par l'écran de fiche ; l'onglet ne fait qu'afficher
+      // `detail.spellSlots`. On teste donc l'affichage avant/après la
+      // consommation d'un emplacement de niveau 3 (`used` du niveau 3 passe
+      // de 0 à 1, celui du niveau 1 reste à 0), ce que produit le lancer
+      // d'un sort de niveau 1 avec cet emplacement.
+      const level3Spell = CharacterSpellEntry(
+        id: 3,
+        name: 'Boule de feu',
+        level: 3,
+        school: 'Évocation',
+        status: SpellStatus.known,
+      );
+      CharacterDetail detailWith(int level3Used) => _detail(
+        classes: [_class('Magicien', 5)],
+        spells: const [_level1Spell, level3Spell],
+        spellSlots: [
+          const CharacterSpellSlot(level: 1, total: 4, used: 0),
+          CharacterSpellSlot(level: 3, total: 3, used: level3Used),
+        ],
+      );
+
+      final handle = tester.ensureSemantics();
+      String label(int level, int remaining, int total) =>
+          'Niveau $level : $remaining sur $total emplacements disponibles';
+
+      // Compteur texte du titre de groupe + annonce sémantique (ligne de la
+      // carte et compteur du groupe : deux occurrences par niveau).
+      await _pump(tester, detailWith(0));
+      expect(find.text('4/4'), findsOneWidget);
+      expect(find.text('3/3'), findsOneWidget);
+      expect(find.bySemanticsLabel(label(3, 3, 3)), findsNWidgets(2));
+
+      await _pump(tester, detailWith(1));
+      expect(find.text('4/4'), findsOneWidget);
+      expect(find.text('2/3'), findsOneWidget);
+      expect(find.text('3/3'), findsNothing);
+      expect(find.bySemanticsLabel(label(1, 4, 4)), findsNWidgets(2));
+      expect(find.bySemanticsLabel(label(3, 2, 3)), findsNWidgets(2));
+      handle.dispose();
+    });
+
     testWidgets('sémantique : une annonce par ligne et pour le compteur', (
       tester,
     ) async {
