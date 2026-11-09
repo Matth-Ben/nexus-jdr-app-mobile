@@ -1513,7 +1513,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hpAdjustmentSheetCancelButton => 'Cancel';
 
   @override
-  String get hpAdjustmentSheetApplyButton => 'Apply';
+  String get hpAdjustmentSheetDamageApplyButton => 'Inflict';
+
+  @override
+  String get hpAdjustmentSheetHealApplyButton => 'Heal';
+
+  @override
+  String get hpAdjustmentSheetTemporaryApplyButton => 'Add';
 
   @override
   String get addXpSheetTitle => 'Add XP';
@@ -2961,6 +2967,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get currencyAdjustmentSheetAmountFieldLabel => 'Amount';
+
+  @override
+  String numericAmountMaxHint(int max) {
+    return 'Max $max';
+  }
+
+  @override
+  String currencyAdjustmentSheetBalanceHint(int balance) {
+    return 'Balance: $balance';
+  }
 
   @override
   String get currencyConversionSheetTitle => 'Exchange coins';

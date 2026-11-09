@@ -65,6 +65,24 @@ void main() {
     },
   );
 
+  testWidgets('le bouton principal suit le mode actif (jamais la couleur '
+      'seule) et la borne est affichée sous le champ', (tester) async {
+    await _open(tester);
+
+    expect(find.text('INFLIGER'), findsOneWidget);
+    expect(find.text('Max 9999'), findsOneWidget);
+    await tester.tap(find.text('SOINS'));
+    await tester.pump();
+    expect(find.text('SOIGNER'), findsOneWidget);
+    expect(find.text('INFLIGER'), findsNothing);
+    await tester.tap(find.text('PV TEMP.'));
+    await tester.pump();
+    expect(find.text('AJOUTER'), findsOneWidget);
+    await tester.tap(find.text('DÉGÂTS'));
+    await tester.pump();
+    expect(find.text('INFLIGER'), findsOneWidget);
+  });
+
   testWidgets(
     'segment "Dégâts" (défaut) : augmenter le montant puis "Appliquer" '
     'transmet l\'état avec les PV retirés',
@@ -94,7 +112,7 @@ void main() {
 
       await tester.tap(find.byIcon(Icons.add));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('APPLIQUER'));
+      await tester.tap(find.text('INFLIGER'));
       await tester.pumpAndSettle();
 
       expect(applied?.currentHp, 9);
@@ -189,7 +207,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), '27');
       await tester.pump();
-      await tester.tap(find.text('APPLIQUER'));
+      await tester.tap(find.text('INFLIGER'));
       await tester.pumpAndSettle();
 
       expect(applied, hasLength(1));
@@ -201,7 +219,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), '500');
       await tester.pump();
-      await tester.tap(find.text('APPLIQUER'));
+      await tester.tap(find.text('INFLIGER'));
       await tester.pumpAndSettle();
 
       expect(applied.single.currentHp, 0);
@@ -216,7 +234,7 @@ void main() {
       await tester.pump();
       await tester.enterText(find.byType(TextField), '500');
       await tester.pump();
-      await tester.tap(find.text('APPLIQUER'));
+      await tester.tap(find.text('SOIGNER'));
       await tester.pumpAndSettle();
 
       expect(applied.single.currentHp, 20);
@@ -232,7 +250,7 @@ void main() {
       await tester.pump();
       await tester.enterText(find.byType(TextField), '5');
       await tester.pump();
-      await tester.tap(find.text('APPLIQUER'));
+      await tester.tap(find.text('AJOUTER'));
       await tester.pumpAndSettle();
 
       expect(applied.single.temporaryHp, 8);
@@ -246,7 +264,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), '12');
       await tester.pump();
-      await tester.tap(find.text('APPLIQUER'));
+      await tester.tap(find.text('INFLIGER'));
       await tester.pumpAndSettle();
 
       expect(applied.single.temporaryHp, 0);
@@ -269,7 +287,7 @@ void main() {
     ) async {
       await openSheet(tester, size: const Size(320, 640), textScale: 1.6);
       expect(tester.takeException(), isNull);
-      expect(find.text('APPLIQUER'), findsOneWidget);
+      expect(find.text('INFLIGER'), findsOneWidget);
     });
   });
 
@@ -285,7 +303,15 @@ void main() {
       expect(find.text('HEALING'), findsOneWidget);
       expect(find.text('TEMP. HP'), findsOneWidget);
       expect(find.text('CANCEL'), findsOneWidget);
-      expect(find.text('APPLY'), findsOneWidget);
+      expect(find.text('INFLICT'), findsOneWidget);
+      expect(find.text('Max 9999'), findsOneWidget);
+
+      await tester.tap(find.text('HEALING'));
+      await tester.pump();
+      expect(find.text('HEAL'), findsOneWidget);
+      await tester.tap(find.text('TEMP. HP'));
+      await tester.pump();
+      expect(find.text('ADD'), findsOneWidget);
     });
   });
 }

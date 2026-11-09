@@ -143,6 +143,13 @@ class _CurrencyConversionSheetContentState
       children: [
         for (final currency in options)
           ChoiceChip(
+            // Cible tactile >= 44 px (le chip Material fait 32 px par défaut).
+            materialTapTargetSize: MaterialTapTargetSize.padded,
+            visualDensity: VisualDensity.standard,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: AppSpacing.sm + 2,
+            ),
             label: Text('${currency.unitLabel} · ${_balanceOf(currency)}'),
             selected: currency == selected,
             onSelected: (_) => onSelected(currency),
@@ -274,9 +281,32 @@ class _Preview extends StatelessWidget {
     final error = conversion.error;
 
     if (error == CurrencyConversionError.tooSmall) {
-      return Text(
-        l10n.currencyConversionSheetTooSmall,
-        style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
+      // Pas de rouge : ce n'est pas une vraie erreur, juste une information.
+      // `text.secondary` en gras : `text.muted` (#8A5A34) fait 5,29:1 sur
+      // `parchment.card` (AA ok) mais le message est trop discret.
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 1),
+            child: Icon(
+              Icons.info_outline,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              l10n.currencyConversionSheetTooSmall,
+              style: AppTypography.body(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
       );
     }
     if (!conversion.isValid) return const SizedBox.shrink();

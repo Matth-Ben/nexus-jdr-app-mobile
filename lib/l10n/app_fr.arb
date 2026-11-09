@@ -1862,9 +1862,17 @@
   "@hpAdjustmentSheetCancelButton": {
     "description": "Bouton secondaire \"Annuler\" de `hp_adjustment_sheet.dart`."
   },
-  "hpAdjustmentSheetApplyButton": "Appliquer",
-  "@hpAdjustmentSheetApplyButton": {
-    "description": "Bouton primaire \"Appliquer\" de `hp_adjustment_sheet.dart`."
+  "hpAdjustmentSheetDamageApplyButton": "Infliger",
+  "@hpAdjustmentSheetDamageApplyButton": {
+    "description": "Bouton primaire de `hp_adjustment_sheet.dart` en mode Dégâts (le libellé suit le mode actif pour éviter d'appliquer des dégâts alors qu'on voulait soigner)."
+  },
+  "hpAdjustmentSheetHealApplyButton": "Soigner",
+  "@hpAdjustmentSheetHealApplyButton": {
+    "description": "Bouton primaire de `hp_adjustment_sheet.dart` en mode Soins."
+  },
+  "hpAdjustmentSheetTemporaryApplyButton": "Ajouter",
+  "@hpAdjustmentSheetTemporaryApplyButton": {
+    "description": "Bouton primaire de `hp_adjustment_sheet.dart` en mode PV temporaires."
   },
 
   "addXpSheetTitle": "Ajouter de l'XP",
@@ -3980,6 +3988,20 @@
   "currencyAdjustmentSheetAmountFieldLabel": "Montant",
   "@currencyAdjustmentSheetAmountFieldLabel": {
     "description": "Libellé d'accessibilité du champ de montant de la feuille d'ajustement de monnaie."
+  },
+  "numericAmountMaxHint": "Max {max}",
+  "@numericAmountMaxHint": {
+    "description": "Aide sous le champ de montant : borne maximale saisissable.",
+    "placeholders": {
+      "max": {"type": "int"}
+    }
+  },
+  "currencyAdjustmentSheetBalanceHint": "Solde : {balance}",
+  "@currencyAdjustmentSheetBalanceHint": {
+    "description": "Aide sous le champ de montant en mode Retirer : solde de la monnaie, borne du retrait.",
+    "placeholders": {
+      "balance": {"type": "int"}
+    }
   },
   "currencyConversionSheetTitle": "Changer des pièces",
   "@currencyConversionSheetTitle": {

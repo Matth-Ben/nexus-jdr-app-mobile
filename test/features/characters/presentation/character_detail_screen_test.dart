@@ -718,7 +718,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.bySemanticsLabel('Augmenter'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('APPLIQUER'));
+    await tester.tap(find.text('SOIGNER'));
     await tester.pumpAndSettle();
   }
 
@@ -1143,7 +1143,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel('Augmenter'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('APPLIQUER'));
+      await tester.tap(find.text('SOIGNER'));
       await tester.pumpAndSettle();
 
       expect(fakeRepository.updateHpCallCount, 1);
@@ -1168,7 +1168,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel('Augmenter'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('APPLIQUER'));
+      await tester.tap(find.text('SOIGNER'));
       await tester.pumpAndSettle();
 
       expect(

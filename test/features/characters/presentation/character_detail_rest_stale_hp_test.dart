@@ -538,7 +538,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel("Augmenter"));
       await tester.pumpAndSettle();
-      await tester.tap(find.text("APPLIQUER"));
+      await tester.tap(find.text("SOIGNER"));
       await tester.pump();
 
       await tester.tap(find.text("REPOS"));
@@ -590,7 +590,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel("Augmenter"));
       await tester.pumpAndSettle();
-      await tester.tap(find.text("APPLIQUER"));
+      await tester.tap(find.text("SOIGNER"));
       await tester.pump();
 
       // Bouton "Repos" unique du bandeau PV : ouvre RestSheet (présélection

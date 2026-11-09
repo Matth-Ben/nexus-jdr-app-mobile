@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/numeric_amount_stepper.dart';
 
@@ -126,6 +127,137 @@ void main() {
     await gesture.up();
     await tester.pump();
     expect(last, 0);
+  });
+
+  testWidgets('appui long sur - : la répétition s\'arrête à la borne 0', (
+    tester,
+  ) async {
+    var changes = 0;
+    await tester.pumpWidget(
+      _Host(initial: 3, max: 9999, onValue: (_) => changes++),
+    );
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byIcon(Icons.remove)),
+    );
+    await tester.pump(const Duration(milliseconds: 600));
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    // Valeur retombée à 0 : plus de Timer actif alors que le doigt est
+    // toujours posé (le framework échouerait sinon en fin de test).
+    expect(tester.hasRunningAnimations, isFalse);
+    expect(changes, lessThanOrEqualTo(3));
+    await tester.pump(const Duration(seconds: 2));
+    expect(changes, lessThanOrEqualTo(3));
+    await gesture.up();
+    await tester.pump();
+  });
+
+  testWidgets('appui long sur + : la répétition s\'arrête à max', (
+    tester,
+  ) async {
+    int? last;
+    var changes = 0;
+    await tester.pumpWidget(
+      _Host(
+        max: 5,
+        onValue: (v) {
+          last = v;
+          changes++;
+        },
+      ),
+    );
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byIcon(Icons.add)),
+    );
+    await tester.pump(const Duration(milliseconds: 600));
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(last, 5);
+    final atMax = changes;
+    await tester.pump(const Duration(seconds: 2));
+    expect(changes, atMax);
+    await gesture.up();
+    await tester.pump();
+  });
+
+  testWidgets('libellé d\'accessibilité porté par le bouton (Semantics), '
+      'pas par l\'icône', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(const _Host(initial: 5));
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Augmenter')),
+      matchesSemantics(
+        label: 'Augmenter',
+        isButton: true,
+        isEnabled: true,
+        hasEnabledState: true,
+        hasTapAction: true,
+      ),
+    );
+    final icons = tester.widgetList<Icon>(find.byType(Icon));
+    expect(icons.every((i) => i.semanticLabel == null), isTrue);
+    handle.dispose();
+  });
+
+  testWidgets('appui long : état pressé sobre (fond parchment.card) puis '
+      'retour au repos', (tester) async {
+    await tester.pumpWidget(const _Host());
+    BoxDecoration decoration() =>
+        tester
+                .widget<Container>(
+                  find
+                      .ancestor(
+                        of: find.byIcon(Icons.add),
+                        matching: find.byType(Container),
+                      )
+                      .first,
+                )
+                .decoration!
+            as BoxDecoration;
+
+    expect(decoration().color, const Color(0xFFEADFC3));
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byIcon(Icons.add)),
+    );
+    await tester.pump();
+    expect(decoration().color, const Color(0xFFFBF3E0));
+    expect((decoration().border! as Border).top.color, const Color(0xFF6B4226));
+    await gesture.up();
+    await tester.pump();
+    expect(decoration().color, const Color(0xFFEADFC3));
+  });
+
+  testWidgets('retour haptique à chaque changement de palier de pas', (
+    tester,
+  ) async {
+    var haptics = 0;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'HapticFeedback.vibrate') haptics++;
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await tester.pumpWidget(const _Host(max: 9999));
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byIcon(Icons.add)),
+    );
+    await tester.pump(const Duration(milliseconds: 600));
+    for (var i = 0; i < 100; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await gesture.up();
+    await tester.pump();
+    // Paliers 1 -> 5 puis 5 -> 10 : exactement deux retours haptiques.
+    expect(haptics, 2);
   });
 
   testWidgets('démontage pendant un appui long : aucun Timer en attente', (

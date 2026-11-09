@@ -114,14 +114,20 @@ class _HpAdjustmentSheetContentState extends State<_HpAdjustmentSheetContent> {
               ),
               const SizedBox(height: AppSpacing.md),
               Center(
-                child: NumericAmountStepper(
-                  value: _amount,
-                  max: _maxAmount,
-                  autofocus: true,
-                  fieldLabel: l10n.hpAdjustmentSheetAmountFieldLabel,
-                  decrementLabel: l10n.numericAmountDecreaseLabel,
-                  incrementLabel: l10n.numericAmountIncreaseLabel,
-                  onChanged: (value) => setState(() => _amount = value),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    NumericAmountStepper(
+                      value: _amount,
+                      max: _maxAmount,
+                      autofocus: true,
+                      fieldLabel: l10n.hpAdjustmentSheetAmountFieldLabel,
+                      decrementLabel: l10n.numericAmountDecreaseLabel,
+                      incrementLabel: l10n.numericAmountIncreaseLabel,
+                      onChanged: (value) => setState(() => _amount = value),
+                    ),
+                    _AmountHint(l10n.numericAmountMaxHint(_maxAmount)),
+                  ],
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -137,7 +143,14 @@ class _HpAdjustmentSheetContentState extends State<_HpAdjustmentSheetContent> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: PrimaryButton(
-                      label: l10n.hpAdjustmentSheetApplyButton,
+                      label: switch (_mode) {
+                        _HpAdjustmentMode.damage =>
+                          l10n.hpAdjustmentSheetDamageApplyButton,
+                        _HpAdjustmentMode.heal =>
+                          l10n.hpAdjustmentSheetHealApplyButton,
+                        _HpAdjustmentMode.temporary =>
+                          l10n.hpAdjustmentSheetTemporaryApplyButton,
+                      },
                       onPressed: _amount > 0 ? _apply : null,
                     ),
                   ),
@@ -146,6 +159,25 @@ class _HpAdjustmentSheetContentState extends State<_HpAdjustmentSheetContent> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Aide sous le champ de montant (borne saisissable), `text.muted` 11 px.
+class _AmountHint extends StatelessWidget {
+  const _AmountHint(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
       ),
     );
   }

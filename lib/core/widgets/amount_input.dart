@@ -7,20 +7,55 @@ import 'package:flutter/services.dart';
 /// dans un `int` est lui aussi ramené à [max]).
 ///
 /// Tolérant au collage : les espaces, séparateurs de milliers et autres
-/// caractères non numériques sont ignorés ("1 234" donne 1234).
+/// caractères non numériques sont ignorés ("1 234" donne 1234). Seule la
+/// partie entière compte : tout ce qui suit le premier "." ou "," est
+/// ignoré ("27.5" et "27,5" donnent 27, ".5" donne 0).
 int parseAmountInput(String text, {required int max}) {
-  final digits = text.replaceAll(RegExp(r'\D'), '');
+  final digits = _integerDigits(text);
   if (digits.isEmpty) return 0;
   final parsed = int.tryParse(digits);
   if (parsed == null || parsed > max) return max;
   return parsed;
 }
 
-/// Formatters de saisie : ne garde que les chiffres (le collage de
-/// "1 234 PO" donne "1234") et limite la longueur à celle de [max] pour
-/// qu'aucune saisie ne puisse déborder.
+/// Chiffres de la partie entière de [text] (avant le premier "." ou ",").
+String _integerDigits(String text) {
+  final separator = text.indexOf(RegExp('[.,]'));
+  final integerPart = separator < 0 ? text : text.substring(0, separator);
+  return integerPart.replaceAll(RegExp(r'\D'), '');
+}
+
+/// Ne garde que la partie entière : un collage "27.5" ou "27,5" donne "27"
+/// (la partie décimale est ignorée, jamais concaténée en "275"). Un
+/// séparateur *tapé* au clavier (ajout d'un seul caractère) est simplement
+/// refusé.
+class _IntegerPartFormatter extends TextInputFormatter {
+  const _IntegerPartFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text;
+    final hasSeparator = text.contains(RegExp('[.,]'));
+    if (hasSeparator && text.length - oldValue.text.length == 1) {
+      return oldValue;
+    }
+    final digits = _integerDigits(text);
+    if (digits == text) return newValue;
+    return TextEditingValue(
+      text: digits,
+      selection: TextSelection.collapsed(offset: digits.length),
+    );
+  }
+}
+
+/// Formatters de saisie : ne garde que les chiffres de la partie entière (le
+/// collage de "1 234 PO" donne "1234", celui de "27,5" donne "27") et limite
+/// la longueur à celle de [max] pour qu'aucune saisie ne puisse déborder.
 List<TextInputFormatter> amountInputFormatters({required int max}) => [
-  FilteringTextInputFormatter.digitsOnly,
+  const _IntegerPartFormatter(),
   LengthLimitingTextInputFormatter('$max'.length),
 ];
 

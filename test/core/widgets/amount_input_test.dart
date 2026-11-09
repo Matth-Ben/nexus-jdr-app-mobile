@@ -24,6 +24,45 @@ void main() {
     });
   });
 
+  group('partie décimale ignorée (S1)', () {
+    test('"27.5" et "27,5" donnent 27', () {
+      expect(parseAmountInput('27.5', max: 9999), 27);
+      expect(parseAmountInput('27,5', max: 9999), 27);
+    });
+
+    test('"0.9" donne 0, ".5" donne 0, texte seul donne 0', () {
+      expect(parseAmountInput('0.9', max: 9999), 0);
+      expect(parseAmountInput('.5', max: 9999), 0);
+      expect(parseAmountInput('abc', max: 9999), 0);
+    });
+
+    TextEditingValue format(String oldText, String newText, int max) {
+      final formatters = amountInputFormatters(max: max);
+      var value = TextEditingValue(text: newText);
+      final old = TextEditingValue(text: oldText);
+      for (final f in formatters) {
+        value = f.formatEditUpdate(old, value);
+      }
+      return value;
+    }
+
+    test('formatter : le collage "27.5" / "27,5" donne "27", pas "275"', () {
+      expect(format('', '27.5', 9999).text, '27');
+      expect(format('', '27,5', 9999).text, '27');
+      expect(format('', '.5', 9999).text, '');
+    });
+
+    test('formatter : un séparateur tapé est refusé', () {
+      expect(format('27', '27.', 9999).text, '27');
+      expect(format('27', '27,', 9999).text, '27');
+    });
+
+    test('formatter : espaces/unités filtrés, longueur limitée à max', () {
+      expect(format('', '1 234 PO', 9999).text, '1234');
+      expect(format('', '123456', 9999).text, '1234');
+    });
+  });
+
   group('répétition accélérée', () {
     test('le pas augmente avec les ticks', () {
       expect(amountRepeatStep(0), 1);

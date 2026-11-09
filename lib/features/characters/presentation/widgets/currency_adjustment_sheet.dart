@@ -156,14 +156,26 @@ class _CurrencyAdjustmentSheetContentState
               ),
               const SizedBox(height: AppSpacing.md),
               Center(
-                child: NumericAmountStepper(
-                  value: _amount,
-                  max: _maxAmount,
-                  autofocus: true,
-                  fieldLabel: l10n.currencyAdjustmentSheetAmountFieldLabel,
-                  decrementLabel: l10n.numericAmountDecreaseLabel,
-                  incrementLabel: l10n.numericAmountIncreaseLabel,
-                  onChanged: (value) => setState(() => _amount = value),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    NumericAmountStepper(
+                      value: _amount,
+                      max: _maxAmount,
+                      autofocus: true,
+                      fieldLabel: l10n.currencyAdjustmentSheetAmountFieldLabel,
+                      decrementLabel: l10n.numericAmountDecreaseLabel,
+                      incrementLabel: l10n.numericAmountIncreaseLabel,
+                      onChanged: (value) => setState(() => _amount = value),
+                    ),
+                    _AmountHint(
+                      _mode == _CurrencyAdjustmentMode.remove
+                          ? l10n.currencyAdjustmentSheetBalanceHint(
+                              widget.currentAmount,
+                            )
+                          : l10n.numericAmountMaxHint(_maxAddAmount),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -197,6 +209,25 @@ class _CurrencyAdjustmentSheetContentState
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Aide sous le champ de montant (borne saisissable), `text.muted` 11 px.
+class _AmountHint extends StatelessWidget {
+  const _AmountHint(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
       ),
     );
   }

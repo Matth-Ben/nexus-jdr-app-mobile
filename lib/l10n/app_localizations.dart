@@ -2678,11 +2678,23 @@ abstract class AppLocalizations {
   /// **'Annuler'**
   String get hpAdjustmentSheetCancelButton;
 
-  /// Bouton primaire "Appliquer" de `hp_adjustment_sheet.dart`.
+  /// Bouton primaire de `hp_adjustment_sheet.dart` en mode Dégâts (le libellé suit le mode actif pour éviter d'appliquer des dégâts alors qu'on voulait soigner).
   ///
   /// In fr, this message translates to:
-  /// **'Appliquer'**
-  String get hpAdjustmentSheetApplyButton;
+  /// **'Infliger'**
+  String get hpAdjustmentSheetDamageApplyButton;
+
+  /// Bouton primaire de `hp_adjustment_sheet.dart` en mode Soins.
+  ///
+  /// In fr, this message translates to:
+  /// **'Soigner'**
+  String get hpAdjustmentSheetHealApplyButton;
+
+  /// Bouton primaire de `hp_adjustment_sheet.dart` en mode PV temporaires.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get hpAdjustmentSheetTemporaryApplyButton;
 
   /// Titre de `add_xp_sheet.dart` (bouton "+" du bandeau XP).
   ///
@@ -4905,6 +4917,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Montant'**
   String get currencyAdjustmentSheetAmountFieldLabel;
+
+  /// Aide sous le champ de montant : borne maximale saisissable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Max {max}'**
+  String numericAmountMaxHint(int max);
+
+  /// Aide sous le champ de montant en mode Retirer : solde de la monnaie, borne du retrait.
+  ///
+  /// In fr, this message translates to:
+  /// **'Solde : {balance}'**
+  String currencyAdjustmentSheetBalanceHint(int balance);
 
   /// Titre de la sheet de conversion de pièces.
   ///

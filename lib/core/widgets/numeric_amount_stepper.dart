@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -108,12 +109,33 @@ class _NumericAmountStepperState extends State<NumericAmountStepper> {
     }
   }
 
-  void _step(int delta) {
+  /// Applique [delta] (borné à `[0, max]`) ; `false` si la valeur n'a pas
+  /// évolué (borne déjà atteinte).
+  bool _step(int delta) {
     final next = (_latest + delta).clamp(0, widget.max);
-    if (next != _latest) {
-      _latest = next;
-      widget.onChanged(next);
-    }
+    if (next == _latest) return false;
+    _latest = next;
+    widget.onChanged(next);
+    return true;
+  }
+
+  /// Dernier pas de répétition appliqué : un retour haptique léger marque
+  /// chaque changement de palier (1, 5, 10).
+  int _lastRepeatStep = 1;
+
+  void _startRepeat(int sign) {
+    _lastRepeatStep = 1;
+    _repeater.start((step) {
+      // Borne atteinte : inutile de continuer à tourner sans effet.
+      if (!_step(sign * step)) {
+        _repeater.stop();
+        return;
+      }
+      if (step != _lastRepeatStep) {
+        _lastRepeatStep = step;
+        HapticFeedback.selectionClick();
+      }
+    });
   }
 
   @override
@@ -126,7 +148,7 @@ class _NumericAmountStepperState extends State<NumericAmountStepper> {
           semanticLabel: widget.decrementLabel,
           enabled: widget.value > 0,
           onStep: () => _step(-1),
-          onRepeatStart: () => _repeater.start((step) => _step(-step)),
+          onRepeatStart: () => _startRepeat(-1),
           onRepeatStop: _repeater.stop,
         ),
         SizedBox(
@@ -160,7 +182,7 @@ class _NumericAmountStepperState extends State<NumericAmountStepper> {
           semanticLabel: widget.incrementLabel,
           enabled: widget.value < widget.max,
           onStep: () => _step(1),
-          onRepeatStart: () => _repeater.start(_step),
+          onRepeatStart: () => _startRepeat(1),
           onRepeatStop: _repeater.stop,
         ),
       ],
@@ -168,7 +190,7 @@ class _NumericAmountStepperState extends State<NumericAmountStepper> {
   }
 }
 
-class _RepeatButton extends StatelessWidget {
+class _RepeatButton extends StatefulWidget {
   const _RepeatButton({
     required this.icon,
     required this.semanticLabel,
@@ -185,41 +207,76 @@ class _RepeatButton extends StatelessWidget {
   final VoidCallback onRepeatStart;
   final VoidCallback onRepeatStop;
 
+  @override
+  State<_RepeatButton> createState() => _RepeatButtonState();
+}
+
+class _RepeatButtonState extends State<_RepeatButton> {
   static const double _tapTargetSize = 44;
   static const double _visualSize = 28;
 
+  /// État "pressé" sobre (tap ou appui long en cours) : fond
+  /// `parchment.card`, bordure `wood.medium`.
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed != value) setState(() => _pressed = value);
+  }
+
+  @override
+  void didUpdateWidget(_RepeatButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.enabled && _pressed) _pressed = false;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final pressed = _pressed && widget.enabled;
     return Opacity(
-      opacity: enabled ? 1 : 0.4,
+      opacity: widget.enabled ? 1 : 0.4,
       child: Semantics(
         button: true,
-        enabled: enabled,
-        onTap: enabled ? onStep : null,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: enabled ? onStep : null,
-          onLongPressStart: enabled ? (_) => onRepeatStart() : null,
-          onLongPressEnd: (_) => onRepeatStop(),
-          onLongPressCancel: onRepeatStop,
-          child: SizedBox(
-            width: _tapTargetSize,
-            height: _tapTargetSize,
-            child: Center(
-              child: Container(
-                width: _visualSize,
-                height: _visualSize,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.parchmentCardAlt,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                  border: Border.all(color: AppColors.woodLight, width: 1.5),
-                ),
-                child: Icon(
-                  icon,
-                  size: 16,
-                  color: AppColors.textSecondary,
-                  semanticLabel: semanticLabel,
+        enabled: widget.enabled,
+        label: widget.semanticLabel,
+        excludeSemantics: true,
+        onTap: widget.enabled ? widget.onStep : null,
+        child: Listener(
+          onPointerDown: (_) => _setPressed(true),
+          onPointerUp: (_) => _setPressed(false),
+          onPointerCancel: (_) => _setPressed(false),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.enabled ? widget.onStep : null,
+            onLongPressStart: widget.enabled
+                ? (_) => widget.onRepeatStart()
+                : null,
+            onLongPressEnd: (_) => widget.onRepeatStop(),
+            onLongPressCancel: widget.onRepeatStop,
+            child: SizedBox(
+              width: _tapTargetSize,
+              height: _tapTargetSize,
+              child: Center(
+                child: Container(
+                  width: _visualSize,
+                  height: _visualSize,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: pressed
+                        ? AppColors.parchmentCard
+                        : AppColors.parchmentCardAlt,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    border: Border.all(
+                      color: pressed
+                          ? AppColors.woodMedium
+                          : AppColors.woodLight,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Icon(
+                    widget.icon,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
             ),

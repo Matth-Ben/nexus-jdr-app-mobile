@@ -112,6 +112,18 @@ void main() {
       expect(result.adjusted, [0]);
     });
 
+    testWidgets('borne visible sous le champ : "Max 999999" en Ajouter, '
+        '"Solde : 25" en Retirer', (tester) async {
+      await _open(tester);
+      expect(find.text('Max 999999'), findsOneWidget);
+      expect(find.textContaining('Solde'), findsNothing);
+
+      await tester.tap(find.text('RETIRER'));
+      await tester.pump();
+      expect(find.text('Solde : 25'), findsOneWidget);
+      expect(find.text('Max 999999'), findsNothing);
+    });
+
     testWidgets('sans conversion fournie, pas de bouton "Changer"', (
       tester,
     ) async {
@@ -213,6 +225,72 @@ void main() {
       expect(result.converted.single, {
         CurrencyKind.gold: 0,
         CurrencyKind.silver: 265,
+      });
+    });
+
+    testWidgets('sélecteurs de pièces : cibles tactiles >= 44 px', (
+      tester,
+    ) async {
+      await _open(tester);
+      await openConversion(tester);
+
+      final chips = find.byType(ChoiceChip);
+      expect(chips, findsWidgets);
+      for (final chip in tester.widgetList<ChoiceChip>(chips)) {
+        expect(chip.materialTapTargetSize, MaterialTapTargetSize.padded);
+      }
+      for (var i = 0; i < chips.evaluate().length; i++) {
+        expect(
+          tester.getSize(chips.at(i)).height,
+          greaterThanOrEqualTo(44),
+          reason: 'chip #$i',
+        );
+      }
+    });
+
+    testWidgets('message "montant insuffisant" : icône d\'information, pas '
+        'de rouge', (tester) async {
+      await _open(tester, currency: CurrencyKind.silver);
+      await openConversion(tester);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'PO · 25').last);
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), '5');
+      await tester.pump();
+
+      expect(find.byIcon(Icons.info_outline), findsOneWidget);
+      final text = tester.widget<Text>(
+        find.text('Ce montant ne suffit pas pour obtenir une pièce entière.'),
+      );
+      expect(text.style?.fontWeight, FontWeight.w700);
+      expect(text.style?.color, const Color(0xFF6B4226));
+    });
+
+    // `_selectTo` : sa branche "échange source/cible" n'est pas atteignable
+    // par l'UI (la rangée "contre" ne propose jamais la pièce source). On
+    // vérifie donc l'invariant observable : source et cible ne coïncident
+    // jamais, et choisir comme source la cible courante échange les deux.
+    testWidgets('choisir la cible comme source échange source et cible; la '
+        'rangée cible ne propose jamais la source', (tester) async {
+      final result = await _open(tester, currency: CurrencyKind.gold);
+      await openConversion(tester);
+
+      // Source PO (25) : la rangée cible ne propose pas PO (1 seule puce).
+      expect(find.widgetWithText(ChoiceChip, 'PO · 25'), findsOneWidget);
+      // On choisit PA comme source : PO devient la cible.
+      await tester.tap(find.widgetWithText(ChoiceChip, 'PA · 15').first);
+      await tester.pump();
+      // PA n'est plus proposée en cible ; PO l'est (et reste une source).
+      expect(find.widgetWithText(ChoiceChip, 'PA · 15'), findsOneWidget);
+      expect(find.widgetWithText(ChoiceChip, 'PO · 25'), findsNWidgets(2));
+
+      await tester.enterText(find.byType(TextField), '10');
+      await tester.pump();
+      expect(find.text('10 PA contre 1 PO'), findsOneWidget);
+      await tester.tap(find.byType(PrimaryButton));
+      await tester.pumpAndSettle();
+      expect(result.converted.single, {
+        CurrencyKind.silver: 5,
+        CurrencyKind.gold: 26,
       });
     });
 
