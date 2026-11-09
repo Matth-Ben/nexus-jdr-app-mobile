@@ -309,5 +309,8 @@ disposition.
   depuis le compte joueur (propriétaire RLS) puis le groupe depuis le compte
   MJ, avec vérification de la disparition réelle des lignes ; aucune donnée
   orpheline connue (`QA-Adventure%` vérifié vide pour les deux comptes).
-  Limite connue : l'étape 5f (quota « SORTS PRÉPARÉS » 5/5 après la montée de
-  niveau) reste une simple observation, sans `fail()`.
+  Étape 5f (assertion stricte) : après la montée de niveau 2, le quota
+  « SORTS PRÉPARÉS » affiche 4 / 5 (« Encore 1 sort à préparer » : Sagesse +3
+  + niveau 2 = 5, sorts de domaine exclus, aucune préparation automatique) ;
+  le test prépare « Mot de guérison » (ni préparé ni de domaine) et exige
+  5 / 5.

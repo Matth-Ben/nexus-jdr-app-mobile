@@ -380,39 +380,42 @@ void main() {
     }
     await tapText(tester, 'SORTS');
     await pumpUntilSettled(tester, attempts: 4);
-    // 5f : le quota "SORTS PRÉPARÉS" passe de 4 à 5 à la montée de niveau
-    // 2 (mod SAG +3 + niveau 2), mais l'étape "Sorts" de l'assistant de
-    // montée de niveau ne fait QUE recalculer les emplacements -- elle ne
-    // propose aucun choix de préparation (voir
-    // `level_up_screen.dart::_buildSpellsStep`, branche sans
-    // `requiresSpellSelection` pour un lanceur qui PRÉPARE ses sorts
-    // plutôt que d'en "apprendre" de nouveaux) : le quota reste donc sous
-    // rempli ("4 / 5, Encore 1 sort à préparer") jusqu'à ce que le joueur
-    // prépare lui-même un 5e sort niveau 1 depuis cet onglet, exactement
-    // comme un vrai joueur le ferait -- documenté comme friction UX dans
-    // le compte-rendu QA plutôt que corrigé ici.
-    if (find.textContaining('Encore 1 sort à préparer').evaluate().isNotEmpty) {
-      observe(
-        'Etape5 - ECART/FRICTION 5f',
-        'quota "SORTS PRÉPARÉS" sous-rempli (4/5) après la montée de '
-            'niveau -- préparation manuelle du 5e sort pour atteindre l\'état '
-            'RAW attendu.',
+    // 5f : le quota "SORTS PRÉPARÉS" passe de 4 à 5 à la montée de niveau 2
+    // (RAW : mod SAG +3 + niveau 2 = 5). Les sorts de domaine (Bénédiction,
+    // Soins) ne comptent pas dans ce quota. L'assistant de montée de niveau
+    // ne propose aucune préparation (le joueur choisit lui-même) : on attend
+    // donc "4 / 5, Encore 1 sort à préparer", puis on prépare un sort non
+    // préparé et non de domaine ("Mot de guérison") et on exige 5 / 5.
+    // Comportement observé conforme à la règle (formule SAG + niveau dans
+    // `PreparedSpellsLimit.limitFor`, domaine exclu par
+    // `_countsTowardPreparedLimit`).
+    if (find.text('4 / 5').evaluate().isEmpty ||
+        find.textContaining('Encore 1 sort à préparer').evaluate().isEmpty) {
+      fail(
+        'ECART 5f : quota "SORTS PRÉPARÉS" attendu "4 / 5" + "Encore 1 sort à '
+        'préparer" juste après la montée de niveau 2. Texte visible : '
+        '${visibleTexts()}',
       );
-      await scrollUntilVisibleThenTap(
-        tester,
-        find.byType(ListView).first,
-        'Mot de guérison',
+    }
+    await scrollUntilVisibleThenTap(
+      tester,
+      find.byType(ListView).first,
+      'Mot de guérison',
+    );
+    await pumpUntilSettled(tester, attempts: 4);
+    await tapText(tester, 'Préparer ce sort');
+    await pumpUntilSettled(tester, attempts: 6);
+    // Le compteur est en tête de liste : la liste paresseuse l'a retiré de
+    // l'arbre après le défilement jusqu'à "Mot de guérison".
+    for (var i = 0; i < 6 && find.text('5 / 5').evaluate().isEmpty; i++) {
+      await tester.drag(find.byType(ListView).first, const Offset(0, 600));
+      await pumpUntilSettled(tester, attempts: 2);
+    }
+    if (find.text('5 / 5').evaluate().isEmpty) {
+      fail(
+        'ECART 5f : quota "SORTS PRÉPARÉS" attendu "5 / 5" après avoir '
+        'préparé "Mot de guérison". Texte visible : ${visibleTexts()}',
       );
-      await pumpUntilSettled(tester, attempts: 4);
-      await tapText(tester, 'Préparer ce sort');
-      await pumpUntilSettled(tester, attempts: 6);
-      if (find.text('5 / 5').evaluate().isEmpty) {
-        observe(
-          'Etape5 - ECART POSSIBLE 5f',
-          'quota "SORTS PRÉPARÉS" toujours pas a 5/5 apres preparation '
-              'manuelle -- texte visible : ${visibleTexts()}',
-        );
-      }
     }
     final level1SlotsAfterLevelUp = tester
         .widgetList<SpellSlotDots>(find.byType(SpellSlotDots))
