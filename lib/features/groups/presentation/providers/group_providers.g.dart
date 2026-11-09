@@ -546,8 +546,8 @@ final class GroupInvitePreviewFamily extends $Family
 /// (tout utilisateur authentifié lirait `user_id`/`character_id` des départs
 /// d'autres groupes). Le tri se fait donc ici : un `DELETE` n'invalide
 /// [groupDetailProvider] que si son `id` est celui d'un membre actuellement
-/// affiché ([GroupDetail.memberRowIds]). **Effectif uniquement une fois la migration web
-/// `fix/enable-realtime-group-members` déployée** (publication de
+/// affiché ([GroupDetail.memberRowIds]). **Effectif uniquement une fois la
+/// migration web `fix/enable-realtime-group-members` déployée** (publication de
 /// `group_members` sur `supabase_realtime`) — tant que ce n'est pas le cas,
 /// ce flux ne reçoit simplement jamais d'évènement, sans régression.
 
@@ -589,8 +589,8 @@ final groupMembersRealtimeWatcherProvider =
 /// (tout utilisateur authentifié lirait `user_id`/`character_id` des départs
 /// d'autres groupes). Le tri se fait donc ici : un `DELETE` n'invalide
 /// [groupDetailProvider] que si son `id` est celui d'un membre actuellement
-/// affiché ([GroupDetail.memberRowIds]). **Effectif uniquement une fois la migration web
-/// `fix/enable-realtime-group-members` déployée** (publication de
+/// affiché ([GroupDetail.memberRowIds]). **Effectif uniquement une fois la
+/// migration web `fix/enable-realtime-group-members` déployée** (publication de
 /// `group_members` sur `supabase_realtime`) — tant que ce n'est pas le cas,
 /// ce flux ne reçoit simplement jamais d'évènement, sans régression.
 
@@ -631,8 +631,8 @@ final class GroupMembersRealtimeWatcherProvider
   /// (tout utilisateur authentifié lirait `user_id`/`character_id` des départs
   /// d'autres groupes). Le tri se fait donc ici : un `DELETE` n'invalide
   /// [groupDetailProvider] que si son `id` est celui d'un membre actuellement
-  /// affiché ([GroupDetail.memberRowIds]). **Effectif uniquement une fois la migration web
-  /// `fix/enable-realtime-group-members` déployée** (publication de
+  /// affiché ([GroupDetail.memberRowIds]). **Effectif uniquement une fois la
+  /// migration web `fix/enable-realtime-group-members` déployée** (publication de
   /// `group_members` sur `supabase_realtime`) — tant que ce n'est pas le cas,
   /// ce flux ne reçoit simplement jamais d'évènement, sans régression.
   GroupMembersRealtimeWatcherProvider._({
@@ -724,8 +724,8 @@ String _$groupMembersRealtimeWatcherHash() =>
 /// (tout utilisateur authentifié lirait `user_id`/`character_id` des départs
 /// d'autres groupes). Le tri se fait donc ici : un `DELETE` n'invalide
 /// [groupDetailProvider] que si son `id` est celui d'un membre actuellement
-/// affiché ([GroupDetail.memberRowIds]). **Effectif uniquement une fois la migration web
-/// `fix/enable-realtime-group-members` déployée** (publication de
+/// affiché ([GroupDetail.memberRowIds]). **Effectif uniquement une fois la
+/// migration web `fix/enable-realtime-group-members` déployée** (publication de
 /// `group_members` sur `supabase_realtime`) — tant que ce n'est pas le cas,
 /// ce flux ne reçoit simplement jamais d'évènement, sans régression.
 
@@ -774,8 +774,8 @@ final class GroupMembersRealtimeWatcherFamily extends $Family
   /// (tout utilisateur authentifié lirait `user_id`/`character_id` des départs
   /// d'autres groupes). Le tri se fait donc ici : un `DELETE` n'invalide
   /// [groupDetailProvider] que si son `id` est celui d'un membre actuellement
-  /// affiché ([GroupDetail.memberRowIds]). **Effectif uniquement une fois la migration web
-  /// `fix/enable-realtime-group-members` déployée** (publication de
+  /// affiché ([GroupDetail.memberRowIds]). **Effectif uniquement une fois la
+  /// migration web `fix/enable-realtime-group-members` déployée** (publication de
   /// `group_members` sur `supabase_realtime`) — tant que ce n'est pas le cas,
   /// ce flux ne reçoit simplement jamais d'évènement, sans régression.
 
