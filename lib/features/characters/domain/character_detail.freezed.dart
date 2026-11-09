@@ -93,9 +93,9 @@ mixin _$CharacterDetail {
 /// l'affichage par `SpeedConverter`), `null` si la race
 /// n'a pas pu être résolue (race personnalisée/non renseignée) — voir
 /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
-/// "Onglet Personnage". Affichée telle quelle sans ajustement (armure
-/// lourde trop forte pour la Force, traits raciaux conditionnels...),
-/// même principe que [isDead] ("reste un simple affichage, sans
+/// "Onglet Personnage". Valeur brute de la race en pieds, sans ajustement de règles (armure
+/// lourde trop forte pour la Force, traits raciaux conditionnels...) : seule la conversion
+/// en mètres s'applique à l'affichage. Même principe que [isDead] ("reste un simple affichage, sans
 /// simulation des règles complètes").
  int? get speed;/// `characters.armor_class_bonus` — ajustement manuel de Classe
 /// d'Armure, saisi par le joueur pour un effet temporaire que l'app ne
@@ -633,9 +633,9 @@ class _CharacterDetail extends CharacterDetail {
 /// l'affichage par `SpeedConverter`), `null` si la race
 /// n'a pas pu être résolue (race personnalisée/non renseignée) — voir
 /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
-/// "Onglet Personnage". Affichée telle quelle sans ajustement (armure
-/// lourde trop forte pour la Force, traits raciaux conditionnels...),
-/// même principe que [isDead] ("reste un simple affichage, sans
+/// "Onglet Personnage". Valeur brute de la race en pieds, sans ajustement de règles (armure
+/// lourde trop forte pour la Force, traits raciaux conditionnels...) : seule la conversion
+/// en mètres s'applique à l'affichage. Même principe que [isDead] ("reste un simple affichage, sans
 /// simulation des règles complètes").
 @override final  int? speed;
 /// `characters.armor_class_bonus` — ajustement manuel de Classe
