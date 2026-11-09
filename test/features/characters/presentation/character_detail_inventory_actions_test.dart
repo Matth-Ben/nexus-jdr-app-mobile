@@ -925,9 +925,7 @@ void main() {
       await tester.tap(find.text('PO'));
       await tester.pumpAndSettle();
 
-      final incrementButton = find.byWidgetPredicate(
-        (widget) => widget is Icon && widget.semanticLabel == 'Augmenter',
-      );
+      final incrementButton = find.bySemanticsLabel('Augmenter');
       await tester.tap(incrementButton);
       await tester.tap(incrementButton);
       await tester.pumpAndSettle();
@@ -1065,6 +1063,82 @@ void main() {
       expect(repository.lastRewardItems, isEmpty);
     },
   );
+
+  group('conversion de pièces (_convertCurrency)', () {
+    /// PO (10) -> PA : ouvre la feuille d'ajustement, "Changer", saisit
+    /// [amount] PO puis valide la conversion.
+    Future<void> convertGold(WidgetTester tester, String amount) async {
+      await tester.tap(find.text('PO'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CHANGER'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), amount);
+      await tester.pump();
+      await tester.tap(find.byType(PrimaryButton));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'écriture unique via addReward(newCurrencyTotals: {source, cible}, '
+      'items: []), puis rafraîchissement de la fiche',
+      (tester) async {
+        final repository = await pumpDetail(tester);
+        await openInventoryTab(tester);
+        final fetchesBefore = repository.fetchCharacterDetailCallCount;
+
+        await convertGold(tester, '4');
+
+        expect(repository.addRewardCallCount, 1);
+        expect(repository.adjustCurrencyCallCount, 0);
+        expect(repository.lastRewardCurrencyTotals, {
+          CurrencyKind.gold: 6,
+          CurrencyKind.silver: 40,
+        });
+        expect(repository.lastRewardItems, isEmpty);
+        expect(repository.fetchCharacterDetailCallCount, fetchesBefore + 1);
+        expect(
+          find.textContaining("n'a pas pu être enregistrée"),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets('WriteOutcome.queued (hors ligne) : snackbar hors-ligne, aucun '
+        'rafraîchissement de la fiche', (tester) async {
+      final repository = await pumpDetail(tester);
+      repository.outcomeToReturn = WriteOutcome.queued;
+      await openInventoryTab(tester);
+      final fetchesBefore = repository.fetchCharacterDetailCallCount;
+
+      await convertGold(tester, '4');
+
+      expect(repository.addRewardCallCount, 1);
+      expect(
+        find.textContaining("n'a pas pu être enregistrée"),
+        findsOneWidget,
+      );
+      expect(repository.fetchCharacterDetailCallCount, fetchesBefore);
+    });
+
+    testWidgets(
+      'CharacterFailure : message de la défaillance affiché, pas de rafraîchissement',
+      (tester) async {
+        final repository = await pumpDetail(tester);
+        repository.failNextAddReward = true;
+        await openInventoryTab(tester);
+        final fetchesBefore = repository.fetchCharacterDetailCallCount;
+
+        await convertGold(tester, '4');
+
+        expect(repository.addRewardCallCount, 1);
+        expect(
+          find.text('Objets non ajoutés (échec partiel simulé).'),
+          findsOneWidget,
+        );
+        expect(repository.fetchCharacterDetailCallCount, fetchesBefore);
+      },
+    );
+  });
 
   testWidgets(
     'WriteOutcome.queued (hors ligne) : message honnête, jamais le message '

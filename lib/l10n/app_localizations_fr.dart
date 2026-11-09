@@ -1533,7 +1533,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get hpAdjustmentSheetCancelButton => 'Annuler';
 
   @override
-  String get hpAdjustmentSheetApplyButton => 'Appliquer';
+  String get hpAdjustmentSheetDamageApplyButton => 'Infliger';
+
+  @override
+  String get hpAdjustmentSheetHealApplyButton => 'Soigner';
+
+  @override
+  String get hpAdjustmentSheetTemporaryApplyButton => 'Ajouter';
 
   @override
   String get addXpSheetTitle => 'Ajouter de l\'XP';
@@ -2977,6 +2983,72 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get currencyAdjustmentSheetApplyButton => 'Appliquer';
+
+  @override
+  String get currencyAdjustmentSheetConvertButton => 'Changer';
+
+  @override
+  String get numericAmountDecreaseLabel => 'Diminuer';
+
+  @override
+  String get numericAmountIncreaseLabel => 'Augmenter';
+
+  @override
+  String get hpAdjustmentSheetAmountFieldLabel => 'Montant de PV';
+
+  @override
+  String get currencyAdjustmentSheetAmountFieldLabel => 'Montant';
+
+  @override
+  String numericAmountMaxHint(int max) {
+    return 'Max $max';
+  }
+
+  @override
+  String currencyAdjustmentSheetBalanceHint(int balance) {
+    return 'Solde : $balance';
+  }
+
+  @override
+  String get currencyConversionSheetTitle => 'Changer des pièces';
+
+  @override
+  String get currencyConversionSheetFromLabel => 'PIÈCE À CHANGER';
+
+  @override
+  String get currencyConversionSheetToLabel => 'CONTRE';
+
+  @override
+  String get currencyConversionSheetAmountLabel => 'MONTANT À CHANGER';
+
+  @override
+  String currencyConversionSheetPreview(
+    int spent,
+    String fromUnit,
+    int obtained,
+    String toUnit,
+  ) {
+    return '$spent $fromUnit contre $obtained $toUnit';
+  }
+
+  @override
+  String currencyConversionSheetRemainder(int unconverted, String fromUnit) {
+    return '$unconverted $fromUnit non converties restent dans votre bourse.';
+  }
+
+  @override
+  String get currencyConversionSheetTooSmall =>
+      'Ce montant ne suffit pas pour obtenir une pièce entière.';
+
+  @override
+  String get currencyConversionSheetNothingToConvert =>
+      'Aucune pièce à changer.';
+
+  @override
+  String get currencyConversionSheetCancelButton => 'Annuler';
+
+  @override
+  String get currencyConversionSheetApplyButton => 'Changer';
 
   @override
   String get inventoryCategoryFilterSheetTitle => 'FILTRER PAR CATÉGORIE';

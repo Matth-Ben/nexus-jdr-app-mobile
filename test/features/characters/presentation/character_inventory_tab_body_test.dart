@@ -528,9 +528,7 @@ void main() {
 
       expect(find.text("Ajuster les pièces d'or"), findsOneWidget);
 
-      final incrementButton = find.byWidgetPredicate(
-        (widget) => widget is Icon && widget.semanticLabel == 'Augmenter',
-      );
+      final incrementButton = find.bySemanticsLabel('Augmenter');
       await tester.tap(incrementButton);
       await tester.tap(incrementButton);
       await tester.pumpAndSettle();

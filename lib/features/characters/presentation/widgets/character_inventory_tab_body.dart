@@ -64,6 +64,7 @@ class CharacterInventoryTabBody extends StatefulWidget {
     required this.onAddCustomInventoryItem,
     required this.onEquipWeaponToSlot,
     this.onAddReward,
+    this.onConvertCurrency,
     this.actionsDisabled = false,
     this.filterAnchorKey,
     super.key,
@@ -111,6 +112,11 @@ class CharacterInventoryTabBody extends StatefulWidget {
   /// `shared_character_view_screen.dart`, où ajouter une récompense n'a pas
   /// de sens).
   final VoidCallback? onAddReward;
+
+  /// Reçoit les nouveaux soldes *absolus* des deux monnaies touchées par une
+  /// conversion (`currency_conversion_sheet.dart`), à écrire en une seule
+  /// requête. `null` masque le bouton "Changer" de la sheet de monnaie.
+  final ValueChanged<Map<CurrencyKind, int>>? onConvertCurrency;
 
   /// `true` pendant qu'une écriture de cet onglet est en vol (voir
   /// `character_detail_screen.dart::_isWritingInventory`), ou en permanence
@@ -225,6 +231,11 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
       currency: currency,
       currentAmount: _currentAmountOf(widget.detail, currency),
       onApply: (newAmount) => widget.onAdjustCurrency(currency, newAmount),
+      balances: {
+        for (final kind in CurrencyKind.values)
+          kind: _currentAmountOf(widget.detail, kind),
+      },
+      onConvert: widget.onConvertCurrency,
     );
   }
 

@@ -1325,6 +1325,39 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Conversion de pièces (`currency_conversion_sheet.dart`) : [newTotals]
+  /// contient les nouveaux soldes *absolus* des deux monnaies touchées
+  /// (débit + crédit). Écrits en **un seul UPDATE** via
+  /// `CharacterRepository.addReward` sans objet (qui met à jour plusieurs
+  /// colonnes `currency_*` d'un coup) : jamais d'état intermédiaire où la
+  /// pièce source serait débitée sans que la cible soit créditée.
+  Future<void> _convertCurrency(Map<CurrencyKind, int> newTotals) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _isWritingInventory = true);
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .addReward(
+            characterId: widget.characterId,
+            newCurrencyTotals: newTotals,
+            items: const [],
+          );
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
+        return;
+      }
+      await _refreshCharacterDetail();
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar('Impossible de changer les pièces. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
   /// Ajout d'un objet du catalogue (sheet "Depuis le catalogue",
   /// `add_item_flow.dart`).
   Future<void> _addInventoryItem(
@@ -2491,6 +2524,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         onToggleItemAttuned: _toggleInventoryItemAttuned,
         onRemoveItem: _removeInventoryItem,
         onAdjustCurrency: _adjustCurrency,
+        onConvertCurrency: _convertCurrency,
         onAddInventoryItem: _addInventoryItem,
         onAddCustomInventoryItem: _addCustomInventoryItem,
         onEquipWeaponToSlot: (item, slot) =>

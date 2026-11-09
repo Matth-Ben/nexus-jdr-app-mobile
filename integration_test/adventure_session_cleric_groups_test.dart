@@ -40,6 +40,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:personnages/core/widgets/numeric_amount_stepper.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_spells_section.dart';
 import 'package:personnages/features/groups/presentation/widgets/group_invite_code_chip.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -240,17 +241,18 @@ void main() {
     // `hp_adjustment_sheet.dart::_HpAdjustmentMode.damage`) -- confirmé
     // explicitement plutôt que supposé silencieusement.
     await tapTextIfPresent(tester, 'DÉGÂTS');
-    for (var i = 0; i < 7; i++) {
-      final increment = find
-          .byWidgetPredicate(
-            (widget) => widget is Icon && widget.semanticLabel == 'Augmenter',
-          )
-          .first;
-      await tester.tap(increment);
-      await tester.pump();
-    }
+    // Saisie directe du montant dans le champ numérique du
+    // `NumericAmountStepper` de la feuille (plus de boucle de taps sur "+").
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(NumericAmountStepper),
+        matching: find.byType(TextField),
+      ),
+      '7',
+    );
     await settleQuickly(tester);
-    await tapText(tester, 'APPLIQUER');
+    // Le bouton principal suit le mode actif : "Infliger" en mode DÉGÂTS.
+    await tapText(tester, 'INFLIGER');
     await pumpUntilSettled(tester, attempts: 6);
     observe('Etape2 - onglet PERSO apres degats', visibleTexts());
     if (find.text('3 / 10').evaluate().isEmpty) {
