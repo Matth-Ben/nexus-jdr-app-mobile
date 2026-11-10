@@ -26,4 +26,11 @@ enum WriteOutcome {
   /// ni dans la file. L'appelant doit afficher un message d'échec
   /// (`characterOfflineNotPersistedMessage`), jamais « sera synchronisé ».
   rejectedOffline,
+
+  /// `applyRest` uniquement (D187) : un repos est déjà en attente de
+  /// synchronisation pour ce personnage et la file n'en garde qu'un. **Rien
+  /// n'a été écrit ni mis en file**, le repos en attente est intact.
+  /// L'appelant doit le dire (`characterDetailRestAlreadyPendingMessage`) et
+  /// annuler son affichage optimiste.
+  restAlreadyPending,
 }

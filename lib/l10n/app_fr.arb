@@ -1660,6 +1660,10 @@
   "@characterDetailOfflineQueuedMessage": {
     "description": "Voir `_CharacterDetailScreenState._offlineQueuedMessage` — écriture réellement mise en file (`PendingCharacterWriteQueue`) : promet une synchronisation future réelle, contrairement à `characterOfflineNotPersistedMessage`."
   },
+  "characterDetailRestAlreadyPendingMessage": "Un repos est déjà en attente de synchronisation pour ce personnage. Attendez le retour de la connexion avant d'en faire un autre.",
+  "@characterDetailRestAlreadyPendingMessage": {
+    "description": "SnackBar de `_applyRest` (D187) : `WriteOutcome.restAlreadyPending` — la file hors-ligne ne garde qu'un repos par personnage, ce second repos n'est ni écrit ni mis en file."
+  },
   "characterDetailArmorClassAdjustErrorMessage": "Impossible d'ajuster la Classe d'Armure. Réessayez.",
   "@characterDetailArmorClassAdjustErrorMessage": {
     "description": "SnackBar d'échec de `_adjustArmorClassBonus` (sheet \"Ajustement de CA\")."

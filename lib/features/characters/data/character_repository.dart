@@ -11,6 +11,7 @@ import '../../../core/rules/character_class.dart';
 import '../../../core/rules/spell_status.dart';
 import '../../../core/utils/french_text_normalizer.dart';
 import '../../../core/network/connectivity_checker.dart';
+import '../../../core/network/transport_failure.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
 import '../../character_creation/domain/spell_selection_resolver.dart';
 import '../../character_creation/domain/spellcasting_rules.dart';
@@ -1934,6 +1935,57 @@ class SupabaseCharacterRepository implements CharacterRepository {
     return null;
   }
 
+  /// Met en file une écriture de PV en y joignant la **base serveur** connue
+  /// (`baseCurrentHp`/`baseTemporaryHp`) : la dernière valeur confirmée par le
+  /// serveur, lue dans le cache de la fiche. `PendingCharacterWriteSyncer` la
+  /// compare à la valeur serveur au rejeu pour détecter une modification
+  /// concurrente depuis un autre appareil du même compte (F19/D178).
+  ///
+  /// Une entrée déjà en file pour ce personnage garde **sa** base : la
+  /// nouvelle valeur la remplace (upsert) mais la valeur serveur de référence
+  /// reste celle d'avant le premier ajustement hors ligne. Sans base connue
+  /// (fiche jamais mise en cache), l'écriture est mise en file sans base et
+  /// aucune détection n'a lieu.
+  Future<void> _enqueueHp({
+    required String characterId,
+    required String ownerId,
+    required int currentHp,
+    required int temporaryHp,
+  }) async {
+    final payload = <String, dynamic>{
+      'currentHp': currentHp,
+      'temporaryHp': temporaryHp,
+    };
+    final existing = await _pendingWriteBeforeOnlineWrite(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: PendingCharacterWriteKind.hp,
+      targetId: '',
+    );
+    final existingBaseCurrent = existing?.payload['baseCurrentHp'];
+    final existingBaseTemporary = existing?.payload['baseTemporaryHp'];
+    if (existingBaseCurrent is num && existingBaseTemporary is num) {
+      payload['baseCurrentHp'] = existingBaseCurrent.toInt();
+      payload['baseTemporaryHp'] = existingBaseTemporary.toInt();
+    } else {
+      final base = await _detailCache.readHp(
+        ownerId: ownerId,
+        characterId: characterId,
+      );
+      if (base != null) {
+        payload['baseCurrentHp'] = base.currentHp;
+        payload['baseTemporaryHp'] = base.temporaryHp;
+      }
+    }
+    await _pendingWrites.enqueue(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: PendingCharacterWriteKind.hp,
+      targetId: '',
+      payload: payload,
+    );
+  }
+
   /// `targetId` (voir [PendingCharacterWrite.targetId]) d'un emplacement de
   /// sort mis en file par [castSpell] : distingue [slotLevel] ET la table
   /// visée ([isPactSlot]) — un même niveau d'emplacement classique
@@ -2012,12 +2064,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final ownerId = _requireOwnerId();
 
     if (!await _connectivityChecker.hasConnection()) {
-      await _pendingWrites.enqueue(
+      await _enqueueHp(
         characterId: characterId,
         ownerId: ownerId,
-        kind: PendingCharacterWriteKind.hp,
-        targetId: '',
-        payload: {'currentHp': currentHp, 'temporaryHp': temporaryHp},
+        currentHp: currentHp,
+        temporaryHp: temporaryHp,
       );
       return WriteOutcome.queued;
     }
@@ -2055,29 +2106,31 @@ class SupabaseCharacterRepository implements CharacterRepository {
         },
       );
       return WriteOutcome.synced;
-    } on TimeoutException {
-      // Dette D12 : `ConnectivityChecker.hasConnection()` a déclaré une
-      // interface active (sinon on ne serait jamais arrivé ici, voir la
-      // branche ci-dessus), mais la requête réseau elle-même n'a jamais
-      // abouti dans le délai global (`TimeoutHttpClient`,
-      // `core/network/timeout_http_client.dart`) — un Wi-Fi sans débit réel
-      // ou un signal faible, typiquement. Traité comme une absence de
-      // connectivité (même mise en file que `!hasConnection()` ci-dessus)
-      // plutôt que comme une [CharacterFailure] dure : contrairement à un
-      // vrai échec serveur (`PostgrestException`/`catch` ci-dessous, jamais
-      // mis en file, voir leur documentation), rien n'indique ici qu'un
-      // nouvel essai échouerait de la même façon.
-      await _pendingWrites.enqueue(
-        characterId: characterId,
-        ownerId: ownerId,
-        kind: PendingCharacterWriteKind.hp,
-        targetId: '',
-        payload: {'currentHp': currentHp, 'temporaryHp': temporaryHp},
-      );
-      return WriteOutcome.queued;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (error, stackTrace) {
+      if (isTransportFailure(error)) {
+        // Dettes D12 et D184 (tout échec de transport, pas seulement le délai
+        // dépassé — voir `isTransportFailure`) : `ConnectivityChecker
+        // .hasConnection()` a déclaré une
+        // interface active (sinon on ne serait jamais arrivé ici, voir la
+        // branche ci-dessus), mais la requête réseau elle-même n'a jamais
+        // abouti dans le délai global (`TimeoutHttpClient`,
+        // `core/network/timeout_http_client.dart`) — un Wi-Fi sans débit réel
+        // ou un signal faible, typiquement. Traité comme une absence de
+        // connectivité (même mise en file que `!hasConnection()` ci-dessus)
+        // plutôt que comme une [CharacterFailure] dure : contrairement à un
+        // vrai échec serveur (`PostgrestException`/`catch` ci-dessous, jamais
+        // mis en file, voir leur documentation), rien n'indique ici qu'un
+        // nouvel essai échouerait de la même façon.
+        await _enqueueHp(
+          characterId: characterId,
+          ownerId: ownerId,
+          currentHp: currentHp,
+          temporaryHp: temporaryHp,
+        );
+        return WriteOutcome.queued;
+      }
       // Remonté à Crashlytics (dette D13) : la mise à jour PV elle-même a
       // pu réussir côté serveur avant qu'une étape locale inattendue
       // (`_recordConfirmedWrite`) échoue — un bug silencieux ici
@@ -2480,23 +2533,24 @@ class SupabaseCharacterRepository implements CharacterRepository {
         },
       );
       return WriteOutcome.synced;
-    } on TimeoutException {
-      // Dette D12 : même rationale que [updateHp] ci-dessus (voir sa
-      // documentation) — la connectivité était déclarée active, mais la
-      // requête réseau n'a jamais abouti dans le délai global
-      // (`TimeoutHttpClient`). Traité comme une absence de connectivité,
-      // jamais comme une [CharacterFailure] dure.
-      await _pendingWrites.enqueue(
-        characterId: characterId,
-        ownerId: ownerId,
-        kind: PendingCharacterWriteKind.xp,
-        targetId: '',
-        payload: {'newXp': newXp},
-      );
-      return WriteOutcome.queued;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (error, stackTrace) {
+      if (isTransportFailure(error)) {
+        // Dette D12 : même rationale que [updateHp] ci-dessus (voir sa
+        // documentation) — la connectivité était déclarée active, mais la
+        // requête réseau n'a jamais abouti dans le délai global
+        // (`TimeoutHttpClient`). Traité comme une absence de connectivité,
+        // jamais comme une [CharacterFailure] dure.
+        await _pendingWrites.enqueue(
+          characterId: characterId,
+          ownerId: ownerId,
+          kind: PendingCharacterWriteKind.xp,
+          targetId: '',
+          payload: {'newXp': newXp},
+        );
+        return WriteOutcome.queued;
+      }
       // Remonté à Crashlytics (dette D13) : même rationale que [updateHp]
       // ci-dessus (écriture XP éventuellement confirmée côté serveur avant
       // un échec local inattendu).
@@ -2578,28 +2632,40 @@ class SupabaseCharacterRepository implements CharacterRepository {
             columns: null,
             supersededWrite: supersededWrite,
           );
+          // D185 : l'emplacement confirmé est reporté dans le cache de la
+          // fiche (aucune colonne `characters` concernée, voir ci-dessus).
+          await _detailCache.applyConfirmedSpellSlot(
+            ownerId: ownerId,
+            characterId: characterId,
+            slotLevel: slotLevel,
+            slotsUsed: slotsUsed,
+            isPactSlot: isPactSlot,
+          );
         },
       );
       return WriteOutcome.synced;
-    } on TimeoutException {
-      // Dette D12 : même rationale que [updateHp] (voir sa documentation).
-      await _pendingWrites.enqueue(
-        characterId: characterId,
-        ownerId: ownerId,
-        kind: PendingCharacterWriteKind.spellSlot,
-        targetId: targetId,
-        payload: {
-          'slotLevel': slotLevel,
-          'slotsUsed': slotsUsed,
-          'isPactSlot': isPactSlot,
-        },
-      );
-      return WriteOutcome.queued;
     } on CharacterFailure {
       rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (error, stackTrace) {
+      if (isTransportFailure(error)) {
+        // Dette D12 + D184 : tout échec de transport (délai dépassé, coupure
+        // pendant la requête, réponse perdue) est mis en file — valeur
+        // absolue, rejeu idempotent même si le serveur l'a déjà appliquée.
+        await _pendingWrites.enqueue(
+          characterId: characterId,
+          ownerId: ownerId,
+          kind: PendingCharacterWriteKind.spellSlot,
+          targetId: targetId,
+          payload: {
+            'slotLevel': slotLevel,
+            'slotsUsed': slotsUsed,
+            'isPactSlot': isPactSlot,
+          },
+        );
+        return WriteOutcome.queued;
+      }
       // Remonté à Crashlytics (dette D13) : même rationale que [updateHp].
       reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
@@ -3083,21 +3149,22 @@ class SupabaseCharacterRepository implements CharacterRepository {
         },
       );
       return WriteOutcome.synced;
-    } on TimeoutException {
-      // Dette D12 : même rationale que [updateHp].
-      await _pendingWrites.enqueue(
-        characterId: characterId,
-        ownerId: ownerId,
-        kind: PendingCharacterWriteKind.innateSpell,
-        targetId: targetId,
-        payload: {'spellId': spellId, 'usesSpent': usesSpent},
-      );
-      return WriteOutcome.queued;
     } on CharacterFailure {
       rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (error, stackTrace) {
+      if (isTransportFailure(error)) {
+        // Dette D12 : même rationale que [updateHp].
+        await _pendingWrites.enqueue(
+          characterId: characterId,
+          ownerId: ownerId,
+          kind: PendingCharacterWriteKind.innateSpell,
+          targetId: targetId,
+          payload: {'spellId': spellId, 'usesSpent': usesSpent},
+        );
+        return WriteOutcome.queued;
+      }
       // Remonté à Crashlytics (dette D13) : même rationale que [updateHp].
       reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
@@ -3164,24 +3231,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
         },
       );
       return WriteOutcome.synced;
-    } on TimeoutException {
-      // Dette D12 : même rationale que [updateHp].
-      await _pendingWrites.enqueue(
-        characterId: characterId,
-        ownerId: ownerId,
-        kind: PendingCharacterWriteKind.classFeature,
-        targetId: targetId,
-        payload: {
-          'classFeatureId': classFeatureId,
-          'usesRemaining': usesRemaining,
-        },
-      );
-      return WriteOutcome.queued;
     } on CharacterFailure {
       rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (error, stackTrace) {
+      if (isTransportFailure(error)) {
+        // Dette D12 : même rationale que [updateHp].
+        await _pendingWrites.enqueue(
+          characterId: characterId,
+          ownerId: ownerId,
+          kind: PendingCharacterWriteKind.classFeature,
+          targetId: targetId,
+          payload: {
+            'classFeatureId': classFeatureId,
+            'usesRemaining': usesRemaining,
+          },
+        );
+        return WriteOutcome.queued;
+      }
       // Remonté à Crashlytics (dette D13) : même rationale que [updateHp].
       reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
@@ -5180,20 +5248,15 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // [applyRestOnline] (qui ferait un aller-retour réseau best-effort pour
     // rien tant qu'il n'y a aucune connectivité).
     if (!await _connectivityChecker.hasConnection()) {
-      await _pendingWrites.enqueue(
+      return _enqueueRestUnlessPending(
         characterId: characterId,
         ownerId: ownerId,
-        kind: PendingCharacterWriteKind.rest,
-        targetId: '',
-        payload: {
-          'type': type.name,
-          'className': className,
-          'hitDiceSpentByClassId': hitDiceSpentByClassId,
-          'appliedGain': appliedGain,
-          'hitDiceRecoveredByClassId': hitDiceRecoveredByClassId,
-        },
+        type: type,
+        className: className,
+        hitDiceSpentByClassId: hitDiceSpentByClassId,
+        appliedGain: appliedGain,
+        hitDiceRecoveredByClassId: hitDiceRecoveredByClassId,
       );
-      return WriteOutcome.queued;
     }
 
     // Verrouillé (D33) : même rationale que `updateHp`, cette fois contre une
@@ -5241,33 +5304,76 @@ class SupabaseCharacterRepository implements CharacterRepository {
         },
       );
       return WriteOutcome.synced;
-    } on TimeoutException {
-      // Dette D12 : même rationale que [updateHp] — connectivité déclarée
-      // active, mais la requête n'a jamais abouti dans le délai global.
-      await _pendingWrites.enqueue(
-        characterId: characterId,
-        ownerId: ownerId,
-        kind: PendingCharacterWriteKind.rest,
-        targetId: '',
-        payload: {
-          'type': type.name,
-          'className': className,
-          'hitDiceSpentByClassId': hitDiceSpentByClassId,
-          'appliedGain': appliedGain,
-          'hitDiceRecoveredByClassId': hitDiceRecoveredByClassId,
-        },
-      );
-      return WriteOutcome.queued;
     } on CharacterFailure {
       rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (error, stackTrace) {
+      if (isTransportFailure(error)) {
+        // Dette D12 : même rationale que [updateHp] — connectivité déclarée
+        // active, mais la requête n'a jamais abouti dans le délai global.
+        return _enqueueRestUnlessPending(
+          characterId: characterId,
+          ownerId: ownerId,
+          type: type,
+          className: className,
+          hitDiceSpentByClassId: hitDiceSpentByClassId,
+          appliedGain: appliedGain,
+          hitDiceRecoveredByClassId: hitDiceRecoveredByClassId,
+        );
+      }
       // Remonté à Crashlytics (dette D13) : repos, écriture multi-étapes
       // sans vraie transaction — même rationale que [applyLevelUp].
       reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
     }
+  }
+
+  /// Met un repos en file **seulement si aucun repos n'y est déjà en
+  /// attente** pour ce personnage (D187) : la file n'a qu'une entrée `rest`
+  /// par personnage (rejouer deux repos à partir d'un état serveur périmé
+  /// n'aurait pas de sens RAW) et un second repos remplaçait silencieusement
+  /// le premier. Retourne [WriteOutcome.queued] (mis en file) ou
+  /// [WriteOutcome.restAlreadyPending] (rien n'a été écrit ni mis en file, le
+  /// repos en attente est intact). Sous le verrou de la clé `(rest)` : la
+  /// vérification et l'ajout ne peuvent pas s'intercaler avec un rejeu.
+  Future<WriteOutcome> _enqueueRestUnlessPending({
+    required String characterId,
+    required String ownerId,
+    required RestType type,
+    required String className,
+    required Map<String, int> hitDiceSpentByClassId,
+    required int appliedGain,
+    required Map<String, int> hitDiceRecoveredByClassId,
+  }) {
+    return _pendingWrites.runExclusive(
+      characterId: characterId,
+      kind: PendingCharacterWriteKind.rest,
+      targetId: '',
+      action: () async {
+        final existing = await _pendingWriteBeforeOnlineWrite(
+          characterId: characterId,
+          ownerId: ownerId,
+          kind: PendingCharacterWriteKind.rest,
+          targetId: '',
+        );
+        if (existing != null) return WriteOutcome.restAlreadyPending;
+        await _pendingWrites.enqueue(
+          characterId: characterId,
+          ownerId: ownerId,
+          kind: PendingCharacterWriteKind.rest,
+          targetId: '',
+          payload: {
+            'type': type.name,
+            'className': className,
+            'hitDiceSpentByClassId': hitDiceSpentByClassId,
+            'appliedGain': appliedGain,
+            'hitDiceRecoveredByClassId': hitDiceRecoveredByClassId,
+          },
+        );
+        return WriteOutcome.queued;
+      },
+    );
   }
 
   /// Exécute la logique complète d'un repos **déjà en ligne** — ancien corps

@@ -2420,6 +2420,12 @@ abstract class AppLocalizations {
   /// **'Hors ligne : sera synchronisé dès que la connexion revient.'**
   String get characterDetailOfflineQueuedMessage;
 
+  /// SnackBar de `_applyRest` (D187) : `WriteOutcome.restAlreadyPending` — la file hors-ligne ne garde qu'un repos par personnage, ce second repos n'est ni écrit ni mis en file.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un repos est déjà en attente de synchronisation pour ce personnage. Attendez le retour de la connexion avant d\'en faire un autre.'**
+  String get characterDetailRestAlreadyPendingMessage;
+
   /// SnackBar d'échec de `_adjustArmorClassBonus` (sheet "Ajustement de CA").
   ///
   /// In fr, this message translates to:

@@ -41,7 +41,7 @@ class CachedReferenceEntries extends Table {
 /// différent (écriture + file d'attente à vider, pas un cache clé/valeur en
 /// lecture seule).
 ///
-/// [characterId]/[kind] forment la clé primaire composite : une nouvelle
+/// [ownerId]/[characterId]/[kind]/[targetId] forment la clé primaire (v5) : une nouvelle
 /// écriture en attente pour un même personnage/type **remplace** la
 /// précédente (upsert, voir `PendingCharacterWriteQueue.enqueue`) plutôt que
 /// de s'ajouter à une liste — `updateHp`/`addXp` écrivent déjà des valeurs
@@ -101,12 +101,14 @@ class PendingCharacterWrites extends Table {
 
   // Clé primaire élargie à `targetId` au schéma v4 (D11) : `(characterId,
   // kind)` seul ne suffisait plus à distinguer deux sorts/aptitudes
-  // différents en attente pour le même personnage — voir
-  // `AppDatabase.migration` pour la migration qui recrée cette table avec
-  // cette nouvelle clé (SQLite ne permet pas de modifier une contrainte
+  // différents en attente pour le même personnage ; puis à `ownerId` au
+  // schéma v5 (relecture de la PR #248, constat c) : sans lui, deux comptes
+  // d'un même appareil ayant la même fiche en file s'écrasaient mutuellement
+  // par l'upsert. Voir `AppDatabase.migration` pour les migrations qui
+  // recréent cette table (SQLite ne permet pas de modifier une contrainte
   // PRIMARY KEY par un simple `ALTER TABLE`).
   @override
-  Set<Column> get primaryKey => {characterId, kind, targetId};
+  Set<Column> get primaryKey => {ownerId, characterId, kind, targetId};
 }
 
 /// Base SQLite locale de l'app (drift), pour l'instant dédiée au cache des
@@ -126,7 +128,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   // [PendingCharacterWrites] (schéma v2) a été ajoutée après la première
   // version livrée de ce cache (v1, [CachedReferenceEntries] seule) : une
@@ -203,6 +205,30 @@ class AppDatabase extends _$AppDatabase {
           );
           await m.database.customStatement(
             'DROP TABLE pending_character_writes_v3',
+          );
+        });
+      }
+      if (from < 5) {
+        // Schéma v5 : `ownerId` entre dans la clé primaire. Même technique
+        // et même transaction explicite que v4 (voir ci-dessus) : renommage,
+        // recréation depuis la définition Dart courante, recopie de toutes
+        // les lignes telles quelles, suppression de la table temporaire.
+        await m.database.transaction(() async {
+          await m.database.customStatement(
+            'ALTER TABLE pending_character_writes '
+            'RENAME TO pending_character_writes_v4',
+          );
+          await m.createTable(pendingCharacterWrites);
+          await m.database.customStatement(
+            'INSERT INTO pending_character_writes '
+            '(character_id, owner_id, kind, target_id, payload, queued_at, '
+            'failure_count, abandoned, last_failure_message) '
+            'SELECT character_id, owner_id, kind, target_id, payload, '
+            'queued_at, failure_count, abandoned, last_failure_message '
+            'FROM pending_character_writes_v4',
+          );
+          await m.database.customStatement(
+            'DROP TABLE pending_character_writes_v4',
           );
         });
       }

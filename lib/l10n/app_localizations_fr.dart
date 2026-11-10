@@ -1386,6 +1386,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Hors ligne : sera synchronisé dès que la connexion revient.';
 
   @override
+  String get characterDetailRestAlreadyPendingMessage =>
+      'Un repos est déjà en attente de synchronisation pour ce personnage. Attendez le retour de la connexion avant d\'en faire un autre.';
+
+  @override
   String get characterDetailArmorClassAdjustErrorMessage =>
       'Impossible d\'ajuster la Classe d\'Armure. Réessayez.';
 
