@@ -323,3 +323,34 @@ Décisions de Matthias :
 Découpage : T0 (retours honnêtes de `WriteOutcome` + harnais de test de la file), T1 (fondations
 de la file : D184 à D187, table `pending_character_ops`, drift v5), T2 (indicateur), puis monnaies,
 journal, inventaire, cache du catalogue. Statut : T0 en cours.
+
+## Vérification sur émulateur de la vague 1 (10/11/2026, `main` = cc4fc75)
+
+Pixel 7 Pro API 34, fr-FR, build profile. Tout #240 à #246 fonctionne en vrai : feuille PV
+(INFLIGER/SOIGNER/AJOUTER, bornes, appui long, « À 0 PV »), monnaies (retrait limité au solde,
+conversion avec valeur totale conservée), onglet Sorts (compteurs `restants/total`, lancer au
+niveau supérieur), grimoire niveau 3 (aucun doublon), partage (« Partage activé. »), FAQ.
+Le scénario d'aventure passe après correction d'un sélecteur périmé (défilement avant lecture des
+pastilles). **F18 résolu** (le compteur baisse hors ligne et se synchronise au retour du réseau).
+**F21 : le débordement de `login_screen.dart:580` n'est pas reproduit** (411 et 320 dp, polices
+1,3 et 2,0) ; l'écran de connexion est sain, constat clos.
+
+Nouveaux constats :
+
+| Id | Constat | Gravité | Suite |
+|---|---|---|---|
+| V2-5 | Chevalier occulte niveau 3 : l'onglet Sorts affiche « Ce personnage ne lance pas de sorts. » alors que le personnage a « Incantation » (tiers-lanceurs non gérés, limitation déjà tracée dans la dette) : le message ment | Moyenne | À décider avec le chantier tiers-lanceurs ; au minimum un message honnête |
+| V2-6 | Un lancer de sort de niveau 1 par un lanceur niveau 3+ demande une 2e feuille (3 taps) alors que le niveau 1 est présélectionné | Basse | Comité de revue (P-à ouvrir) |
+| V2-7 | Électrum et platine non saisissables depuis un solde nul (tuile masquée à 0, décision de Matthias) ; conversion PA vers PO propose PC par défaut | Basse | Comité de revue |
+| V2-8 | Écran de partage : chaînes françaises en dur (titre, snackbars, dialogue), casse incohérente (« Désactiver le partage » vs « ACTIVER LE PARTAGE ») | Basse | Correctif i18n |
+| V2-9 | Police 2,0 sur 411 dp : titre « TES AVENT/URIERS » et bouton « IMPORTE/R XML » coupés en plein mot | Moyenne | Plafond de la police pixel (PR #247 à #249) |
+| V2-10 | Police 2,0 : barre d'onglets de la fiche déborde de 22 à 24 px (libellés tronqués) | Moyenne | Plafond + onglets élastiques (PR #249) |
+| V2-11 | Police 2,0 : carte Points de vie déborde de 53 px à droite | Moyenne | Plafond (PR #247/#249), à revérifier sur émulateur |
+| V2-17 | `adventure_session_cleric_groups_test.dart` nettoie en ligne et non via `addTearDown` : un échec laisse le personnage en base | Basse | Correctif de test |
+
+Non exécuté : clavier réel ouvert sur la feuille PV (clavier simulé en test), carte des
+compétences à 1,3 et 2,0, électrum > 0.
+
+Décision de Matthias (10/11/2026) sur le plafond de la police pixel : règle à 3 paliers
+(titres ×1,3 ; boutons et onglets ×1,5 ; valeurs PV/XP ×1,6 en conteneur contraint) ; onglets
+de fiche en police de corps sous 340 dp ; sélecteur à 3 segments maintenu à ×1,3.
