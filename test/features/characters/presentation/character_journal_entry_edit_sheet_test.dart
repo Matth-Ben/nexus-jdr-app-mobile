@@ -464,31 +464,22 @@ void main() {
     },
   );
 
-  testWidgets(
-    'WriteOutcome.queued (hors ligne) : bandeau d\'alerte inline, sheet '
-    'reste ouverte, texte saisi préservé',
-    (tester) async {
-      final repository = await _pumpSheet(tester);
-      repository.outcomeToReturn = WriteOutcome.queued;
+  testWidgets('WriteOutcome.rejectedOffline (hors ligne) : bandeau d\'alerte inline, sheet '
+      'reste ouverte, texte saisi préservé', (tester) async {
+    final repository = await _pumpSheet(tester);
+    repository.outcomeToReturn = WriteOutcome.rejectedOffline;
 
-      await tester.enterText(find.byType(TextFormField), 'Note pas envoyée.');
-      await tester.pump();
-      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), 'Note pas envoyée.');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+    await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining("n'a pas pu être enregistrée"),
-        findsOneWidget,
-      );
-      expect(
-        tester
-            .widget<TextFormField>(find.byType(TextFormField))
-            .controller!
-            .text,
-        'Note pas envoyée.',
-      );
-    },
-  );
+    expect(find.textContaining("n'a pas pu être enregistrée"), findsOneWidget);
+    expect(
+      tester.widget<TextFormField>(find.byType(TextFormField)).controller!.text,
+      'Note pas envoyée.',
+    );
+  });
 
   testWidgets(
     'CharacterFailure : bandeau d\'alerte inline affiche failure.message, '

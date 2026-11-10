@@ -2024,34 +2024,37 @@ void main() {
       },
     );
 
-    testWidgets('échec total hors ligne (WriteOutcome.queued pour les deux) : '
-        'SnackBar hors-ligne, le mode sélection reste actif avec les deux '
-        'toujours cochés', (tester) async {
-      fakeCharacterRepository.charactersToReturn = twoCharacters;
-      fakeCharacterRepository.deleteOutcomeByCharacterId['1'] =
-          WriteOutcome.queued;
-      fakeCharacterRepository.deleteOutcomeByCharacterId['2'] =
-          WriteOutcome.queued;
+    testWidgets(
+      'échec total hors ligne (WriteOutcome.rejectedOffline pour les deux) : '
+      'SnackBar hors-ligne, le mode sélection reste actif avec les deux '
+      'toujours cochés',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = twoCharacters;
+        fakeCharacterRepository.deleteOutcomeByCharacterId['1'] =
+            WriteOutcome.rejectedOffline;
+        fakeCharacterRepository.deleteOutcomeByCharacterId['2'] =
+            WriteOutcome.rejectedOffline;
 
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.checklist));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Halltesse Ambrelune'));
-      await tester.tap(find.text('Borgan Pierrefort'));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        await tester.tap(find.byIcon(Icons.checklist));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Halltesse Ambrelune'));
+        await tester.tap(find.text('Borgan Pierrefort'));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('SUPPRIMER'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Supprimer (2)'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('SUPPRIMER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Supprimer (2)'));
+        await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining("n'a pas pu être enregistrée"),
-        findsOneWidget,
-      );
-      expect(find.text('2 personnages sélectionnés'), findsOneWidget);
-    });
+        expect(
+          find.textContaining("n'a pas pu être enregistrée"),
+          findsOneWidget,
+        );
+        expect(find.text('2 personnages sélectionnés'), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'échec partiel : SnackBar récapitulatif, le mode sélection reste '

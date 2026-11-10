@@ -154,7 +154,7 @@ class FakeRepository implements CharacterRepository {
     setEquippedCallOrder.add(inventoryId);
     lastInventoryId = inventoryId;
     lastEquipped = equipped;
-    if (outcomeToReturn == WriteOutcome.queued) return outcomeToReturn;
+    if (outcomeToReturn == WriteOutcome.rejectedOffline) return outcomeToReturn;
     current = current.copyWith(
       inventory: [
         for (final item in current.inventory)
@@ -192,7 +192,7 @@ class FakeRepository implements CharacterRepository {
   /// `_equipWeaponToSlot` ci-dessous.
   bool failNextEquipWeaponToSlot = false;
 
-  /// Fait retourner [WriteOutcome.queued] au *prochain* appel à
+  /// Fait retourner [WriteOutcome.rejectedOffline] au *prochain* appel à
   /// [equipWeaponToSlot] (consommé après usage), sans affecter
   /// [setInventoryItemEquipped] — simule une connexion perdue juste après un
   /// déséquipement automatique déjà persisté avec succès, voir le test
@@ -215,9 +215,9 @@ class FakeRepository implements CharacterRepository {
     }
     if (queueNextEquipWeaponToSlot) {
       queueNextEquipWeaponToSlot = false;
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
-    if (outcomeToReturn == WriteOutcome.queued) return outcomeToReturn;
+    if (outcomeToReturn == WriteOutcome.rejectedOffline) return outcomeToReturn;
     current = current.copyWith(
       inventory: [
         for (final item in current.inventory)
@@ -1103,22 +1103,25 @@ void main() {
       },
     );
 
-    testWidgets('WriteOutcome.queued (hors ligne) : snackbar hors-ligne, aucun '
-        'rafraîchissement de la fiche', (tester) async {
-      final repository = await pumpDetail(tester);
-      repository.outcomeToReturn = WriteOutcome.queued;
-      await openInventoryTab(tester);
-      final fetchesBefore = repository.fetchCharacterDetailCallCount;
+    testWidgets(
+      'WriteOutcome.rejectedOffline (hors ligne) : snackbar hors-ligne, aucun '
+      'rafraîchissement de la fiche',
+      (tester) async {
+        final repository = await pumpDetail(tester);
+        repository.outcomeToReturn = WriteOutcome.rejectedOffline;
+        await openInventoryTab(tester);
+        final fetchesBefore = repository.fetchCharacterDetailCallCount;
 
-      await convertGold(tester, '4');
+        await convertGold(tester, '4');
 
-      expect(repository.addRewardCallCount, 1);
-      expect(
-        find.textContaining("n'a pas pu être enregistrée"),
-        findsOneWidget,
-      );
-      expect(repository.fetchCharacterDetailCallCount, fetchesBefore);
-    });
+        expect(repository.addRewardCallCount, 1);
+        expect(
+          find.textContaining("n'a pas pu être enregistrée"),
+          findsOneWidget,
+        );
+        expect(repository.fetchCharacterDetailCallCount, fetchesBefore);
+      },
+    );
 
     testWidgets(
       'CharacterFailure : message de la défaillance affiché, pas de rafraîchissement',
@@ -1140,28 +1143,22 @@ void main() {
     );
   });
 
-  testWidgets(
-    'WriteOutcome.queued (hors ligne) : message honnête, jamais le message '
-    '"sera synchronisé"',
-    (tester) async {
-      final repository = await pumpDetail(tester);
-      repository.outcomeToReturn = WriteOutcome.queued;
-      await openInventoryTab(tester);
+  testWidgets('WriteOutcome.rejectedOffline (hors ligne) : message honnête, jamais le message '
+      '"sera synchronisé"', (tester) async {
+    final repository = await pumpDetail(tester);
+    repository.outcomeToReturn = WriteOutcome.rejectedOffline;
+    await openInventoryTab(tester);
 
-      await tester.tap(find.text('Dague'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Retirer'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Retirer'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Dague'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Retirer'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Retirer'));
+    await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining("n'a pas pu être enregistrée"),
-        findsOneWidget,
-      );
-      expect(find.textContaining('sera synchronisé'), findsNothing);
-    },
-  );
+    expect(find.textContaining("n'a pas pu être enregistrée"), findsOneWidget);
+    expect(find.textContaining('sera synchronisé'), findsNothing);
+  });
 
   testWidgets(
     'un second tap sur la même carte pendant qu\'une utilisation est encore '
@@ -1415,77 +1412,67 @@ void main() {
       },
     );
 
-    testWidgets(
-      'WriteOutcome.queued (hors ligne) pendant le déséquipement automatique '
-      'interrompt la séquence : equipWeaponToSlot jamais appelé, message '
-      'honnête',
-      (tester) async {
-        final repository = await pumpDetail(
-          tester,
-          initialDetail: detail.copyWith(
-            inventory: [sword1, sword2, newDagger],
-          ),
-        );
-        repository.outcomeToReturn = WriteOutcome.queued;
-        await openInventoryTab(tester);
+    testWidgets('WriteOutcome.rejectedOffline (hors ligne) pendant le déséquipement automatique '
+        'interrompt la séquence : equipWeaponToSlot jamais appelé, message '
+        'honnête', (tester) async {
+      final repository = await pumpDetail(
+        tester,
+        initialDetail: detail.copyWith(inventory: [sword1, sword2, newDagger]),
+      );
+      repository.outcomeToReturn = WriteOutcome.rejectedOffline;
+      await openInventoryTab(tester);
 
-        await tester.tap(find.text('Poignard'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Équiper'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Set principal'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Poignard'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Équiper'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Set principal'));
+      await tester.pumpAndSettle();
 
-        expect(repository.setEquippedCallCount, 1);
-        expect(repository.equipWeaponToSlotCallCount, 0);
-        expect(
-          find.textContaining("n'a pas pu être enregistrée"),
-          findsOneWidget,
-        );
-      },
-    );
+      expect(repository.setEquippedCallCount, 1);
+      expect(repository.equipWeaponToSlotCallCount, 0);
+      expect(
+        find.textContaining("n'a pas pu être enregistrée"),
+        findsOneWidget,
+      );
+    });
 
-    testWidgets(
-      'WriteOutcome.queued sur l\'écriture finale (après déséquipement '
-      'automatique déjà persisté avec succès) : fiche tout de même '
-      'rafraîchie, pas seulement le SnackBar hors-ligne',
-      (tester) async {
-        final repository = await pumpDetail(
-          tester,
-          initialDetail: detail.copyWith(
-            inventory: [sword1, sword2, newDagger],
-          ),
-        );
-        repository.queueNextEquipWeaponToSlot = true;
-        await openInventoryTab(tester);
+    testWidgets('WriteOutcome.rejectedOffline sur l\'écriture finale (après déséquipement '
+        'automatique déjà persisté avec succès) : fiche tout de même '
+        'rafraîchie, pas seulement le SnackBar hors-ligne', (tester) async {
+      final repository = await pumpDetail(
+        tester,
+        initialDetail: detail.copyWith(inventory: [sword1, sword2, newDagger]),
+      );
+      repository.queueNextEquipWeaponToSlot = true;
+      await openInventoryTab(tester);
 
-        final fetchCountBefore = repository.fetchCharacterDetailCallCount;
+      final fetchCountBefore = repository.fetchCharacterDetailCallCount;
 
-        await tester.tap(find.text('Poignard'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Équiper'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Set principal'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Poignard'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Équiper'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Set principal'));
+      await tester.pumpAndSettle();
 
-        expect(repository.setEquippedCallCount, 1);
-        expect(repository.equipWeaponToSlotCallCount, 1);
-        expect(
-          find.textContaining("n'a pas pu être enregistrée"),
-          findsOneWidget,
-        );
-        expect(
-          repository.fetchCharacterDetailCallCount,
-          greaterThan(fetchCountBefore),
-          reason:
-              'le déséquipement automatique a réellement été persisté avant '
-              'que l\'équipement final reparte en file d\'attente : la fiche '
-              'doit être rafraîchie pour ne pas continuer à afficher '
-              '"Épée courte" comme équipée alors qu\'elle ne l\'est plus '
-              'côté serveur.',
-        );
-      },
-    );
+      expect(repository.setEquippedCallCount, 1);
+      expect(repository.equipWeaponToSlotCallCount, 1);
+      expect(
+        find.textContaining("n'a pas pu être enregistrée"),
+        findsOneWidget,
+      );
+      expect(
+        repository.fetchCharacterDetailCallCount,
+        greaterThan(fetchCountBefore),
+        reason:
+            'le déséquipement automatique a réellement été persisté avant '
+            'que l\'équipement final reparte en file d\'attente : la fiche '
+            'doit être rafraîchie pour ne pas continuer à afficher '
+            '"Épée courte" comme équipée alors qu\'elle ne l\'est plus '
+            'côté serveur.',
+      );
+    });
 
     testWidgets(
       'échec réseau sur l\'écriture finale (après déséquipement automatique '

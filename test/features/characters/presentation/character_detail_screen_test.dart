@@ -1265,7 +1265,7 @@ void main() {
       'rien ne sera jamais écrit.',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail;
-        fakeRepository.setDeadOutcomeToReturn = WriteOutcome.queued;
+        fakeRepository.setDeadOutcomeToReturn = WriteOutcome.rejectedOffline;
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
@@ -1368,7 +1368,8 @@ void main() {
       'doit donc jamais promettre une synchronisation ultérieure',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail;
-        fakeRepository.setArchivedOutcomeToReturn = WriteOutcome.queued;
+        fakeRepository.setArchivedOutcomeToReturn =
+            WriteOutcome.rejectedOffline;
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
@@ -1459,7 +1460,8 @@ void main() {
       'setDead/setArchived',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail;
-        fakeRepository.deleteCharacterOutcomeToReturn = WriteOutcome.queued;
+        fakeRepository.deleteCharacterOutcomeToReturn =
+            WriteOutcome.rejectedOffline;
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
@@ -1594,7 +1596,8 @@ void main() {
       'sans promesse de synchronisation ultérieure',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail;
-        fakeRepository.setInspirationOutcomeToReturn = WriteOutcome.queued;
+        fakeRepository.setInspirationOutcomeToReturn =
+            WriteOutcome.rejectedOffline;
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
@@ -1679,7 +1682,8 @@ void main() {
       'sans promesse de synchronisation ultérieure',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail;
-        fakeRepository.setArmorClassBonusOutcomeToReturn = WriteOutcome.queued;
+        fakeRepository.setArmorClassBonusOutcomeToReturn =
+            WriteOutcome.rejectedOffline;
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();

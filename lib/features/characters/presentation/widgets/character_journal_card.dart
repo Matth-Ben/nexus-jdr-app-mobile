@@ -143,7 +143,7 @@ class CharacterJournalCard extends ConsumerWidget {
       final outcome = await ref
           .read(characterRepositoryProvider)
           .removeJournalEntry(characterId: detail.id, entryId: entry.id);
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.characterOfflineNotPersistedMessage)),

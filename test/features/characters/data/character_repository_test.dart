@@ -1403,7 +1403,7 @@ void main() {
           newQuantity: 1,
         );
 
-        expect(outcome, WriteOutcome.queued);
+        expect(outcome, WriteOutcome.rejectedOffline);
         expect(await pendingWrites.allForOwner(ownerId), isEmpty);
       });
 
@@ -1536,7 +1536,7 @@ void main() {
           slot: WeaponSlot.principal,
         );
 
-        expect(outcome, WriteOutcome.queued);
+        expect(outcome, WriteOutcome.rejectedOffline);
         expect(await pendingWrites.allForOwner(ownerId), isEmpty);
       });
 
@@ -1649,7 +1649,7 @@ void main() {
           newAmount: 42,
         );
 
-        expect(outcome, WriteOutcome.queued);
+        expect(outcome, WriteOutcome.rejectedOffline);
         expect(await pendingWrites.allForOwner(ownerId), isEmpty);
       });
 
@@ -1830,7 +1830,7 @@ void main() {
           ],
         );
 
-        expect(outcome, WriteOutcome.queued);
+        expect(outcome, WriteOutcome.rejectedOffline);
         expect(await pendingWrites.allForOwner(ownerId), isEmpty);
       });
 
@@ -2060,7 +2060,7 @@ void main() {
         bonus: 2,
       );
 
-      expect(outcome, WriteOutcome.queued);
+      expect(outcome, WriteOutcome.rejectedOffline);
       expect(await pendingWrites.allForOwner(ownerId), isEmpty);
     });
 
@@ -2187,7 +2187,7 @@ void main() {
             appearanceText: 'Cheveux argentés.',
           );
 
-          expect(outcome, WriteOutcome.queued);
+          expect(outcome, WriteOutcome.rejectedOffline);
           expect(await pendingWrites.allForOwner(ownerId), isEmpty);
         },
       );
@@ -2318,7 +2318,7 @@ void main() {
           body: 'Note de séance.',
         );
 
-        expect(outcome, WriteOutcome.queued);
+        expect(outcome, WriteOutcome.rejectedOffline);
         expect(await pendingWrites.allForOwner(ownerId), isEmpty);
       });
 

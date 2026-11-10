@@ -268,7 +268,7 @@ abstract class CharacterRepository {
   /// `presentation/widgets/character_journal_entry_edit_sheet.dart`.
   ///
   /// Mode hors ligne : mêmes règles que [useInventoryItem] (retourne
-  /// [WriteOutcome.queued] sans persister nulle part, jamais synchronisé
+  /// [WriteOutcome.rejectedOffline] sans persister nulle part, jamais synchronisé
   /// automatiquement — décision chef de projet, même périmètre volontairement
   /// restreint de [PendingCharacterWriteQueue] que le reste de la fiche en
   /// dehors de PV/XP).
@@ -2095,7 +2095,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     final ownerId = _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -2119,7 +2119,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     final ownerId = _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -2140,7 +2140,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   Future<WriteOutcome> deleteCharacter({required String characterId}) async {
     final ownerId = _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -2168,7 +2168,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     final ownerId = _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -2192,7 +2192,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     final ownerId = _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -2369,7 +2369,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -2393,7 +2393,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -2417,7 +2417,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -2618,7 +2618,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // s'assurer qu'une session existe.
     _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -2643,7 +2643,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     // Vérification bloquante AVANT toute écriture, et volontairement HORS du
@@ -3205,7 +3205,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // Voir la documentation de [CharacterRepository.useInventoryItem] :
     // jamais mis en file.
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -3238,7 +3238,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -3263,7 +3263,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -3288,7 +3288,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -3312,7 +3312,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -3339,7 +3339,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // `character_inventory`) : même filtre explicite que [updateHp]/[addXp].
     final ownerId = _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -3368,7 +3368,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -3397,7 +3397,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -3426,7 +3426,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     final ownerId = _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {
@@ -5652,7 +5652,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // Voir la documentation de [CharacterRepository.updateStoryFields] :
     // jamais mis en file, même règle que [useInventoryItem].
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
 
     try {

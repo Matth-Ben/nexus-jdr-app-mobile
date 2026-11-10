@@ -225,7 +225,7 @@ class _CharacterStoryEditSheetContentState
             treasureText: _valueAt(8),
           );
 
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         if (!mounted) return;
         setState(() {
           _isSaving = false;

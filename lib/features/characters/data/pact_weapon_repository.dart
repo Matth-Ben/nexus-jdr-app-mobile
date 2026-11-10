@@ -30,7 +30,7 @@ abstract class PactWeaponRepository {
   Future<List<PactWeaponOption>> fetchEligibleWeapons();
 
   /// Enregistre [itemId] comme forme courante (upsert). Hors-ligne : aucune
-  /// écriture, renvoie [WriteOutcome.queued] (pas de file d'attente pour les
+  /// écriture, renvoie [WriteOutcome.rejectedOffline] (pas de file d'attente pour les
   /// écritures d'inventaire, voir `CharacterRepository`).
   Future<WriteOutcome> setPactWeapon({
     required String characterId,
@@ -115,7 +115,7 @@ class SupabasePactWeaponRepository implements PactWeaponRepository {
     required int itemId,
   }) async {
     if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.queued;
+      return WriteOutcome.rejectedOffline;
     }
     try {
       await _client.from('character_pact_weapons').upsert({

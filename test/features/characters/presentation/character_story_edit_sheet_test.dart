@@ -630,41 +630,35 @@ void main() {
     },
   );
 
-  testWidgets(
-    'WriteOutcome.queued (hors ligne) : bandeau d\'alerte inline honnête, '
-    'sheet reste ouverte, texte saisi préservé',
-    (tester) async {
-      final repository = await _pumpSheet(tester);
-      repository.outcomeToReturn = WriteOutcome.queued;
+  testWidgets('WriteOutcome.rejectedOffline (hors ligne) : bandeau d\'alerte inline honnête, '
+      'sheet reste ouverte, texte saisi préservé', (tester) async {
+    final repository = await _pumpSheet(tester);
+    repository.outcomeToReturn = WriteOutcome.rejectedOffline;
 
-      await tester.enterText(
-        find.byType(TextFormField).first,
-        'Apparence modifiée pas encore enregistrée.',
-      );
-      await tester.pump();
-      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
-      await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextFormField).first,
+      'Apparence modifiée pas encore enregistrée.',
+    );
+    await tester.pump();
+    await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+    await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining("n'a pas pu être enregistrée"),
-        findsOneWidget,
-      );
-      expect(find.byType(TextFormField), findsNWidgets(9));
-      expect(
-        tester
-            .widgetList<TextFormField>(find.byType(TextFormField))
-            .first
-            .controller!
-            .text,
-        'Apparence modifiée pas encore enregistrée.',
-      );
+    expect(find.textContaining("n'a pas pu être enregistrée"), findsOneWidget);
+    expect(find.byType(TextFormField), findsNWidgets(9));
+    expect(
+      tester
+          .widgetList<TextFormField>(find.byType(TextFormField))
+          .first
+          .controller!
+          .text,
+      'Apparence modifiée pas encore enregistrée.',
+    );
 
-      final primaryButton = tester.widget<PrimaryButton>(
-        find.byType(PrimaryButton),
-      );
-      expect(primaryButton.isLoading, isFalse);
-    },
-  );
+    final primaryButton = tester.widget<PrimaryButton>(
+      find.byType(PrimaryButton),
+    );
+    expect(primaryButton.isLoading, isFalse);
+  });
 
   testWidgets(
     'CharacterFailure : bandeau d\'alerte inline affiche `failure.message`, '

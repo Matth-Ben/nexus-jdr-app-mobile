@@ -136,9 +136,14 @@ class PendingCharacterWrite {
 /// `PendingCharacterWriteSyncer`) n'ont jamais à connaître le détail de la
 /// table drift sous-jacente.
 class PendingCharacterWriteQueue {
-  PendingCharacterWriteQueue(this._db);
+  /// [now] : horloge injectable (`DateTime.now` par défaut, comportement
+  /// inchangé), pour rendre testables les arbitrages par horodatage
+  /// ([enqueue]).
+  PendingCharacterWriteQueue(this._db, {DateTime Function()? now})
+    : _now = now ?? DateTime.now;
 
   final AppDatabase _db;
+  final DateTime Function() _now;
 
   /// Seuil de refus non rejouables **consécutifs** (D34 du registre de dette
   /// technique) avant d'abandonner une entrée plutôt que de la retenter
@@ -254,7 +259,7 @@ class PendingCharacterWriteQueue {
               ))
               .getSingleOrNull();
 
-      var queuedAt = DateTime.now();
+      var queuedAt = _now();
       if (existing != null) {
         final earliest = existing.queuedAt.add(const Duration(seconds: 1));
         if (queuedAt.isBefore(earliest)) {
