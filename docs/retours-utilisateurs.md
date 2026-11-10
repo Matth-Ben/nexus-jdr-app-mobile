@@ -354,3 +354,31 @@ compétences à 1,3 et 2,0, électrum > 0.
 Décision de Matthias (10/11/2026) sur le plafond de la police pixel : règle à 3 paliers
 (titres ×1,3 ; boutons et onglets ×1,5 ; valeurs PV/XP ×1,6 en conteneur contraint) ; onglets
 de fiche en police de corps sous 340 dp ; sélecteur à 3 segments maintenu à ×1,3.
+
+## Vérification sur émulateur des PR #251 à #254 (10/11/2026, `main` = 1987d53)
+
+Pixel 7 Pro API 34, fr-FR, comptes QA uniquement. **Conforme** : bandeau de synchronisation (silence en
+usage normal ; « Hors ligne. Tes modifications… » après ≈ 2 s ; « Hors ligne · N modifications en
+attente » en direct ; « Synchronisation… » puis « Synchronisé » ≈ 2 s puis silence ; sticky sur la fiche,
+au-dessus du bandeau de mise à jour sur la liste), dialogue de retour Android si N > 0, ligne
+« Dernière synchronisation » du Profil, **alerte de conflit F19 provoquée de bout en bout** (texte exact,
+fermeture ×, visible liste et fiche, survit à une relance), un seul repos en attente, conditions
+(sélecteur 14 états ordonnés, Enregistrer inactif sans changement, persistance, vue MJ en lecture seule,
+refus propre hors ligne avec sélection conservée, pas de débordement à ×2,0 sur 320 dp). **V2-9, V2-10
+et V2-11 corrigés** à ×2,0 ; l'écran de connexion est sain jusqu'à ×3,0.
+
+| Id | Constat | Gravité | Suite |
+|---|---|---|---|
+| V3-1 | Onglet Sorts : titres de carte en police pixel non plafonnés (« EMPLACEMENTS DE SORTS », « PRÉPARATION DES SORTS », « SORTS PRÉPARÉS ») ; à ×3,0 sur 320 dp coupés en plein mot, à ×2,0 « SORTS PRÉPARÉS 2/2 » tassé ; l'inventaire à ×3,0 perd le nom de l'objet | Basse à moyenne | PR 2 du plafond de police (D192) |
+| V3-2 | Tuile « VIT. » : débordement de 27 px à ×3,0 sur 411 dp ; « INIT. » et « INSP. » tronqués en « IN… » | Basse (×3,0 hors plage Android standard) | PR 2 |
+| V3-3 | `adventure_session_cleric_groups_test.dart` échoue en l'état (« ECART 3 : SpellSlotDots niveau 1 introuvable ») : liste restée défilée après « LANCER » ; l'échec laisse un personnage `QA-Adventure-Clerc-…` orphelin dans la base distante (V2-17 aggravé) | Moyenne | Correctif de test : remonter la liste avant la lecture + nettoyage via `addTearDown` |
+| V3-4 | Chips d'états à 411 dp avec 3 chips : le crayon d'édition tombe seul sur une 2e ligne | Basse | Ajustement de mise en page |
+| V3-5 | Carte membre MJ : la pastille « +3 » ne dit pas quels états sont masqués (le libellé sémantique existe) | Basse | Fiche pour le comité de revue si souhaité |
+| V3-8 | Alerte d'abandon/conflit avec un nom de personnage long (32 caractères) : bandeau de 5 lignes (≈ 150 dp) | Basse | À surveiller ; limiter la longueur du nom affiché |
+
+Icônes pixel : lisibles à 32 dp ; **ambiguës** : À terre (lit/règle), Agrippé (poing), Étourdi (étincelles
+confondues avec « bonus »), Inconscient (« z » dans un coin) ; à 16 dp, À terre et Étourdi deviennent des
+taches (le libellé accompagne toujours l'icône). Hauteur utile du sélecteur : ≈ 7,5 lignes à ×1,0, 1,7
+ligne à 320 dp/×2,0. **Non exécuté** : fiche partagée anonyme `/p/token` (indiscernable de la fiche
+membre), « jamais » de la dernière synchronisation, vrai redémarrage du processus, « Quitter quand même »,
+N = 0 isolé pour le dialogue, exactement 4 conditions, coupure réseau en pleine réponse.
