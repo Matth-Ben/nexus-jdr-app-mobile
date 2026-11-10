@@ -187,14 +187,23 @@ class _ConditionsSheetState extends State<ConditionsSheet> {
                     },
                   ),
                 ),
-                _Footer(
-                  isSaving: _isSaving,
-                  canSave: _hasChanges,
-                  canClear: _selected.isNotEmpty,
-                  errorMessage: _errorMessage,
-                  onSave: _save,
-                  onCancel: () => Navigator.of(context).pop(),
-                  onClear: _clearAll,
+                // Pied plafonné à 40 % de la hauteur : défile en interne à très
+                // grande police (avec la bannière d'erreur) au lieu de déborder.
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.sizeOf(context).height * 0.4,
+                  ),
+                  child: SingleChildScrollView(
+                    child: _Footer(
+                      isSaving: _isSaving,
+                      canSave: _hasChanges,
+                      canClear: _selected.isNotEmpty,
+                      errorMessage: _errorMessage,
+                      onSave: _save,
+                      onCancel: () => Navigator.of(context).pop(),
+                      onClear: _clearAll,
+                    ),
+                  ),
                 ),
               ],
             ),

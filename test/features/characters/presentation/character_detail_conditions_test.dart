@@ -53,13 +53,16 @@ class _FakeConditionsRepository implements CharacterConditionsRepository {
   WriteOutcome outcome = WriteOutcome.synced;
   Object? error;
   Completer<void>? gate;
+  List<String> lastUnknownKeys = const [];
 
   @override
   Future<WriteOutcome> setConditions({
     required String characterId,
     required List<ConditionType> conditions,
+    List<String> unknownKeys = const [],
   }) async {
     calls.add((characterId, conditions));
+    lastUnknownKeys = unknownKeys;
     await gate?.future;
     final failure = error;
     if (failure != null) throw failure;
@@ -71,33 +74,42 @@ class _FakeConditionsRepository implements CharacterConditionsRepository {
   }
 }
 
-CharacterDetail _fighter({List<ConditionType> conditions = const []}) =>
-    CharacterDetail(
-      id: '1',
-      name: 'Sylas',
-      classes: const [
-        CharacterDetailClassRow(
-          classId: 1,
-          className: 'Guerrier',
-          level: 3,
-          isPrimary: true,
-          savingThrowProficiencies: [],
-          hitDie: 10,
-        ),
-      ],
-      xp: 0,
-      currentHp: 10,
-      maxHp: 10,
-      temporaryHp: 0,
-      abilityScores: const {},
-      conditions: conditions,
-    );
+CharacterDetail _fighter({
+  List<ConditionType> conditions = const [],
+  List<String> unknownConditionKeys = const [],
+}) => CharacterDetail(
+  id: '1',
+  name: 'Sylas',
+  classes: const [
+    CharacterDetailClassRow(
+      classId: 1,
+      className: 'Guerrier',
+      level: 3,
+      isPrimary: true,
+      savingThrowProficiencies: [],
+      hitDie: 10,
+    ),
+  ],
+  xp: 0,
+  currentHp: 10,
+  maxHp: 10,
+  temporaryHp: 0,
+  abilityScores: const {},
+  conditions: conditions,
+  unknownConditionKeys: unknownConditionKeys,
+);
 
 Future<(_FakeCharacterRepository, _FakeConditionsRepository)> _pump(
   WidgetTester tester, {
   List<ConditionType> conditions = const [],
+  List<String> unknownConditionKeys = const [],
 }) async {
-  final characters = _FakeCharacterRepository(_fighter(conditions: conditions));
+  final characters = _FakeCharacterRepository(
+    _fighter(
+      conditions: conditions,
+      unknownConditionKeys: unknownConditionKeys,
+    ),
+  );
   final conditionsRepository = _FakeConditionsRepository(characters);
   tester.view.physicalSize = const Size(800, 2400);
   tester.view.devicePixelRatio = 1;
@@ -143,6 +155,46 @@ Future<void> _check(WidgetTester tester, String label) async {
 }
 
 void main() {
+  testWidgets('clé inconnue lue avec la fiche : transmise à écriture', (
+    tester,
+  ) async {
+    final (_, repo) = await _pump(
+      tester,
+      conditions: const [ConditionType.blinded],
+      unknownConditionKeys: const ['futur_etat'],
+    );
+
+    await tester.tap(find.byIcon(Icons.edit_outlined).last);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.text('Aveuglé'),
+      ),
+    ); // désélection effective
+    await tester.pump();
+    await tester.tap(find.text('ENREGISTRER'));
+    await tester.pumpAndSettle();
+
+    expect(repo.calls.single.$2, isEmpty);
+    expect(repo.lastUnknownKeys, ['futur_etat']);
+  });
+
+  testWidgets('accessDenied : message localisé au singulier', (tester) async {
+    final (_, repo) = await _pump(tester);
+    repo.error = const CharacterFailure(
+      'x',
+      code: CharacterErrorCode.accessDenied,
+    );
+
+    await _openSelector(tester);
+    await _check(tester, 'Charmé');
+    await tester.tap(find.text('ENREGISTRER'));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Vous n'avez pas accès à ce personnage."), findsOneWidget);
+  });
+
   testWidgets('sans condition : « + État », le sélecteur s\'ouvre', (
     tester,
   ) async {

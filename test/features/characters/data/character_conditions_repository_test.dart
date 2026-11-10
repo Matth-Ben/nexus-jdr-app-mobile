@@ -102,6 +102,34 @@ void main() {
     expect(patch.url.queryParameters['owner_id'], 'eq.owner-1');
   });
 
+  test('clés inconnues réinjectées dans le tableau écrit (désélection d une '
+      'condition connue effective)', () async {
+    final sent = <http.Request>[];
+    final repository = SupabaseCharacterConditionsRepository(
+      await _client(
+        sent: sent,
+        respond: (r) => _json(
+          [
+            {'id': characterId},
+          ],
+          200,
+          r,
+        ),
+      ),
+      _Connectivity(true),
+    );
+
+    await repository.setConditions(
+      characterId: characterId,
+      conditions: [ConditionType.prone],
+      unknownKeys: ['futur_etat'],
+    );
+
+    expect(jsonDecode(sent.singleWhere((r) => r.method == 'PATCH').body), {
+      'conditions': ['prone', 'futur_etat'],
+    });
+  });
+
   test('aucune condition : le tableau vide REMPLACE l\'ancien', () async {
     final sent = <http.Request>[];
     final repository = SupabaseCharacterConditionsRepository(

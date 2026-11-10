@@ -44,6 +44,26 @@ void main() {
       });
     });
 
+    test('unknownKeys : clés non reconnues, dédoublonnées ; toStorage les '
+        'réinjecte sans doublon, la désélection reste effective', () {
+      const raw = ['blinded', 'futur_a', 'futur_a', 'futur_b', 3];
+      expect(ConditionType.unknownKeys(raw), ['futur_a', 'futur_b']);
+      expect(ConditionType.unknownKeys(null), isEmpty);
+      expect(
+        ConditionType.toStorage(const [
+          ConditionType.prone,
+        ], unknownKeys: ConditionType.unknownKeys(raw)),
+        ['prone', 'futur_a', 'futur_b'],
+      );
+      expect(
+        ConditionType.toStorage(
+          const [],
+          unknownKeys: ['futur_a', 'blinded', 'futur_a'],
+        ),
+        ['futur_a'],
+      );
+    });
+
     test('toStorage : remplacement complet, canonique, sans doublon', () {
       expect(
         ConditionType.toStorage([

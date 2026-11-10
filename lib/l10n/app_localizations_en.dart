@@ -3707,7 +3707,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get conditionCharmedRule =>
-      'Cannot attack the charmer; the charmer has advantage on social interactions with it.';
+      'Cannot harm the charmer; the charmer has advantage on social checks against it.';
 
   @override
   String get conditionDeafenedLabel => 'Deafened';
@@ -3748,14 +3748,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get conditionParalyzedRule =>
-      'Incapacitated, cannot move; fails Str/Dex saves; attacks against it have advantage, melee crits.';
+      'Incapacitated, immobile; fails Str/Dex saves; attacks against it have advantage, crit within 5 ft.';
 
   @override
   String get conditionPetrifiedLabel => 'Petrified';
 
   @override
   String get conditionPetrifiedRule =>
-      'Turned to stone: incapacitated, resists all damage, immune to poison and disease.';
+      'Stone: incapacitated, advantage against it, fails Str/Dex saves, resists all damage, poison-immune.';
 
   @override
   String get conditionPoisonedLabel => 'Poisoned';
@@ -3769,7 +3769,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get conditionProneRule =>
-      'Can only crawl; melee attacks against it have advantage, ranged ones disadvantage.';
+      'Crawls; disadvantage on its attacks; against it: advantage within 5 ft, otherwise disadvantage.';
 
   @override
   String get conditionRestrainedLabel => 'Restrained';
@@ -3790,7 +3790,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get conditionUnconsciousRule =>
-      'Incapacitated, prone, unaware; attacks against it have advantage, melee hits crit.';
+      'Incapacitated, drops items, prone; fails Str/Dex saves; against it: advantage, crit within 5 ft.';
 
   @override
   String get conditionsAddButtonLabel => 'Condition';
@@ -3848,4 +3848,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get conditionsNoneAnnouncement => 'No active condition';
+
+  @override
+  String get conditionsAccessDeniedMessage =>
+      'You don\'t have access to this character.';
 }

@@ -53,6 +53,22 @@ enum ConditionType {
     return canonical(found);
   }
 
+  /// Clés **non reconnues** de la valeur brute (texte, dédoublonnées, ordre
+  /// d'apparition) : à réinjecter à l'écriture pour ne pas supprimer une
+  /// condition stockée par une version plus récente de l'app.
+  static List<String> unknownKeys(Object? raw) {
+    if (raw is! List) return const [];
+    final found = <String>[];
+    for (final element in raw) {
+      if (element is String &&
+          fromStorageKey(element) == null &&
+          !found.contains(element)) {
+        found.add(element);
+      }
+    }
+    return found;
+  }
+
   /// [conditions] dédoublonnées, en ordre canonique (ordre de déclaration).
   static List<ConditionType> canonical(Iterable<ConditionType> conditions) {
     final set = conditions.toSet();
@@ -64,7 +80,17 @@ enum ConditionType {
 
   /// Valeur JSON à écrire dans `characters.conditions` (remplacement complet
   /// du tableau).
-  static List<String> toStorage(Iterable<ConditionType> conditions) => [
-    for (final type in canonical(conditions)) type.storageKey,
-  ];
+  ///
+  /// [unknownKeys] (clés non reconnues lues précédemment) sont conservées
+  /// après les clés connues, sans doublon.
+  static List<String> toStorage(
+    Iterable<ConditionType> conditions, {
+    Iterable<String> unknownKeys = const [],
+  }) {
+    final keys = [for (final type in canonical(conditions)) type.storageKey];
+    for (final key in unknownKeys) {
+      if (fromStorageKey(key) == null && !keys.contains(key)) keys.add(key);
+    }
+    return keys;
+  }
 }

@@ -4978,7 +4978,7 @@
   "@conditionCharmedLabel": {
     "description": "Libellé de la condition D&D 5e « charmed » (clé serveur `charmed`)."
   },
-  "conditionCharmedRule": "Ne peut attaquer le charmeur ; celui-ci a l'avantage aux interactions sociales.",
+  "conditionCharmedRule": "Ne peut cibler le charmeur de façon nuisible ; celui-ci a l'avantage social.",
   "@conditionCharmedRule": {
     "description": "Règle résumée de la condition « charmed » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
   },
@@ -5026,7 +5026,7 @@
   "@conditionParalyzedLabel": {
     "description": "Libellé de la condition D&D 5e « paralyzed » (clé serveur `paralyzed`)."
   },
-  "conditionParalyzedRule": "Neutralisé, immobile ; rate For/Dex ; attaques contre lui avantagées, critique au contact.",
+  "conditionParalyzedRule": "Neutralisé, immobile ; rate For/Dex ; attaques contre lui avantagées, critique ≤ 1,50 m.",
   "@conditionParalyzedRule": {
     "description": "Règle résumée de la condition « paralyzed » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
   },
@@ -5034,7 +5034,7 @@
   "@conditionPetrifiedLabel": {
     "description": "Libellé de la condition D&D 5e « petrified » (clé serveur `petrified`)."
   },
-  "conditionPetrifiedRule": "Transformé en pierre : neutralisé, résiste à tout, immunisé au poison et aux maladies.",
+  "conditionPetrifiedRule": "Pierre : neutralisé, avantage contre lui, rate For/Dex, résiste à tout, immunisé poison.",
   "@conditionPetrifiedRule": {
     "description": "Règle résumée de la condition « petrified » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
   },
@@ -5050,7 +5050,7 @@
   "@conditionProneLabel": {
     "description": "Libellé de la condition D&D 5e « prone » (clé serveur `prone`)."
   },
-  "conditionProneRule": "Ne peut que ramper ; attaques au contact contre lui avantagées, à distance désavantagées.",
+  "conditionProneRule": "Rampe ; désavantage à ses attaques ; contre lui : avantage ≤ 1,50 m, sinon désavantage.",
   "@conditionProneRule": {
     "description": "Règle résumée de la condition « prone » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
   },
@@ -5074,7 +5074,7 @@
   "@conditionUnconsciousLabel": {
     "description": "Libellé de la condition D&D 5e « unconscious » (clé serveur `unconscious`)."
   },
-  "conditionUnconsciousRule": "Neutralisé, à terre, inconscient ; attaques contre lui avantagées, critiques au contact.",
+  "conditionUnconsciousRule": "Neutralisé, lâche tout, à terre ; rate For/Dex ; contre lui : avantage, critique ≤ 1,50 m.",
   "@conditionUnconsciousRule": {
     "description": "Règle résumée de la condition « unconscious » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
   },
@@ -5168,5 +5168,9 @@
   "conditionsNoneAnnouncement": "Aucun état actif",
   "@conditionsNoneAnnouncement": {
     "description": "Annonce d'accessibilité quand plus aucune condition n'est active."
+  },
+  "conditionsAccessDeniedMessage": "Vous n'avez pas accès à ce personnage.",
+  "@conditionsAccessDeniedMessage": {
+    "description": "Refus d'accès (RLS) à l'enregistrement des conditions d'un personnage (singulier)."
   }
 }

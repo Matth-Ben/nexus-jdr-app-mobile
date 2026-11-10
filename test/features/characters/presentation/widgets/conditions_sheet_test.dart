@@ -112,7 +112,7 @@ Future<void> _tapRow(WidgetTester tester, String label) async {
   await tester.scrollUntilVisible(
     row,
     80,
-    scrollable: find.byType(Scrollable).last,
+    scrollable: find.byType(Scrollable).first,
   );
   await tester.pumpAndSettle();
   await tester.tap(row);
@@ -141,7 +141,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Pétrifié'),
         100,
-        scrollable: find.byType(Scrollable).last,
+        scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('Pétrifié'), findsOneWidget);
     });
@@ -157,7 +157,7 @@ void main() {
         await tester.scrollUntilVisible(
           finder,
           80,
-          scrollable: find.byType(Scrollable).last,
+          scrollable: find.byType(Scrollable).first,
         );
         seen.add(label);
       }
@@ -185,7 +185,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Unconscious'),
         100,
-        scrollable: find.byType(Scrollable).last,
+        scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('Unconscious'), findsOneWidget);
     });
@@ -389,8 +389,29 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Pétrifié'),
         100,
-        scrollable: find.byType(Scrollable).last,
+        scrollable: find.byType(Scrollable).first,
       );
+      expect(tester.takeException(), isNull);
+      expect(find.text('ENREGISTRER'), findsOneWidget);
+    });
+  });
+
+  group('T8 : police x2,0 avec bannière d erreur', () {
+    testWidgets('pied non défilant + bannière : aucun débordement', (
+      tester,
+    ) async {
+      await _open(
+        tester,
+        scale: 2,
+        onSave: (_) async =>
+            'Hors ligne : cette action n a pas pu être enregistrée. Réessayez '
+            'une fois reconnecté.',
+      );
+      await _tapRow(tester, 'Charmé');
+      await tester.tap(find.text('ENREGISTRER'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertBanner), findsOneWidget);
       expect(tester.takeException(), isNull);
       expect(find.text('ENREGISTRER'), findsOneWidget);
     });
