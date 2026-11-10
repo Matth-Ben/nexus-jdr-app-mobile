@@ -18,6 +18,7 @@ import '../../character_creation/domain/spell_selection_resolver.dart';
 import '../../character_creation/domain/spellcasting_rules.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
+import '../domain/condition_type.dart';
 import '../domain/character_failure.dart';
 import '../domain/character_list_sorter.dart';
 import '../domain/character_spell_slot.dart';
@@ -1894,6 +1895,15 @@ class SupabaseCharacterRepository implements CharacterRepository {
                   else
                     feature,
               ],
+            );
+          case PendingCharacterWriteKind.conditions:
+            // P6b : tableau complet de clés (dernière écriture gagnante),
+            // clés inconnues préservées comprises.
+            final raw = write.payload['conditions'];
+            if (raw is! List) break;
+            result = result.copyWith(
+              conditions: ConditionType.parse(raw),
+              unknownConditionKeys: ConditionType.unknownKeys(raw),
             );
           case PendingCharacterWriteKind.rest:
           // Jamais superposée — voir la documentation de cette méthode.
