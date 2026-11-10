@@ -22,6 +22,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/cache/app_database.dart';
 import 'package:personnages/core/cache/cache_providers.dart';
@@ -241,148 +242,128 @@ void main() {
   // Ces tests passent par un vrai `AppDatabase`/`PendingCharacterWriteQueue`
   // (contrairement au reste de ce fichier) : `consumeAbandonedMessages` n'a
   // pas de double, voir la doc de classe de `PendingCharacterWriteQueue`.
-  group('CharacterWriteSyncCoordinator : signalement des abandons (D34)', () {
-    late AppDatabase db;
-    late PendingCharacterWriteQueue queue;
-    late _ScriptedSyncer fakeSyncer;
-    late _FakeConnectivityChecker fakeConnectivity;
-    late SupabaseClient signedInClient;
+  // Depuis la tranche T2 du chantier hors-ligne, un abandon n'est plus un
+  // `SnackBar` global : la ligne abandonnée est consommée ET enregistrée dans
+  // `SyncAlerts` (alerte persistée affichée par `SyncStatusBanner`) dans une
+  // même transaction. Vrai `AppDatabase`/`PendingCharacterWriteQueue`.
+  group(
+    'CharacterWriteSyncCoordinator : alertes d\'abandon persistées (D34)',
+    () {
+      late AppDatabase db;
+      late PendingCharacterWriteQueue queue;
+      late _ScriptedSyncer fakeSyncer;
+      late _FakeConnectivityChecker fakeConnectivity;
+      late SupabaseClient signedInClient;
 
-    setUp(() async {
-      db = AppDatabase(NativeDatabase.memory());
-      queue = PendingCharacterWriteQueue(db);
-      fakeSyncer = _ScriptedSyncer();
-      fakeConnectivity = _FakeConnectivityChecker();
-      signedInClient = await _buildSignedInClient(ownerId: 'owner-1');
-    });
+      setUp(() async {
+        db = AppDatabase(NativeDatabase.memory());
+        queue = PendingCharacterWriteQueue(db);
+        fakeSyncer = _ScriptedSyncer();
+        fakeConnectivity = _FakeConnectivityChecker();
+        signedInClient = await _buildSignedInClient(ownerId: 'owner-1');
+      });
 
-    tearDown(() async {
-      await db.close();
-    });
+      tearDown(() async {
+        await db.close();
+      });
 
-    /// Insère directement une ligne abandonnée (contourne le classement
-    /// d'erreur du synchroniseur, hors périmètre de ce test de la couche
-    /// présentation — déjà couvert par
-    /// `test/core/cache/pending_character_write_queue_test.dart` et
-    /// `character_repository_pending_writes_test.dart`).
-    Future<void> seedAbandonedWrite(String message) async {
-      await db
-          .into(db.pendingCharacterWrites)
-          .insert(
-            PendingCharacterWritesCompanion.insert(
-              characterId: 'char-1',
-              ownerId: 'owner-1',
-              kind: 'hp',
-              payload: '{"currentHp":1,"temporaryHp":0}',
-              queuedAt: DateTime.now(),
-              failureCount: const Value(5),
-              abandoned: const Value(true),
-              lastFailureMessage: Value(message),
-            ),
-          );
-    }
+      /// Insère directement une ligne abandonnée (contourne le classement
+      /// d'erreur du synchroniseur, hors périmètre de ce test de la couche
+      /// présentation — déjà couvert par
+      /// `test/core/cache/pending_character_write_queue_test.dart` et
+      /// `character_repository_pending_writes_test.dart`).
+      Future<void> seedAbandonedWrite(String message) async {
+        await db
+            .into(db.pendingCharacterWrites)
+            .insert(
+              PendingCharacterWritesCompanion.insert(
+                characterId: 'char-1',
+                ownerId: 'owner-1',
+                kind: 'hp',
+                payload: '{"currentHp":1,"temporaryHp":0}',
+                queuedAt: DateTime.now(),
+                failureCount: const Value(5),
+                abandoned: const Value(true),
+                lastFailureMessage: Value(message),
+              ),
+            );
+      }
 
-    testWidgets("une écriture abandonnée affiche un SnackBar global dès que le "
-        'coordinateur démarre, et ne le réaffiche plus ensuite', (
-      tester,
-    ) async {
-      await seedAbandonedWrite('Vos PV abandonnés (test).');
-      fakeSyncer.resultToReturn = const {};
-      final messengerKey = GlobalKey<ScaffoldMessengerState>();
+      List<Override> overrides() => [
+        pendingCharacterWriteSyncerProvider.overrideWithValue(fakeSyncer),
+        connectivityCheckerProvider.overrideWithValue(fakeConnectivity),
+        pendingCharacterWriteQueueProvider.overrideWithValue(queue),
+        supabaseClientProvider.overrideWithValue(signedInClient),
+        appDatabaseProvider.overrideWithValue(db),
+      ];
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            pendingCharacterWriteSyncerProvider.overrideWithValue(fakeSyncer),
-            connectivityCheckerProvider.overrideWithValue(fakeConnectivity),
-            pendingCharacterWriteQueueProvider.overrideWithValue(queue),
-            supabaseClientProvider.overrideWithValue(signedInClient),
-            scaffoldMessengerKeyProvider.overrideWithValue(messengerKey),
-          ],
-          child: MaterialApp(
-            scaffoldMessengerKey: messengerKey,
-            home: Consumer(
-              builder: (context, ref, _) {
-                ref.watch(characterWriteSyncCoordinatorProvider);
-                return const Scaffold(body: SizedBox());
-              },
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
+      testWidgets('règle 10 : une écriture abandonnée devient une alerte '
+          'persistée (consommée une seule fois), sans aucun SnackBar', (
+        tester,
+      ) async {
+        await seedAbandonedWrite('Vos PV abandonnés (test).');
+        fakeSyncer.resultToReturn = const {};
+        final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
-      expect(find.text('Vos PV abandonnés (test).'), findsOneWidget);
-      expect(
-        (await db.select(db.pendingCharacterWrites).get()),
-        isEmpty,
-        reason: 'consommée (et donc supprimée) une fois affichée',
-      );
-
-      // Un nouveau retour de connectivité ne doit plus rien réafficher :
-      // déjà consommée.
-      await tester.pumpWidget(Container());
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            pendingCharacterWriteSyncerProvider.overrideWithValue(fakeSyncer),
-            connectivityCheckerProvider.overrideWithValue(fakeConnectivity),
-            pendingCharacterWriteQueueProvider.overrideWithValue(queue),
-            supabaseClientProvider.overrideWithValue(signedInClient),
-            scaffoldMessengerKeyProvider.overrideWithValue(messengerKey),
-          ],
-          child: MaterialApp(
-            scaffoldMessengerKey: messengerKey,
-            home: Consumer(
-              builder: (context, ref, _) {
-                ref.watch(characterWriteSyncCoordinatorProvider);
-                return const Scaffold(body: SizedBox());
-              },
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ...overrides(),
+              scaffoldMessengerKeyProvider.overrideWithValue(messengerKey),
+            ],
+            child: MaterialApp(
+              scaffoldMessengerKey: messengerKey,
+              home: Consumer(
+                builder: (context, ref, _) {
+                  ref.watch(characterWriteSyncCoordinatorProvider);
+                  return const Scaffold(body: SizedBox());
+                },
+              ),
             ),
           ),
-        ),
-      );
-      fakeConnectivity.emitRestored();
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(
-        find.text('Vos PV abandonnés (test).'),
-        findsNothing,
-        reason: "déjà consommée : ne doit jamais réapparaître à l'écran",
-      );
-    });
+        expect(find.byType(SnackBar), findsNothing);
+        expect(await db.select(db.pendingCharacterWrites).get(), isEmpty);
+        final alerts = await db.select(db.syncAlerts).get();
+        expect(alerts, hasLength(1));
+        expect(alerts.single.kind, 'abandon');
+        expect(alerts.single.ownerId, 'owner-1');
+        expect(alerts.single.characterId, 'char-1');
 
-    testWidgets("sans écriture abandonnée, aucun SnackBar n'est affiché", (
-      tester,
-    ) async {
-      fakeSyncer.resultToReturn = const {};
-      final messengerKey = GlobalKey<ScaffoldMessengerState>();
+        // Un nouveau retour de connectivité n'empile rien de plus.
+        fakeConnectivity.emitRestored();
+        await tester.pumpAndSettle();
+        expect(await db.select(db.syncAlerts).get(), hasLength(1));
+        expect(find.byType(SnackBar), findsNothing);
+      });
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            pendingCharacterWriteSyncerProvider.overrideWithValue(fakeSyncer),
-            connectivityCheckerProvider.overrideWithValue(fakeConnectivity),
-            pendingCharacterWriteQueueProvider.overrideWithValue(queue),
-            supabaseClientProvider.overrideWithValue(signedInClient),
-            scaffoldMessengerKeyProvider.overrideWithValue(messengerKey),
-          ],
-          child: MaterialApp(
-            scaffoldMessengerKey: messengerKey,
-            home: Consumer(
-              builder: (context, ref, _) {
-                ref.watch(characterWriteSyncCoordinatorProvider);
-                return const Scaffold(body: SizedBox());
-              },
+      testWidgets('sans écriture abandonnée : ni alerte, ni SnackBar', (
+        tester,
+      ) async {
+        fakeSyncer.resultToReturn = const {};
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: overrides(),
+            child: MaterialApp(
+              home: Consumer(
+                builder: (context, ref, _) {
+                  ref.watch(characterWriteSyncCoordinatorProvider);
+                  return const Scaffold(body: SizedBox());
+                },
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byType(SnackBar), findsNothing);
-    });
-  });
+        expect(find.byType(SnackBar), findsNothing);
+        expect(await db.select(db.syncAlerts).get(), isEmpty);
+      });
+    },
+  );
 }
 
 /// Même mécanisme que `character_repository_pending_writes_test.dart::
@@ -481,6 +462,9 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
 
   @override
   Stream<bool> get onConnectivityRestored => _controller.stream;
+
+  @override
+  Stream<bool> get onConnectivityChanged => const Stream.empty();
 
   void emitRestored() => _controller.add(true);
 }

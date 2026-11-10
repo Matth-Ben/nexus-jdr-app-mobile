@@ -9,9 +9,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,10 +20,11 @@ import 'package:personnages/core/cache/app_database.dart'
 import 'package:personnages/core/cache/cache_providers.dart';
 import 'package:personnages/core/cache/pending_character_write_queue.dart';
 import 'package:personnages/core/cache/reference_data_cache.dart';
+import 'package:personnages/core/cache/sync_alert_store.dart';
+import 'package:personnages/core/cache/sync_state_store.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/core/network/supabase_client_provider.dart';
 import 'package:personnages/core/network/transport_failure.dart';
-import 'package:personnages/core/notifications/notification_providers.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:personnages/features/characters/data/character_detail_cache.dart';
@@ -406,9 +406,9 @@ void main() {
     });
   });
 
-  group('coordinateur : signalement des abandons', () {
-    /// Abandonne d'abord une entrée directement (5 refus), hors coordinateur.
-    Future<void> seedAbandonedHpWrite() async {
+  group('coordinateur : alertes persistées des abandons (T2)', () {
+    /// Met une écriture de PV en file hors ligne (fiche `_characterId`).
+    Future<void> queueHpWrite() async {
       stack.connectivity.goOffline();
       await stack.repository.updateHp(
         characterId: _characterId,
@@ -416,129 +416,142 @@ void main() {
         temporaryHp: 0,
       );
       stack.connectivity.goOnline();
-      stack.server.rejectWith('42501');
-      for (
-        var i = 0;
-        i < PendingCharacterWriteQueue.abandonAfterConsecutiveFailures;
-        i++
-      ) {
-        await stack.syncer.sync();
-      }
-      stack.server.clearRejection();
-      expect((await stack.allRows()).single.abandoned, isTrue);
     }
 
-    List<Override> overrides(
-      GlobalKey<ScaffoldMessengerState> key,
-      _CountingRepository repository,
-    ) => [
+    List<Override> overrides(_CountingRepository repository) => [
       characterRepositoryProvider.overrideWithValue(repository),
       pendingCharacterWriteSyncerProvider.overrideWithValue(stack.syncer),
       pendingCharacterWriteQueueProvider.overrideWithValue(stack.queue),
       connectivityCheckerProvider.overrideWithValue(stack.connectivity),
       supabaseClientProvider.overrideWithValue(stack.client),
-      scaffoldMessengerKeyProvider.overrideWithValue(key),
+      appDatabaseProvider.overrideWithValue(stack.db),
+      referenceDataCacheProvider.overrideWithValue(stack.cache),
     ];
 
-    test('D62 : messenger == null (clé jamais attachée) -> les messages ne '
-        'sont PAS consommés, la ligne abandonnée reste en base', () async {
-      await seedAbandonedHpWrite();
-      final key = GlobalKey<ScaffoldMessengerState>();
+    Future<List<SyncAlert>> alerts() =>
+        SyncAlertStore(stack.db).allForOwner(_ownerA);
+
+    test('règle 10 : un abandon devient une alerte persistée (consommation et '
+        'insertion atomiques), jamais un SnackBar, sans dépendre d\'un '
+        'ScaffoldMessenger', () async {
+      await queueHpWrite();
+      stack.server.rejectWith('42501');
       final container = ProviderContainer(
-        overrides: overrides(key, _CountingRepository()),
+        overrides: overrides(_CountingRepository()),
       );
       addTearDown(container.dispose);
 
       container.read(characterWriteSyncCoordinatorProvider);
       await pumpEventQueue();
-      stack.connectivity.emitRestored();
-      await pumpEventQueue();
+      for (
+        var i = 1;
+        i < PendingCharacterWriteQueue.abandonAfterConsecutiveFailures;
+        i++
+      ) {
+        stack.connectivity.emitRestored();
+        await pumpEventQueue();
+      }
 
-      final rows = await stack.allRows();
-      expect(rows, hasLength(1), reason: 'jamais consommée sans messenger');
-      expect(rows.single.abandoned, isTrue);
-      expect(rows.single.lastFailureMessage, isNotEmpty);
+      expect(await stack.allRows(), isEmpty, reason: 'ligne consommée');
+      final stored = await alerts();
+      expect(stored, hasLength(1));
+      expect(stored.single.kind, SyncAlertKind.abandon);
+      expect(stored.single.characterId, _characterId);
+      expect(stored.single.dataKind, 'hp');
     });
 
-    testWidgets('message d\'abandon affiché puis consommé une seule fois, au '
-        'passage de synchro qui suit l\'abandon', (tester) async {
-      final key = GlobalKey<ScaffoldMessengerState>();
-      final repository = _CountingRepository();
-      await tester.runAsync(() async {
-        stack.connectivity.goOffline();
-        await stack.repository.updateHp(
-          characterId: _characterId,
-          currentHp: 6,
-          temporaryHp: 0,
-        );
-        stack.connectivity.goOnline();
-        stack.server.rejectWith('42501');
-      });
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: overrides(key, repository),
-          child: MaterialApp(
-            scaffoldMessengerKey: key,
-            home: Consumer(
-              builder: (context, ref, _) {
-                ref.watch(characterWriteSyncCoordinatorProvider);
-                return const Scaffold(body: SizedBox());
-              },
-            ),
-          ),
-        ),
+    test('l\'alerte n\'est jamais ré-empilée par un passage de synchro '
+        'suivant, et persiste tant qu\'elle n\'est pas fermée', () async {
+      await queueHpWrite();
+      stack.server.rejectWith('42501');
+      final container = ProviderContainer(
+        overrides: overrides(_CountingRepository()),
       );
-
-      // Démarrage = tentative 1 ; 4 retours de réseau = tentatives 2 à 5.
-      for (var i = 0; i < 4; i++) {
-        await tester.runAsync(() async {
-          stack.connectivity.emitRestored();
-          await Future<void>.delayed(const Duration(milliseconds: 200));
-        });
-        await tester.pump();
-      }
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 200)),
-      );
-      await tester.pump();
-
-      expect(find.textContaining('vos PV'), findsOneWidget);
-      expect(await tester.runAsync(stack.allRows), isEmpty);
-
-      await tester.runAsync(() async {
+      addTearDown(container.dispose);
+      container.read(characterWriteSyncCoordinatorProvider);
+      await pumpEventQueue();
+      for (var i = 0; i < 8; i++) {
         stack.connectivity.emitRestored();
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-      });
-      await tester.pump();
-      expect(
-        find.textContaining('vos PV'),
-        findsOneWidget,
-        reason: 'consommé : jamais ré-empilé par un passage de synchro suivant',
-      );
-      expect(await tester.runAsync(stack.allRows), isEmpty);
+        await pumpEventQueue();
+      }
 
-      // Laisse le SnackBar expirer (aucun Timer en attente à la fin).
-      await tester.pump(const Duration(seconds: 5));
-      await tester.pump(const Duration(seconds: 1));
+      expect(await alerts(), hasLength(1));
+    });
+
+    test('la valeur serveur connue (cache de la fiche) est jointe à l\'alerte '
+        'd\'abandon de PV, avec le nom du personnage', () async {
+      await stack.cache.put(
+        CharacterDetailCache.keyFor(
+          ownerId: _ownerA,
+          characterId: _characterId,
+        ),
+        {
+          CharacterDetailCache.rowKey: {
+            'name': 'Aria',
+            'current_hp': 7,
+            'max_hp': 12,
+          },
+        },
+      );
+      await queueHpWrite();
+      stack.server.rejectWith('42501');
+      final container = ProviderContainer(
+        overrides: overrides(_CountingRepository()),
+      );
+      addTearDown(container.dispose);
+      container.read(characterWriteSyncCoordinatorProvider);
+      await pumpEventQueue();
+      for (var i = 1; i < 6; i++) {
+        stack.connectivity.emitRestored();
+        await pumpEventQueue();
+      }
+
+      final stored = (await alerts()).single;
+      expect(stored.characterName, 'Aria');
+      expect(stored.serverValue, {'currentHp': 7, 'maxHp': 12});
+    });
+
+    test('un abandon d\'un passage précédent (ligne déjà abandonnée en base) '
+        'devient une alerte et invalide la fiche', () async {
+      await stack.db
+          .into(stack.db.pendingCharacterWrites)
+          .insert(
+            PendingCharacterWritesCompanion.insert(
+              characterId: _characterId,
+              ownerId: _ownerA,
+              kind: 'hp',
+              payload: jsonEncode({'currentHp': 1, 'temporaryHp': 0}),
+              queuedAt: DateTime.utc(2026, 11, 10),
+              failureCount: const Value(5),
+              abandoned: const Value(true),
+              lastFailureMessage: const Value('abandonnée'),
+            ),
+          );
+      final repository = _CountingRepository();
+      final container = ProviderContainer(overrides: overrides(repository));
+      addTearDown(container.dispose);
+      container.listen(
+        characterDetailProvider(_characterId),
+        (previous, next) {},
+        fireImmediately: true,
+      );
+      await pumpEventQueue();
+      final before = repository.fetchCount;
+
+      container.read(characterWriteSyncCoordinatorProvider);
+      await pumpEventQueue();
+
+      expect(await stack.allRows(), isEmpty);
+      expect(await alerts(), hasLength(1));
+      expect(repository.fetchCount, before + 1, reason: 'fiche invalidée');
     });
 
     test('D186 : à l\'abandon, la fiche du personnage EST invalidée (relue), '
         'comme pour une synchro réussie', () async {
-      // Avant T1, le coordinateur n'invalidait que les ids synchronisés avec
-      // succès : un abandon laissait la fiche affichée sur l'état optimiste.
-      stack.connectivity.goOffline();
-      await stack.repository.updateHp(
-        characterId: _characterId,
-        currentHp: 6,
-        temporaryHp: 0,
-      );
-      stack.connectivity.goOnline();
+      await queueHpWrite();
       stack.server.rejectWith('42501');
       final repository = _CountingRepository();
-      final container = ProviderContainer(
-        overrides: overrides(GlobalKey<ScaffoldMessengerState>(), repository),
-      );
+      final container = ProviderContainer(overrides: overrides(repository));
       addTearDown(container.dispose);
       container.listen(
         characterDetailProvider(_characterId),
@@ -553,7 +566,7 @@ void main() {
         stack.connectivity.emitRestored();
         await pumpEventQueue();
       }
-      expect((await stack.allRows()).single.abandoned, isTrue);
+      expect(await alerts(), hasLength(1));
       expect(
         repository.fetchCount,
         2,
@@ -573,62 +586,55 @@ void main() {
       expect(repository.fetchCount, 3);
     });
 
-    testWidgets('un abandon d\'un passage précédent (consommé plus tard, '
-        'messenger prêt) invalide aussi la fiche', (tester) async {
-      final repository = _CountingRepository();
-      final key = GlobalKey<ScaffoldMessengerState>();
-      await tester.runAsync(
-        () => stack.db
-            .into(stack.db.pendingCharacterWrites)
-            .insert(
-              PendingCharacterWritesCompanion.insert(
-                characterId: _characterId,
-                ownerId: _ownerA,
-                kind: 'hp',
-                payload: jsonEncode({'currentHp': 1, 'temporaryHp': 0}),
-                queuedAt: DateTime.utc(2026, 11, 10),
-                failureCount: const Value(5),
-                abandoned: const Value(true),
-                lastFailureMessage: const Value('abandonnée'),
-              ),
-            ),
-      );
+    test(
+      'une synchro réussie date la dernière synchronisation du compte',
+      () async {
+        await queueHpWrite();
+        final container = ProviderContainer(
+          overrides: overrides(_CountingRepository()),
+        );
+        addTearDown(container.dispose);
+        expect(await SyncStateStore(stack.db).lastSuccess(_ownerA), isNull);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: overrides(key, repository),
-          child: MaterialApp(
-            scaffoldMessengerKey: key,
-            home: Consumer(
-              builder: (context, ref, _) {
-                ref.watch(characterDetailProvider(_characterId));
-                return const Scaffold(body: SizedBox());
-              },
-            ),
-          ),
+        container.read(characterWriteSyncCoordinatorProvider);
+        await pumpEventQueue();
+
+        expect(await SyncStateStore(stack.db).lastSuccess(_ownerA), isNotNull);
+        expect(await SyncStateStore(stack.db).lastSuccess(_ownerB), isNull);
+      },
+    );
+
+    test('un conflit F19 est enregistré comme alerte persistée, avec les PV '
+        'serveur et le PV max du cache', () async {
+      await stack.cache.put(
+        CharacterDetailCache.keyFor(
+          ownerId: _ownerA,
+          characterId: _characterId,
         ),
+        {
+          CharacterDetailCache.rowKey: {
+            'name': 'Aria',
+            'current_hp': 10,
+            'temporary_hp': 0,
+            'max_hp': 12,
+          },
+        },
       );
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      await queueHpWrite();
+      // Le serveur a changé depuis la mise en file (autre appareil).
+      stack.server.concurrentChange({'current_hp': 3});
+      final container = ProviderContainer(
+        overrides: overrides(_CountingRepository()),
       );
-      await tester.pump();
-      final before = repository.fetchCount;
+      addTearDown(container.dispose);
 
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(Scaffold)),
-      );
       container.read(characterWriteSyncCoordinatorProvider);
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 200)),
-      );
-      await tester.pump();
+      await pumpEventQueue();
 
-      expect(find.text('abandonnée'), findsOneWidget);
-      expect(await tester.runAsync(stack.allRows), isEmpty);
-      expect(repository.fetchCount, before + 1, reason: 'fiche invalidée');
-
-      await tester.pump(const Duration(seconds: 5));
-      await tester.pump(const Duration(seconds: 1));
+      final stored = (await alerts()).single;
+      expect(stored.kind, SyncAlertKind.conflict);
+      expect(stored.characterName, 'Aria');
+      expect(stored.serverValue, {'currentHp': 3, 'maxHp': 12});
     });
   });
 

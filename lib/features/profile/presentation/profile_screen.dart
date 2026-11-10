@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/sync/sync_clock_provider.dart';
+import '../../../core/sync/sync_status_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -15,6 +17,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../auth/domain/auth_failure.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 import 'providers/package_info_provider.dart';
+import 'widgets/last_sync_label.dart';
 
 /// Écran "Profil / paramètres du compte", route `/profile` — dernier écran
 /// de la navigation principale (bouton profil rond de
@@ -208,10 +211,35 @@ class _FooterVersion extends ConsumerWidget {
         ? 'Nexus JDR — Personnages'
         : 'Nexus JDR — Personnages · v$version';
 
-    return Text(
-      label,
-      textAlign: TextAlign.center,
-      style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
+    final l10n = AppLocalizations.of(context)!;
+    final syncLabel = lastSyncLabel(
+      l10n,
+      lastSync: ref.watch(lastSyncAtProvider).value,
+      now: ref.watch(syncClockProvider)(),
+      pendingCount: ref.watch(pendingWriteCountProvider()).value ?? 0,
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Dernière synchronisation (T2 du chantier hors-ligne) : pas de timer,
+        // rafraîchie au rebuild ; un seul libellé d'accessibilité.
+        Semantics(
+          label: syncLabel,
+          excludeSemantics: true,
+          child: Text(
+            syncLabel,
+            textAlign: TextAlign.center,
+            style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
+        ),
+      ],
     );
   }
 }

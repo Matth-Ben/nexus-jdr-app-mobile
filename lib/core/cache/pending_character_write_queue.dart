@@ -73,9 +73,17 @@ class AbandonedWrite {
     required this.characterId,
     required this.kindKey,
     required this.message,
+    this.targetId = '',
+    this.payload = const {},
   });
 
   final String characterId;
+
+  /// Cible de l'entrée abandonnée (`PendingCharacterWrite.targetId`) et son
+  /// payload décodé (vide si illisible) : servent à composer l'alerte
+  /// persistée (ex. niveau de l'emplacement de sort concerné).
+  final String targetId;
+  final Map<String, dynamic> payload;
 
   /// `PendingCharacterWriteKind.storageKey` tel que stocké (peut être un kind
   /// inconnu de cette version).
@@ -525,10 +533,37 @@ class PendingCharacterWriteQueue {
   /// méthode elle-même ne fait aucune vérification de ce genre, elle
   /// supprime sans condition, y compris une écriture non encore synchronisée
   /// si l'appelant ne l'a pas garanti en amont.
+  ///
+  /// Purge aussi, dans la même transaction, le reste de l'état de synchro
+  /// local du compte (T2 du chantier hors-ligne) : ses alertes de synchro
+  /// ([SyncAlerts]) et sa date de dernière synchro ([SyncStates]).
   Future<void> removeAllForOwner(String ownerId) async {
-    await (_db.delete(
-      _db.pendingCharacterWrites,
-    )..where((row) => row.ownerId.equals(ownerId))).go();
+    await _db.transaction(() async {
+      await (_db.delete(
+        _db.pendingCharacterWrites,
+      )..where((row) => row.ownerId.equals(ownerId))).go();
+      await (_db.delete(
+        _db.syncAlerts,
+      )..where((row) => row.ownerId.equals(ownerId))).go();
+      await (_db.delete(
+        _db.syncStates,
+      )..where((row) => row.ownerId.equals(ownerId))).go();
+    });
+  }
+
+  /// Nombre d'écritures **actives** (non abandonnées) en attente de [ownerId],
+  /// en direct : pour tout son compte, ou pour le seul [characterId] si
+  /// fourni. Alimente le bandeau de synchro (liste = total du compte, fiche =
+  /// ce personnage) ; une entrée abandonnée n'est jamais comptée.
+  Stream<int> watchPendingCount(String ownerId, {String? characterId}) {
+    final query = _db.select(_db.pendingCharacterWrites)
+      ..where((row) {
+        final base = row.ownerId.equals(ownerId) & row.abandoned.equals(false);
+        return characterId == null
+            ? base
+            : base & row.characterId.equals(characterId);
+      });
+    return query.watch().map((rows) => rows.length);
   }
 
   /// Messages des entrées abandonnées de [ownerId] (toutes, tous personnages
@@ -571,10 +606,22 @@ class PendingCharacterWriteQueue {
             characterId: row.characterId,
             kindKey: row.kind,
             message: row.lastFailureMessage ?? _fallbackAbandonMessage,
+            targetId: row.targetId,
+            payload: _decodePayloadOrEmpty(row.payload),
           ),
       ];
     });
   }
+}
+
+Map<String, dynamic> _decodePayloadOrEmpty(String raw) {
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is Map) return Map<String, dynamic>.from(decoded);
+  } catch (_) {
+    // Payload illisible : alerte de repli.
+  }
+  return const {};
 }
 
 /// Repli si [PendingCharacterWrites.lastFailureMessage] est resté vide alors

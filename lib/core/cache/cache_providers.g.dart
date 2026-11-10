@@ -187,3 +187,95 @@ final class PendingCharacterWriteQueueProvider
 
 String _$pendingCharacterWriteQueueHash() =>
     r'd9cebe9c03623117fcd6f08438aaf07e1495091e';
+
+/// Alertes de synchro persistées (abandons, conflits) — voir [SyncAlertStore].
+
+@ProviderFor(syncAlertStore)
+final syncAlertStoreProvider = SyncAlertStoreProvider._();
+
+/// Alertes de synchro persistées (abandons, conflits) — voir [SyncAlertStore].
+
+final class SyncAlertStoreProvider
+    extends $FunctionalProvider<SyncAlertStore, SyncAlertStore, SyncAlertStore>
+    with $Provider<SyncAlertStore> {
+  /// Alertes de synchro persistées (abandons, conflits) — voir [SyncAlertStore].
+  SyncAlertStoreProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'syncAlertStoreProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$syncAlertStoreHash();
+
+  @$internal
+  @override
+  $ProviderElement<SyncAlertStore> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  SyncAlertStore create(Ref ref) {
+    return syncAlertStore(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SyncAlertStore value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SyncAlertStore>(value),
+    );
+  }
+}
+
+String _$syncAlertStoreHash() => r'301fe4b24208c7202122ec3405f17efc5d50dc59';
+
+/// Date de la dernière synchro réussie, par compte — voir [SyncStateStore].
+
+@ProviderFor(syncStateStore)
+final syncStateStoreProvider = SyncStateStoreProvider._();
+
+/// Date de la dernière synchro réussie, par compte — voir [SyncStateStore].
+
+final class SyncStateStoreProvider
+    extends $FunctionalProvider<SyncStateStore, SyncStateStore, SyncStateStore>
+    with $Provider<SyncStateStore> {
+  /// Date de la dernière synchro réussie, par compte — voir [SyncStateStore].
+  SyncStateStoreProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'syncStateStoreProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$syncStateStoreHash();
+
+  @$internal
+  @override
+  $ProviderElement<SyncStateStore> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  SyncStateStore create(Ref ref) {
+    return syncStateStore(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SyncStateStore value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SyncStateStore>(value),
+    );
+  }
+}
+
+String _$syncStateStoreHash() => r'3ca6253a10b2e09adcc8ca301834e5ec4031e71b';

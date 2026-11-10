@@ -11,11 +11,19 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:personnages/l10n/app_localizations.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/cache/app_database.dart';
+import 'package:personnages/core/cache/cache_providers.dart';
+import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/core/rules/spell_status.dart';
+import 'package:personnages/core/sync/sync_status_providers.dart';
+import 'package:personnages/core/widgets/sync_status_banner.dart';
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/widgets/info_banner.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/wood_back_header.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
@@ -53,6 +61,9 @@ import 'package:personnages/core/widgets/portrait_frame.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_detail_provider.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
+
+import '../../../support/fake_connectivity_checker.dart';
+
 import 'package:personnages/features/characters/presentation/widgets/character_ability_score_grid.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_equipped_weapons_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_stat_pills_row.dart';
@@ -667,10 +678,14 @@ void main() {
     );
   }
 
-  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
+  Widget buildTestWidget({
+    Locale locale = const Locale('fr'),
+    List<Override> extraOverrides = const [],
+  }) {
     return ProviderScope(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeRepository),
+        ...extraOverrides,
       ],
       child: MaterialApp.router(
         // `CharacterDetailScreen` et ses widgets lisent désormais
@@ -730,6 +745,59 @@ void main() {
       tester.element(find.byType(CharacterDetailScreen)),
     ).invalidate(characterDetailProvider('1'));
   }
+
+  testWidgets('bandeau de synchro (T2) : hors ligne sans modification en '
+      'attente -> « Hors ligne. » sur la fiche, entre l\'en-tête et le '
+      'contenu, même pendant le chargement', (tester) async {
+    fakeRepository.detailCompleter = Completer<CharacterDetail>();
+    final db = AppDatabase(NativeDatabase.memory());
+    final connectivity = FakeConnectivityChecker();
+    addTearDown(() async {
+      await connectivity.close();
+      await db.close();
+    });
+
+    await tester.binding.setSurfaceSize(const Size(800, 2400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      buildTestWidget(
+        extraOverrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          syncOwnerIdProvider.overrideWithValue('owner-1'),
+          connectivityCheckerProvider.overrideWithValue(connectivity),
+        ],
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(SyncStatusBanner), findsOneWidget);
+    expect(find.byIcon(Icons.cloud_off_outlined), findsNothing);
+
+    connectivity.goOffline();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+      find.text(
+        'Hors ligne. Tes modifications seront envoyées au retour du réseau.',
+      ),
+      findsOneWidget,
+    );
+    final headerBottom = tester.getBottomLeft(find.byType(WoodBackHeader)).dy;
+    final bannerTop = tester.getTopLeft(find.byType(InfoBanner)).dy;
+    expect(bannerTop, greaterThanOrEqualTo(headerBottom));
+    expect(
+      tester.getTopLeft(find.byType(CircularProgressIndicator)).dy,
+      greaterThan(bannerTop),
+      reason: 'le bandeau est au-dessus du contenu',
+    );
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump(const Duration(seconds: 10));
+  });
 
   testWidgets('affiche un indicateur de chargement pendant la récupération', (
     tester,

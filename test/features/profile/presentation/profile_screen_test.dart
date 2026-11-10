@@ -18,11 +18,15 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/core/sync/sync_clock_provider.dart';
+import 'package:personnages/core/sync/sync_status_providers.dart';
+import 'package:personnages/core/theme/app_typography.dart';
 import 'package:personnages/core/widgets/menu_tile.dart';
 import 'package:personnages/core/widgets/profile_avatar.dart';
 import 'package:personnages/core/widgets/settings_list_card.dart';
@@ -123,6 +127,9 @@ class _AlwaysOnlineConnectivityChecker implements ConnectivityChecker {
 
   @override
   Stream<bool> get onConnectivityRestored => const Stream.empty();
+
+  @override
+  Stream<bool> get onConnectivityChanged => const Stream.empty();
 }
 
 User _fakeUser({
@@ -166,10 +173,12 @@ void main() {
   Widget buildTestWidget({
     required User? user,
     Locale locale = const Locale('fr'),
+    List<Override> extraOverrides = const [],
   }) {
     return ProviderScope(
       overrides: [
         currentUserProvider.overrideWithValue(user),
+        ...extraOverrides,
         authRepositoryProvider.overrideWithValue(fakeAuthRepository),
         connectivityCheckerProvider.overrideWithValue(
           _AlwaysOnlineConnectivityChecker(),
@@ -242,6 +251,92 @@ void main() {
     await tester.tap(find.text('Ouvrir le profil'));
     await tester.pumpAndSettle();
   }
+
+  group('dernière synchronisation (T2 du chantier hors-ligne)', () {
+    final now = DateTime(2026, 11, 10, 15, 0);
+
+    List<Override> syncOverrides({DateTime? lastSync, int pending = 0}) => [
+      syncClockProvider.overrideWithValue(() => now),
+      lastSyncAtProvider.overrideWith((ref) => Stream.value(lastSync)),
+      pendingWriteCountProvider().overrideWith((ref) => Stream.value(pending)),
+    ];
+
+    Future<void> pumpProfile(
+      WidgetTester tester, {
+      DateTime? lastSync,
+      int pending = 0,
+      Locale locale = const Locale('fr'),
+    }) async {
+      await tester.binding.setSurfaceSize(const Size(800, 2400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        buildTestWidget(
+          user: _fakeUser(),
+          locale: locale,
+          extraOverrides: syncOverrides(lastSync: lastSync, pending: pending),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ouvrir le profil'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('relatif, au-dessus de la version, police corps 12 muted', (
+      tester,
+    ) async {
+      await pumpProfile(
+        tester,
+        lastSync: now.subtract(const Duration(minutes: 5)),
+      );
+
+      final syncFinder = find.text('Dernière synchronisation : il y a 5 min');
+      expect(syncFinder, findsOneWidget);
+      final style = tester.widget<Text>(syncFinder).style!;
+      expect(style.fontSize, 12);
+      expect(
+        style.fontFamily,
+        isNot(AppTypography.display(fontSize: 12).fontFamily),
+      );
+      expect(
+        tester.getBottomLeft(syncFinder).dy,
+        lessThanOrEqualTo(
+          tester.getTopLeft(find.textContaining('Nexus JDR — Personnages')).dy,
+        ),
+        reason: 'juste au-dessus de la version',
+      );
+    });
+
+    testWidgets('jamais synchronisé + modifications en attente : « jamais · '
+        'N en attente »', (tester) async {
+      await pumpProfile(tester, pending: 2);
+      expect(
+        find.text('Dernière synchronisation : jamais · 2 en attente'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('au-delà de 24 h : date absolue locale ; un seul libellé '
+        "d'accessibilité", (tester) async {
+      await pumpProfile(tester, lastSync: DateTime(2026, 11, 7, 14, 32));
+      expect(
+        find.text('Dernière synchronisation : 7 nov. 2026 à 14:32'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Dernière synchronisation : 7 nov. 2026 à 14:32'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('anglais', (tester) async {
+      await pumpProfile(
+        tester,
+        lastSync: now.subtract(const Duration(hours: 3)),
+        locale: const Locale('en'),
+      );
+      expect(find.text('Last sync: 3 h ago'), findsOneWidget);
+    });
+  });
 
   testWidgets('affiche le nom (`user_metadata[\'full_name\']`) et l\'e-mail de '
       '`currentUserProvider`', (tester) async {

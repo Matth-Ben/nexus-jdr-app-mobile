@@ -5,10 +5,12 @@
 // `overrideWithValue`, pour ne jamais toucher à `Supabase.instance.client`.
 
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:drift/native.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -42,7 +44,15 @@ import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
+import 'package:personnages/core/cache/app_database.dart';
+import 'package:personnages/core/cache/cache_providers.dart';
+import 'package:personnages/core/cache/pending_character_write_queue.dart';
+import 'package:personnages/core/cache/sync_alert_store.dart';
+import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/core/router/route_observer_provider.dart';
+import 'package:personnages/core/sync/sync_status_providers.dart';
+import 'package:personnages/core/widgets/alert_banner.dart';
+import 'package:personnages/core/widgets/info_banner.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
 import 'package:personnages/core/widgets/dashed_border_painter.dart';
@@ -52,6 +62,8 @@ import 'package:personnages/features/characters/presentation/providers/character
 import 'package:personnages/features/characters/presentation/widgets/character_card.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/l10n/app_localizations.dart';
+
+import '../../../support/fake_connectivity_checker.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   int fetchCallCount = 0;
@@ -664,6 +676,7 @@ void main() {
     AppVersionRepository? appVersionRepository,
     Locale locale = const Locale('fr'),
     double textScale = 1.0,
+    List<Override> extraOverrides = const [],
   }) {
     final observer = routeObserver ?? RouteObserver<PageRoute<dynamic>>();
     return ProviderScope(
@@ -671,6 +684,7 @@ void main() {
         characterRepositoryProvider.overrideWithValue(fakeCharacterRepository),
         authRepositoryProvider.overrideWithValue(fakeAuthRepository),
         routeObserverProvider.overrideWithValue(observer),
+        ...extraOverrides,
         appVersionRepositoryProvider.overrideWithValue(
           appVersionRepository ?? fakeAppVersionRepository,
         ),
@@ -2308,6 +2322,240 @@ void main() {
         expect(find.text('1 personnage sélectionné'), findsOneWidget);
       },
     );
+  });
+
+  group('bandeau de synchro et retour Android (T2 du chantier hors-ligne)', () {
+    late AppDatabase db;
+    late FakeConnectivityChecker connectivity;
+    late PendingCharacterWriteQueue queue;
+    late List<MethodCall> platformCalls;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      connectivity = FakeConnectivityChecker();
+      queue = PendingCharacterWriteQueue(db);
+      platformCalls = [];
+    });
+
+    tearDown(() async {
+      await connectivity.close();
+      await db.close();
+    });
+
+    List<Override> syncOverrides() => [
+      appDatabaseProvider.overrideWithValue(db),
+      syncOwnerIdProvider.overrideWithValue('owner-1'),
+      connectivityCheckerProvider.overrideWithValue(connectivity),
+    ];
+
+    Future<void> flushDb(WidgetTester tester) async {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pump();
+    }
+
+    Future<void> enqueue(WidgetTester tester, String characterId) async {
+      await tester.runAsync(
+        () => queue.enqueue(
+          characterId: characterId,
+          ownerId: 'owner-1',
+          kind: PendingCharacterWriteKind.hp,
+          targetId: '',
+          payload: {'currentHp': 1, 'temporaryHp': 0},
+        ),
+      );
+      await flushDb(tester);
+    }
+
+    Future<void> finish(WidgetTester tester) async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pump(const Duration(seconds: 10));
+    }
+
+    void mockPlatform(WidgetTester tester) {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          platformCalls.add(call);
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+    }
+
+    int popCalls() => platformCalls
+        .where((call) => call.method == 'SystemNavigator.pop')
+        .length;
+
+    Future<void> addAlert(
+      WidgetTester tester, {
+      SyncAlertKind kind = SyncAlertKind.abandon,
+      String name = 'Aria',
+    }) => tester.runAsync(
+      () => SyncAlertStore(db).add(
+        ownerId: 'owner-1',
+        kind: kind,
+        characterId: 'c1',
+        characterName: name,
+        dataKind: 'hp',
+        serverValue: {'currentHp': 7, 'maxHp': 12},
+      ),
+    );
+
+    final updateSuggested = _FakeAppVersionRepository(
+      const AppVersionRow(
+        minimumSupportedVersion: '0.1.0',
+        latestVersion: '0.5.0',
+      ),
+    );
+
+    testWidgets('règle 8 : le bandeau de synchro est au-dessus de la mise à '
+        'jour suggérée et de la recherche', (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+      await addAlert(tester);
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          extraOverrides: syncOverrides(),
+          appVersionRepository: updateSuggested,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await flushDb(tester);
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final headerBottom = tester
+          .getBottomLeft(find.text('TES AVENTURIERS'))
+          .dy;
+      final alertTop = tester.getTopLeft(find.byType(AlertBanner)).dy;
+      final updateTop = tester
+          .getTopLeft(find.text('Nouvelle version disponible'))
+          .dy;
+      final searchTop = tester
+          .getTopLeft(
+            find.widgetWithText(TextField, 'Rechercher un personnage'),
+          )
+          .dy;
+      expect(headerBottom, lessThan(alertTop));
+      expect(alertTop, lessThan(updateTop));
+      expect(updateTop, lessThan(searchTop));
+      await finish(tester);
+    });
+
+    testWidgets('règle 8 : 360 dp x police 2,0, alerte + mise à jour '
+        'suggérée : aucun débordement', (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      fakeCharacterRepository.charactersToReturn = const [];
+      await addAlert(
+        tester,
+        kind: SyncAlertKind.conflict,
+        name: 'Halltesse Ambrelune',
+      );
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          textScale: 2,
+          extraOverrides: syncOverrides(),
+          appVersionRepository: updateSuggested,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await flushDb(tester);
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(AlertBanner), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await finish(tester);
+    });
+
+    testWidgets('décision (a) : la liste n\'affiche pas « Hors ligne » sans '
+        'modification en attente, mais l\'affiche avec le TOTAL du compte '
+        'dès N > 0', (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+      await tester.pumpWidget(buildTestWidget(extraOverrides: syncOverrides()));
+      await tester.pumpAndSettle();
+      await flushDb(tester);
+
+      connectivity.goOffline();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 5));
+      expect(find.byType(InfoBanner), findsNothing);
+
+      await enqueue(tester, 'c1');
+      await enqueue(tester, 'c2');
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(
+        find.text('Hors ligne · 2 modifications en attente'),
+        findsOneWidget,
+      );
+      await finish(tester);
+    });
+
+    testWidgets('règle 9 : retour Android sans modification en attente -> '
+        'pas de dialogue, l\'app quitte', (tester) async {
+      mockPlatform(tester);
+      fakeCharacterRepository.charactersToReturn = const [];
+      await tester.pumpWidget(buildTestWidget(extraOverrides: syncOverrides()));
+      await tester.pumpAndSettle();
+      await flushDb(tester);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(find.text("Quitter l'app ?"), findsNothing);
+      expect(popCalls(), 1);
+      await finish(tester);
+    });
+
+    testWidgets('règle 9 : retour Android avec N > 0 -> dialogue ; « Rester » '
+        'ferme sans quitter, « Quitter quand même » quitte', (tester) async {
+      mockPlatform(tester);
+      fakeCharacterRepository.charactersToReturn = const [];
+      await tester.pumpWidget(buildTestWidget(extraOverrides: syncOverrides()));
+      await tester.pumpAndSettle();
+      await enqueue(tester, 'c1');
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text("Quitter l'app ?"), findsOneWidget);
+      expect(
+        find.textContaining("1 modification en attente d'envoi."),
+        findsOneWidget,
+      );
+      expect(popCalls(), 0);
+
+      await tester.tap(find.text('RESTER'));
+      await tester.pumpAndSettle();
+      expect(find.text("Quitter l'app ?"), findsNothing);
+      expect(popCalls(), 0);
+
+      // Un tap hors du dialogue vaut « Rester ».
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pumpAndSettle();
+      expect(find.text("Quitter l'app ?"), findsNothing);
+      expect(popCalls(), 0);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('QUITTER QUAND MÊME'));
+      await tester.pumpAndSettle();
+      expect(popCalls(), 1);
+      await finish(tester);
+    });
   });
 
   group('locale anglaise', () {

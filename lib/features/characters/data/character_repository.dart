@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/reference_data_cache.dart';
+import '../../../core/cache/sync_state_store.dart';
 import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../../core/rules/character_class.dart';
 import '../../../core/rules/spell_status.dart';
@@ -1439,13 +1440,19 @@ class SupabaseCharacterRepository implements CharacterRepository {
     this._client,
     this._cache,
     this._pendingWrites,
-    this._connectivityChecker,
-  );
+    this._connectivityChecker, {
+    SyncStateStore? syncState,
+    // ignore: prefer_initializing_formals -- paramètre nommé public.
+  }) : _syncState = syncState;
 
   final SupabaseClient _client;
   final ReferenceDataCache _cache;
   final PendingCharacterWriteQueue _pendingWrites;
   final ConnectivityChecker _connectivityChecker;
+
+  /// Date de dernière synchro réussie (T2 du chantier hors-ligne) : mise à jour
+  /// après chaque lecture serveur réussie de la liste/fiche. Optionnelle.
+  final SyncStateStore? _syncState;
 
   /// Clé, forme et correction ciblée de l'entrée de cache de la fiche — voir
   /// [CharacterDetailCache].
@@ -1594,6 +1601,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         CharacterListCache.classNamesKey: classNames,
       };
       await _writeCacheBestEffort(cacheKey, payload);
+      unawaited(_syncState?.markSuccess(ownerId));
       return _mapCharacterListPayload(payload);
     } on CharacterFailure {
       rethrow;
@@ -1707,6 +1715,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // Le cache garde l'état serveur brut : les écritures en attente ne
       // sont superposées qu'au résultat renvoyé (voir [_withPendingWrites]).
       await _writeCacheBestEffort(cacheKey, payload);
+      unawaited(_syncState?.markSuccess(ownerId));
       return await _withPendingWrites(
         _mapCharacterDetailPayload(payload),
         ownerId: ownerId,

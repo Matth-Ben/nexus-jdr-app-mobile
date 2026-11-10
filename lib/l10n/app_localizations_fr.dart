@@ -3888,4 +3888,138 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get conditionsAccessDeniedMessage =>
       'Vous n\'avez pas accès à ce personnage.';
+
+  @override
+  String get syncBannerSyncing => 'Synchronisation…';
+
+  @override
+  String get syncBannerOfflineEmpty =>
+      'Hors ligne. Tes modifications seront envoyées au retour du réseau.';
+
+  @override
+  String syncBannerOfflinePending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hors ligne · $count modifications en attente',
+      one: 'Hors ligne · 1 modification en attente',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String syncBannerPendingOnline(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count modifications en attente d\'envoi',
+      one: '1 modification en attente d\'envoi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncBannerSynced => 'Synchronisé';
+
+  @override
+  String get syncBannerOfflineSemantics => 'Hors ligne';
+
+  @override
+  String get syncBannerDismissTooltip => 'Fermer';
+
+  @override
+  String get syncAlertUnknownCharacter => 'ce personnage';
+
+  @override
+  String syncAlertAbandonHp(String name, int value, int max) {
+    return 'Modification non enregistrée : la dernière valeur connue des PV de $name est $value/$max.';
+  }
+
+  @override
+  String syncAlertAbandonSlot(String name, int level, int value, int max) {
+    return 'Modification non enregistrée : la dernière valeur connue des emplacements de niveau $level de $name est $value/$max.';
+  }
+
+  @override
+  String syncAlertAbandonXp(String name, int value) {
+    return 'Modification non enregistrée : la dernière valeur connue de l\'XP de $name est $value.';
+  }
+
+  @override
+  String syncAlertAbandonFallback(String name) {
+    return 'Une modification de $name n\'a pas pu être enregistrée. La fiche affiche la valeur du serveur.';
+  }
+
+  @override
+  String syncAlertConflictHp(String name, int value, int max) {
+    return '$name a été modifié sur un autre appareil : les PV étaient à $value/$max sur le serveur. Ta modification hors ligne a été appliquée par-dessus.';
+  }
+
+  @override
+  String syncAlertConflictFallback(String name) {
+    return '$name a été modifié sur un autre appareil. Ta modification hors ligne a été appliquée par-dessus.';
+  }
+
+  @override
+  String syncAlertMoreSuffix(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: ' (+$count autres)',
+      one: ' (+1 autre)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncExitDialogTitle => 'Quitter l\'app ?';
+
+  @override
+  String syncExitDialogBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count modifications en attente d\'envoi. Elles restent enregistrées sur l\'appareil et partiront à la prochaine ouverture avec du réseau.',
+      one: '1 modification en attente d\'envoi. Elle reste enregistrée sur l\'appareil et partira à la prochaine ouverture avec du réseau.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncExitDialogStay => 'Rester';
+
+  @override
+  String get syncExitDialogLeave => 'Quitter quand même';
+
+  @override
+  String profileLastSync(String when) {
+    return 'Dernière synchronisation : $when';
+  }
+
+  @override
+  String get profileLastSyncNever => 'Dernière synchronisation : jamais';
+
+  @override
+  String get profileLastSyncJustNow => 'à l\'instant';
+
+  @override
+  String profileLastSyncMinutes(int count) {
+    return 'il y a $count min';
+  }
+
+  @override
+  String profileLastSyncHours(int count) {
+    return 'il y a $count h';
+  }
+
+  @override
+  String profileLastSyncAbsolute(String date, String time) {
+    return '$date à $time';
+  }
+
+  @override
+  String profileLastSyncPendingSuffix(int count) {
+    return ' · $count en attente';
+  }
 }

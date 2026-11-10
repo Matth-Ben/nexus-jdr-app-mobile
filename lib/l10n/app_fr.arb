@@ -5172,5 +5172,171 @@
   "conditionsAccessDeniedMessage": "Vous n'avez pas accès à ce personnage.",
   "@conditionsAccessDeniedMessage": {
     "description": "Refus d'accès (RLS) à l'enregistrement des conditions d'un personnage (singulier)."
+  },
+  "syncBannerSyncing": "Synchronisation…",
+  "@syncBannerSyncing": {
+    "description": "Bandeau de synchro (`SyncStatusBanner`) : synchronisation en cours, visible après 1 s."
+  },
+  "syncBannerOfflineEmpty": "Hors ligne. Tes modifications seront envoyées au retour du réseau.",
+  "@syncBannerOfflineEmpty": {
+    "description": "Bandeau de synchro : hors ligne, aucune modification en attente (fiche seulement)."
+  },
+  "syncBannerOfflinePending": "{count, plural, =1{Hors ligne · 1 modification en attente} other{Hors ligne · {count} modifications en attente}}",
+  "@syncBannerOfflinePending": {
+    "description": "Bandeau de synchro : hors ligne avec des modifications en attente.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncBannerPendingOnline": "{count, plural, =1{1 modification en attente d'envoi} other{{count} modifications en attente d'envoi}}",
+  "@syncBannerPendingOnline": {
+    "description": "Bandeau de synchro : en ligne, des modifications attendent depuis plus de 3 s.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncBannerSynced": "Synchronisé",
+  "@syncBannerSynced": {
+    "description": "Bandeau de synchro : confirmation transitoire (2 s) après un état hors ligne/en attente."
+  },
+  "syncBannerOfflineSemantics": "Hors ligne",
+  "@syncBannerOfflineSemantics": {
+    "description": "Libellé d'accessibilité fixe (sans compteur, pour ne pas être ré-annoncé à chaque changement) de la région live du bandeau hors ligne."
+  },
+  "syncBannerDismissTooltip": "Fermer",
+  "@syncBannerDismissTooltip": {
+    "description": "Info-bulle/libellé d'accessibilité du bouton de fermeture d'une alerte de synchro."
+  },
+  "syncAlertUnknownCharacter": "ce personnage",
+  "@syncAlertUnknownCharacter": {
+    "description": "Repli du nom de personnage dans une alerte de synchro quand le nom n'a pas pu être retrouvé."
+  },
+  "syncAlertAbandonHp": "Modification non enregistrée : la dernière valeur connue des PV de {name} est {value}/{max}.",
+  "@syncAlertAbandonHp": {
+    "description": "Alerte d'abandon d'une écriture de PV.",
+    "placeholders": {
+      "name": {"type": "String"},
+      "value": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "syncAlertAbandonSlot": "Modification non enregistrée : la dernière valeur connue des emplacements de niveau {level} de {name} est {value}/{max}.",
+  "@syncAlertAbandonSlot": {
+    "description": "Alerte d'abandon d'une écriture d'emplacement de sort.",
+    "placeholders": {
+      "name": {"type": "String"},
+      "level": {"type": "int"},
+      "value": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "syncAlertAbandonXp": "Modification non enregistrée : la dernière valeur connue de l'XP de {name} est {value}.",
+  "@syncAlertAbandonXp": {
+    "description": "Alerte d'abandon d'une écriture d'XP.",
+    "placeholders": {
+      "name": {"type": "String"},
+      "value": {"type": "int"}
+    }
+  },
+  "syncAlertAbandonFallback": "Une modification de {name} n'a pas pu être enregistrée. La fiche affiche la valeur du serveur.",
+  "@syncAlertAbandonFallback": {
+    "description": "Alerte d'abandon de repli (aptitude, sort inné, repos, valeur serveur inconnue).",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "syncAlertConflictHp": "{name} a été modifié sur un autre appareil : les PV étaient à {value}/{max} sur le serveur. Ta modification hors ligne a été appliquée par-dessus.",
+  "@syncAlertConflictHp": {
+    "description": "Alerte de conflit F19 (même compte, deux appareils) sur les PV.",
+    "placeholders": {
+      "name": {"type": "String"},
+      "value": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "syncAlertConflictFallback": "{name} a été modifié sur un autre appareil. Ta modification hors ligne a été appliquée par-dessus.",
+  "@syncAlertConflictFallback": {
+    "description": "Alerte de conflit de repli (valeur serveur inconnue).",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "syncAlertMoreSuffix": "{count, plural, =1{ (+1 autre)} other{ (+{count} autres)}}",
+  "@syncAlertMoreSuffix": {
+    "description": "Suffixe ajouté à une alerte de synchro quand d'autres alertes attendent derrière elle.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncExitDialogTitle": "Quitter l'app ?",
+  "@syncExitDialogTitle": {
+    "description": "Titre du dialogue du retour Android depuis la liste racine quand des écritures sont en attente."
+  },
+  "syncExitDialogBody": "{count, plural, =1{1 modification en attente d'envoi. Elle reste enregistrée sur l'appareil et partira à la prochaine ouverture avec du réseau.} other{{count} modifications en attente d'envoi. Elles restent enregistrées sur l'appareil et partiront à la prochaine ouverture avec du réseau.}}",
+  "@syncExitDialogBody": {
+    "description": "Corps du dialogue de sortie Android.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncExitDialogStay": "Rester",
+  "@syncExitDialogStay": {
+    "description": "Bouton primaire du dialogue de sortie : ferme le dialogue."
+  },
+  "syncExitDialogLeave": "Quitter quand même",
+  "@syncExitDialogLeave": {
+    "description": "Bouton secondaire du dialogue de sortie : quitte l'app."
+  },
+  "profileLastSync": "Dernière synchronisation : {when}",
+  "@profileLastSync": {
+    "description": "Ligne du pied de page du Profil. {when} : durée relative ou date absolue.",
+    "placeholders": {
+      "when": {"type": "String"}
+    }
+  },
+  "profileLastSyncNever": "Dernière synchronisation : jamais",
+  "@profileLastSyncNever": {
+    "description": "Pied de page du Profil : aucune synchro réussie connue pour ce compte."
+  },
+  "profileLastSyncJustNow": "à l'instant",
+  "@profileLastSyncJustNow": {
+    "description": "Durée relative < 1 min."
+  },
+  "profileLastSyncMinutes": "il y a {count} min",
+  "@profileLastSyncMinutes": {
+    "description": "Durée relative < 60 min.",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "profileLastSyncHours": "il y a {count} h",
+  "@profileLastSyncHours": {
+    "description": "Durée relative < 24 h.",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "profileLastSyncAbsolute": "{date} à {time}",
+  "@profileLastSyncAbsolute": {
+    "description": "Date absolue locale (au-delà de 24 h). date/time déjà formatés par intl.",
+    "placeholders": {
+      "date": {"type": "String"},
+      "time": {"type": "String"}
+    }
+  },
+  "profileLastSyncPendingSuffix": " · {count} en attente",
+  "@profileLastSyncPendingSuffix": {
+    "description": "Suffixe de la ligne de dernière synchro quand des modifications attendent.",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
   }
 }

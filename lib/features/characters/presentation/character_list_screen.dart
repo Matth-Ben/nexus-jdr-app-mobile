@@ -1,12 +1,13 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/route_observer_provider.dart';
+import '../../../core/sync/sync_status_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -15,6 +16,7 @@ import '../../../core/widgets/display_text.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
+import '../../../core/widgets/sync_status_banner.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../app_update/presentation/widgets/update_suggested_banner.dart';
 import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
@@ -32,6 +34,7 @@ import 'widgets/character_delete_confirmation.dart';
 import 'widgets/character_list_filter_sheet.dart';
 import 'widgets/character_selection_action_bar.dart';
 import 'widgets/connection_error_state.dart';
+import 'widgets/sync_exit_dialog.dart';
 
 /// Facteur d'échelle de police au-delà duquel le bloc d'en-tête est plafonné
 /// (F21), même seuil que la bannière de mise à jour.
@@ -306,6 +309,26 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Retour Android depuis la liste racine : si des écritures hors-ligne
+    // attendent encore d'être envoyées, confirmation avant de quitter
+    // (T2 du chantier hors-ligne). Sans écriture en attente, le retour
+    // quitte l'app normalement. Aucun équivalent iOS.
+    final pendingCount = ref.watch(pendingWriteCountProvider()).value ?? 0;
+    return PopScope(
+      canPop: pendingCount == 0,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final leave = await showSyncExitDialog(
+          context,
+          pendingCount: pendingCount,
+        );
+        if (leave == true) await SystemNavigator.pop();
+      },
+      child: _buildList(context),
+    );
+  }
+
+  Widget _buildList(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final charactersAsync = ref.watch(charactersProvider);
 
@@ -351,6 +374,11 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
         children: [
           const _Header(),
           const SizedBox(height: AppSpacing.sm),
+          // Bandeau de synchro hors-ligne (T2 du chantier hors-ligne) : au-dessus
+          // de la mise à jour suggérée, avant la recherche. Total du compte.
+          const SyncStatusBanner(
+            visiblePadding: EdgeInsets.only(bottom: AppSpacing.sm),
+          ),
           // Bandeau "Mise à jour suggérée" (recettage
           // direction-artistique du 13/09/2026) — inséré
           // inconditionnellement : le widget se réduit lui-même à

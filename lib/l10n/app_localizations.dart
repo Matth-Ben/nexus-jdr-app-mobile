@@ -6347,6 +6347,162 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Vous n\'avez pas accès à ce personnage.'**
   String get conditionsAccessDeniedMessage;
+
+  /// Bandeau de synchro (`SyncStatusBanner`) : synchronisation en cours, visible après 1 s.
+  ///
+  /// In fr, this message translates to:
+  /// **'Synchronisation…'**
+  String get syncBannerSyncing;
+
+  /// Bandeau de synchro : hors ligne, aucune modification en attente (fiche seulement).
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors ligne. Tes modifications seront envoyées au retour du réseau.'**
+  String get syncBannerOfflineEmpty;
+
+  /// Bandeau de synchro : hors ligne avec des modifications en attente.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Hors ligne · 1 modification en attente} other{Hors ligne · {count} modifications en attente}}'**
+  String syncBannerOfflinePending(int count);
+
+  /// Bandeau de synchro : en ligne, des modifications attendent depuis plus de 3 s.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 modification en attente d\'envoi} other{{count} modifications en attente d\'envoi}}'**
+  String syncBannerPendingOnline(int count);
+
+  /// Bandeau de synchro : confirmation transitoire (2 s) après un état hors ligne/en attente.
+  ///
+  /// In fr, this message translates to:
+  /// **'Synchronisé'**
+  String get syncBannerSynced;
+
+  /// Libellé d'accessibilité fixe (sans compteur, pour ne pas être ré-annoncé à chaque changement) de la région live du bandeau hors ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors ligne'**
+  String get syncBannerOfflineSemantics;
+
+  /// Info-bulle/libellé d'accessibilité du bouton de fermeture d'une alerte de synchro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer'**
+  String get syncBannerDismissTooltip;
+
+  /// Repli du nom de personnage dans une alerte de synchro quand le nom n'a pas pu être retrouvé.
+  ///
+  /// In fr, this message translates to:
+  /// **'ce personnage'**
+  String get syncAlertUnknownCharacter;
+
+  /// Alerte d'abandon d'une écriture de PV.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modification non enregistrée : la dernière valeur connue des PV de {name} est {value}/{max}.'**
+  String syncAlertAbandonHp(String name, int value, int max);
+
+  /// Alerte d'abandon d'une écriture d'emplacement de sort.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modification non enregistrée : la dernière valeur connue des emplacements de niveau {level} de {name} est {value}/{max}.'**
+  String syncAlertAbandonSlot(String name, int level, int value, int max);
+
+  /// Alerte d'abandon d'une écriture d'XP.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modification non enregistrée : la dernière valeur connue de l\'XP de {name} est {value}.'**
+  String syncAlertAbandonXp(String name, int value);
+
+  /// Alerte d'abandon de repli (aptitude, sort inné, repos, valeur serveur inconnue).
+  ///
+  /// In fr, this message translates to:
+  /// **'Une modification de {name} n\'a pas pu être enregistrée. La fiche affiche la valeur du serveur.'**
+  String syncAlertAbandonFallback(String name);
+
+  /// Alerte de conflit F19 (même compte, deux appareils) sur les PV.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a été modifié sur un autre appareil : les PV étaient à {value}/{max} sur le serveur. Ta modification hors ligne a été appliquée par-dessus.'**
+  String syncAlertConflictHp(String name, int value, int max);
+
+  /// Alerte de conflit de repli (valeur serveur inconnue).
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a été modifié sur un autre appareil. Ta modification hors ligne a été appliquée par-dessus.'**
+  String syncAlertConflictFallback(String name);
+
+  /// Suffixe ajouté à une alerte de synchro quand d'autres alertes attendent derrière elle.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{ (+1 autre)} other{ (+{count} autres)}}'**
+  String syncAlertMoreSuffix(int count);
+
+  /// Titre du dialogue du retour Android depuis la liste racine quand des écritures sont en attente.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter l\'app ?'**
+  String get syncExitDialogTitle;
+
+  /// Corps du dialogue de sortie Android.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 modification en attente d\'envoi. Elle reste enregistrée sur l\'appareil et partira à la prochaine ouverture avec du réseau.} other{{count} modifications en attente d\'envoi. Elles restent enregistrées sur l\'appareil et partiront à la prochaine ouverture avec du réseau.}}'**
+  String syncExitDialogBody(int count);
+
+  /// Bouton primaire du dialogue de sortie : ferme le dialogue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rester'**
+  String get syncExitDialogStay;
+
+  /// Bouton secondaire du dialogue de sortie : quitte l'app.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter quand même'**
+  String get syncExitDialogLeave;
+
+  /// Ligne du pied de page du Profil. {when} : durée relative ou date absolue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dernière synchronisation : {when}'**
+  String profileLastSync(String when);
+
+  /// Pied de page du Profil : aucune synchro réussie connue pour ce compte.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dernière synchronisation : jamais'**
+  String get profileLastSyncNever;
+
+  /// Durée relative < 1 min.
+  ///
+  /// In fr, this message translates to:
+  /// **'à l\'instant'**
+  String get profileLastSyncJustNow;
+
+  /// Durée relative < 60 min.
+  ///
+  /// In fr, this message translates to:
+  /// **'il y a {count} min'**
+  String profileLastSyncMinutes(int count);
+
+  /// Durée relative < 24 h.
+  ///
+  /// In fr, this message translates to:
+  /// **'il y a {count} h'**
+  String profileLastSyncHours(int count);
+
+  /// Date absolue locale (au-delà de 24 h). date/time déjà formatés par intl.
+  ///
+  /// In fr, this message translates to:
+  /// **'{date} à {time}'**
+  String profileLastSyncAbsolute(String date, String time);
+
+  /// Suffixe de la ligne de dernière synchro quand des modifications attendent.
+  ///
+  /// In fr, this message translates to:
+  /// **' · {count} en attente'**
+  String profileLastSyncPendingSuffix(int count);
 }
 
 class _AppLocalizationsDelegate

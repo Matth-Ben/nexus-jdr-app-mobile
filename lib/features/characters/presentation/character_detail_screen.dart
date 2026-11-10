@@ -10,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/secondary_button.dart';
+import '../../../core/widgets/sync_status_banner.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
@@ -2564,6 +2565,18 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                     // directement (voir `character_story_tab_body.dart`).
                     CharacterDetailTab.story => null,
                   },
+          ),
+          // Bandeau de synchro hors-ligne : sticky, hors zone défilante
+          // (T2 du chantier hors-ligne), visible aussi pendant
+          // chargement/erreur de la fiche.
+          SyncStatusBanner(
+            characterId: widget.characterId,
+            visiblePadding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              AppSpacing.sm,
+            ),
           ),
           Expanded(
             child: detailAsync.when(

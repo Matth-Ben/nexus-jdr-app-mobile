@@ -263,6 +263,9 @@ class AlwaysOnlineConnectivityChecker implements ConnectivityChecker {
 
   @override
   Stream<bool> get onConnectivityRestored => const Stream.empty();
+
+  @override
+  Stream<bool> get onConnectivityChanged => const Stream.empty();
 }
 
 Future<(Object, String)> _fetchFirstTranslatedName(

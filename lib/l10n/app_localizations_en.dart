@@ -3852,4 +3852,138 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get conditionsAccessDeniedMessage =>
       'You don\'t have access to this character.';
+
+  @override
+  String get syncBannerSyncing => 'Syncing…';
+
+  @override
+  String get syncBannerOfflineEmpty =>
+      'Offline. Your changes will be sent when you\'re back online.';
+
+  @override
+  String syncBannerOfflinePending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Offline · $count changes pending',
+      one: 'Offline · 1 change pending',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String syncBannerPendingOnline(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count changes waiting to be sent',
+      one: '1 change waiting to be sent',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncBannerSynced => 'Synced';
+
+  @override
+  String get syncBannerOfflineSemantics => 'Offline';
+
+  @override
+  String get syncBannerDismissTooltip => 'Dismiss';
+
+  @override
+  String get syncAlertUnknownCharacter => 'this character';
+
+  @override
+  String syncAlertAbandonHp(String name, int value, int max) {
+    return 'Change not saved: the last known HP of $name are $value/$max.';
+  }
+
+  @override
+  String syncAlertAbandonSlot(String name, int level, int value, int max) {
+    return 'Change not saved: the last known level $level spell slots of $name are $value/$max.';
+  }
+
+  @override
+  String syncAlertAbandonXp(String name, int value) {
+    return 'Change not saved: the last known XP of $name is $value.';
+  }
+
+  @override
+  String syncAlertAbandonFallback(String name) {
+    return 'A change to $name could not be saved. The sheet shows the server value.';
+  }
+
+  @override
+  String syncAlertConflictHp(String name, int value, int max) {
+    return '$name was changed on another device: HP were $value/$max on the server. Your offline change was applied on top.';
+  }
+
+  @override
+  String syncAlertConflictFallback(String name) {
+    return '$name was changed on another device. Your offline change was applied on top.';
+  }
+
+  @override
+  String syncAlertMoreSuffix(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: ' (+$count more)',
+      one: ' (+1 more)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncExitDialogTitle => 'Leave the app?';
+
+  @override
+  String syncExitDialogBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count changes waiting to be sent. They stay saved on this device and will be sent the next time you open the app with a connection.',
+      one: '1 change waiting to be sent. It stays saved on this device and will be sent the next time you open the app with a connection.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncExitDialogStay => 'Stay';
+
+  @override
+  String get syncExitDialogLeave => 'Leave anyway';
+
+  @override
+  String profileLastSync(String when) {
+    return 'Last sync: $when';
+  }
+
+  @override
+  String get profileLastSyncNever => 'Last sync: never';
+
+  @override
+  String get profileLastSyncJustNow => 'just now';
+
+  @override
+  String profileLastSyncMinutes(int count) {
+    return '$count min ago';
+  }
+
+  @override
+  String profileLastSyncHours(int count) {
+    return '$count h ago';
+  }
+
+  @override
+  String profileLastSyncAbsolute(String date, String time) {
+    return '$date at $time';
+  }
+
+  @override
+  String profileLastSyncPendingSuffix(int count) {
+    return ' · $count pending';
+  }
 }

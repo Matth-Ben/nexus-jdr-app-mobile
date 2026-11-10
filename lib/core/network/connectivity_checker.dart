@@ -32,6 +32,12 @@ abstract class ConnectivityChecker {
   /// déconnecté, ni pour un changement d'interface connectée vers une autre
   /// interface elle aussi connectée.
   Stream<bool> get onConnectivityRestored;
+
+  /// Émet l'état de connectivité (`true` = connecté) à **chaque** changement,
+  /// perte comme retour (jamais deux fois la même valeur de suite) : alimente
+  /// le bandeau de synchro (`core/sync/`), qui doit aussi savoir quand le
+  /// réseau disparaît.
+  Stream<bool> get onConnectivityChanged;
 }
 
 /// Implémentation réelle, au-dessus de [Connectivity]. [connectivity]
@@ -55,6 +61,10 @@ class ConnectivityPlusChecker implements ConnectivityChecker {
   Stream<bool> get onConnectivityRestored => _connectivity.onConnectivityChanged
       .map(_isConnected)
       .where((connected) => connected);
+
+  @override
+  Stream<bool> get onConnectivityChanged =>
+      _connectivity.onConnectivityChanged.map(_isConnected).distinct();
 
   static bool _isConnected(List<ConnectivityResult> results) =>
       results.any((result) => result != ConnectivityResult.none);

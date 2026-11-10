@@ -71,6 +71,26 @@ class CharacterDetailCache {
     }
   }
 
+  /// Ligne `characters` brute en cache (dernier état serveur connu), `null`
+  /// si la fiche n'est pas en cache ou de forme inattendue. Sert à composer
+  /// les alertes de synchro (nom du personnage, valeur serveur).
+  Future<Map<String, dynamic>?> readRow({
+    required String ownerId,
+    required String characterId,
+  }) async {
+    try {
+      final payload = await _cache.get(
+        keyFor(ownerId: ownerId, characterId: characterId),
+      );
+      if (payload is! Map) return null;
+      final row = payload[rowKey];
+      if (row is! Map) return null;
+      return Map<String, dynamic>.from(row);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// PV (courants, temporaires) de la ligne `characters` en cache, c'est-à-
   /// dire la dernière valeur **confirmée par le serveur** connue de l'app
   /// (le cache ne reçoit jamais une valeur seulement mise en file) — base de

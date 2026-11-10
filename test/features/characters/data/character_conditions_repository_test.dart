@@ -24,6 +24,9 @@ class _Connectivity implements ConnectivityChecker {
 
   @override
   Stream<bool> get onConnectivityRestored => const Stream.empty();
+
+  @override
+  Stream<bool> get onConnectivityChanged => const Stream.empty();
 }
 
 /// Client Supabase réel dont le transport HTTP est fabriqué, authentifié en

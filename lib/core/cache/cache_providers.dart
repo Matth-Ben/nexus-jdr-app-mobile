@@ -3,6 +3,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'app_database.dart';
 import 'pending_character_write_queue.dart';
 import 'reference_data_cache.dart';
+import 'sync_alert_store.dart';
+import 'sync_state_store.dart';
 
 part 'cache_providers.g.dart';
 
@@ -33,4 +35,16 @@ ReferenceDataCache referenceDataCache(Ref ref) {
 @Riverpod(keepAlive: true)
 PendingCharacterWriteQueue pendingCharacterWriteQueue(Ref ref) {
   return PendingCharacterWriteQueue(ref.watch(appDatabaseProvider));
+}
+
+/// Alertes de synchro persistées (abandons, conflits) — voir [SyncAlertStore].
+@Riverpod(keepAlive: true)
+SyncAlertStore syncAlertStore(Ref ref) {
+  return SyncAlertStore(ref.watch(appDatabaseProvider));
+}
+
+/// Date de la dernière synchro réussie, par compte — voir [SyncStateStore].
+@Riverpod(keepAlive: true)
+SyncStateStore syncStateStore(Ref ref) {
+  return SyncStateStore(ref.watch(appDatabaseProvider));
 }
