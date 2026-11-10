@@ -127,7 +127,8 @@ class PendingCharacterWriteSyncer {
   /// Une entrée dont l'écriture réussit :
   /// - est reportée dans le cache de la fiche
   ///   (`CharacterDetailCache.applyConfirmedColumns`), **seulement pour
-  ///   `hp`/`xp`/`conditions`** (voir [_cacheColumnsOf]) : la synchro passe souvent fiche
+  ///   `hp`/`xp`/`conditions`** (voir [_cacheColumnsOf]) : la synchro passe
+  ///   souvent fiche
   ///   fermée (démarrage de l'app, retour du réseau), personne ne relit alors
   ///   la fiche et le cache resterait sur l'état serveur d'avant. Les autres
   ///   kinds (D11) ne touchent jamais `characters` directement — rien à
@@ -229,6 +230,13 @@ class PendingCharacterWriteSyncer {
             // serveur.
             final write = await _currentVersionOf(listed);
             if (write == null) return;
+            // P6b : un payload `conditions` valide en JSON mais sans liste est
+            // traité comme illisible : jamais d'écriture (un tableau vide
+            // effacerait toutes les conditions du serveur).
+            if (write.kind == PendingCharacterWriteKind.conditions &&
+                write.payload['conditions'] is! List) {
+              return;
+            }
 
             ServerValueConflict? conflict;
             try {

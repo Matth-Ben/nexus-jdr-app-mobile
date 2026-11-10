@@ -287,4 +287,74 @@ void main() {
     expect(await queue.allForOwner(_ownerA), isEmpty);
     expect(await queue.allForOwner(_ownerB), hasLength(1));
   });
+
+  for (final bad in <Map<String, dynamic>>[
+    {},
+    {'conditions': 'x'},
+    {'conditions': null},
+  ]) {
+    test('payload illisible $bad : aucune écriture conditions, les autres '
+        'entrées sont rejouées, rien n est effacé du serveur', () async {
+      await queue.enqueue(
+        characterId: _characterId,
+        ownerId: _ownerA,
+        kind: PendingCharacterWriteKind.conditions,
+        targetId: '',
+        payload: bad,
+      );
+      clock = clock.add(const Duration(seconds: 5));
+      await queue.enqueue(
+        characterId: _characterId,
+        ownerId: _ownerA,
+        kind: PendingCharacterWriteKind.hp,
+        targetId: '',
+        payload: {'currentHp': 4, 'temporaryHp': 0},
+      );
+
+      final synced = await syncer.sync();
+
+      expect(synced, {_characterId});
+      expect(server.characterRow['current_hp'], 4);
+      expect(server.characterRow['conditions'], ['poisoned']);
+      expect(
+        server.writes.where((w) => (w.body as Map).containsKey('conditions')),
+        isEmpty,
+      );
+    });
+  }
+
+  test('écriture en ligne : une entrée conditions remise en file pendant '
+      'l écriture n est pas retirée', () async {
+    await queue.enqueue(
+      characterId: _characterId,
+      ownerId: _ownerA,
+      kind: PendingCharacterWriteKind.conditions,
+      targetId: '',
+      payload: {
+        'conditions': ['prone'],
+      },
+    );
+    server.onWriteApplied = (_) async {
+      clock = clock.add(const Duration(seconds: 5));
+      await queue.enqueue(
+        characterId: _characterId,
+        ownerId: _ownerA,
+        kind: PendingCharacterWriteKind.conditions,
+        targetId: '',
+        payload: {
+          'conditions': ['blinded'],
+        },
+      );
+    };
+
+    final outcome = await conditions.setConditions(
+      characterId: _characterId,
+      conditions: [ConditionType.charmed],
+    );
+
+    expect(outcome, WriteOutcome.synced);
+    final rows = await queue.allForOwner(_ownerA);
+    expect(rows, hasLength(1));
+    expect(rows.single.payload['conditions'], ['blinded']);
+  });
 }
