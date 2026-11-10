@@ -40,6 +40,19 @@ void main() {
       await pumpUntilSettled(tester, attempts: 6);
 
       final name = qaUniqueCharacterName('QA-Test-ObjetPerso');
+      // Nettoyage garanti même si une étape échoue (idempotent : ne supprime
+      // que le personnage `QA-…` créé par ce test, no-op s'il n'existe plus).
+      addTearDown(() async {
+        try {
+          await Supabase.instance.client
+              .from('characters')
+              .delete()
+              .eq('name', name);
+        } on Object catch (error) {
+          // ignore: avoid_print
+          print('CLEANUP: échec de la suppression de "$name" : $error');
+        }
+      });
       await createCharacter(
         tester,
         characterName: name,
