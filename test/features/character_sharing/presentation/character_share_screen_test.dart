@@ -10,9 +10,11 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/theme/app_theme.dart';
 import 'package:personnages/features/character_sharing/data/character_sharing_repository.dart';
 import 'package:personnages/features/character_sharing/presentation/character_share_screen.dart';
 import 'package:personnages/features/character_sharing/presentation/providers/character_sharing_providers.dart';
@@ -447,7 +449,7 @@ void main() {
     fakeSharingRepository = _FakeCharacterSharingRepository();
   });
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({ThemeData? theme}) {
     return ProviderScope(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeCharacterRepository),
@@ -456,6 +458,7 @@ void main() {
         ),
       ],
       child: MaterialApp.router(
+        theme: theme,
         routerConfig: GoRouter(
           initialLocation: '/characters/char-1/share',
           routes: [
@@ -672,6 +675,53 @@ void main() {
           await tester.pumpWidget(buildTestWidget());
           await tester.pumpAndSettle();
           expect(expectDisplayTextSane(tester), greaterThan(0));
+        });
+      }
+    }
+  });
+
+  // D192 PR 3 : titre, contenu et boutons du dialogue de confirmation héritent
+  // du thème en police corps (aucun plafond display), grandissent librement et
+  // le dialogue défile plutôt que de déborder.
+  group('grande police : dialogue de confirmation', () {
+    for (final scale in [2.0, 3.0]) {
+      for (final width in displayScaleWidths) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          await useScaledView(tester, scale: scale, width: width, height: 640);
+          fakeCharacterRepository.detailToReturn = _baseDetail.copyWith(
+            shareToken: 'tok-xyz',
+          );
+          await tester.pumpWidget(buildTestWidget(theme: AppTheme.light));
+          await tester.pumpAndSettle();
+          await tester.scrollUntilVisible(
+            find.text('Désactiver le partage'),
+            200,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.tap(find.text('Désactiver le partage'));
+          await tester.pumpAndSettle();
+
+          expect(find.text('Désactiver le partage ?'), findsOneWidget);
+          for (final label in [
+            'Désactiver le partage ?',
+            'Annuler',
+            'Désactiver',
+          ]) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.descendant(
+                of: find.text(label).last,
+                matching: find.byType(RichText),
+              ),
+            );
+            expect(paragraph.text.style?.fontFamily, 'WorkSans', reason: label);
+            expect(paragraph.textScaler.scale(10), closeTo(10 * scale, 0.01));
+          }
+          expect(tester.takeException(), isNull);
+          // Les actions restent atteignables en faisant défiler le dialogue.
+          await tester.ensureVisible(find.text('Annuler'));
+          await tester.tap(find.text('Annuler'));
+          await tester.pumpAndSettle();
+          expect(find.text('Désactiver le partage ?'), findsNothing);
         });
       }
     }

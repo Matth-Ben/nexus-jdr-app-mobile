@@ -109,6 +109,9 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        // Titre et contenu en police corps qui grandit librement (D192 PR 3) :
+        // le dialogue défile plutôt que de déborder à x3,0.
+        scrollable: true,
         backgroundColor: AppColors.parchmentCard,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),

@@ -91,21 +91,27 @@ abstract final class AppTypography {
   /// d'improviser un style ad hoc — les couleurs par défaut ci-dessous
   /// conviennent aux écrans "parchemin" ; sur fond "scène", surcharger la
   /// couleur via `.copyWith(color: AppColors.textOnWood)` au point d'usage) :
-  /// - `headlineSmall`/`titleLarge`/`titleMedium`/`labelLarge` → `font.display`
-  ///   (titres d'écran, titres de carte, boutons, labels de navigation).
+  /// - `headlineSmall`/`titleMedium`/`labelLarge` → `font.body` en gras
+  ///   (titre de dialogue, menus, `TextButton`, chips) : un `ThemeData` ne peut
+  ///   pas plafonner l'agrandissement du texte, donc tout style hérité par un
+  ///   widget Material doit être en corps, qui grandit librement (décision du
+  ///   10/11/2026, D192 PR 3).
+  /// - `titleLarge` → `font.display` (titre d'AppBar). Aucun usage à ce jour ;
+  ///   un `AppBar` qui l'hériterait devrait envelopper son titre dans un
+  ///   `DisplayText` (plafonné) plutôt que laisser le `Text` brut.
   /// - `bodyLarge`/`bodyMedium`/`bodySmall` → `font.body` texte courant.
   /// - `titleSmall`/`labelMedium`/`labelSmall` → `font.body` en semi-gras
   ///   (labels de champ, valeurs importantes).
   static TextTheme get textTheme {
     return TextTheme(
-      headlineSmall: display(fontSize: 15),
+      headlineSmall: body(fontSize: 17, fontWeight: FontWeight.w700),
       titleLarge: display(fontSize: 13),
-      titleMedium: display(fontSize: 11),
+      titleMedium: body(fontSize: 15, fontWeight: FontWeight.w700),
       titleSmall: body(fontSize: 14, fontWeight: FontWeight.w700),
       bodyLarge: body(fontSize: 16),
       bodyMedium: body(fontSize: 14),
       bodySmall: body(fontSize: 12, color: AppColors.textMuted),
-      labelLarge: display(fontSize: 11),
+      labelLarge: body(fontSize: 14, fontWeight: FontWeight.w700),
       labelMedium: body(fontSize: 12, fontWeight: FontWeight.w600),
       labelSmall: body(
         fontSize: 11,
