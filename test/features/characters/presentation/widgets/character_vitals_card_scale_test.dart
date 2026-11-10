@@ -14,8 +14,9 @@ Future<void> _pump(WidgetTester tester, double textScale) async {
   // 400 dp et non 360 : la police de test (Ahem, 1 em par glyphe) est ~1,8 fois
   // plus large que WorkSans, la ligne PV tient sur 360 dp avec les vraies polices
   // mais pas avec Ahem.
-  await tester.binding.setSurfaceSize(const Size(400, 800));
-  addTearDown(() => tester.binding.setSurfaceSize(null));
+  tester.view.physicalSize = const Size(400, 800);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

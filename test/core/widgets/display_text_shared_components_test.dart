@@ -196,6 +196,82 @@ void main() {
     expect(h1, 48);
     expect(h15, greaterThan(48));
   });
+  // N1 : deux boutons demi-largeur (160 dp, paire `Expanded`) avec un mot long
+  // de 11 lettres : à x1,5 il ne tient pas à pleine échelle (11 x 16,5 dp >
+  // 144 dp utiles) ; le mot reste entier (échelle réduite, jamais sous x1,0
+  // donc jamais sous 11 px), et le rendu à x1,0 est inchangé.
+  final halfWidthButtons = <String, Widget Function(String)>{
+    'PrimaryButton': (l) => PrimaryButton(label: l, onPressed: () {}),
+    'SecondaryButton': (l) => SecondaryButton(label: l, onPressed: () {}),
+    'DestructiveButton (plein)': (l) =>
+        DestructiveButton(label: l, filled: true, onPressed: () {}),
+    'DashedButton': (l) =>
+        DashedButton(icon: Icons.add, label: l, onPressed: () {}),
+  };
+  for (final entry in halfWidthButtons.entries) {
+    for (final word in ['Enregistrer', 'Personnages']) {
+      testWidgets('${entry.key} demi-largeur, "$word" : mot entier à x1,5 et '
+          'x2,0, taille >= 11, inchangé à x1,0', (tester) async {
+        Widget pair() => SizedBox(
+          width: 360,
+          child: Row(
+            children: [
+              Expanded(child: entry.value(word)),
+              const SizedBox(width: 8),
+              Expanded(child: entry.value(word)),
+            ],
+          ),
+        );
+        double fontOf() {
+          final p = tester.renderObject<RenderParagraph>(
+            find.descendant(
+              of: find.byType(DisplayText).first,
+              matching: find.byType(RichText),
+            ),
+          );
+          return p.textScaler.scale(11);
+        }
+
+        await pumpScaled(
+          tester,
+          _inColumn(360, pair()),
+          scale: 1,
+          surface: surface,
+        );
+        expect(fontOf(), closeTo(11, 0.01));
+        for (final scale in [1.5, 2.0]) {
+          await pumpScaled(
+            tester,
+            _inColumn(360, pair()),
+            scale: scale,
+            surface: surface,
+          );
+          expect(tester.takeException(), isNull);
+          for (final element
+              in find
+                  .descendant(
+                    of: find.byType(DisplayText),
+                    matching: find.byType(RichText),
+                  )
+                  .evaluate()) {
+            final paragraph = element.renderObject! as RenderParagraph;
+            final plain = paragraph.text.toPlainText();
+            final painter = TextPainter(
+              text: TextSpan(text: plain, style: paragraph.text.style),
+              textDirection: TextDirection.ltr,
+              textScaler: paragraph.textScaler,
+            )..layout();
+            expect(
+              painter.width,
+              lessThanOrEqualTo(paragraph.size.width + 0.5),
+              reason: '"$plain" coupé à x$scale',
+            );
+            expect(paragraph.textScaler.scale(11), greaterThanOrEqualTo(11));
+          }
+        }
+      });
+    }
+  }
 }
 
 /// Hauteur non bornée, comme dans un `Column`/`ListView` réel : sans elle, le

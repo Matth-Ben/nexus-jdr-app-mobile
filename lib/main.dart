@@ -345,7 +345,7 @@ Future<BootstrapResult> _initializeSupabaseAndFirebase() async {
 /// Si [initialize] résout `supabaseReady: false` (Supabase indisponible), ni
 /// la vérification de version ni [child] ne sont construits — tous deux
 /// dépendent de `Supabase.instance.client`, qui planterait (voir la doc de
-/// [_initializeSupabaseAndFirebase]) — [_SupabaseUnavailableScreen] prend le
+/// [_initializeSupabaseAndFirebase]) — [SupabaseUnavailableScreen] prend le
 /// relais à la place, avec un bouton "Réessayer" qui relance [initialize].
 @visibleForTesting
 class AppBootstrap extends ConsumerStatefulWidget {
@@ -396,7 +396,7 @@ class _AppBootstrapState extends ConsumerState<AppBootstrap> {
           return MaterialApp(
             theme: AppTheme.light,
             debugShowCheckedModeBanner: false,
-            home: _SupabaseUnavailableScreen(onRetry: _retryInitialization),
+            home: SupabaseUnavailableScreen(onRetry: _retryInitialization),
           );
         }
 
@@ -480,8 +480,9 @@ class _AppBootstrapState extends ConsumerState<AppBootstrap> {
 /// Volontairement sommaire (pas de maquette dédiée à cet état, contrairement
 /// à [ForceUpdateScreen]/[SplashScreen]) : juste de quoi ne jamais laisser
 /// l'utilisateur face à un écran figé sans recours.
-class _SupabaseUnavailableScreen extends StatelessWidget {
-  const _SupabaseUnavailableScreen({required this.onRetry});
+@visibleForTesting
+class SupabaseUnavailableScreen extends StatelessWidget {
+  const SupabaseUnavailableScreen({required this.onRetry});
 
   final VoidCallback onRetry;
 

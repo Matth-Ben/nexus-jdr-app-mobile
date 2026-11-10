@@ -90,17 +90,73 @@ class DisplayText extends StatelessWidget {
         textScaler: scaler,
       );
     }
-    return Text(
-      data!,
-      style: style,
-      textAlign: textAlign,
-      maxLines: maxLines,
-      overflow: overflow,
-      softWrap: softWrap,
-      semanticsLabel: semanticsLabel,
-      textDirection: textDirection,
-      strutStyle: strutStyle,
-      textScaler: scaler,
-    );
+    if (tier == DisplayTier.control) {
+      // Repli "mot entier" : dans un bouton étroit (demi-largeur), un mot
+      // long à x1,5 serait coupé en plein mot ; on réduit alors l'échelle
+      // jusqu'à ce que le mot le plus long tienne, sans jamais passer sous la
+      // taille de base (x1,0, donc jamais sous 11 px en display). Sans effet
+      // si les mots tiennent déjà (rendu identique), ou si la largeur est
+      // non bornée. Pas de support des dimensions intrinsèques
+      // (`LayoutBuilder`) : ne pas placer sous `IntrinsicHeight`/`Width`.
+      return LayoutBuilder(
+        builder: (context, constraints) =>
+            _text(_fitLongestWord(context, scaler, constraints.maxWidth)),
+      );
+    }
+    return _text(scaler);
+  }
+
+  Widget _text(TextScaler scaler) => Text(
+    data!,
+    style: style,
+    textAlign: textAlign,
+    maxLines: maxLines,
+    overflow: overflow,
+    softWrap: softWrap,
+    semanticsLabel: semanticsLabel,
+    textDirection: textDirection,
+    strutStyle: strutStyle,
+    textScaler: scaler,
+  );
+
+  TextScaler _fitLongestWord(
+    BuildContext context,
+    TextScaler scaler,
+    double maxWidth,
+  ) {
+    if (!maxWidth.isFinite) return scaler;
+    final effective = DefaultTextStyle.of(context).style.merge(style);
+    final base = effective.fontSize ?? 14;
+    final words = data!.split(RegExp(r'\s+'))..removeWhere((w) => w.isEmpty);
+    if (words.isEmpty) return scaler;
+    final longest = words.reduce((a, b) => a.length >= b.length ? a : b);
+    final direction = textDirection ?? Directionality.of(context);
+
+    double widthAt(double factor) {
+      final painter = TextPainter(
+        text: TextSpan(text: longest, style: effective),
+        textDirection: direction,
+        textScaler: TextScaler.linear(factor),
+      )..layout();
+      final width = painter.width;
+      painter.dispose();
+      return width;
+    }
+
+    final current = scaler.scale(base) / base;
+    if (current <= 1 || widthAt(current) <= maxWidth) return scaler;
+    // Recherche dichotomique du plus grand facteur dans [1, current] qui
+    // fait tenir le mot ; si même x1,0 ne tient pas, on reste à x1,0.
+    var low = 1.0;
+    var high = current;
+    for (var i = 0; i < 10; i++) {
+      final mid = (low + high) / 2;
+      if (widthAt(mid) <= maxWidth) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+    return TextScaler.linear(low);
   }
 }

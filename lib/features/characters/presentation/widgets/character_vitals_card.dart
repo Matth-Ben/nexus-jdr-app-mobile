@@ -132,9 +132,11 @@ class _RestButton extends StatelessWidget {
 
 /// Valeur `body` jumelée à une étiquette display PV/XP de la carte (décision
 /// du 10/11/2026) : plafonnée à [AppTypography.maxVitalsValueScaleFactor]
-/// (x1,6) pour que la paire étiquette + valeur tienne sur la ligne de largeur
-/// contrainte de la carte. Exception ciblée : le corps reste libre partout
-/// ailleurs, y compris dans le reste de cette carte.
+/// (x1,6) pour que la paire étiquette + valeur tienne sur une ligne à largeur
+/// contrainte (la `Row` de l'étiquette), même si la carte est dans une page
+/// défilante (le défilement est vertical, la largeur reste bornée). Exception
+/// ciblée : le corps reste libre partout ailleurs, y compris dans le reste de
+/// cette carte.
 class _VitalsValueText extends StatelessWidget {
   const _VitalsValueText(this.data, {required this.style});
 
