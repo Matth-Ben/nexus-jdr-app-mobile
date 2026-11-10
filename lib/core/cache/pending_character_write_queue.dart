@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import 'app_database.dart';
+import 'app_database.dart' as drift_rows show PendingCharacterWrite;
 
 /// Les six types d'écriture rendus hors-ligne-capables — voir la doc de
 /// classe de [PendingCharacterWrites]. Périmètre étendu le 09/10/2026 (D11 du
@@ -51,15 +52,35 @@ enum PendingCharacterWriteKind {
   /// Valeur stockée telle quelle dans `PendingCharacterWrites.kind`.
   final String storageKey;
 
-  static PendingCharacterWriteKind fromStorageKey(String value) =>
-      PendingCharacterWriteKind.values.firstWhere(
-        (kind) => kind.storageKey == value,
-        orElse: () => throw ArgumentError.value(
-          value,
-          'value',
-          'Kind de PendingCharacterWrites inconnu.',
-        ),
-      );
+  /// `null` si [value] n'est pas un kind connu de cette version de l'app
+  /// (ligne écrite par une version plus récente, ou plus ancienne) : jamais
+  /// d'exception, un kind inconnu est ignoré par les lectures de la file au
+  /// lieu de faire échouer toute la synchro (ou le démarrage de l'app).
+  static PendingCharacterWriteKind? fromStorageKey(String value) {
+    for (final kind in PendingCharacterWriteKind.values) {
+      if (kind.storageKey == value) return kind;
+    }
+    return null;
+  }
+}
+
+/// Une entrée abandonnée (D34/D186) au moment où elle est consommée : le
+/// message à montrer au joueur ET le personnage concerné, pour que l'appelant
+/// puisse invalider la fiche de ce personnage (sans quoi l'écran garde
+/// l'ancienne superposition optimiste).
+class AbandonedWrite {
+  const AbandonedWrite({
+    required this.characterId,
+    required this.kindKey,
+    required this.message,
+  });
+
+  final String characterId;
+
+  /// `PendingCharacterWriteKind.storageKey` tel que stocké (peut être un kind
+  /// inconnu de cette version).
+  final String kindKey;
+  final String message;
 }
 
 /// Une ligne de [PendingCharacterWrites] déjà décodée — voir
@@ -253,6 +274,7 @@ class PendingCharacterWriteQueue {
       final existing =
           await (_db.select(_db.pendingCharacterWrites)..where(
                 (row) =>
+                    row.ownerId.equals(ownerId) &
                     row.characterId.equals(characterId) &
                     row.kind.equals(kind.storageKey) &
                     row.targetId.equals(targetId),
@@ -311,9 +333,9 @@ class PendingCharacterWriteQueue {
   /// `(characterId, kind, targetId)` supprimerait alors cette valeur plus récente,
   /// jamais envoyée : ajustement perdu sans message.
   ///
-  /// [ownerId] fait partie du filtre bien qu'il ne fasse pas partie de la
-  /// clé primaire : un compte ne retire jamais l'entrée en attente d'un
-  /// autre compte du même appareil.
+  /// [ownerId] fait partie du filtre (et de la clé primaire depuis le schéma
+  /// v5) : un compte ne retire jamais l'entrée en attente d'un autre compte
+  /// du même appareil.
   Future<bool> removeIfUnchanged(PendingCharacterWrite write) async {
     final removed =
         await (_db.delete(_db.pendingCharacterWrites)..where(
@@ -358,29 +380,54 @@ class PendingCharacterWriteQueue {
     required String characterId,
   }) async {
     final rows =
-        await (_db.select(_db.pendingCharacterWrites)..where(
-              (row) =>
-                  row.ownerId.equals(ownerId) &
-                  row.characterId.equals(characterId) &
-                  row.abandoned.equals(false),
-            ))
+        await (_db.select(_db.pendingCharacterWrites)
+              ..where(
+                (row) =>
+                    row.ownerId.equals(ownerId) &
+                    row.characterId.equals(characterId) &
+                    row.abandoned.equals(false),
+              )
+              ..orderBy(_replayOrder))
             .get();
+    return _decode(rows);
+  }
 
-    final knownKinds = {
-      for (final kind in PendingCharacterWriteKind.values)
-        kind.storageKey: kind,
-    };
+  /// Ordre de rejeu, déterministe : mise en file (`queuedAt`, qui avance à
+  /// chaque remplacement, voir [enqueue]), puis clé primaire pour départager
+  /// deux entrées de même horodatage. Ne dépend jamais de l'ordre de parcours
+  /// physique de la table SQLite.
+  static List<OrderingTerm Function($PendingCharacterWritesTable)>
+  get _replayOrder => [
+    (row) => OrderingTerm.asc(row.queuedAt),
+    (row) => OrderingTerm.asc(row.characterId),
+    (row) => OrderingTerm.asc(row.kind),
+    (row) => OrderingTerm.asc(row.targetId),
+  ];
+
+  /// Décode des lignes en [PendingCharacterWrite] ; une ligne dont le `kind`
+  /// est inconnu de cette version, ou dont le payload est illisible, est
+  /// ignorée (jamais d'exception : elle ne doit pas empêcher de synchroniser
+  /// ou d'afficher le reste).
+  List<PendingCharacterWrite> _decode(
+    List<drift_rows.PendingCharacterWrite> stored,
+  ) {
     final writes = <PendingCharacterWrite>[];
-    for (final row in rows) {
-      final kind = knownKinds[row.kind];
+    for (final row in stored) {
+      final kind = PendingCharacterWriteKind.fromStorageKey(row.kind);
       if (kind == null) continue;
+      final Map<String, dynamic> payload;
+      try {
+        payload = Map<String, dynamic>.from(jsonDecode(row.payload) as Map);
+      } catch (_) {
+        continue;
+      }
       writes.add(
         PendingCharacterWrite(
           characterId: row.characterId,
           ownerId: row.ownerId,
           kind: kind,
           targetId: row.targetId,
-          payload: Map<String, dynamic>.from(jsonDecode(row.payload) as Map),
+          payload: payload,
           rawPayload: row.payload,
           queuedAt: row.queuedAt,
         ),
@@ -396,24 +443,14 @@ class PendingCharacterWriteQueue {
   /// .sync` ne doit plus jamais les retenter une fois abandonnées.
   Future<List<PendingCharacterWrite>> allForOwner(String ownerId) async {
     final rows =
-        await (_db.select(_db.pendingCharacterWrites)..where(
-              (row) =>
-                  row.ownerId.equals(ownerId) & row.abandoned.equals(false),
-            ))
+        await (_db.select(_db.pendingCharacterWrites)
+              ..where(
+                (row) =>
+                    row.ownerId.equals(ownerId) & row.abandoned.equals(false),
+              )
+              ..orderBy(_replayOrder))
             .get();
-
-    return [
-      for (final row in rows)
-        PendingCharacterWrite(
-          characterId: row.characterId,
-          ownerId: row.ownerId,
-          kind: PendingCharacterWriteKind.fromStorageKey(row.kind),
-          targetId: row.targetId,
-          payload: Map<String, dynamic>.from(jsonDecode(row.payload) as Map),
-          rawPayload: row.payload,
-          queuedAt: row.queuedAt,
-        ),
-    ];
+    return _decode(rows);
   }
 
   /// Compte un refus **non rejouable** (contrainte, RLS — voir
@@ -499,15 +536,29 @@ class PendingCharacterWriteQueue {
   /// définitivement les lignes renvoyées, elles ne sont donc jamais signalées
   /// deux fois (voir `CharacterWriteSyncCoordinator`, seul appelant prévu,
   /// qui les affiche par un `SnackBar` global dès qu'il en reçoit).
-  Future<List<String>> consumeAbandonedMessages({required String ownerId}) {
+  Future<List<String>> consumeAbandonedMessages({
+    required String ownerId,
+  }) async {
+    final abandoned = await consumeAbandoned(ownerId: ownerId);
+    return [for (final entry in abandoned) entry.message];
+  }
+
+  /// Comme [consumeAbandonedMessages], mais renvoie aussi le personnage de
+  /// chaque entrée abandonnée (D186) : l'appelant doit invalider la fiche de
+  /// ces personnages — une entrée abandonnée cesse d'être superposée à la
+  /// fiche ([forCharacter]), mais une fiche déjà affichée ne le sait pas
+  /// tant qu'elle n'est pas relue.
+  Future<List<AbandonedWrite>> consumeAbandoned({required String ownerId}) {
     return _db.transaction(() async {
       final rows =
-          await (_db.select(_db.pendingCharacterWrites)..where(
-                (row) =>
-                    row.ownerId.equals(ownerId) & row.abandoned.equals(true),
-              ))
+          await (_db.select(_db.pendingCharacterWrites)
+                ..where(
+                  (row) =>
+                      row.ownerId.equals(ownerId) & row.abandoned.equals(true),
+                )
+                ..orderBy(_replayOrder))
               .get();
-      if (rows.isEmpty) return const <String>[];
+      if (rows.isEmpty) return const <AbandonedWrite>[];
 
       await (_db.delete(_db.pendingCharacterWrites)..where(
             (row) => row.ownerId.equals(ownerId) & row.abandoned.equals(true),
@@ -516,7 +567,11 @@ class PendingCharacterWriteQueue {
 
       return [
         for (final row in rows)
-          row.lastFailureMessage ?? _fallbackAbandonMessage,
+          AbandonedWrite(
+            characterId: row.characterId,
+            kindKey: row.kind,
+            message: row.lastFailureMessage ?? _fallbackAbandonMessage,
+          ),
       ];
     });
   }

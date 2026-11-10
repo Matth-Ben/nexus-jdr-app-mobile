@@ -299,6 +299,20 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// indépendantes : voir [_castSpell]/[_effectiveDetail].
   Map<int, int> _localSpellSlotsUsed = {};
 
+  /// Niveaux de [_localSpellSlotsUsed] dont le dernier lancer a été
+  /// **réellement mis en file** hors ligne ([WriteOutcome.queued]) et non
+  /// confirmé (D186). Pour ces niveaux, la superposition fait foi côté file
+  /// (`SupabaseCharacterRepository._withPendingWrites`, source unique) : le
+  /// remplacement local est relâché dès que `characterDetailProvider` livre
+  /// une nouvelle fiche, qu'elle porte la valeur de la file (rouverture,
+  /// relecture) ou la valeur serveur (écriture **abandonnée**, la file ne la
+  /// superpose plus et le coordinateur invalide la fiche) — sans quoi l'écran
+  /// gardait indéfiniment un compteur que la base n'a jamais reçu.
+  final Set<int> _queuedSlotLevels = {};
+
+  /// Équivalent de [_queuedSlotLevels] pour [_localPactSlotUsed].
+  bool _pactSlotQueued = false;
+
   /// État optimiste local des utilisations restantes d'aptitudes de classe
   /// (`character_feature_uses.uses_remaining`) — `{class_feature_id:
   /// uses_remaining}`, même principe que [_localSpellSlotsUsed] mais pour
@@ -633,6 +647,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     final myRestGeneration = _restGeneration;
     setState(() {
       _localSpellSlotsUsed = {..._localSpellSlotsUsed, slotLevel: newUsed};
+      _queuedSlotLevels.remove(slotLevel);
       _isCastingSpell = true;
     });
 
@@ -657,7 +672,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // (rien à annuler : il sera rejoué au retour du réseau), même
         // message honnête que [_applyHpState]/[_addXp]
         // ([_offlineQueuedMessage]). Aucune fiche à relire côté serveur pour
-        // l'instant.
+        // l'instant. Ce remplacement local n'est pourtant tenu que jusqu'à
+        // la prochaine fiche livrée (D186, voir [_queuedSlotLevels]) : c'est
+        // la file, superposée par le dépôt, qui fait ensuite foi.
+        _queuedSlotLevels.add(slotLevel);
         _showSnackBar(_offlineQueuedMessage(l10n));
         return;
       }
@@ -718,6 +736,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     final myRestGeneration = _restGeneration;
     setState(() {
       _localPactSlotUsed = newUsed;
+      _pactSlotQueued = false;
       _isCastingSpell = true;
     });
 
@@ -737,7 +756,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       if (outcome == WriteOutcome.queued) {
         // D11 : même règle que la branche classique ci-dessus (voir son
         // commentaire) — mise en file réelle désormais, état optimiste
-        // conservé tel quel.
+        // conservé tel quel — jusqu'à la prochaine fiche livrée (D186, voir
+        // [_pactSlotQueued]).
+        _pactSlotQueued = true;
         _showSnackBar(_offlineQueuedMessage(l10n));
         return;
       }
@@ -2051,6 +2072,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             appliedGain: appliedGain,
             hitDiceRecoveredByClassId: hitDiceRecoveredByClassId,
           );
+      if (outcome == WriteOutcome.restAlreadyPending) {
+        // D187 : un repos est déjà en attente, rien n'a été écrit — passe par
+        // la branche d'échec ci-dessous (retour à l'état d'avant le repos).
+        throw CharacterFailure(l10n.characterDetailRestAlreadyPendingMessage);
+      }
       if (outcome == WriteOutcome.queued) {
         // D11 du registre de dette technique (09/10/2026) : ce repos est
         // réellement mis en file (`PendingCharacterWriteQueue`, kind `rest`)
@@ -2245,9 +2271,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         if (_localSpellSlotsUsed.isNotEmpty) {
           final remaining = _confirmedEntriesRemoved(
             _localSpellSlotsUsed,
-            (level, used) => detail.spellSlots.any(
-              (slot) => slot.level == level && slot.used == used,
-            ),
+            (level, used) =>
+                _queuedSlotLevels.remove(level) ||
+                detail.spellSlots.any(
+                  (slot) => slot.level == level && slot.used == used,
+                ),
           );
           if (remaining.length != _localSpellSlotsUsed.length) {
             _localSpellSlotsUsed = remaining;
@@ -2288,8 +2316,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // simple plutôt qu'une map, un seul pool de pacte possible).
         final localPactUsed = _localPactSlotUsed;
         if (localPactUsed != null &&
-            detail.pactSpellSlot?.used == localPactUsed) {
+            (_pactSlotQueued || detail.pactSpellSlot?.used == localPactUsed)) {
           _localPactSlotUsed = null;
+          _pactSlotQueued = false;
           shouldSetState = true;
         }
 

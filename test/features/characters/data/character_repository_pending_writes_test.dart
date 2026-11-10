@@ -96,7 +96,14 @@ void main() {
     final matching = pending.where(
       (write) => write.characterId == _characterId && write.kind == kind,
     );
-    return matching.isEmpty ? null : matching.single.payload;
+    if (matching.isEmpty) return null;
+    // Les cles `base*` (base serveur de la detection F19/D178, T1) sont
+    // couvertes par `test/core/sync/offline_write_queue_harness_test.dart` :
+    // ces scenarios ne comparent que les valeurs saisies par le joueur.
+    return {
+      for (final entry in matching.single.payload.entries)
+        if (!entry.key.startsWith('base')) entry.key: entry.value,
+    };
   }
 
   /// "Ouvre" la fiche en ligne une première fois : peuple le cache avec

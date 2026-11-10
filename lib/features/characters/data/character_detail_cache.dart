@@ -70,4 +70,85 @@ class CharacterDetailCache {
       // Best-effort : voir la documentation de cette méthode.
     }
   }
+
+  /// PV (courants, temporaires) de la ligne `characters` en cache, c'est-à-
+  /// dire la dernière valeur **confirmée par le serveur** connue de l'app
+  /// (le cache ne reçoit jamais une valeur seulement mise en file) — base de
+  /// comparaison de la détection de modification concurrente (F19/D178).
+  /// `null` si la fiche n'est pas en cache ou si les colonnes manquent.
+  Future<({int currentHp, int temporaryHp})?> readHp({
+    required String ownerId,
+    required String characterId,
+  }) async {
+    try {
+      final payload = await _cache.get(
+        keyFor(ownerId: ownerId, characterId: characterId),
+      );
+      if (payload is! Map) return null;
+      final row = payload[rowKey];
+      if (row is! Map) return null;
+      final current = row['current_hp'];
+      final temporary = row['temporary_hp'];
+      if (current is! num || temporary is! num) return null;
+      return (currentHp: current.toInt(), temporaryHp: temporary.toInt());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Reporte dans la fiche en cache un `slots_used` confirmé par le serveur
+  /// pour un emplacement de sort (D185) : `character_spell_slots` (liste de
+  /// lignes, une par niveau) ou `character_pact_slots` (objet unique, ou
+  /// liste à un élément — voir `CharacterDetailRowMapper.parsePactSpellSlot`).
+  /// Mêmes garanties que [applyConfirmedColumns] (rien si la fiche n'est pas
+  /// en cache, best-effort, jamais pour une valeur seulement mise en file).
+  Future<void> applyConfirmedSpellSlot({
+    required String ownerId,
+    required String characterId,
+    required int slotLevel,
+    required int slotsUsed,
+    required bool isPactSlot,
+  }) async {
+    final column = isPactSlot
+        ? 'character_pact_slots'
+        : 'character_spell_slots';
+    Map<String, dynamic> patched(Map<dynamic, dynamic> slotRow) {
+      final copy = Map<String, dynamic>.from(slotRow);
+      if ((copy['slot_level'] as num?)?.toInt() == slotLevel) {
+        copy['slots_used'] = slotsUsed;
+      }
+      return copy;
+    }
+
+    try {
+      await _cache.updateIfPresent(
+        keyFor(ownerId: ownerId, characterId: characterId),
+        (payload) {
+          if (payload is! Map) return null;
+          final row = payload[rowKey];
+          if (row is! Map) return null;
+          final raw = row[column];
+          final Object updated;
+          if (raw is List) {
+            updated = [
+              for (final entry in raw) entry is Map ? patched(entry) : entry,
+            ];
+          } else if (raw is Map) {
+            updated = patched(raw);
+          } else {
+            return null;
+          }
+          return <String, dynamic>{
+            ...Map<String, dynamic>.from(payload),
+            rowKey: <String, dynamic>{
+              ...Map<String, dynamic>.from(row),
+              column: updated,
+            },
+          };
+        },
+      );
+    } catch (_) {
+      // Best-effort : voir la documentation de cette méthode.
+    }
+  }
 }

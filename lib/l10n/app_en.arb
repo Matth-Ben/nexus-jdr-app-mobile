@@ -419,6 +419,7 @@
   "characterDetailFeatureSyncErrorMessage": "Unable to sync class features. Please try again.",
   "characterDetailXpAddErrorMessage": "Unable to add XP. Please try again.",
   "characterDetailOfflineQueuedMessage": "Offline: will sync once you're back online.",
+  "characterDetailRestAlreadyPendingMessage": "A rest is already waiting to sync for this character. Wait until you're back online before taking another one.",
   "characterDetailArmorClassAdjustErrorMessage": "Unable to adjust Armor Class. Please try again.",
 
   "characterVitalsCardRestButton": "Rest",

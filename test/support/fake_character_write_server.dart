@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -81,7 +82,7 @@ class FakeCharacterWriteServer {
   /// Appelé après chaque requête d'écriture appliquée (avant la perte
   /// éventuelle de réponse) : permet à un test d'injecter un
   /// [concurrentChange] au moment précis voulu.
-  void Function(RecordedRequest request)? onWriteApplied;
+  FutureOr<void> Function(RecordedRequest request)? onWriteApplied;
 
   List<RecordedRequest> get writes =>
       requests.where((r) => r.isWrite).toList(growable: false);
@@ -153,7 +154,7 @@ class FakeCharacterWriteServer {
       characterRow = {...characterRow, ...Map<String, dynamic>.from(body)};
     }
     final applied = record(applied: true);
-    onWriteApplied?.call(applied);
+    await onWriteApplied?.call(applied);
 
     if (_failAfterApply > 0) {
       _failAfterApply--;

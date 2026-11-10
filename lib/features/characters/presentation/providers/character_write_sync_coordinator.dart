@@ -7,6 +7,7 @@ import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/network/connectivity_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../../../core/notifications/notification_providers.dart';
+import '../../data/pending_character_write_syncer.dart';
 import 'character_detail_provider.dart';
 import 'character_providers.dart';
 
@@ -54,13 +55,30 @@ class CharacterWriteSyncCoordinator {
         .listen((_) => unawaited(_sync()));
   }
 
+  final StreamController<ServerValueConflict> _conflicts =
+      StreamController<ServerValueConflict>.broadcast();
+
+  /// Modifications concurrentes détectées au rejeu (F19/D178) : le serveur
+  /// avait changé depuis la mise en file, l'écriture en file a été rejouée
+  /// quand même (alerte **non bloquante**, jamais un blocage). Flux en
+  /// mémoire, sans abonné par défaut : consommé plus tard par l'alerte de la
+  /// tranche T8 du chantier hors-ligne.
+  Stream<ServerValueConflict> get conflicts => _conflicts.stream;
+
   Future<void> _sync() async {
-    final syncedCharacterIds = await _ref
+    final report = await _ref
         .read(pendingCharacterWriteSyncerProvider)
-        .sync();
-    for (final characterId in syncedCharacterIds) {
+        .syncWithReport();
+    // Synchronisés ET abandonnés (D186) : une entrée abandonnée cesse d'être
+    // superposée à la fiche, mais une fiche déjà affichée ne le sait pas
+    // tant qu'elle n'est pas relue.
+    for (final characterId in {
+      ...report.synced,
+      ...report.abandonedCharacterIds,
+    }) {
       _ref.invalidate(characterDetailProvider(characterId));
     }
+    if (!_conflicts.isClosed) report.conflicts.forEach(_conflicts.add);
     await _notifyAbandonedWrites();
   }
 
@@ -106,11 +124,14 @@ class CharacterWriteSyncCoordinator {
       final messenger = _ref.read(scaffoldMessengerKeyProvider).currentState;
       if (messenger == null) return;
 
-      final messages = await _ref
+      final abandoned = await _ref
           .read(pendingCharacterWriteQueueProvider)
-          .consumeAbandonedMessages(ownerId: ownerId);
-      for (final message in messages) {
-        messenger.showSnackBar(SnackBar(content: Text(message)));
+          .consumeAbandoned(ownerId: ownerId);
+      for (final entry in abandoned) {
+        // Aussi pour une entrée abandonnée lors d'un passage précédent
+        // (app tuée avant l'affichage) : sa fiche doit être relue.
+        _ref.invalidate(characterDetailProvider(entry.characterId));
+        messenger.showSnackBar(SnackBar(content: Text(entry.message)));
       }
     } catch (_) {
       // Best-effort — voir la documentation de cette méthode.
@@ -119,5 +140,6 @@ class CharacterWriteSyncCoordinator {
 
   void dispose() {
     unawaited(_subscription?.cancel());
+    unawaited(_conflicts.close());
   }
 }

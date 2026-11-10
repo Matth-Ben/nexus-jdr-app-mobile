@@ -463,9 +463,11 @@ class _ScriptedSyncer extends PendingCharacterWriteSyncer {
   int callCount = 0;
 
   @override
-  Future<Set<String>> sync({Set<PendingCharacterWriteKind>? onlyKinds}) async {
+  Future<SyncReport> syncWithReport({
+    Set<PendingCharacterWriteKind>? onlyKinds,
+  }) async {
     callCount++;
-    return resultToReturn;
+    return SyncReport(synced: resultToReturn);
   }
 }
 

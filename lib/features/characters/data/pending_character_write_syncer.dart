@@ -8,6 +8,48 @@ import '../domain/rest_type.dart';
 import 'character_detail_cache.dart';
 import 'character_repository.dart';
 
+/// Une modification concurrente détectée au rejeu d'une écriture en file
+/// (F19/D178) : le serveur ne porte plus la valeur qu'avait l'app quand
+/// l'écriture a été mise en file. L'écriture a été **rejouée quand même**
+/// ([queuedValue] est maintenant sur le serveur, [serverValue] est écrasée) —
+/// signal destiné à l'alerte non bloquante (tranche T8).
+class ServerValueConflict {
+  const ServerValueConflict({
+    required this.characterId,
+    required this.kind,
+    required this.serverValue,
+    required this.queuedValue,
+  });
+
+  final String characterId;
+  final PendingCharacterWriteKind kind;
+
+  /// Valeur trouvée sur le serveur au moment du rejeu (avant écrasement).
+  final Map<String, dynamic> serverValue;
+
+  /// Valeur de la file, désormais écrite sur le serveur.
+  final Map<String, dynamic> queuedValue;
+}
+
+/// Compte rendu d'une passe de [PendingCharacterWriteSyncer.syncWithReport].
+class SyncReport {
+  const SyncReport({
+    this.synced = const {},
+    this.abandonedCharacterIds = const {},
+    this.conflicts = const [],
+  });
+
+  /// Personnages dont au moins une entrée a été écrite avec succès.
+  final Set<String> synced;
+
+  /// Personnages dont une entrée vient d'être abandonnée pendant cette passe
+  /// (refus non rejouable répété, D34/D186).
+  final Set<String> abandonedCharacterIds;
+
+  /// Modifications concurrentes détectées (écriture rejouée malgré tout).
+  final List<ServerValueConflict> conflicts;
+}
+
 /// Vide, best-effort, la file d'attente [PendingCharacterWrites]
 /// (`core/cache/pending_character_write_queue.dart`) en écrivant directement
 /// en base chaque entrée en attente — jamais via
@@ -147,14 +189,26 @@ class PendingCharacterWriteSyncer {
   /// l'appel imbriqué à `{hp, xp}` (seul besoin réel de D35, voir sa
   /// documentation), il ne retente jamais la clé `rest`/`spellSlot`/
   /// `innateSpell`/`classFeature` déjà tenue par l'appelant.
-  Future<Set<String>> sync({Set<PendingCharacterWriteKind>? onlyKinds}) async {
+  Future<Set<String>> sync({Set<PendingCharacterWriteKind>? onlyKinds}) async =>
+      (await syncWithReport(onlyKinds: onlyKinds)).synced;
+
+  /// Comme [sync] mais renvoie le compte rendu complet de la passe
+  /// ([SyncReport]) : personnages synchronisés, personnages dont une entrée
+  /// vient d'être **abandonnée** (D186 : leur fiche doit être invalidée, une
+  /// entrée abandonnée n'est plus superposée) et modifications concurrentes
+  /// détectées (F19/D178). Seul le coordinateur de synchro en a besoin.
+  Future<SyncReport> syncWithReport({
+    Set<PendingCharacterWriteKind>? onlyKinds,
+  }) async {
     final ownerId = _client.auth.currentUser?.id;
     if (ownerId == null) {
-      return const {};
+      return const SyncReport();
     }
 
     final pending = await _pendingWrites.allForOwner(ownerId);
     final synced = <String>{};
+    final abandoned = <String>{};
+    final conflicts = <ServerValueConflict>[];
 
     for (final listed in pending) {
       if (onlyKinds != null && !onlyKinds.contains(listed.kind)) continue;
@@ -176,14 +230,18 @@ class PendingCharacterWriteSyncer {
             final write = await _currentVersionOf(listed);
             if (write == null) return;
 
+            ServerValueConflict? conflict;
             try {
+              conflict = await _detectConcurrentChange(write, ownerId: ownerId);
               await _applyWrite(write, ownerId: ownerId);
             } on PostgrestException catch (error) {
               if (_isNonRetryable(error)) {
-                await _pendingWrites.recordNonRetryableFailure(
-                  write: write,
-                  reason: _abandonMessage(write.kind),
-                );
+                final justAbandoned = await _pendingWrites
+                    .recordNonRetryableFailure(
+                      write: write,
+                      reason: _abandonMessage(write.kind),
+                    );
+                if (justAbandoned) abandoned.add(write.characterId);
               }
               rethrow;
             }
@@ -200,8 +258,21 @@ class PendingCharacterWriteSyncer {
                 columns: cacheColumns,
               );
             }
+            // D185 : un emplacement de sort confirmé est reporté dans le
+            // cache de la fiche, sans quoi une relecture qui retombe sur le
+            // cache (réseau retombé) afficherait l'ancien compteur.
+            if (write.kind == PendingCharacterWriteKind.spellSlot) {
+              await _detailCache.applyConfirmedSpellSlot(
+                ownerId: ownerId,
+                characterId: write.characterId,
+                slotLevel: (write.payload['slotLevel'] as num).toInt(),
+                slotsUsed: (write.payload['slotsUsed'] as num).toInt(),
+                isPactSlot: write.payload['isPactSlot'] == true,
+              );
+            }
             await _pendingWrites.removeIfUnchanged(write);
             synced.add(write.characterId);
+            if (conflict != null) conflicts.add(conflict);
           },
         );
       } catch (error, stackTrace) {
@@ -222,7 +293,62 @@ class PendingCharacterWriteSyncer {
       }
     }
 
-    return synced;
+    return SyncReport(
+      synced: synced,
+      abandonedCharacterIds: abandoned,
+      conflicts: conflicts,
+    );
+  }
+
+  /// Détection de modification concurrente (F19/D178, même compte sur deux
+  /// appareils) pour une écriture de PV en file : compare la valeur serveur
+  /// connue **à la mise en file** (`baseCurrentHp`/`baseTemporaryHp` du
+  /// payload, voir `SupabaseCharacterRepository.updateHp`) à la valeur
+  /// serveur **actuelle**. Si elles diffèrent, l'écriture est rejouée quand
+  /// même (décision de Matthias du 10/11/2026 : alerte non bloquante, jamais
+  /// de blocage) et le signal [ServerValueConflict] est renvoyé pour que
+  /// l'appelant le fasse remonter.
+  ///
+  /// `null` (aucun signal) si : autre kind que `hp`, pas de base connue (fiche
+  /// jamais mise en cache), serveur inchangé, ou serveur déjà égal à la valeur
+  /// en file (écriture déjà appliquée, réponse perdue : rejeu idempotent, pas
+  /// un conflit). Lecture réseau : une erreur remonte comme celle de
+  /// l'écriture qui la suit (même traitement de rejeu/abandon).
+  Future<ServerValueConflict?> _detectConcurrentChange(
+    PendingCharacterWrite write, {
+    required String ownerId,
+  }) async {
+    if (write.kind != PendingCharacterWriteKind.hp) return null;
+    final baseCurrent = write.payload['baseCurrentHp'];
+    final baseTemporary = write.payload['baseTemporaryHp'];
+    if (baseCurrent is! num || baseTemporary is! num) return null;
+
+    final row = await _client
+        .from('characters')
+        .select('current_hp, temporary_hp')
+        .eq('id', write.characterId)
+        .eq('owner_id', ownerId)
+        .maybeSingle();
+    if (row == null) return null;
+    final serverCurrent = (row['current_hp'] as num?)?.toInt();
+    final serverTemporary = (row['temporary_hp'] as num?)?.toInt();
+    if (serverCurrent == null || serverTemporary == null) return null;
+
+    final queuedCurrent = (write.payload['currentHp'] as num).toInt();
+    final queuedTemporary = (write.payload['temporaryHp'] as num).toInt();
+    final alreadyApplied =
+        serverCurrent == queuedCurrent && serverTemporary == queuedTemporary;
+    final unchanged =
+        serverCurrent == baseCurrent.toInt() &&
+        serverTemporary == baseTemporary.toInt();
+    if (alreadyApplied || unchanged) return null;
+
+    return ServerValueConflict(
+      characterId: write.characterId,
+      kind: write.kind,
+      serverValue: {'currentHp': serverCurrent, 'temporaryHp': serverTemporary},
+      queuedValue: {'currentHp': queuedCurrent, 'temporaryHp': queuedTemporary},
+    );
   }
 
   /// Exécute réellement [write] en ligne — dispatch par [PendingCharacterWrite

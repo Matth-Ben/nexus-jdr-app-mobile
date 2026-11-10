@@ -5,7 +5,9 @@
 // comportement de production, ces tests figent l'existant (dont deux défauts
 // connus, voir les tests de caractérisation « à inverser en tranche T1 »).
 
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -13,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:personnages/core/cache/app_database.dart'
     hide PendingCharacterWrite;
 import 'package:personnages/core/cache/cache_providers.dart';
@@ -20,13 +23,16 @@ import 'package:personnages/core/cache/pending_character_write_queue.dart';
 import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/core/network/supabase_client_provider.dart';
+import 'package:personnages/core/network/transport_failure.dart';
 import 'package:personnages/core/notifications/notification_providers.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
+import 'package:personnages/features/characters/data/character_detail_cache.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/data/pending_character_write_syncer.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
+import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_detail_provider.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
@@ -200,13 +206,10 @@ void main() {
       expect(await stack.pendingCount(), 0);
     });
 
-    test('ordre de rejeu : celui de la mise en file (parcours de la table '
-        'drift, sans ORDER BY explicite)', () async {
-      // Caractérisation de l'existant : `allForOwner` n'a pas de ORDER BY ;
-      // SQLite parcourt la table dans l'ordre d'insertion, qui coïncide avec
-      // l'ordre de mise en file (et NON avec l'ordre de clé primaire
-      // characterId/kind/targetId : hp < spellSlot < xp). L'ordre n'est donc
-      // pas garanti par le contrat, seulement observé.
+    test('ordre de rejeu : celui de la mise en file (queuedAt, ORDER BY '
+        'explicite), pas celui de la cle primaire', () async {
+      // `allForOwner` trie par queuedAt : l'ordre de mise en file (spell, xp,
+      // hp) differe de l'ordre de cle primaire (hp < spell_slot < xp).
       stack.connectivity.goOffline();
       await stack.repository.castSpell(
         characterId: _characterId,
@@ -520,12 +523,10 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
     });
 
-    test('Caractérisation : à l\'abandon, la fiche n\'est PAS invalidée '
-        '(seuls les personnages synchronisés avec succès le sont)', () async {
-      // Le coordinateur n'invalide `characterDetailProvider` que pour les
-      // ids retournés par `sync()` (succès). Un abandon ne l'invalide pas :
-      // la fiche affichée garde l'état optimiste jusqu'à sa prochaine
-      // lecture. Documenté tel quel, à réévaluer en tranche T1.
+    test('D186 : à l\'abandon, la fiche du personnage EST invalidée (relue), '
+        'comme pour une synchro réussie', () async {
+      // Avant T1, le coordinateur n'invalidait que les ids synchronisés avec
+      // succès : un abandon laissait la fiche affichée sur l'état optimiste.
       stack.connectivity.goOffline();
       await stack.repository.updateHp(
         characterId: _characterId,
@@ -553,9 +554,13 @@ void main() {
         await pumpEventQueue();
       }
       expect((await stack.allRows()).single.abandoned, isTrue);
-      expect(repository.fetchCount, 1, reason: 'aucune invalidation');
+      expect(
+        repository.fetchCount,
+        2,
+        reason: 'une seule invalidation, au passage qui abandonne l\'entrée',
+      );
 
-      // En revanche un succès invalide bien la fiche.
+      // Un succès invalide toujours la fiche.
       stack.connectivity.goOffline();
       await stack.repository.updateHp(
         characterId: _characterId,
@@ -565,7 +570,65 @@ void main() {
       stack.connectivity.goOnline();
       stack.server.clearRejection();
       await pumpEventQueue();
-      expect(repository.fetchCount, 2);
+      expect(repository.fetchCount, 3);
+    });
+
+    testWidgets('un abandon d\'un passage précédent (consommé plus tard, '
+        'messenger prêt) invalide aussi la fiche', (tester) async {
+      final repository = _CountingRepository();
+      final key = GlobalKey<ScaffoldMessengerState>();
+      await tester.runAsync(
+        () => stack.db
+            .into(stack.db.pendingCharacterWrites)
+            .insert(
+              PendingCharacterWritesCompanion.insert(
+                characterId: _characterId,
+                ownerId: _ownerA,
+                kind: 'hp',
+                payload: jsonEncode({'currentHp': 1, 'temporaryHp': 0}),
+                queuedAt: DateTime.utc(2026, 11, 10),
+                failureCount: const Value(5),
+                abandoned: const Value(true),
+                lastFailureMessage: const Value('abandonnée'),
+              ),
+            ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: overrides(key, repository),
+          child: MaterialApp(
+            scaffoldMessengerKey: key,
+            home: Consumer(
+              builder: (context, ref, _) {
+                ref.watch(characterDetailProvider(_characterId));
+                return const Scaffold(body: SizedBox());
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      await tester.pump();
+      final before = repository.fetchCount;
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold)),
+      );
+      container.read(characterWriteSyncCoordinatorProvider);
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 200)),
+      );
+      await tester.pump();
+
+      expect(find.text('abandonnée'), findsOneWidget);
+      expect(await tester.runAsync(stack.allRows), isEmpty);
+      expect(repository.fetchCount, before + 1, reason: 'fiche invalidée');
+
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(seconds: 1));
     });
   });
 
@@ -739,59 +802,107 @@ void main() {
     });
   });
 
-  group('Caractérisation des défauts connus (à inverser en tranche T1)', () {
+  group('Chantier hors-ligne T1 (ex-caractérisations inversées)', () {
     test('D184 : une exception réseau non-Timeout pendant castSpell '
-        '(SocketException) n\'est PAS mise en file : CharacterFailure levée '
-        '(l\'écran rétablit alors l\'affichage d\'avant)', () async {
-      // À INVERSER EN TRANCHE T1 : le comportement voulu est une mise en
-      // file (`WriteOutcome.queued`) sans revert. `castSpell` n'attrape que
-      // `TimeoutException` ; tout autre échec de transport tombe dans le
-      // `catch` générique -> `mapUnknownCharacterError()`. Le revert de
-      // l'affichage vient de l'écran, sur `on CharacterFailure` (voir
-      // `character_detail_screen.dart::_castSpell`, couvert par
-      // `character_detail_screen_test.dart`).
+        '(SocketException) est mise en file : queued, rien d\'appliqué, '
+        'rejeu au retour du réseau', () async {
       stack.server.failBefore(1);
 
-      // Connectivité déclarée active (hasConnection() vrai) mais la requête
-      // d'écriture n'aboutit pas : la lecture `characters` préalable passe,
-      // l'écriture du slot échoue.
-      await expectLater(
-        stack.repository.castSpell(
-          characterId: _characterId,
-          slotLevel: 1,
-          slotsUsed: 1,
-        ),
-        throwsA(isA<CharacterFailure>()),
+      final outcome = await stack.repository.castSpell(
+        characterId: _characterId,
+        slotLevel: 1,
+        slotsUsed: 1,
       );
 
-      expect(await stack.pendingCount(), 0, reason: 'rien en file (D184)');
+      expect(outcome, WriteOutcome.queued);
+      expect(await stack.pendingCount(), 1);
       expect(stack.server.appliedWrites, isEmpty);
-    });
 
-    test('D184 (variante réponse perdue) : le sort EST appliqué côté serveur '
-        'mais l\'app croit à un échec et ne met rien en file', () async {
-      // À INVERSER EN TRANCHE T1 (même défaut, cas critique : l'effet est
-      // appliqué, l'affichage revient pourtant à l'état d'avant).
-      stack.server.failAfterApply(1);
-
-      await expectLater(
-        stack.repository.castSpell(
-          characterId: _characterId,
-          slotLevel: 1,
-          slotsUsed: 1,
-        ),
-        throwsA(isA<CharacterFailure>()),
-      );
-
+      expect(await stack.syncer.sync(), {_characterId});
       expect(stack.server.appliedWrites, hasLength(1));
       expect(await stack.pendingCount(), 0);
     });
 
-    test('F19/D178 : un PV absolu en file écrase une valeur modifiée entre '
-        'temps par un autre client (serveur à 2, file à 5 -> 5)', () async {
-      // À INVERSER EN TRANCHE T1 : la file stocke une valeur absolue sans
-      // base de comparaison ; le rejeu écrase le changement concurrent au
-      // lieu de le détecter/fusionner.
+    test('D184 (réponse perdue) : le sort EST appliqué côté serveur, l\'app '
+        'le met en file, le rejeu réapplique la MÊME valeur absolue '
+        '(aucun doublon d\'effet)', () async {
+      stack.server.failAfterApply(1);
+
+      final outcome = await stack.repository.castSpell(
+        characterId: _characterId,
+        slotLevel: 1,
+        slotsUsed: 1,
+      );
+
+      expect(outcome, WriteOutcome.queued);
+      expect(stack.server.appliedWrites, hasLength(1));
+      expect(await stack.pendingCount(), 1);
+
+      expect(await stack.syncer.sync(), {_characterId});
+
+      final bodies = stack.server.appliedWrites.map((w) => w.body).toList();
+      expect(bodies, [
+        {'slots_used': 1},
+        {'slots_used': 1},
+      ], reason: 'valeur absolue : pas de second emplacement consommé');
+      expect(await stack.pendingCount(), 0);
+    });
+
+    test('D184 : la même mise en file vaut pour PV, XP, sort inné et '
+        'aptitude (toutes les écritures de la file)', () async {
+      stack.server.failBefore(4);
+
+      expect(
+        await stack.repository.updateHp(
+          characterId: _characterId,
+          currentHp: 3,
+          temporaryHp: 0,
+        ),
+        WriteOutcome.queued,
+      );
+      expect(
+        await stack.repository.addXp(characterId: _characterId, newXp: 400),
+        WriteOutcome.queued,
+      );
+      expect(
+        await stack.repository.setInnateSpellUsesSpent(
+          characterId: _characterId,
+          spellId: 7,
+          usesSpent: 1,
+        ),
+        WriteOutcome.queued,
+      );
+      expect(
+        await stack.repository.useClassFeature(
+          characterId: _characterId,
+          classFeatureId: 9,
+          usesRemaining: 0,
+        ),
+        WriteOutcome.queued,
+      );
+      expect(await stack.pendingCount(), 4);
+    });
+
+    test('un refus Postgrest (SQLSTATE) reste un échec : CharacterFailure, '
+        'rien en file', () async {
+      stack.server.rejectWith('42501');
+
+      await expectLater(
+        stack.repository.castSpell(
+          characterId: _characterId,
+          slotLevel: 1,
+          slotsUsed: 1,
+        ),
+        throwsA(isA<CharacterFailure>()),
+      );
+
+      expect(await stack.pendingCount(), 0);
+    });
+
+    test('F19/D178 : PV en file rejoué alors que le serveur a changé entre '
+        'temps : l\'écriture part quand même (non bloquant) ET le signal '
+        '« valeur serveur différente » est levé', () async {
+      await _seedCachedCharacter(stack);
       stack.connectivity.goOffline();
       await stack.repository.updateHp(
         characterId: _characterId,
@@ -801,13 +912,280 @@ void main() {
       stack.server.concurrentChange({'current_hp': 2});
       stack.connectivity.goOnline();
 
-      expect(stack.server.characterRow['current_hp'], 2);
-      expect(await stack.syncer.sync(), {_characterId});
+      final report = await stack.syncer.syncWithReport();
 
+      expect(report.synced, {_characterId});
       expect(stack.server.characterRow['current_hp'], 5);
       expect(stack.server.appliedWrites, hasLength(1));
+      expect(report.conflicts, hasLength(1));
+      final conflict = report.conflicts.single;
+      expect(conflict.characterId, _characterId);
+      expect(conflict.kind, PendingCharacterWriteKind.hp);
+      expect(conflict.serverValue, {'currentHp': 2, 'temporaryHp': 0});
+      expect(conflict.queuedValue, {'currentHp': 5, 'temporaryHp': 0});
+    });
+
+    test(
+      'F19 : serveur inchangé depuis la mise en file -> aucun signal',
+      () async {
+        await _seedCachedCharacter(stack);
+        stack.connectivity.goOffline();
+        await stack.repository.updateHp(
+          characterId: _characterId,
+          currentHp: 5,
+          temporaryHp: 0,
+        );
+        stack.connectivity.goOnline();
+
+        final report = await stack.syncer.syncWithReport();
+
+        expect(report.synced, {_characterId});
+        expect(report.conflicts, isEmpty);
+        expect(stack.server.characterRow['current_hp'], 5);
+      },
+    );
+
+    test('F19 : fiche jamais mise en cache (aucune base) -> écriture rejouée '
+        'sans signal', () async {
+      stack.connectivity.goOffline();
+      await stack.repository.updateHp(
+        characterId: _characterId,
+        currentHp: 5,
+        temporaryHp: 0,
+      );
+      stack.server.concurrentChange({'current_hp': 2});
+      stack.connectivity.goOnline();
+
+      final report = await stack.syncer.syncWithReport();
+
+      expect(report.synced, {_characterId});
+      expect(report.conflicts, isEmpty);
+      expect(stack.server.characterRow['current_hp'], 5);
+    });
+
+    test('F19 : réponse perdue (le serveur porte déjà la valeur en file) -> '
+        'rejeu idempotent, pas un faux conflit', () async {
+      await _seedCachedCharacter(stack);
+      stack.connectivity.goOffline();
+      await stack.repository.updateHp(
+        characterId: _characterId,
+        currentHp: 5,
+        temporaryHp: 0,
+      );
+      stack.connectivity.goOnline();
+      stack.server.failAfterApply(1);
+
+      final first = await stack.syncer.syncWithReport();
+      expect(first.synced, isEmpty);
+      final second = await stack.syncer.syncWithReport();
+
+      expect(second.synced, {_characterId});
+      expect(second.conflicts, isEmpty);
+    });
+
+    test('F19 : un second ajustement hors ligne garde la base du premier '
+        '(valeur serveur d\'avant le premier ajustement)', () async {
+      await _seedCachedCharacter(stack);
+      stack.connectivity.goOffline();
+      await stack.repository.updateHp(
+        characterId: _characterId,
+        currentHp: 5,
+        temporaryHp: 0,
+      );
+      await stack.repository.updateHp(
+        characterId: _characterId,
+        currentHp: 4,
+        temporaryHp: 1,
+      );
+
+      final payload = (await stack.queue.allForOwner(_ownerA)).single.payload;
+
+      expect(payload, {
+        'currentHp': 4,
+        'temporaryHp': 1,
+        'baseCurrentHp': 10,
+        'baseTemporaryHp': 0,
+      });
+    });
+
+    test('D185 : un emplacement confirmé en ligne est reporté dans le cache '
+        'de la fiche (classique et pacte)', () async {
+      await _seedCachedCharacter(stack);
+
+      await stack.repository.castSpell(
+        characterId: _characterId,
+        slotLevel: 2,
+        slotsUsed: 1,
+      );
+      await stack.repository.castSpell(
+        characterId: _characterId,
+        slotLevel: 1,
+        slotsUsed: 1,
+        isPactSlot: true,
+      );
+
+      final row = await _cachedRow(stack);
+      expect(
+        (row['character_spell_slots'] as List).map(
+          (s) => (s as Map)['slots_used'],
+        ),
+        [0, 1],
+      );
+      expect((row['character_pact_slots'] as Map)['slots_used'], 1);
+    });
+
+    test('D185 : un emplacement synchronisé (rejeu de la file) est reporté '
+        'dans le cache, une valeur seulement en file ne l\'est pas', () async {
+      await _seedCachedCharacter(stack);
+      stack.connectivity.goOffline();
+      await stack.repository.castSpell(
+        characterId: _characterId,
+        slotLevel: 1,
+        slotsUsed: 1,
+      );
+
+      expect(
+        ((await _cachedRow(stack))['character_spell_slots'] as List)
+            .map((s) => (s as Map)['slots_used'])
+            .first,
+        0,
+        reason: 'mise en file seulement : le cache reste l\'état serveur',
+      );
+
+      stack.connectivity.goOnline();
+      await stack.syncer.sync();
+
+      expect(
+        ((await _cachedRow(stack))['character_spell_slots'] as List)
+            .map((s) => (s as Map)['slots_used'])
+            .first,
+        1,
+      );
+    });
+
+    test('D187 : un second repos hors ligne est refusé explicitement '
+        '(restAlreadyPending), le premier reste intact en file', () async {
+      stack.connectivity.goOffline();
+
+      final first = await stack.repository.applyRest(
+        characterId: _characterId,
+        type: RestType.short,
+        className: 'Magicien',
+      );
+      final second = await stack.repository.applyRest(
+        characterId: _characterId,
+        type: RestType.long,
+        className: 'Magicien',
+      );
+
+      expect(first, WriteOutcome.queued);
+      expect(second, WriteOutcome.restAlreadyPending);
+      final pending = await stack.queue.allForOwner(_ownerA);
+      expect(pending, hasLength(1));
+      expect(pending.single.payload['type'], 'short');
+    });
+
+    test('D187 : un repos d\'un autre personnage n\'est pas refusé', () async {
+      stack.connectivity.goOffline();
+      await stack.repository.applyRest(
+        characterId: _characterId,
+        type: RestType.short,
+        className: 'Magicien',
+      );
+
+      final other = await stack.repository.applyRest(
+        characterId: 'char-2',
+        type: RestType.long,
+        className: 'Magicien',
+      );
+
+      expect(other, WriteOutcome.queued);
+      expect(await stack.pendingCount(), 2);
     });
   });
+
+  group('rejeu : entrée remplacée en vol (relecture #248, constat d)', () {
+    test('une valeur mise en file PENDANT l\'envoi n\'est pas retirée par la '
+        'synchro de l\'ancienne ; elle part à la passe suivante', () async {
+      stack.connectivity.goOffline();
+      await stack.repository.updateHp(
+        characterId: _characterId,
+        currentHp: 5,
+        temporaryHp: 0,
+      );
+      stack.connectivity.goOnline();
+      var replaced = false;
+      stack.server.onWriteApplied = (_) async {
+        if (replaced) return;
+        replaced = true;
+        await stack.queue.enqueue(
+          characterId: _characterId,
+          ownerId: _ownerA,
+          kind: PendingCharacterWriteKind.hp,
+          targetId: '',
+          payload: {'currentHp': 8, 'temporaryHp': 0},
+        );
+      };
+
+      await stack.syncer.sync();
+
+      expect(stack.server.characterRow['current_hp'], 5);
+      final pending = await stack.queue.allForOwner(_ownerA);
+      expect(pending, hasLength(1), reason: 'la valeur 8 n\'a pas été perdue');
+      expect(pending.single.payload['currentHp'], 8);
+
+      await stack.syncer.sync();
+      expect(stack.server.characterRow['current_hp'], 8);
+      expect(await stack.pendingCount(), 0);
+    });
+  });
+
+  test('transport_failure : classification des erreurs', () {
+    expect(isTransportFailure(const SocketException('x')), isTrue);
+    expect(isTransportFailure(TimeoutException('x')), isTrue);
+    expect(isTransportFailure(http.ClientException('x')), isTrue);
+    expect(isTransportFailure(const HandshakeException('x')), isTrue);
+    expect(isTransportFailure(const HttpException('x')), isTrue);
+    expect(
+      isTransportFailure(PostgrestException(message: 'x', code: '42501')),
+      isFalse,
+    );
+    expect(isTransportFailure(const CharacterFailure('x')), isFalse);
+    expect(isTransportFailure(StateError('x')), isFalse);
+  });
+}
+
+/// Fiche en cache comme après une lecture réussie : ligne `characters` (PV
+/// 10/0, identique au faux serveur) et emplacements (niveaux 1 et 2, pacte).
+Future<void> _seedCachedCharacter(_Stack stack) async {
+  await stack.cache.put(
+    CharacterDetailCache.keyFor(ownerId: _ownerA, characterId: _characterId),
+    {
+      CharacterDetailCache.rowKey: {
+        'id': _characterId,
+        'current_hp': 10,
+        'temporary_hp': 0,
+        'character_spell_slots': [
+          {'slot_level': 1, 'slots_total': 2, 'slots_used': 0},
+          {'slot_level': 2, 'slots_total': 1, 'slots_used': 0},
+        ],
+        'character_pact_slots': {
+          'slot_level': 1,
+          'slots_total': 1,
+          'slots_used': 0,
+        },
+      },
+    },
+  );
+}
+
+Future<Map<String, dynamic>> _cachedRow(_Stack stack) async {
+  final payload = await stack.cache.get(
+    CharacterDetailCache.keyFor(ownerId: _ownerA, characterId: _characterId),
+  );
+  return Map<String, dynamic>.from(
+    (payload! as Map)[CharacterDetailCache.rowKey] as Map,
+  );
 }
 
 /// Double minimal : seule la lecture de la fiche est exercée (compte les

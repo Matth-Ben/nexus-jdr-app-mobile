@@ -488,7 +488,12 @@ class $PendingCharacterWritesTable extends PendingCharacterWrites
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {characterId, kind, targetId};
+  Set<GeneratedColumn> get $primaryKey => {
+    ownerId,
+    characterId,
+    kind,
+    targetId,
+  };
   @override
   PendingCharacterWrite map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';

@@ -87,6 +87,7 @@ class _FakeCharacterRepository implements CharacterRepository {
   String? lastAppliedRestClassName;
   int applyRestCallCount = 0;
   Object? applyRestErrorToThrow;
+  WriteOutcome applyRestOutcomeToReturn = WriteOutcome.synced;
 
   /// Captures de l'appel a [applyRest] - voir le groupe de tests
   /// "repos d'un personnage multiclasse (dieux de vie par classe)" de ce
@@ -445,7 +446,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     lastAppliedAppliedGain = appliedGain;
     lastAppliedHitDiceRecoveredByClassId = hitDiceRecoveredByClassId;
     if (detailAfterRest != null) detailToReturn = detailAfterRest;
-    return WriteOutcome.synced;
+    return applyRestOutcomeToReturn;
   }
 
   @override
@@ -2429,6 +2430,36 @@ void main() {
       expect(find.text('PV actuels : 18 / 30'), findsOneWidget);
     });
 
+    testWidgets('D187 : un repos refusé car un repos est déjà en attente '
+        '(restAlreadyPending) affiche le message dédié, annule l\'affichage '
+        'optimiste et ne dit jamais « effectué »', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+      fakeRepository.applyRestOutcomeToReturn = WriteOutcome.restAlreadyPending;
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('REPOS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyRestCallCount, 1);
+      expect(
+        find.text(
+          'Un repos est déjà en attente de synchronisation pour ce '
+          "personnage. Attendez le retour de la connexion avant d'en faire "
+          'un autre.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('effectué'), findsNothing);
+      expect(
+        find.text('30 / 30'),
+        findsNothing,
+        reason: 'PV optimistes du repos long annulés',
+      );
+    });
+
     testWidgets('appliquer directement (segment "Repos long" par défaut) '
         'appelle applyRest(RestType.long), rafraîchit la fiche et affiche la '
         'confirmation', (tester) async {
@@ -2963,6 +2994,34 @@ void main() {
         // sera rejoué au retour du réseau.
         expect(
           find.bySemanticsLabel('Niveau 1 : 1 sur 3 emplacements disponibles'),
+          findsNWidgets(2),
+        );
+      },
+    );
+
+    // D186 : le remplacement local d'un lancer mis en file n'est tenu que
+    // jusqu'à la prochaine fiche livrée (la file, superposée par le dépôt,
+    // fait ensuite foi). Ici la fiche relue (après un abandon, invalidée par
+    // le coordinateur) porte la valeur serveur : l'écran doit la montrer au
+    // lieu de garder indéfiniment le compteur local que la base n'a jamais
+    // reçu.
+    testWidgets(
+      'D186 : lancer mis en file puis fiche relue sans cette écriture '
+      '(abandon) : le compteur local est relâché, la valeur de la fiche '
+      'est affichée',
+      (tester) async {
+        fakeRepository.castSpellOutcomeToReturn = WriteOutcome.queued;
+        await pumpSpellsTab(tester);
+        expect(
+          find.bySemanticsLabel('Niveau 1 : 1 sur 3 emplacements disponibles'),
+          findsNWidgets(2),
+        );
+
+        invalidateDetail(tester);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.bySemanticsLabel('Niveau 1 : 2 sur 3 emplacements disponibles'),
           findsNWidgets(2),
         );
       },

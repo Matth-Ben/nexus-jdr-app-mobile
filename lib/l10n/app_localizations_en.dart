@@ -1369,6 +1369,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Offline: will sync once you\'re back online.';
 
   @override
+  String get characterDetailRestAlreadyPendingMessage =>
+      'A rest is already waiting to sync for this character. Wait until you\'re back online before taking another one.';
+
+  @override
   String get characterDetailArmorClassAdjustErrorMessage =>
       'Unable to adjust Armor Class. Please try again.';
 
