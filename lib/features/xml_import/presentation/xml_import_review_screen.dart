@@ -358,9 +358,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              // Boutons empilés quand la largeur du dialogue ne permet pas
-              // deux demi-largeurs (« CONTINUER » y serait coupé en plein
-              // mot, même à taille de police normale sur 320 dp).
+              // Côte à côte quand chaque demi-largeur peut contenir le mot le
+              // plus long de son libellé à taille de base (mesuré, plus la
+              // marge interne des boutons) ; sinon empilés, pour ne jamais
+              // couper « CONTINUER » en plein mot.
               LayoutBuilder(
                 builder: (context, constraints) {
                   final back = SecondaryButton(
@@ -372,7 +373,16 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
                     label: 'Continuer',
                     onPressed: () => Navigator.of(context).pop(true),
                   );
-                  if (constraints.maxWidth < 290) {
+                  final halfWidth = (constraints.maxWidth - AppSpacing.sm) / 2;
+                  final needed =
+                      [
+                        for (final w in ['RETOURNER', 'CONTINUER'])
+                          _displayWordWidth(w),
+                      ].reduce((a, b) => a > b ? a : b) +
+                      2 * AppSpacing.sm +
+                      // Bordure et filet intérieurs des boutons.
+                      8;
+                  if (halfWidth < needed) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -2216,4 +2226,15 @@ class _NetworkErrorState extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Largeur du mot [word] en police pixel à la taille de base (11 px, x1,0).
+double _displayWordWidth(String word) {
+  final painter = TextPainter(
+    text: TextSpan(text: word, style: AppTypography.display(fontSize: 11)),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
 }

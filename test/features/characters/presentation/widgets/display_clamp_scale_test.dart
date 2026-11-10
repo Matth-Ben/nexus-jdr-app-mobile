@@ -308,8 +308,18 @@ void main() {
             matching: find.byType(RichText),
           ),
         );
-        expect(paragraph.didExceedMaxLines, isFalse, reason: label);
         expect(paragraph.text.toPlainText(), label);
+        // Taille effective à l'écran : taille du texte agrandie, réduite par
+        // le FittedBox ancêtre (échelle du transform) ; jamais sous 11 px.
+        final scale = paragraph.getTransformTo(null).getMaxScaleOnAxis();
+        final effective = paragraph.textScaler.scale(11) * scale;
+        expect(
+          effective,
+          greaterThanOrEqualTo(11),
+          reason: '$label : $effective px',
+        );
+        // Libellé complet : la largeur de mise en page contient le mot.
+        expect(paragraph.didExceedMaxLines, isFalse, reason: label);
       }
     },
   );

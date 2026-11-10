@@ -373,7 +373,7 @@ class _FounderBadge extends StatelessWidget {
       child: DisplayText(
         'TOI',
         style: AppTypography.display(
-          fontSize: 9,
+          fontSize: 11,
           color: AppColors.textSecondary,
         ),
       ),

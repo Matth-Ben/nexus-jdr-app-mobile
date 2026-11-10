@@ -362,7 +362,7 @@ class _SpellSlotDot extends StatelessWidget {
 
 /// Taille du texte des pastilles de ligne de sort ([_GrantBadge],
 /// [_InnateBadge]) — une seule constante pour qu'elles restent alignées.
-const double _rowBadgeFontSize = 10;
+const double _rowBadgeFontSize = 11;
 
 /// Taille du texte du marqueur « Épuisé » d'un sort inné ([_InnateUsage]).
 const double _innateSpentFontSize = 11;
@@ -547,7 +547,7 @@ class _PreparationStatus extends StatelessWidget {
         DisplayText(
           label.toUpperCase(),
           style: AppTypography.display(
-            fontSize: 10,
+            fontSize: 11,
             color: AppColors.textSecondary,
           ),
         ),

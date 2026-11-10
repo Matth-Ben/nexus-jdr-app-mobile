@@ -727,6 +727,13 @@ void main() {
         await tester.pumpWidget(_buildTestWidget(fakeRepository));
         await tester.pumpAndSettle();
 
+        // Le lien est en pied de liste : il faut défiler jusqu'à lui (le badge
+        // de statut sur sa propre ligne allonge la carte d'un membre).
+        await tester.scrollUntilVisible(
+          find.text('Quitter le groupe'),
+          200,
+          scrollable: find.byType(Scrollable).last,
+        );
         await tester.tap(find.text('Quitter le groupe'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Quitter'));

@@ -122,7 +122,7 @@ int expectDisplayTextSane(
 
 /// Largeurs (dp) et échelles de police testées par [displayScaleMatrix].
 const displayScaleWidths = [320.0, 360.0];
-const displayScaleFactors = [2.0, 3.0];
+const displayScaleFactors = [1.0, 2.0, 3.0];
 
 /// Enregistre un test par couple (échelle, largeur) : monte [build] dans une
 /// appli localisée en français (avec `ProviderScope`), à x2,0 et x3,0 sur 320

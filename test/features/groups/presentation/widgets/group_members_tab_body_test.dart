@@ -5,6 +5,7 @@
 // personnage" (membre orphelin, voir `GroupMember.isAwaitingCharacter`).
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -424,8 +425,8 @@ void main() {
   // sans débordement, mot coupé ni display sous 11 px (voir
   // `display_scale_helpers.dart`).
   group('grande police : onglet Membres (badges MORT / INCONSCIENT)', () {
-    for (final scale in displayScaleFactors) {
-      for (final width in displayScaleWidths) {
+    for (final scale in [1.0, 2.0, 3.0]) {
+      for (final width in [320.0, 360.0, 411.0]) {
         testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
           await useScaledView(tester, scale: scale, width: width, height: 2400);
           await _pump(
@@ -460,6 +461,30 @@ void main() {
             ]),
           );
           expect(expectDisplayTextSane(tester), greaterThan(0));
+          // Badges en entier, sans ellipse (le helper ignore l'ellipse :
+          // assertion explicite). « INCONSCIENT » et « MORT » ne sont jamais
+          // abrégés, dès x1,0 sur 320 dp.
+          for (final word in ['INCONSCIENT', 'MORT']) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.descendant(
+                of: find.text(word),
+                matching: find.byType(RichText),
+              ),
+            );
+            expect(paragraph.didExceedMaxLines, isFalse, reason: word);
+            expect(paragraph.text.toPlainText(), word);
+            final painter = TextPainter(
+              text: TextSpan(text: word, style: paragraph.text.style),
+              textDirection: TextDirection.ltr,
+              textScaler: paragraph.textScaler,
+            )..layout();
+            expect(
+              paragraph.size.width,
+              greaterThanOrEqualTo(painter.width - 0.5),
+              reason: '$word tronqué',
+            );
+            painter.dispose();
+          }
         });
       }
     }

@@ -281,7 +281,7 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: DisplayText(
         _label,
-        style: AppTypography.display(fontSize: 10, color: _foreground),
+        style: AppTypography.display(fontSize: 11, color: _foreground),
       ),
     );
   }

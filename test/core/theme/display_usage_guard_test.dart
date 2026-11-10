@@ -10,6 +10,7 @@
 // plafond fait échouer ce test.
 
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,6 +25,10 @@ const Map<String, String> _allowlist = {
   // `TextStyle` du thème Material (`textTheme`, bouton, dialogue) : migrés en
   // corps par la PR 3 du chantier (D192) ; ne pas les convertir ici.
   'lib/core/theme/app_theme.dart': 'styles du thème Material, PR 3 (D192)',
+  // `_displayWordWidth` : mesure de largeur (TextPainter) pour choisir entre
+  // boutons côte à côte et empilés ; aucun texte rendu, donc rien à plafonner.
+  'lib/features/xml_import/presentation/xml_import_review_screen.dart':
+      'mesure de largeur de mot, aucun rendu',
 };
 
 /// Retire commentaires et littéraux de chaîne en conservant la position des
@@ -107,7 +112,70 @@ List<String> findUncappedDisplayUses(String source) {
   return problems;
 }
 
+int _lineOf(String code, int index) =>
+    code.substring(0, index).split('\n').length;
+
+/// Appels display dont la taille littérale est inférieure à 11 px (plancher
+/// d'accessibilité, décision du 10/11/2026 : jamais sous 11 px, dès x1,0). Une
+/// taille passée par un identifiant est résolue vers `const double id = N;`
+/// du même fichier.
+List<String> findTooSmallDisplayUses(String source) {
+  final code = _blank(source);
+  final problems = <String>[];
+  for (final m in RegExp(r'AppTypography\.display\(').allMatches(code)) {
+    final args = code.substring(m.end, math.min(code.length, m.end + 400));
+    final size = RegExp(r'fontSize:\s*([A-Za-z_][\w.]*|\d+(?:\.\d+)?)')
+        .firstMatch(args)
+        ?.group(1);
+    if (size == null) continue;
+    var value = double.tryParse(size);
+    if (value == null) {
+      final decl = RegExp(
+        r'(?:const|final) double '
+        '${RegExp.escape(size)}'
+        r'\s*=\s*(\d+(?:\.\d+)?)',
+      ).firstMatch(code);
+      value = decl == null ? null : double.parse(decl.group(1)!);
+    }
+    if (value != null && value < 11) {
+      final line = _lineOf(code, m.start);
+      problems.add('ligne $line (fontSize $value px)');
+    }
+  }
+  return problems;
+}
+
+/// Usages du `textTheme` display (titres/boutons du thème Material) hors du
+/// thème : ils hériteraient de la police pixel sans `DisplayText`.
+List<String> findDisplayTextThemeUses(String source) {
+  final code = _blank(source);
+  return [
+    for (final m in RegExp(
+      r'textTheme\s*\.\s*(headlineSmall|titleLarge|titleMedium|labelLarge)',
+    ).allMatches(code))
+      'ligne ${_lineOf(code, m.start)} (${m.group(0)})',
+  ];
+}
+
 void main() {
+  group('détecteurs de taille et de textTheme', () {
+    test('refuse un display sous 11 px (littéral ou constante)', () {
+      const src = '''
+const double _small = 10;
+DisplayText('A', style: AppTypography.display(fontSize: 9)),
+DisplayText('B', style: AppTypography.display(fontSize: _small)),
+DisplayText('C', style: AppTypography.display(fontSize: 11)),
+''';
+      expect(findTooSmallDisplayUses(src), hasLength(2));
+    });
+
+    test('refuse le textTheme display hors thème', () {
+      const src = 'final s = Theme.of(context).textTheme.titleLarge;';
+      expect(findDisplayTextThemeUses(src), hasLength(1));
+      expect(findDisplayTextThemeUses('textTheme.bodyMedium'), isEmpty);
+    });
+  });
+
   group('findUncappedDisplayUses (le détecteur)', () {
     test('accepte le style passé à DisplayText et DisplayText.rich', () {
       const src = '''
@@ -165,6 +233,30 @@ final s = 'AppTypography.display(';
       _allowlist.keys.toSet().difference(seenAllowed),
       isEmpty,
       reason: 'Entrée de liste blanche sans usage non plafonné : la retirer.',
+    );
+  });
+
+  test('aucun display sous 11 px et aucun textTheme display hors thème', () {
+    final offenders = <String>[];
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      final path = entity.path.replaceAll(r'', '/');
+      final source = entity.readAsStringSync();
+      for (final p in findTooSmallDisplayUses(source)) {
+        offenders.add('$path : $p');
+      }
+      if (!path.startsWith('lib/core/theme/')) {
+        for (final p in findDisplayTextThemeUses(source)) {
+          offenders.add('$path : $p');
+        }
+      }
+    }
+    expect(
+      offenders,
+      isEmpty,
+      reason:
+          'Display sous 11 px (plancher dès x1,0) ou textTheme display '
+          'utilisé hors du thème : relever à 11 px ou utiliser DisplayText.',
     );
   });
 }

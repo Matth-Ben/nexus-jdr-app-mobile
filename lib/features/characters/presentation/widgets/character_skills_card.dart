@@ -175,7 +175,7 @@ class _SkillRow extends StatelessWidget {
 /// Chip "D20" en bout de ligne de compétence — remplace l'icône dé
 /// (`Icons.casino_outlined`), jugée peu lisible en revue direction-artistique
 /// (recettage du 13/09) : fond transparent, bordure `AppColors.woodLight`,
-/// `AppRadius.sm`, texte `AppTypography.display(fontSize: 9)`. Purement
+/// `AppRadius.sm`, texte `AppTypography.display(fontSize: 11)`. Purement
 /// décoratif (le jet reste déclenché par le `onTap` de toute la ligne, voir
 /// [_SkillRow]) — pas de zone de tap dédiée.
 class _D20Chip extends StatelessWidget {
@@ -192,7 +192,7 @@ class _D20Chip extends StatelessWidget {
       ),
       child: DisplayText(
         AppLocalizations.of(context)!.characterSkillsCardD20Chip,
-        style: AppTypography.display(fontSize: 9, color: AppColors.textMuted),
+        style: AppTypography.display(fontSize: 11, color: AppColors.textMuted),
       ),
     );
   }
