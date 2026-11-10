@@ -66,3 +66,54 @@ final class ConnectivityCheckerProvider
 
 String _$connectivityCheckerHash() =>
     r'c10b923ed52485894c40fc2e6db9833d5ae346e7';
+
+/// État de connectivité en direct (`true` = connecté) : valeur courante puis
+/// chaque changement — voir `ConnectivityChecker.onConnectivityChanged`.
+/// Alimente le bandeau de synchro (`core/sync/`). Une erreur du canal de
+/// plateforme est laissée à l'`AsyncValue` (le bandeau la traite comme « en
+/// ligne », jamais comme un faux hors-ligne).
+
+@ProviderFor(connectivityStatus)
+final connectivityStatusProvider = ConnectivityStatusProvider._();
+
+/// État de connectivité en direct (`true` = connecté) : valeur courante puis
+/// chaque changement — voir `ConnectivityChecker.onConnectivityChanged`.
+/// Alimente le bandeau de synchro (`core/sync/`). Une erreur du canal de
+/// plateforme est laissée à l'`AsyncValue` (le bandeau la traite comme « en
+/// ligne », jamais comme un faux hors-ligne).
+
+final class ConnectivityStatusProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, Stream<bool>>
+    with $FutureModifier<bool>, $StreamProvider<bool> {
+  /// État de connectivité en direct (`true` = connecté) : valeur courante puis
+  /// chaque changement — voir `ConnectivityChecker.onConnectivityChanged`.
+  /// Alimente le bandeau de synchro (`core/sync/`). Une erreur du canal de
+  /// plateforme est laissée à l'`AsyncValue` (le bandeau la traite comme « en
+  /// ligne », jamais comme un faux hors-ligne).
+  ConnectivityStatusProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'connectivityStatusProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$connectivityStatusHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<bool> create(Ref ref) {
+    return connectivityStatus(ref);
+  }
+}
+
+String _$connectivityStatusHash() =>
+    r'73ddb30a7baf147be964c388ae8339383b45f91e';

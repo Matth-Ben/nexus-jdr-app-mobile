@@ -179,7 +179,7 @@ void main() {
       'kind',
       'target_id',
     });
-    expect(db.schemaVersion, 5);
+    expect(db.schemaVersion, 6);
     await db.close();
   });
 }

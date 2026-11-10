@@ -28,18 +28,37 @@ import '../theme/app_typography.dart';
 /// - `features/character_creation/presentation/equipment_step_screen.dart`
 /// - `features/characters/presentation/widgets/portrait_crop_screen.dart`
 ///
-/// Non interactif (pas d'`InkWell`, pas de zone de tap).
+/// Non interactif par défaut (pas d'`InkWell`, pas de zone de tap) ; avec
+/// [onDismiss] (tranche T2 du chantier hors-ligne, alertes de synchro), un
+/// bouton de fermeture `Icons.close` de 44x44 apparaît à droite (aucune
+/// nouvelle couleur). L'icône d'avertissement est alignée en haut du texte,
+/// pour les messages sur plusieurs lignes.
 class AlertBanner extends StatelessWidget {
-  const AlertBanner({required this.message, super.key});
+  const AlertBanner({
+    required this.message,
+    this.onDismiss,
+    this.dismissTooltip,
+    super.key,
+  });
 
   final String message;
 
+  /// Si non nul, affiche le bouton de fermeture.
+  final VoidCallback? onDismiss;
+
+  /// Info-bulle/libellé d'accessibilité du bouton de fermeture (localisé par
+  /// l'appelant).
+  final String? dismissTooltip;
+
   @override
   Widget build(BuildContext context) {
+    final onDismiss = this.onDismiss;
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
+      padding: EdgeInsets.only(
+        left: AppSpacing.md,
+        right: onDismiss == null ? AppSpacing.md : AppSpacing.xs,
+        top: onDismiss == null ? AppSpacing.sm : AppSpacing.xs,
+        bottom: onDismiss == null ? AppSpacing.sm : AppSpacing.xs,
       ),
       decoration: BoxDecoration(
         color: AppColors.alertBannerBackground,
@@ -50,23 +69,48 @@ class AlertBanner extends StatelessWidget {
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: AppColors.accentBrick,
-            size: 20,
+          const Padding(
+            padding: EdgeInsets.only(top: 1),
+            child: Icon(
+              Icons.warning_amber_rounded,
+              color: AppColors.accentBrick,
+              size: 20,
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Text(
-              message,
-              style: AppTypography.body(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+            child: Padding(
+              // Centre le texte d'une ligne sur la zone de 44 dp du bouton.
+              padding: EdgeInsets.symmetric(
+                vertical: onDismiss == null ? 0 : AppSpacing.sm,
+              ),
+              child: Text(
+                message,
+                style: AppTypography.body(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ),
           ),
+          if (onDismiss != null)
+            SizedBox(
+              width: 44,
+              height: 44,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                tooltip: dismissTooltip,
+                onPressed: onDismiss,
+                icon: const Icon(
+                  Icons.close,
+                  size: 20,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
         ],
       ),
     );

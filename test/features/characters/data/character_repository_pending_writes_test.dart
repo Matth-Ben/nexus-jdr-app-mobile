@@ -1708,6 +1708,9 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
   @override
   Stream<bool> get onConnectivityRestored => _restored.stream;
 
+  @override
+  Stream<bool> get onConnectivityChanged => const Stream.empty();
+
   void emitRestored() => _restored.add(true);
 }
 

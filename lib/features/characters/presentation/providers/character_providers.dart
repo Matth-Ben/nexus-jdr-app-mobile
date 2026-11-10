@@ -3,9 +3,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/network/connectivity_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
+import '../../data/character_detail_cache.dart';
 import '../../data/character_repository.dart';
 import '../../data/pending_character_write_syncer.dart';
 import '../../data/racial_innate_spell_repository.dart';
+import '../../data/sync_alert_recorder.dart';
 import '../../data/warlock_pact_spell_repository.dart';
 import '../../domain/character_summary.dart';
 import '../../domain/inventory_catalog_item.dart';
@@ -19,6 +21,7 @@ CharacterRepository characterRepository(Ref ref) {
     ref.watch(referenceDataCacheProvider),
     ref.watch(pendingCharacterWriteQueueProvider),
     ref.watch(connectivityCheckerProvider),
+    syncState: ref.watch(syncStateStoreProvider),
   );
 }
 
@@ -102,3 +105,15 @@ Future<List<InventoryCatalogItem>> inventoryCatalog(Ref ref) {
 }
 
 Duration? _noRetry(int retryCount, Object error) => null;
+
+/// Enregistre les abandons/conflits de synchro comme alertes persistées —
+/// voir `SyncAlertRecorder`. Seul consommateur : le coordinateur de synchro.
+@Riverpod(keepAlive: true)
+SyncAlertRecorder syncAlertRecorder(Ref ref) {
+  return SyncAlertRecorder(
+    ref.watch(appDatabaseProvider),
+    ref.watch(pendingCharacterWriteQueueProvider),
+    ref.watch(syncAlertStoreProvider),
+    CharacterDetailCache(ref.watch(referenceDataCacheProvider)),
+  );
+}

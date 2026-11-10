@@ -121,6 +121,9 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
 
   @override
   Stream<bool> get onConnectivityRestored => const Stream.empty();
+
+  @override
+  Stream<bool> get onConnectivityChanged => const Stream.empty();
 }
 
 Future<_FakeAuthRepository> _pumpScreen(

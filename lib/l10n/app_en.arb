@@ -1240,5 +1240,31 @@
   "conditionsAccessDeniedMessage": "You don't have access to this character.",
   "@conditionsAccessDeniedMessage": {
     "description": "Refus d'accès (RLS) à l'enregistrement des conditions d'un personnage (singulier)."
-  }
+  },
+  "syncBannerSyncing": "Syncing…",
+  "syncBannerOfflineEmpty": "Offline. Your changes will be sent when you're back online.",
+  "syncBannerOfflinePending": "{count, plural, =1{Offline · 1 change pending} other{Offline · {count} changes pending}}",
+  "syncBannerPendingOnline": "{count, plural, =1{1 change waiting to be sent} other{{count} changes waiting to be sent}}",
+  "syncBannerSynced": "Synced",
+  "syncBannerOfflineSemantics": "Offline",
+  "syncBannerDismissTooltip": "Dismiss",
+  "syncAlertUnknownCharacter": "this character",
+  "syncAlertAbandonHp": "Change not saved: the last known HP of {name} are {value}/{max}.",
+  "syncAlertAbandonSlot": "Change not saved: the last known level {level} spell slots of {name} are {value}/{max}.",
+  "syncAlertAbandonXp": "Change not saved: the last known XP of {name} is {value}.",
+  "syncAlertAbandonFallback": "A change to {name} could not be saved. The sheet shows the server value.",
+  "syncAlertConflictHp": "{name} was changed on another device: HP were {value}/{max} on the server. Your offline change was applied on top.",
+  "syncAlertConflictFallback": "{name} was changed on another device. Your offline change was applied on top.",
+  "syncAlertMoreSuffix": "{count, plural, =1{ (+1 more)} other{ (+{count} more)}}",
+  "syncExitDialogTitle": "Leave the app?",
+  "syncExitDialogBody": "{count, plural, =1{1 change waiting to be sent. It stays saved on this device and will be sent the next time you open the app with a connection.} other{{count} changes waiting to be sent. They stay saved on this device and will be sent the next time you open the app with a connection.}}",
+  "syncExitDialogStay": "Stay",
+  "syncExitDialogLeave": "Leave anyway",
+  "profileLastSync": "Last sync: {when}",
+  "profileLastSyncNever": "Last sync: never",
+  "profileLastSyncJustNow": "just now",
+  "profileLastSyncMinutes": "{count} min ago",
+  "profileLastSyncHours": "{count} h ago",
+  "profileLastSyncAbsolute": "{date} at {time}",
+  "profileLastSyncPendingSuffix": " · {count} pending"
 }

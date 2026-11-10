@@ -55,7 +55,7 @@ final class CharacterRepositoryProvider
 }
 
 String _$characterRepositoryHash() =>
-    r'208385b8ada01b47c8c2bb0331b74548ca6a9b80';
+    r'9df20e6abd8cfae018d923756712276fe0f7bc30';
 
 /// Lectures de référence de la faveur de pacte de l'Occultiste (sorts mineurs
 /// du Livre des ombres, Appel de familier) — voir
@@ -409,3 +409,58 @@ final class InventoryCatalogProvider
 }
 
 String _$inventoryCatalogHash() => r'cf03e8663cfa931f2fa404a89e9ee49862f5f24c';
+
+/// Enregistre les abandons/conflits de synchro comme alertes persistées —
+/// voir `SyncAlertRecorder`. Seul consommateur : le coordinateur de synchro.
+
+@ProviderFor(syncAlertRecorder)
+final syncAlertRecorderProvider = SyncAlertRecorderProvider._();
+
+/// Enregistre les abandons/conflits de synchro comme alertes persistées —
+/// voir `SyncAlertRecorder`. Seul consommateur : le coordinateur de synchro.
+
+final class SyncAlertRecorderProvider
+    extends
+        $FunctionalProvider<
+          SyncAlertRecorder,
+          SyncAlertRecorder,
+          SyncAlertRecorder
+        >
+    with $Provider<SyncAlertRecorder> {
+  /// Enregistre les abandons/conflits de synchro comme alertes persistées —
+  /// voir `SyncAlertRecorder`. Seul consommateur : le coordinateur de synchro.
+  SyncAlertRecorderProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'syncAlertRecorderProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$syncAlertRecorderHash();
+
+  @$internal
+  @override
+  $ProviderElement<SyncAlertRecorder> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SyncAlertRecorder create(Ref ref) {
+    return syncAlertRecorder(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SyncAlertRecorder value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SyncAlertRecorder>(value),
+    );
+  }
+}
+
+String _$syncAlertRecorderHash() => r'2571189fec7a37426328ecef0b4b575bda0c6a9e';

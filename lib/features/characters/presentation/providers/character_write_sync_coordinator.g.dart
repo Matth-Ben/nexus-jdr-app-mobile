@@ -13,9 +13,10 @@ part of 'character_write_sync_coordinator.dart';
 /// (`PendingCharacterWriteSyncer`) déclenchée par la connectivité, invalide
 /// `characterDetailProvider` pour chaque personnage synchronisé avec succès
 /// (pour que la fiche, si affichée, se resynchronise proprement avec l'état
-/// serveur confirmé), et signale au joueur toute écriture abandonnée après
-/// un refus non rejouable répété ([_notifyAbandonedWrites], D34 du registre
-/// de dette technique) — voir
+/// serveur confirmé), et enregistre comme **alertes persistées**
+/// (`SyncAlerts`, affichées par `SyncStatusBanner`) toute écriture abandonnée
+/// après un refus non rejouable répété ([_recordAbandonedWrites], D34 du
+/// registre de dette technique) et tout conflit F19 — voir
 /// `docs/cahier-des-charges/01-architecture-technique.md`, section "Mode
 /// hors-ligne".
 ///
@@ -23,8 +24,13 @@ part of 'character_write_sync_coordinator.dart';
 /// remonter jusqu'à l'appelant de [start]) :
 /// - immédiatement au démarrage (des écritures peuvent être restées en
 ///   attente depuis la dernière fermeture de l'app, avec un réseau déjà
-///   revenu depuis) ;
+///   revenu depuis — c'est ce qui justifie que le dialogue de sortie Android
+///   promette un envoi « à la prochaine ouverture avec du réseau ») ;
 /// - à chaque retour de connectivité (`ConnectivityChecker.onConnectivityRestored`).
+///
+/// Chaque passe signale son activité à `syncActivityProvider` (bandeau
+/// « Synchronisation… ») et, si au moins une écriture a abouti, date la
+/// dernière synchro réussie (`SyncStateStore`).
 ///
 /// Pas de synchro en arrière-plan pendant que l'app est fermée/suspendue —
 /// hors périmètre (voir la tâche qui a introduit ce mécanisme).
@@ -38,9 +44,10 @@ final characterWriteSyncCoordinatorProvider =
 /// (`PendingCharacterWriteSyncer`) déclenchée par la connectivité, invalide
 /// `characterDetailProvider` pour chaque personnage synchronisé avec succès
 /// (pour que la fiche, si affichée, se resynchronise proprement avec l'état
-/// serveur confirmé), et signale au joueur toute écriture abandonnée après
-/// un refus non rejouable répété ([_notifyAbandonedWrites], D34 du registre
-/// de dette technique) — voir
+/// serveur confirmé), et enregistre comme **alertes persistées**
+/// (`SyncAlerts`, affichées par `SyncStatusBanner`) toute écriture abandonnée
+/// après un refus non rejouable répété ([_recordAbandonedWrites], D34 du
+/// registre de dette technique) et tout conflit F19 — voir
 /// `docs/cahier-des-charges/01-architecture-technique.md`, section "Mode
 /// hors-ligne".
 ///
@@ -48,8 +55,13 @@ final characterWriteSyncCoordinatorProvider =
 /// remonter jusqu'à l'appelant de [start]) :
 /// - immédiatement au démarrage (des écritures peuvent être restées en
 ///   attente depuis la dernière fermeture de l'app, avec un réseau déjà
-///   revenu depuis) ;
+///   revenu depuis — c'est ce qui justifie que le dialogue de sortie Android
+///   promette un envoi « à la prochaine ouverture avec du réseau ») ;
 /// - à chaque retour de connectivité (`ConnectivityChecker.onConnectivityRestored`).
+///
+/// Chaque passe signale son activité à `syncActivityProvider` (bandeau
+/// « Synchronisation… ») et, si au moins une écriture a abouti, date la
+/// dernière synchro réussie (`SyncStateStore`).
 ///
 /// Pas de synchro en arrière-plan pendant que l'app est fermée/suspendue —
 /// hors périmètre (voir la tâche qui a introduit ce mécanisme).
@@ -67,9 +79,10 @@ final class CharacterWriteSyncCoordinatorProvider
   /// (`PendingCharacterWriteSyncer`) déclenchée par la connectivité, invalide
   /// `characterDetailProvider` pour chaque personnage synchronisé avec succès
   /// (pour que la fiche, si affichée, se resynchronise proprement avec l'état
-  /// serveur confirmé), et signale au joueur toute écriture abandonnée après
-  /// un refus non rejouable répété ([_notifyAbandonedWrites], D34 du registre
-  /// de dette technique) — voir
+  /// serveur confirmé), et enregistre comme **alertes persistées**
+  /// (`SyncAlerts`, affichées par `SyncStatusBanner`) toute écriture abandonnée
+  /// après un refus non rejouable répété ([_recordAbandonedWrites], D34 du
+  /// registre de dette technique) et tout conflit F19 — voir
   /// `docs/cahier-des-charges/01-architecture-technique.md`, section "Mode
   /// hors-ligne".
   ///
@@ -77,8 +90,13 @@ final class CharacterWriteSyncCoordinatorProvider
   /// remonter jusqu'à l'appelant de [start]) :
   /// - immédiatement au démarrage (des écritures peuvent être restées en
   ///   attente depuis la dernière fermeture de l'app, avec un réseau déjà
-  ///   revenu depuis) ;
+  ///   revenu depuis — c'est ce qui justifie que le dialogue de sortie Android
+  ///   promette un envoi « à la prochaine ouverture avec du réseau ») ;
   /// - à chaque retour de connectivité (`ConnectivityChecker.onConnectivityRestored`).
+  ///
+  /// Chaque passe signale son activité à `syncActivityProvider` (bandeau
+  /// « Synchronisation… ») et, si au moins une écriture a abouti, date la
+  /// dernière synchro réussie (`SyncStateStore`).
   ///
   /// Pas de synchro en arrière-plan pendant que l'app est fermée/suspendue —
   /// hors périmètre (voir la tâche qui a introduit ce mécanisme).

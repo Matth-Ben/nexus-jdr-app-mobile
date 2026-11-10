@@ -111,6 +111,49 @@ class PendingCharacterWrites extends Table {
   Set<Column> get primaryKey => {ownerId, characterId, kind, targetId};
 }
 
+/// Alertes de synchronisation hors-ligne (schéma v6, chantier hors-ligne T2) :
+/// une ligne par écriture **abandonnée** (refus non rejouable répété, D34) ou
+/// par **conflit** F19 (le serveur avait changé depuis la mise en file, le
+/// rejeu a écrasé quand même). Persistées pour survivre au redémarrage de
+/// l'app : le joueur les ferme lui-même (fermeture = suppression de la
+/// ligne), jamais d'auto-fermeture.
+///
+/// Tout est stocké sous forme structurée (jamais un texte localisé) : le
+/// bandeau compose son message dans la langue courante de l'app.
+/// [serverValue] est un JSON (`{"currentHp": 7, "maxHp": 12}`...) dont la
+/// forme dépend de [dataKind] (`PendingCharacterWriteKind.storageKey`), ou
+/// `NULL` si la valeur serveur n'était pas connue (texte de repli).
+/// Volontairement absentes de l'export RGPD : état technique transitoire de
+/// l'app (pas une donnée saisie par le joueur), le nom de personnage qu'elles
+/// recopient figure déjà dans l'export du personnage lui-même.
+@DataClassName('SyncAlertRow')
+class SyncAlerts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get ownerId => text()();
+
+  /// `'abandon'` ou `'conflict'` — voir `SyncAlertKind`.
+  TextColumn get kind => text()();
+  TextColumn get characterId => text()();
+  TextColumn get characterName => text()();
+  TextColumn get dataKind => text()();
+  TextColumn get serverValue => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+}
+
+/// Dernier échange réussi avec le serveur, par compte (schéma v6) : rejeu de
+/// la file OU lecture serveur réussie de la liste/fiche. Table plutôt que
+/// `shared_preferences` : valeur par [ownerId] à purger avec le reste de
+/// l'état de synchro à la déconnexion (`removeAllForOwner`), et observable
+/// (`watch`) par le Profil — `shared_preferences` n'est utilisé dans ce dépôt
+/// que pour des préférences d'interface (langue, filtres, bandeaux fermés).
+class SyncStates extends Table {
+  TextColumn get ownerId => text()();
+  DateTimeColumn get lastSuccessfulSyncAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {ownerId};
+}
+
 /// Base SQLite locale de l'app (drift), pour l'instant dédiée au cache des
 /// données de référence en lecture seule ([CachedReferenceEntries]) et à la
 /// file de synchro hors-ligne PV/XP ([PendingCharacterWrites]) — première
@@ -119,7 +162,14 @@ class PendingCharacterWrites extends Table {
 /// hors-ligne"). Un seul `AppDatabase` doit vivre pour toute la durée de
 /// l'app, exposé par `appDatabaseProvider` (`keepAlive`,
 /// `core/cache/cache_providers.dart`), jamais recréé par écran.
-@DriftDatabase(tables: [CachedReferenceEntries, PendingCharacterWrites])
+@DriftDatabase(
+  tables: [
+    CachedReferenceEntries,
+    PendingCharacterWrites,
+    SyncAlerts,
+    SyncStates,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   /// [executor] injectable pour les tests (ex. `NativeDatabase.memory()`,
   /// jamais un vrai fichier disque dans `flutter test`) — sinon, ouvre le
@@ -128,7 +178,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   // [PendingCharacterWrites] (schéma v2) a été ajoutée après la première
   // version livrée de ce cache (v1, [CachedReferenceEntries] seule) : une
@@ -230,6 +280,17 @@ class AppDatabase extends _$AppDatabase {
           await m.database.customStatement(
             'DROP TABLE pending_character_writes_v4',
           );
+        });
+      }
+      if (from < 6) {
+        // Schéma v6 : deux tables ajoutées (alertes de synchro persistées,
+        // dernière synchro par compte), aucune table existante modifiée.
+        // Même transaction explicite que v4/v5 : sur sqlite3,
+        // `PRAGMA user_version` passe à 6 AVANT `onUpgrade`, une migration
+        // interrompue entre les deux `createTable` ne serait jamais rejouée.
+        await m.database.transaction(() async {
+          await m.createTable(syncAlerts);
+          await m.createTable(syncStates);
         });
       }
     },

@@ -4380,6 +4380,9 @@ class _AlwaysOnlineConnectivityChecker implements ConnectivityChecker {
 
   @override
   Stream<bool> get onConnectivityRestored => const Stream.empty();
+
+  @override
+  Stream<bool> get onConnectivityChanged => const Stream.empty();
 }
 
 /// Double entièrement contrôlé par le test — voir le groupe "mode
@@ -4394,6 +4397,9 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
 
   @override
   Stream<bool> get onConnectivityRestored => const Stream.empty();
+
+  @override
+  Stream<bool> get onConnectivityChanged => const Stream.empty();
 }
 
 /// Fabrique un `SupabaseClient` réel, mais dont le transport HTTP est

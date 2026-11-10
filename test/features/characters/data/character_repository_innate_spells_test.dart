@@ -520,6 +520,9 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
 
   @override
   Stream<bool> get onConnectivityRestored => const Stream.empty();
+
+  @override
+  Stream<bool> get onConnectivityChanged => const Stream.empty();
 }
 
 /// Même double que `character_repository_rest_test.dart` : routage par nom
