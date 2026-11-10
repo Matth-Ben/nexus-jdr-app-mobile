@@ -73,19 +73,24 @@ class CharacterDetailTabBar extends StatelessWidget {
       color: AppColors.woodMedium,
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          height: _height,
-          child: Row(
-            children: [
-              for (final tab in CharacterDetailTab.values)
-                Expanded(
-                  child: _TabButton(
-                    tab: tab,
-                    selected: tab == current,
-                    onTap: () => onSelect(tab),
+        // Hauteur élastique : `_height` est un minimum, la barre grandit si
+        // le libellé (x1,3) et l'icône ne tiennent plus dans 62 dp.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: _height),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final tab in CharacterDetailTab.values)
+                  Expanded(
+                    child: _TabButton(
+                      tab: tab,
+                      selected: tab == current,
+                      onTap: () => onSelect(tab),
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -135,9 +140,21 @@ class _TabButton extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 2),
-            DisplayText(
-              tab.label(l10n),
-              style: AppTypography.display(fontSize: 11, color: labelColor),
+            // Reste au palier title (x1,3) et non control : chaque onglet fait
+            // 1/5 de la largeur (72 dp sur 360 dp), un libellé à x1,5 ne peut
+            // pas passer à la ligne sans couper un mot (la hauteur, elle, est
+            // élastique).
+            // `FittedBox` : la police pixel fait 1 em par glyphe, "PERSO" à x1,3
+            // (74 dp) dépasse la colonne de 72 dp sur 360 dp et serait coupé
+            // en plein mot ; le libellé rétrécit donc d'un cran (jamais sous
+            // 11 dp jusqu'à 6 lettres sur 360 dp) au lieu de se couper.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: DisplayText(
+                tab.label(l10n),
+                maxLines: 1,
+                style: AppTypography.display(fontSize: 11, color: labelColor),
+              ),
             ),
           ],
         ),

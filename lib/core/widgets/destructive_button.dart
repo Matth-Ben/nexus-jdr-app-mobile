@@ -111,6 +111,7 @@ class DestructiveButton extends StatelessWidget {
                     : Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xs,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -132,8 +133,11 @@ class DestructiveButton extends StatelessWidget {
                             // long, `RenderFlex overflowed`).
                             Flexible(
                               child: filled
+                                  // Palier control (x1,5), 2 lignes.
                                   ? DisplayText(
                                       label.toUpperCase(),
+                                      tier: DisplayTier.control,
+                                      maxLines: 2,
                                       textAlign: TextAlign.center,
                                       style: AppTypography.display(
                                         fontSize: 11,

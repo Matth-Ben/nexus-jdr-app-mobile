@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/widgets/display_text.dart';
 import 'package:personnages/core/widgets/selectable_option_tile.dart';
 import 'package:personnages/core/widgets/sheet_header_bar.dart';
 import 'package:personnages/features/characters/domain/inventory_category_filter.dart';
@@ -108,8 +109,18 @@ void main() {
 
     // La barre de tête a grandi avec son titre.
     final header = tester.getRect(find.byType(SheetHeaderBar));
-    // Titre en police display : plafonné à x1,3, la barre garde au moins 56 px.
-    expect(header.height, greaterThanOrEqualTo(56));
+    // Titre en police display : plafonné à x1,3 (le x3 de ce test exerce le
+    // corps, qui reste libre) ; la barre mesure donc exactement 56 px et le
+    // titre reste dans la barre.
+    expect(header.height, 56);
+    final title = tester.getRect(
+      find.descendant(
+        of: find.byType(SheetHeaderBar),
+        matching: find.byType(DisplayText),
+      ),
+    );
+    expect(title.top, greaterThanOrEqualTo(header.top));
+    expect(title.bottom, lessThanOrEqualTo(header.bottom));
 
     // Les options ne tiennent plus toutes entre la barre de tête et la barre
     // de navigation : la dernière est ramenée à l'écran par défilement.

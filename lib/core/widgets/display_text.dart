@@ -2,9 +2,27 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_typography.dart';
 
+/// Palier de plafonnement de [DisplayText] (décision du 10/11/2026) : pas de
+/// facteur numérique libre à l'appel.
+enum DisplayTier {
+  /// Titres, marque, badges de statut : plafond
+  /// [AppTypography.maxDisplayScaleFactor] (x1,3).
+  title(AppTypography.maxDisplayScaleFactor),
+
+  /// Libellés de boutons, onglets, segments : plafond
+  /// [AppTypography.maxControlScaleFactor] (x1,5). Le conteneur doit absorber
+  /// le retour à la ligne (`maxLines` 2, hauteur élastique, `minHeight` et
+  /// jamais de hauteur fixe) ; sinon rester à [title] et le justifier.
+  control(AppTypography.maxControlScaleFactor);
+
+  const DisplayTier(this.maxScaleFactor);
+
+  final double maxScaleFactor;
+}
+
 /// `Text` en police pixel [AppTypography.display] dont l'agrandissement dû à
-/// la taille de police du système est plafonné à
-/// [AppTypography.maxDisplayScaleFactor] (x1,3, décision du 10/11/2026).
+/// la taille de police du système est plafonné selon son [tier] (x1,3 pour
+/// [DisplayTier.title] par défaut, x1,5 pour [DisplayTier.control]).
 ///
 /// Le plafond s'applique à ce seul `Text` (jamais au sous-arbre) : le texte
 /// courant ([AppTypography.body]) reste entièrement agrandissable. Si un
@@ -17,6 +35,7 @@ class DisplayText extends StatelessWidget {
   const DisplayText(
     this.data, {
     super.key,
+    this.tier = DisplayTier.title,
     this.style,
     this.textAlign,
     this.maxLines,
@@ -30,6 +49,7 @@ class DisplayText extends StatelessWidget {
   const DisplayText.rich(
     this.textSpan, {
     super.key,
+    this.tier = DisplayTier.title,
     this.style,
     this.textAlign,
     this.maxLines,
@@ -40,6 +60,7 @@ class DisplayText extends StatelessWidget {
     this.strutStyle,
   }) : data = null;
 
+  final DisplayTier tier;
   final String? data;
   final InlineSpan? textSpan;
   final TextStyle? style;
@@ -54,7 +75,7 @@ class DisplayText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context)
-        .clamp(maxScaleFactor: AppTypography.maxDisplayScaleFactor);
+        .clamp(maxScaleFactor: tier.maxScaleFactor);
     if (textSpan != null) {
       return Text.rich(
         textSpan!,

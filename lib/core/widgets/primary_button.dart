@@ -70,9 +70,15 @@ class PrimaryButton extends StatelessWidget {
                     : Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xs,
                         ),
+                        // Palier control (x1,5) : le libellé passe sur 2
+                        // lignes et le bouton grandit (minHeight 48, jamais
+                        // de hauteur fixe).
                         child: DisplayText(
                           label.toUpperCase(),
+                          tier: DisplayTier.control,
+                          maxLines: 2,
                           textAlign: TextAlign.center,
                           style: AppTypography.display(
                             fontSize: 11,

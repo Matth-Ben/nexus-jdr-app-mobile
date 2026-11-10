@@ -18,6 +18,7 @@ import 'core/notifications/push_token_registrar.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/pending_write_sync_hook_provider.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/display_text.dart';
 import 'features/app_update/domain/app_version_status.dart';
 import 'features/app_update/presentation/force_update_screen.dart';
 import 'features/app_update/presentation/providers/app_version_providers.dart';
@@ -505,7 +506,13 @@ class _SupabaseUnavailableScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: onRetry,
-                  child: const Text('Réessayer'),
+                  // Palier control (x1,5) : le style display vient du thème.
+                  child: const DisplayText(
+                    'Réessayer',
+                    tier: DisplayTier.control,
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),

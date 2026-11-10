@@ -130,6 +130,28 @@ class _RestButton extends StatelessWidget {
   }
 }
 
+/// Valeur `body` jumelée à une étiquette display PV/XP de la carte (décision
+/// du 10/11/2026) : plafonnée à [AppTypography.maxVitalsValueScaleFactor]
+/// (x1,6) pour que la paire étiquette + valeur tienne sur la ligne de largeur
+/// contrainte de la carte. Exception ciblée : le corps reste libre partout
+/// ailleurs, y compris dans le reste de cette carte.
+class _VitalsValueText extends StatelessWidget {
+  const _VitalsValueText(this.data, {required this.style});
+
+  final String data;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      data,
+      style: style,
+      textScaler: MediaQuery.textScalerOf(context)
+          .clamp(maxScaleFactor: AppTypography.maxVitalsValueScaleFactor),
+    );
+  }
+}
+
 /// Bandeau PV entièrement tappable (demande utilisateur du 15/09 : remplace
 /// le stepper +/- de soin/dégât rapide, retiré, et l'ancien bouton crayon
 /// isolé — l'icône crayon reste affichée comme simple indice visuel
@@ -169,7 +191,7 @@ class _HpSection extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                Text(
+                _VitalsValueText(
                   '${detail.currentHp} / ${detail.maxHp}',
                   style: AppTypography.body(
                     fontSize: 15,
@@ -368,7 +390,7 @@ class _XpSection extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            Text(
+            _VitalsValueText(
               '${detail.xp} / $threshold',
               style: AppTypography.body(
                 fontSize: 13,
