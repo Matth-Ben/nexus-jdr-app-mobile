@@ -53,3 +53,29 @@ extension CurrencyKindProperties on CurrencyKind {
     CurrencyKind.copper => 'pièces de cuivre',
   };
 }
+
+/// Colonnes `characters.currency_*` valides d'un payload de file `currency`.
+const _currencyColumns = {
+  'currency_pp',
+  'currency_gp',
+  'currency_ep',
+  'currency_sp',
+  'currency_cp',
+};
+
+/// [raw] (`{colonne currency_*: total}`) si c'est un objet non vide dont
+/// **toutes** les clés sont des colonnes de monnaie connues et toutes les
+/// valeurs des entiers `>= 0` ; sinon `null` (payload illisible : jamais
+/// rejoué ni superposé — un total absolu douteux écraserait la bourse).
+Map<String, int>? validCurrencyTotals(Object? raw) {
+  if (raw is! Map || raw.isEmpty) return null;
+  final result = <String, int>{};
+  for (final entry in raw.entries) {
+    final key = entry.key;
+    final value = entry.value;
+    if (key is! String || !_currencyColumns.contains(key)) return null;
+    if (value is! int || value < 0) return null;
+    result[key] = value;
+  }
+  return result;
+}

@@ -1352,7 +1352,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
+      // T3 : mis en file hors ligne, la relecture superpose la valeur en
+      // file (voir `SupabaseCharacterRepository._withPendingWrites`).
       await _refreshCharacterDetail();
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineQueuedMessage(l10n));
+      }
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
@@ -1386,6 +1391,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         return;
       }
       await _refreshCharacterDetail();
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineQueuedMessage(l10n));
+      }
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
@@ -1516,7 +1524,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         return;
       }
       await _refreshCharacterDetail();
-      _showSnackBar('Récompense ajoutée.');
+      _showSnackBar(
+        outcome == WriteOutcome.queued
+            ? _offlineQueuedMessage(l10n)
+            : 'Récompense ajoutée.',
+      );
     } on CharacterFailure catch (failure) {
       await _refreshCharacterDetail();
       _showSnackBar(failure.message);

@@ -1695,8 +1695,8 @@ void main() {
         expect(outcome, WriteOutcome.synced);
       });
 
-      test('adjustCurrency : connectivité absente -> retourne queued sans '
-          'tenter le réseau, jamais mise en file', () async {
+      test('adjustCurrency : connectivité absente -> mise en file (T3), '
+          'queued sans tenter le réseau', () async {
         final client = await _buildSignedInFakeSupabaseClient(
           ownerId: ownerId,
           throwOnRequest: true,
@@ -1714,13 +1714,23 @@ void main() {
           newAmount: 42,
         );
 
-        expect(outcome, WriteOutcome.rejectedOffline);
-        expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+        expect(outcome, WriteOutcome.queued);
+        final queued = await pendingWrites.allForOwner(ownerId);
+        expect(queued, hasLength(1));
+        expect(queued.single.kind, PendingCharacterWriteKind.currency);
+        expect(queued.single.payload['totals'], {'currency_gp': 42});
       });
 
       test('adjustCurrency : connectivité présente + écriture réussie -> '
           'synced', () async {
-        final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: {
+            'characters': [
+              {'id': characterId},
+            ],
+          },
+        );
         final repository = SupabaseCharacterRepository(
           client,
           cache,

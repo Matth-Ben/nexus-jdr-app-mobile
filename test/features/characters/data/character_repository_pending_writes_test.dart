@@ -285,6 +285,43 @@ void main() {
     });
   });
 
+  group('monnaies (T3) : cache hors ligne et superposition', () {
+    Future<void> queueCurrency(Object? totals) => pendingWrites.enqueue(
+      characterId: _characterId,
+      ownerId: _ownerId,
+      kind: PendingCharacterWriteKind.currency,
+      targetId: '',
+      payload: {'totals': totals},
+    );
+
+    test('hors ligne : monnaies du cache + superposition des seules '
+        'monnaies en file', () async {
+      await openOnlineOnce();
+      goOffline();
+
+      final cachedOnly = await repository.fetchCharacterDetail(_characterId);
+      expect(cachedOnly.currencyGp, 5);
+
+      await queueCurrency({'currency_gp': 12, 'currency_sp': 3});
+
+      final overlaid = await repository.fetchCharacterDetail(_characterId);
+      expect(overlaid.currencyGp, 12);
+      expect(overlaid.currencySp, 3);
+      expect(overlaid.currencyPp, 0);
+      expect(overlaid.currencyCp, 0);
+    });
+
+    test('payload de file illisible : ignoré, fiche inchangée', () async {
+      await openOnlineOnce();
+      goOffline();
+      await queueCurrency({'currency_gp': -4});
+
+      final detail = await repository.fetchCharacterDetail(_characterId);
+
+      expect(detail.currencyGp, 5);
+    });
+  });
+
   group('retour du réseau', () {
     test('la valeur synchronisée est la dernière mise en file, la file est '
         'vidée, la fiche relue affiche la même valeur', () async {

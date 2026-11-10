@@ -68,10 +68,14 @@ class SyncAlertRecorder {
       characterId: conflict.characterId,
       characterName: (row?['name'] as String?) ?? '',
       dataKind: conflict.kind.storageKey,
-      serverValue: {
-        'currentHp': conflict.serverValue['currentHp'],
-        'maxHp': (row?['max_hp'] as num?)?.toInt(),
-      },
+      // Monnaies : totaux serveur trouvés au rejeu (pas d'UI avant T8, le
+      // bandeau retombe sur son texte de repli).
+      serverValue: conflict.kind == PendingCharacterWriteKind.currency
+          ? Map<String, dynamic>.from(conflict.serverValue)
+          : {
+              'currentHp': conflict.serverValue['currentHp'],
+              'maxHp': (row?['max_hp'] as num?)?.toInt(),
+            },
     );
   }
 
