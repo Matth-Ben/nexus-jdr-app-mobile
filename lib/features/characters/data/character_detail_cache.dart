@@ -1,4 +1,6 @@
 import '../../../core/cache/reference_data_cache.dart';
+import '../../../core/rules/spell_status.dart';
+import '../domain/offline_state_writes.dart';
 
 /// Point unique de connaissance de l'entrée de cache de la fiche personnage
 /// (`SupabaseCharacterRepository.fetchCharacterDetail`) : sa clé, et
@@ -70,6 +72,107 @@ class CharacterDetailCache {
       // Best-effort : voir la documentation de cette méthode.
     }
   }
+
+  /// Reporte dans la fiche en cache un changement **confirmé** d'une relation
+  /// enfant de la ligne `characters` ([relation] : `character_spells`,
+  /// `character_inventory`...). [transform] reçoit les lignes en cache de la
+  /// relation et renvoie les lignes à stocker (T5a). Mêmes garanties que
+  /// [applyConfirmedColumns] : rien si la fiche (ou la relation) n'est pas en
+  /// cache, best-effort, jamais pour une valeur seulement mise en file.
+  Future<void> applyConfirmedRelation({
+    required String ownerId,
+    required String characterId,
+    required String relation,
+    required List<Map<String, dynamic>> Function(
+      List<Map<String, dynamic>> rows,
+    )
+    transform,
+  }) async {
+    try {
+      await _cache.updateIfPresent(
+        keyFor(ownerId: ownerId, characterId: characterId),
+        (payload) {
+          if (payload is! Map) return null;
+          final row = payload[rowKey];
+          if (row is! Map) return null;
+          final raw = row[relation];
+          if (raw is! List) return null;
+          final rows = [
+            for (final entry in raw)
+              if (entry is Map) Map<String, dynamic>.from(entry),
+          ];
+          return <String, dynamic>{
+            ...Map<String, dynamic>.from(payload),
+            rowKey: <String, dynamic>{
+              ...Map<String, dynamic>.from(row),
+              relation: transform(rows),
+            },
+          };
+        },
+      );
+    } catch (_) {
+      // Best-effort : voir la documentation de cette méthode.
+    }
+  }
+
+  /// Reporte dans le cache l'état d'un sort confirmé par le serveur (T5a) :
+  /// statut sur les lignes ordinaires (jamais une ligne 'inné'), favori sur
+  /// toutes les lignes du sort ; une préparation sans aucune ligne en crée une.
+  Future<void> applyConfirmedSpellState({
+    required String ownerId,
+    required String characterId,
+    required int spellId,
+    required SpellStatePatch patch,
+  }) => applyConfirmedRelation(
+    ownerId: ownerId,
+    characterId: characterId,
+    relation: 'character_spells',
+    transform: (rows) {
+      final hasRow = rows.any((row) => row['spell_id'] == spellId);
+      final result = [
+        for (final row in rows)
+          if (row['spell_id'] != spellId)
+            row
+          else
+            {
+              ...row,
+              if (patch.prepared != null &&
+                  row['status'] != SpellStatus.innate.value)
+                'status':
+                    (patch.prepared! ? SpellStatus.prepared : SpellStatus.known)
+                        .value,
+              if (patch.favorite != null) 'is_favorite': patch.favorite,
+            },
+      ];
+      if (!hasRow && patch.prepared == true) {
+        result.add({
+          'spell_id': spellId,
+          'status': SpellStatus.prepared.value,
+          'is_favorite': false,
+          'source_class_id': null,
+          'innate_uses_spent': 0,
+        });
+      }
+      return result;
+    },
+  );
+
+  /// Reporte dans le cache l'état d'un objet d'inventaire confirmé par le
+  /// serveur (T5a).
+  Future<void> applyConfirmedInventoryState({
+    required String ownerId,
+    required String characterId,
+    required String inventoryId,
+    required InventoryStatePatch patch,
+  }) => applyConfirmedRelation(
+    ownerId: ownerId,
+    characterId: characterId,
+    relation: 'character_inventory',
+    transform: (rows) => [
+      for (final row in rows)
+        if (row['id'] == inventoryId) {...row, ...patch.toColumns()} else row,
+    ],
+  );
 
   /// Ligne `characters` brute en cache (dernier état serveur connu), `null`
   /// si la fiche n'est pas en cache ou de forme inattendue. Sert à composer

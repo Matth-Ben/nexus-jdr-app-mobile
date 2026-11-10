@@ -46,6 +46,9 @@ import '../domain/level_up_rune_option.dart';
 import '../domain/level_up_subclass_option.dart';
 import '../domain/multiclass_prerequisites.dart';
 import '../domain/portrait_storage_path_resolver.dart';
+import '../domain/character_inventory_item.dart';
+import '../domain/character_spell_entry.dart';
+import '../domain/offline_state_writes.dart';
 import '../domain/prepared_caster_spell_list.dart';
 import '../domain/prepared_spells_limit.dart';
 import '../domain/rest_type.dart';
@@ -181,8 +184,14 @@ abstract class CharacterRepository {
 
   /// Écrit directement `characters.inspiration` — pastille "Inspiration" de
   /// l'onglet "Personnage" (`CharacterStatPillsRow`) — même contrat que
-  /// [setDead]/[setArchived] (mode hors-ligne inclus, voir la documentation
-  /// de [setDead]), simple flag sans effet sur le reste de la fiche.
+  /// [setDead]/[setArchived], simple flag sans effet sur le reste de la
+  /// fiche.
+  ///
+  /// Mode hors ligne (T5a, P15) : contrairement à [setDead]/[setArchived], mis
+  /// en file ([PendingCharacterWriteKind.characterFlags], dernière valeur
+  /// gagnante) hors ligne ou sur erreur de transport — [WriteOutcome.queued] ;
+  /// un refus Postgrest ou zéro ligne affectée est un échec, jamais mis en
+  /// file.
   Future<WriteOutcome> setInspiration({
     required String characterId,
     required bool inspiration,
@@ -193,10 +202,9 @@ abstract class CharacterRepository {
   /// (`CharacterStatPillsRow`/`armor_class_bonus_sheet.dart`), voir la doc
   /// de classe de `CharacterDetail.armorClassBonus`. [bonus] est déjà la
   /// nouvelle valeur absolue signée (peut être négatif, un malus RAW), même
-  /// contrat que [setDead]/[setArchived]/[setInspiration] (mode hors-ligne
-  /// inclus, voir la documentation de [setDead] : jamais mise en file,
-  /// écriture jugée suffisamment secondaire pour ne pas mériter sa propre
-  /// entrée dans `PendingCharacterWriteQueue`).
+  /// contrat que [setInspiration], y compris le mode hors ligne (T5a, P15) :
+  /// mis en file ([PendingCharacterWriteKind.characterFlags], dernière valeur
+  /// gagnante), [WriteOutcome.queued].
   Future<WriteOutcome> setArmorClassBonus({
     required String characterId,
     required int bonus,
@@ -356,8 +364,13 @@ abstract class CharacterRepository {
   /// `_SpellRow` (`presentation/widgets/character_spells_section.dart`),
   /// épinglage pour accès rapide en combat
   /// (`docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
-  /// "Onglet Sorts"). Même contrat que [setDead]/[setArchived] (mode
-  /// hors-ligne inclus) : simple flag, jamais mis en file d'attente.
+  /// "Onglet Sorts"). Simple flag.
+  ///
+  /// Mode hors ligne (T5a, P15) : mis en file ([PendingCharacterWriteKind
+  /// .spellState], `targetId` = [spellId], fusion champ par champ avec une
+  /// éventuelle préparation en attente) hors ligne ou sur erreur de
+  /// transport — [WriteOutcome.queued] ; un refus Postgrest ou zéro ligne
+  /// affectée est un échec, jamais mis en file.
   Future<WriteOutcome> setSpellFavorite({
     required String characterId,
     required int spellId,
@@ -398,6 +411,11 @@ abstract class CharacterRepository {
   /// et un sort qui n'a que des lignes 'inné' ne reçoit aucune nouvelle
   /// ligne (rien n'est écrit, [WriteOutcome.synced] quand même : la base est
   /// déjà dans l'état voulu pour un sort inné).
+  ///
+  /// Mode hors ligne (T5a, P15) : mis en file (`spellState`, `targetId` =
+  /// [spellId]) ; la limite de préparation est alors vérifiée sur l'état
+  /// **effectif** (cache + file), pour que plusieurs préparations cumulées
+  /// hors ligne ne la dépassent pas. Le rejeu ne la revérifie pas.
   Future<WriteOutcome> setSpellPrepared({
     required String characterId,
     required int spellId,
@@ -478,7 +496,10 @@ abstract class CharacterRepository {
   /// [equipWeaponToSlot]), seulement une armure/un bouclier, catégories
   /// pour lesquelles `weapon_slot` n'a de toute façon aucun sens.
   ///
-  /// Mode hors ligne : mêmes règles que [useInventoryItem].
+  /// Mode hors ligne (T5a, P15) : mis en file (`inventoryState`, `targetId` =
+  /// [inventoryId], dernière valeur gagnante) hors ligne ou sur erreur de
+  /// transport — [WriteOutcome.queued] ; un refus ou zéro ligne affectée est
+  /// un échec, jamais mis en file.
   Future<WriteOutcome> setInventoryItemEquipped({
     required String characterId,
     required String inventoryId,
@@ -493,8 +514,9 @@ abstract class CharacterRepository {
   /// [setInventoryItemEquipped] pour chacune) — cette méthode ne fait que la
   /// dernière écriture (équiper la nouvelle arme dans le set choisi).
   ///
-  /// Mode hors ligne : mêmes règles que [useInventoryItem] (jamais mise en
-  /// file, voir sa documentation).
+  /// Mode hors ligne (T5a, P15) : mis en file (`inventoryState`, un état
+  /// absolu par objet, [WriteOutcome.queued]) ; l'auto-déséquipement des armes
+  /// du même set reste fait par l'appelant, une écriture par objet.
   Future<WriteOutcome> equipWeaponToSlot({
     required String characterId,
     required String inventoryId,
@@ -508,7 +530,10 @@ abstract class CharacterRepository {
   /// l'appel (voir `presentation/widgets/item_action_sheet.dart`/
   /// `item_info_panel.dart`), jamais ici.
   ///
-  /// Mode hors ligne : mêmes règles que [useInventoryItem].
+  /// Mode hors ligne (T5a, P15) : mis en file (`inventoryState`, `targetId` =
+  /// [inventoryId]) ; hors ligne, le plafond de 3 est revérifié sur l'état
+  /// **effectif** (cache + file) et une [CharacterFailure] est levée si une
+  /// harmonisation cumulée le dépasserait.
   Future<WriteOutcome> setInventoryItemAttuned({
     required String characterId,
     required String inventoryId,
@@ -1915,6 +1940,53 @@ class SupabaseCharacterRepository implements CharacterRepository {
               conditions: ConditionType.parse(raw),
               unknownConditionKeys: ConditionType.unknownKeys(raw),
             );
+          case PendingCharacterWriteKind.spellState:
+            // T5a : préparé/favori du sort `targetId`. Les dérivés (nombre de
+            // sorts préparés, quota par classe) sont des getters de
+            // [CharacterDetail] : ils suivent cet état effectif.
+            final spellId = parseSpellTargetId(write.targetId);
+            final patch = parseSpellStatePayload(write.payload);
+            if (spellId == null || patch == null) break;
+            result = result.copyWith(
+              spells: [
+                for (final spell in result.spells)
+                  if (spell.id == spellId)
+                    spell.copyWithPendingState(
+                      prepared: patch.prepared,
+                      favorite: patch.favorite,
+                    )
+                  else
+                    spell,
+              ],
+            );
+          case PendingCharacterWriteKind.inventoryState:
+            // T5a : équipé/set d'arme/harmonisé de l'objet `targetId` (CA,
+            // nombre d'objets harmonisés : getters dérivés de l'inventaire).
+            final patch = parseInventoryStatePayload(write.payload);
+            if (!isValidInventoryTargetId(write.targetId) || patch == null) {
+              break;
+            }
+            result = result.copyWith(
+              inventory: [
+                for (final item in result.inventory)
+                  if (item.id == write.targetId)
+                    item.copyWithPendingState(
+                      equipped: patch.equipped,
+                      changeWeaponSlot: patch.hasWeaponSlot,
+                      weaponSlot: patch.weaponSlot,
+                      isAttuned: patch.attuned,
+                    )
+                  else
+                    item,
+              ],
+            );
+          case PendingCharacterWriteKind.characterFlags:
+            final patch = parseCharacterFlagsPayload(write.payload);
+            if (patch == null) break;
+            result = result.copyWith(
+              inspiration: patch.inspiration ?? result.inspiration,
+              armorClassBonus: patch.armorClassBonus ?? result.armorClassBonus,
+            );
           case PendingCharacterWriteKind.rest:
           // Jamais superposée — voir la documentation de cette méthode.
         }
@@ -2224,6 +2296,388 @@ class SupabaseCharacterRepository implements CharacterRepository {
     );
   }
 
+  /// Moteur commun des réglages d'état **absolus** mis en file (T5a, P15) :
+  /// `setSpellPrepared`/`setSpellFavorite` (`spellState`),
+  /// `setInventoryItemEquipped`/`equipWeaponToSlot`/`setInventoryItemAttuned`
+  /// (`inventoryState`), `setInspiration`/`setArmorClassBonus`
+  /// (`characterFlags`) — même schéma que `setConditions`/[_writeCurrencyTotals].
+  ///
+  /// - hors ligne, ou erreur de transport : [guardBeforeEnqueue] (bornes
+  ///   métier sur l'état **effectif**, cache + file), puis mise en file avec
+  ///   fusion champ par champ de l'entrée déjà en file pour cette cible
+  ///   (dernière valeur gagnante), [WriteOutcome.queued] ;
+  /// - en ligne : écriture immédiate dans `runExclusive(characterId, kind,
+  ///   targetId)`. L'entrée restée en file (réseau revenu, synchro pas encore
+  ///   passée) est **fusionnée** au changement avant l'écriture — sans quoi son
+  ///   retrait perdrait ses autres champs — puis retirée par
+  ///   `removeIfUnchanged`, et le cache de la fiche reçoit l'état confirmé ;
+  /// - refus Postgrest (RLS, contrainte) ou zéro ligne affectée : échec, rien
+  ///   en file.
+  Future<WriteOutcome> _writeAbsoluteState<P extends Object>({
+    required String characterId,
+    required PendingCharacterWriteKind kind,
+    required String targetId,
+    required _StateCodec<P> codec,
+    required P change,
+    required Future<void> Function(String ownerId, P effective, P change)
+    writeOnline,
+    required Future<void> Function(String ownerId, P effective) recordInCache,
+    Future<void> Function(String ownerId)? guardBeforeEnqueue,
+  }) async {
+    final ownerId = _requireOwnerId();
+
+    Future<WriteOutcome> enqueue() async {
+      await guardBeforeEnqueue?.call(ownerId);
+      final existing = await _pendingWriteBeforeOnlineWrite(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: kind,
+        targetId: targetId,
+      );
+      final older = existing == null ? null : codec.parse(existing.payload);
+      final effective = older == null ? change : codec.merge(older, change);
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: kind,
+        targetId: targetId,
+        payload: codec.toPayload(effective),
+      );
+      return WriteOutcome.queued;
+    }
+
+    if (!await _connectivityChecker.hasConnection()) {
+      return enqueue();
+    }
+
+    try {
+      await _pendingWrites.runExclusive(
+        characterId: characterId,
+        kind: kind,
+        targetId: targetId,
+        action: () async {
+          final supersededWrite = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: kind,
+            targetId: targetId,
+          );
+          final older = supersededWrite == null
+              ? null
+              : codec.parse(supersededWrite.payload);
+          final effective = older == null ? change : codec.merge(older, change);
+          await writeOnline(ownerId, effective, change);
+          await _recordConfirmedWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            columns: null,
+            supersededWrite: supersededWrite,
+          );
+          await recordInCache(ownerId, effective);
+        },
+      );
+      return WriteOutcome.synced;
+    } on CharacterFailure {
+      rethrow;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (error, stackTrace) {
+      if (isTransportFailure(error)) {
+        // Même traitement que `updateHp` (D12/D184).
+        return enqueue();
+      }
+      reportNonFatal(error, stackTrace);
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  /// Refus non rejouable : zéro ligne affectée (RLS silencieuse ou cible
+  /// disparue). Même code que le refus RLS (`42501`) : en ligne, il devient un
+  /// `accessDenied` (`mapCharacterError`) ; au rejeu, il est classé non
+  /// rejouable (abandon au seuil, alerte persistée).
+  PostgrestException _noRowAffected(String what) => PostgrestException(
+    message: 'Aucune ligne affectée ($what).',
+    code: '42501',
+  );
+
+  /// État effectif de la fiche hors ligne : cache (dernier état serveur
+  /// connu) + écritures en file. `null` si la fiche n'est pas en cache.
+  Future<CharacterDetail?> _effectiveDetailFromCache({
+    required String ownerId,
+    required String characterId,
+  }) async {
+    final cached = await _mappedFromCache(
+      CharacterDetailCache.keyFor(ownerId: ownerId, characterId: characterId),
+      _mapCharacterDetailPayload,
+    );
+    if (cached == null) return null;
+    return _withPendingWrites(
+      cached,
+      ownerId: ownerId,
+      characterId: characterId,
+    );
+  }
+
+  /// Borne RAW de préparation, vérifiée hors ligne sur l'état **effectif**
+  /// (cache + file : plusieurs préparations cumulées hors ligne ne peuvent pas
+  /// dépasser la limite de la classe). Même message que la vérification
+  /// serveur (`_resolvePreparingClassAndEnforceLimit`). Fail-open si la fiche
+  /// n'est pas en cache ou si la classe d'origine est ambiguë.
+  Future<void> _enforcePreparedLimitOffline({
+    required String ownerId,
+    required String characterId,
+    required int spellId,
+  }) async {
+    final detail = await _effectiveDetailFromCache(
+      ownerId: ownerId,
+      characterId: characterId,
+    );
+    if (detail == null) return;
+    CharacterSpellEntry? spell;
+    for (final entry in detail.spells) {
+      if (entry.id == spellId) {
+        spell = entry;
+        break;
+      }
+    }
+    if (spell == null ||
+        spell.level <= 0 ||
+        spell.status != SpellStatus.known ||
+        spell.isAlwaysPrepared ||
+        !spell.requiresPreparation) {
+      return;
+    }
+    final limits = detail.preparedSpellsByClass;
+    if (limits.isEmpty) return;
+    ClassPreparedSpells? target;
+    if (limits.length == 1) {
+      target = limits.single;
+    } else {
+      final candidates = [
+        for (final limit in limits)
+          if (spell.sourceClassIds
+              .map((id) => id.toString())
+              .contains(limit.classId.toString()))
+            limit,
+      ];
+      if (candidates.isEmpty) return;
+      target = candidates.firstWhere(
+        (limit) => !limit.isAtLimit,
+        orElse: () => candidates.first,
+      );
+    }
+    if (target.isAtLimit) {
+      throw CharacterFailure(
+        'Limite de sorts préparés atteinte pour ${target.className} '
+        '(${target.preparedCount}/${target.limit}) : ne plus préparer un sort '
+        "de cette classe avant d'en préparer un nouveau.",
+      );
+    }
+  }
+
+  /// Plafond RAW d'objets harmonisés, vérifié hors ligne sur l'état
+  /// **effectif** (cache + file). Fail-open si la fiche n'est pas en cache.
+  Future<void> _enforceAttunementCapOffline({
+    required String ownerId,
+    required String characterId,
+    required String inventoryId,
+  }) async {
+    final detail = await _effectiveDetailFromCache(
+      ownerId: ownerId,
+      characterId: characterId,
+    );
+    if (detail == null) return;
+    CharacterInventoryItem? item;
+    for (final entry in detail.inventory) {
+      if (entry.id == inventoryId) {
+        item = entry;
+        break;
+      }
+    }
+    if (item == null || item.isAttuned) return;
+    if (detail.attunedItemCount >= CharacterDetail.attunementCap) {
+      throw const CharacterFailure(
+        'Vous ne pouvez pas harmoniser plus de '
+        '${CharacterDetail.attunementCap} objets à la fois.',
+      );
+    }
+  }
+
+  /// Écrit l'état d'un sort ([patch] : préparé et/ou favori). La limite de
+  /// préparation n'est vérifiée que si [enforceLimit] : le rejeu de la file
+  /// ne la revérifie jamais (elle l'a été à la mise en file, et une
+  /// [CharacterFailure] ne serait de toute façon jamais classée non
+  /// rejouable). Public comme [applyRestOnline] : appelé par
+  /// `PendingCharacterWriteSyncer`. Ne vérifie pas la connectivité.
+  ///
+  /// Lève une [PostgrestException] `42501` (zéro ligne) pour un favori sans
+  /// ligne `character_spells` ; dé-préparer un sort sans aucune ligne est un
+  /// succès sans écriture (l'état voulu est déjà atteint).
+  Future<void> applySpellStateOnline({
+    required String characterId,
+    required int spellId,
+    required SpellStatePatch patch,
+    bool enforceLimit = false,
+  }) async {
+    final prepared = patch.prepared;
+    if (prepared != null) {
+      final resolvedSourceClassId = prepared
+          ? await _resolvePreparingClassAndEnforceLimit(
+              characterId: characterId,
+              spellId: spellId,
+              enforceLimit: enforceLimit,
+            )
+          : null;
+      await _writePreparedStatus(
+        characterId: characterId,
+        spellId: spellId,
+        prepared: prepared,
+        resolvedSourceClassId: resolvedSourceClassId,
+      );
+    }
+    final favorite = patch.favorite;
+    if (favorite != null) {
+      final updated = await _client
+          .from('character_spells')
+          .update({'is_favorite': favorite})
+          .eq('character_id', characterId)
+          .eq('spell_id', spellId)
+          .select('id');
+      if (updated.isEmpty) throw _noRowAffected('character_spells');
+    }
+  }
+
+  /// Écrit l'état d'un objet d'inventaire ([patch]). Public comme
+  /// [applySpellStateOnline]. Zéro ligne affectée : [PostgrestException]
+  /// `42501`.
+  Future<void> applyInventoryStateOnline({
+    required String characterId,
+    required String inventoryId,
+    required InventoryStatePatch patch,
+  }) async {
+    final updated = await _client
+        .from('character_inventory')
+        .update(patch.toColumns())
+        .eq('id', inventoryId)
+        .eq('character_id', characterId)
+        .select('id');
+    if (updated.isEmpty) throw _noRowAffected('character_inventory');
+  }
+
+  Future<void> _recordSpellStateInCache({
+    required String ownerId,
+    required String characterId,
+    required int spellId,
+    required SpellStatePatch patch,
+  }) => _detailCache.applyConfirmedSpellState(
+    ownerId: ownerId,
+    characterId: characterId,
+    spellId: spellId,
+    patch: patch,
+  );
+
+  Future<void> _recordInventoryStateInCache({
+    required String ownerId,
+    required String characterId,
+    required String inventoryId,
+    required InventoryStatePatch patch,
+  }) => _detailCache.applyConfirmedInventoryState(
+    ownerId: ownerId,
+    characterId: characterId,
+    inventoryId: inventoryId,
+    patch: patch,
+  );
+
+  Future<WriteOutcome> _writeCharacterFlags({
+    required String characterId,
+    required CharacterFlagsPatch change,
+  }) => _writeAbsoluteState<CharacterFlagsPatch>(
+    characterId: characterId,
+    kind: PendingCharacterWriteKind.characterFlags,
+    targetId: '',
+    codec: _flagsCodec,
+    change: change,
+    writeOnline: (ownerId, effective, _) async {
+      final updated = await _client
+          .from('characters')
+          .update(effective.toColumns())
+          .eq('id', characterId)
+          .eq('owner_id', ownerId)
+          .select('id');
+      if (updated.isEmpty) throw _noRowAffected('characters');
+    },
+    recordInCache: (ownerId, effective) => _detailCache.applyConfirmedColumns(
+      ownerId: ownerId,
+      characterId: characterId,
+      columns: effective.toColumns(),
+    ),
+  );
+
+  Future<WriteOutcome> _writeSpellState({
+    required String characterId,
+    required int spellId,
+    required SpellStatePatch change,
+  }) => _writeAbsoluteState<SpellStatePatch>(
+    characterId: characterId,
+    kind: PendingCharacterWriteKind.spellState,
+    targetId: spellId.toString(),
+    codec: _spellCodec,
+    change: change,
+    guardBeforeEnqueue: (ownerId) async {
+      if (change.prepared == true) {
+        await _enforcePreparedLimitOffline(
+          ownerId: ownerId,
+          characterId: characterId,
+          spellId: spellId,
+        );
+      }
+    },
+    writeOnline: (ownerId, effective, change) => applySpellStateOnline(
+      characterId: characterId,
+      spellId: spellId,
+      patch: effective,
+      enforceLimit: change.prepared == true,
+    ),
+    recordInCache: (ownerId, effective) => _recordSpellStateInCache(
+      ownerId: ownerId,
+      characterId: characterId,
+      spellId: spellId,
+      patch: effective,
+    ),
+  );
+
+  Future<WriteOutcome> _writeInventoryState({
+    required String characterId,
+    required String inventoryId,
+    required InventoryStatePatch change,
+  }) => _writeAbsoluteState<InventoryStatePatch>(
+    characterId: characterId,
+    kind: PendingCharacterWriteKind.inventoryState,
+    targetId: inventoryId,
+    codec: _inventoryCodec,
+    change: change,
+    guardBeforeEnqueue: (ownerId) async {
+      if (change.attuned == true) {
+        await _enforceAttunementCapOffline(
+          ownerId: ownerId,
+          characterId: characterId,
+          inventoryId: inventoryId,
+        );
+      }
+    },
+    writeOnline: (ownerId, effective, _) => applyInventoryStateOnline(
+      characterId: characterId,
+      inventoryId: inventoryId,
+      patch: effective,
+    ),
+    recordInCache: (ownerId, effective) => _recordInventoryStateInCache(
+      ownerId: ownerId,
+      characterId: characterId,
+      inventoryId: inventoryId,
+      patch: effective,
+    ),
+  );
+
   @override
   Future<WriteOutcome> updateHp({
     required String characterId,
@@ -2387,49 +2841,19 @@ class SupabaseCharacterRepository implements CharacterRepository {
   Future<WriteOutcome> setInspiration({
     required String characterId,
     required bool inspiration,
-  }) async {
-    final ownerId = _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
-    }
-
-    try {
-      await _client
-          .from('characters')
-          .update({'inspiration': inspiration})
-          .eq('id', characterId)
-          .eq('owner_id', ownerId);
-      return WriteOutcome.synced;
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
-    } catch (_) {
-      throw mapUnknownCharacterError();
-    }
-  }
+  }) => _writeCharacterFlags(
+    characterId: characterId,
+    change: CharacterFlagsPatch(inspiration: inspiration),
+  );
 
   @override
   Future<WriteOutcome> setArmorClassBonus({
     required String characterId,
     required int bonus,
-  }) async {
-    final ownerId = _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
-    }
-
-    try {
-      await _client
-          .from('characters')
-          .update({'armor_class_bonus': bonus})
-          .eq('id', characterId)
-          .eq('owner_id', ownerId);
-      return WriteOutcome.synced;
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
-    } catch (_) {
-      throw mapUnknownCharacterError();
-    }
-  }
+  }) => _writeCharacterFlags(
+    characterId: characterId,
+    change: CharacterFlagsPatch(armorClassBonus: bonus),
+  );
 
   @override
   Future<String> uploadPortrait({
@@ -2846,130 +3270,109 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String characterId,
     required int spellId,
     required bool isFavorite,
-  }) async {
-    // `character_spells` n'a pas de colonne `owner_id` propre, la RLS
-    // (`owns_character(character_id)`) est la garantie d'isolation — même
-    // principe que [useInventoryItem]. `_requireOwnerId()` sert uniquement à
-    // s'assurer qu'une session existe.
-    _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
-    }
-
-    try {
-      await _client
-          .from('character_spells')
-          .update({'is_favorite': isFavorite})
-          .eq('character_id', characterId)
-          .eq('spell_id', spellId);
-      return WriteOutcome.synced;
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
-    } catch (_) {
-      throw mapUnknownCharacterError();
-    }
-  }
+  }) =>
+      // `character_spells` n'a pas de colonne `owner_id` propre, la RLS
+      // (`owns_character(character_id)`) est la garantie d'isolation.
+      _writeSpellState(
+        characterId: characterId,
+        spellId: spellId,
+        change: SpellStatePatch(favorite: isFavorite),
+      );
 
   @override
   Future<WriteOutcome> setSpellPrepared({
     required String characterId,
     required int spellId,
     required bool prepared,
+  }) =>
+      // La vérification de la limite RAW (en ligne : serveur, hors ligne :
+      // état effectif cache + file) a lieu AVANT toute écriture ou mise en
+      // file ; une [CharacterFailure] se propage telle quelle. Jamais pour
+      // dé-préparer : voir la doc de [CharacterRepository.setSpellPrepared].
+      _writeSpellState(
+        characterId: characterId,
+        spellId: spellId,
+        change: SpellStatePatch(prepared: prepared),
+      );
+
+  /// Écrit le statut 'préparé'/'connu' de [spellId] (corps historique de
+  /// `setSpellPrepared`, partagé avec [applySpellStateOnline]) : met à jour
+  /// la ligne ordinaire existante, ou la crée pour un sort de la liste de
+  /// classe d'un lanceur à préparation encore sans ligne. Échecs Postgrest
+  /// relancés tels quels (le mapping est fait par l'appelant).
+  Future<void> _writePreparedStatus({
+    required String characterId,
+    required int spellId,
+    required bool prepared,
+    required Object? resolvedSourceClassId,
   }) async {
-    _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
-    }
-
-    // Vérification bloquante AVANT toute écriture, et volontairement HORS du
-    // `try`/`catch` ci-dessous : une [CharacterFailure] levée ici doit se
-    // propager telle quelle à l'appelant (même convention que les autres
-    // écritures de ce dépôt, ex. `applyLevelUp`), pas être ré-enveloppée par
-    // `mapUnknownCharacterError()` comme le ferait le `catch (_)` générique
-    // de ce bloc s'il l'attrapait. Jamais appelée pour dé-préparer : voir la
-    // doc de classe de [CharacterRepository.setSpellPrepared].
-    final resolvedSourceClassId = prepared
-        ? await _resolvePreparingClassAndEnforceLimit(
-            characterId: characterId,
-            spellId: spellId,
-          )
-        : null;
-
-    try {
-      final updated = await _client
+    final updated = await _client
+        .from('character_spells')
+        .update({
+          'status': (prepared ? SpellStatus.prepared : SpellStatus.known).value,
+        })
+        .eq('character_id', characterId)
+        .eq('spell_id', spellId)
+        // Jamais une ligne 'inné' : un sort inné n'a pas de préparation,
+        // et la passer à 'préparé' puis 'connu' serait sans retour. Si le
+        // sort a des lignes en double (une innée, une ordinaire), seule la
+        // ligne ordinaire bouge.
+        .neq('status', SpellStatus.innate.value)
+        .select('id');
+    // Sort de la liste de classe d'un lanceur à préparation, sans ligne
+    // `character_spells` tant qu'il n'a jamais été préparé (voir
+    // `_fetchPreparedCasterClassListSpellRows`) : la créer. Pas d'upsert
+    // possible : la contrainte unique posée par D10
+    // (`character_spells_unique_ordinary_per_spell`) est partielle (ne
+    // porte que sur les lignes non-innées) et PostgREST n'expose pas de
+    // moyen de cibler un upsert sur une contrainte partielle plutôt que
+    // sur la clé primaire.
+    if (updated.isEmpty && prepared) {
+      // Aucune ligne modifiée : soit le sort n'a aucune ligne, soit il
+      // n'a que des lignes 'inné' (exclues ci-dessus). Dans ce second
+      // cas, ne rien écrire — surtout pas une ligne en double.
+      final existing = await _client
           .from('character_spells')
-          .update({
-            'status':
-                (prepared ? SpellStatus.prepared : SpellStatus.known).value,
-          })
+          .select('id')
           .eq('character_id', characterId)
           .eq('spell_id', spellId)
-          // Jamais une ligne 'inné' : un sort inné n'a pas de préparation,
-          // et la passer à 'préparé' puis 'connu' serait sans retour. Si le
-          // sort a des lignes en double (une innée, une ordinaire), seule la
-          // ligne ordinaire bouge.
-          .neq('status', SpellStatus.innate.value)
-          .select('id');
-      // Sort de la liste de classe d'un lanceur à préparation, sans ligne
-      // `character_spells` tant qu'il n'a jamais été préparé (voir
-      // `_fetchPreparedCasterClassListSpellRows`) : la créer. Pas d'upsert
-      // possible : la contrainte unique posée par D10
-      // (`character_spells_unique_ordinary_per_spell`) est partielle (ne
-      // porte que sur les lignes non-innées) et PostgREST n'expose pas de
-      // moyen de cibler un upsert sur une contrainte partielle plutôt que
-      // sur la clé primaire.
-      if (updated.isEmpty && prepared) {
-        // Aucune ligne modifiée : soit le sort n'a aucune ligne, soit il
-        // n'a que des lignes 'inné' (exclues ci-dessus). Dans ce second
-        // cas, ne rien écrire — surtout pas une ligne en double.
-        final existing = await _client
-            .from('character_spells')
-            .select('id')
-            .eq('character_id', characterId)
-            .eq('spell_id', spellId)
-            .limit(1);
-        if (existing.isNotEmpty) return WriteOutcome.synced;
-        try {
-          await _client.from('character_spells').insert({
-            'character_id': characterId,
-            'spell_id': spellId,
-            'status': SpellStatus.prepared.value,
-            // D40 (`docs/dette-technique.md`) : cette colonne n'était encore
-            // jamais écrite à l'insertion avant ce chantier — `null` si la
-            // résolution ci-dessus n'a pas pu déterminer de classe (fail
-            // open, voir sa documentation), jamais une valeur devinée.
-            'source_class_id': resolvedSourceClassId,
-          });
-        } on PostgrestException catch (error) {
-          // D42 : course entre la vérification `existing` ci-dessus et cet
-          // insert — un appel concurrent (double appui rapide, ou synchro
-          // hors ligne qui se déclenche en même temps qu'une action en
-          // ligne) peut passer la même vérification avant que cet insert ne
-          // soit confirmé. Depuis la contrainte unique posée par D10
-          // (`character_spells_unique_ordinary_per_spell`, au plus une
-          // ligne non-innée par (character_id, spell_id)), c'est désormais
-          // cet insert qui échoue avec '23505' plutôt que de créer un
-          // doublon silencieux. L'état voulu par le joueur (ce sort est
-          // préparé) est de toute façon atteint — par cet appel ou par celui
-          // qui a gagné la course — donc un succès, pas une erreur à
-          // afficher. On vérifie le nom de la contrainte (pas seulement le
-          // code '23505') pour ne jamais masquer une vraie violation
-          // d'unicité sur une autre contrainte si cette table en gagnait une
-          // un jour ; à ce jour c'est la seule contrainte unique sur les
-          // lignes non-innées de `character_spells`.
-          final isExpectedRaceCondition =
-              error.code == '23505' &&
-              error.message.contains(
-                'character_spells_unique_ordinary_per_spell',
-              );
-          if (!isExpectedRaceCondition) rethrow;
-        }
+          .limit(1);
+      if (existing.isNotEmpty) return;
+      try {
+        await _client.from('character_spells').insert({
+          'character_id': characterId,
+          'spell_id': spellId,
+          'status': SpellStatus.prepared.value,
+          // D40 (`docs/dette-technique.md`) : cette colonne n'était encore
+          // jamais écrite à l'insertion avant ce chantier — `null` si la
+          // résolution ci-dessus n'a pas pu déterminer de classe (fail
+          // open, voir sa documentation), jamais une valeur devinée.
+          'source_class_id': resolvedSourceClassId,
+        });
+      } on PostgrestException catch (error) {
+        // D42 : course entre la vérification `existing` ci-dessus et cet
+        // insert — un appel concurrent (double appui rapide, ou synchro
+        // hors ligne qui se déclenche en même temps qu'une action en
+        // ligne) peut passer la même vérification avant que cet insert ne
+        // soit confirmé. Depuis la contrainte unique posée par D10
+        // (`character_spells_unique_ordinary_per_spell`, au plus une
+        // ligne non-innée par (character_id, spell_id)), c'est désormais
+        // cet insert qui échoue avec '23505' plutôt que de créer un
+        // doublon silencieux. L'état voulu par le joueur (ce sort est
+        // préparé) est de toute façon atteint — par cet appel ou par celui
+        // qui a gagné la course — donc un succès, pas une erreur à
+        // afficher. On vérifie le nom de la contrainte (pas seulement le
+        // code '23505') pour ne jamais masquer une vraie violation
+        // d'unicité sur une autre contrainte si cette table en gagnait une
+        // un jour ; à ce jour c'est la seule contrainte unique sur les
+        // lignes non-innées de `character_spells`.
+        final isExpectedRaceCondition =
+            error.code == '23505' &&
+            error.message.contains(
+              'character_spells_unique_ordinary_per_spell',
+            );
+        if (!isExpectedRaceCondition) rethrow;
       }
-      return WriteOutcome.synced;
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
-    } catch (_) {
-      throw mapUnknownCharacterError();
     }
   }
 
@@ -3022,6 +3425,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   Future<Object?> _resolvePreparingClassAndEnforceLimit({
     required String characterId,
     required int spellId,
+    bool enforceLimit = true,
   }) async {
     final classRows = await _client
         .from('character_classes')
@@ -3162,7 +3566,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     );
     final limit = limitOf(target);
     final currentCount = countsByClassId[target.classId.toString()] ?? 0;
-    if (currentCount >= limit) {
+    if (enforceLimit && currentCount >= limit) {
       throw CharacterFailure(
         'Limite de sorts préparés atteinte pour ${target.className} '
         '($currentCount/$limit) : ne plus préparer un sort de cette classe '
@@ -3472,75 +3876,41 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String characterId,
     required String inventoryId,
     required bool equipped,
-  }) async {
-    _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
-    }
-
-    try {
-      await _client
-          .from('character_inventory')
-          .update({'equipped': equipped, if (!equipped) 'weapon_slot': null})
-          .eq('id', inventoryId)
-          .eq('character_id', characterId);
-      return WriteOutcome.synced;
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
-    } catch (_) {
-      throw mapUnknownCharacterError();
-    }
-  }
+  }) => _writeInventoryState(
+    characterId: characterId,
+    inventoryId: inventoryId,
+    change: InventoryStatePatch(
+      equipped: equipped,
+      // Déséquiper efface aussi le set d'arme ; équiper ne le touche jamais.
+      hasWeaponSlot: !equipped,
+    ),
+  );
 
   @override
   Future<WriteOutcome> equipWeaponToSlot({
     required String characterId,
     required String inventoryId,
     required WeaponSlot slot,
-  }) async {
-    _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
-    }
-
-    try {
-      await _client
-          .from('character_inventory')
-          .update({'equipped': true, 'weapon_slot': slot.value})
-          .eq('id', inventoryId)
-          .eq('character_id', characterId);
-      return WriteOutcome.synced;
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
-    } catch (_) {
-      throw mapUnknownCharacterError();
-    }
-  }
+  }) => _writeInventoryState(
+    characterId: characterId,
+    inventoryId: inventoryId,
+    change: InventoryStatePatch(
+      equipped: true,
+      hasWeaponSlot: true,
+      weaponSlot: slot,
+    ),
+  );
 
   @override
   Future<WriteOutcome> setInventoryItemAttuned({
     required String characterId,
     required String inventoryId,
     required bool attuned,
-  }) async {
-    _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
-    }
-
-    try {
-      await _client
-          .from('character_inventory')
-          .update({'is_attuned': attuned})
-          .eq('id', inventoryId)
-          .eq('character_id', characterId);
-      return WriteOutcome.synced;
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
-    } catch (_) {
-      throw mapUnknownCharacterError();
-    }
-  }
+  }) => _writeInventoryState(
+    characterId: characterId,
+    inventoryId: inventoryId,
+    change: InventoryStatePatch(attuned: attuned),
+  );
 
   @override
   Future<WriteOutcome> removeInventoryItem({
@@ -7662,3 +8032,36 @@ class SupabaseCharacterRepository implements CharacterRepository {
     );
   }
 }
+
+/// Format de file d'une famille de réglages d'état absolus (T5a) : analyse
+/// stricte du payload, fusion champ par champ « dernière valeur gagnante » et
+/// sérialisation — voir `domain/offline_state_writes.dart`.
+class _StateCodec<P extends Object> {
+  const _StateCodec({
+    required this.parse,
+    required this.merge,
+    required this.toPayload,
+  });
+
+  final P? Function(Object? payload) parse;
+  final P Function(P older, P newer) merge;
+  final Map<String, dynamic> Function(P patch) toPayload;
+}
+
+final _spellCodec = _StateCodec<SpellStatePatch>(
+  parse: parseSpellStatePayload,
+  merge: (older, newer) => older.merge(newer),
+  toPayload: (patch) => patch.toPayload(),
+);
+
+final _inventoryCodec = _StateCodec<InventoryStatePatch>(
+  parse: parseInventoryStatePayload,
+  merge: (older, newer) => older.merge(newer),
+  toPayload: (patch) => patch.toPayload(),
+);
+
+final _flagsCodec = _StateCodec<CharacterFlagsPatch>(
+  parse: parseCharacterFlagsPayload,
+  merge: (older, newer) => older.merge(newer),
+  toPayload: (patch) => patch.toPayload(),
+);

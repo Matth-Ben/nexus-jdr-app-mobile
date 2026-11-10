@@ -74,6 +74,14 @@ class FakeCharacterWriteServer {
 
   Map<String, dynamic> characterRow;
 
+  /// Tables enfants à état (T5a) : lignes de `character_spells`,
+  /// `character_inventory`... (clé = nom de table). Une table **présente** ici
+  /// est simulée : `GET` filtré (`eq.`/`neq.`), `PATCH` appliqué aux seules
+  /// lignes qui passent les filtres (zéro ligne = réponse `[]`, rien
+  /// appliqué), `POST` ajoute des lignes. Une table absente garde le
+  /// comportement historique (simple journal).
+  final Map<String, List<Map<String, dynamic>>> tables = {};
+
   /// Réseau totalement coupé : toute requête lève une `SocketException`.
   bool down = false;
 
@@ -131,6 +139,22 @@ class FakeCharacterWriteServer {
 
     if (!isWrite) {
       record(applied: false);
+      final stateful = tables[table];
+      if (stateful != null) {
+        final matching = _matching(stateful, request.url.queryParameters);
+        final asObject = (request.headers['Accept'] ?? '').contains(
+          'object+json',
+        );
+        if (asObject) {
+          return matching.isEmpty
+              ? _json(request, {
+                  'message': 'Aucune ligne',
+                  'code': 'PGRST116',
+                }, statusCode: 406)
+              : _json(request, matching.first);
+        }
+        return _json(request, matching);
+      }
       if (table == 'characters') {
         final asObject = (request.headers['Accept'] ?? '').contains(
           'object+json',
@@ -175,6 +199,28 @@ class FakeCharacterWriteServer {
       }
     }
 
+    final statefulRows = tables[table];
+    if (statefulRows != null) {
+      if (request.method == 'POST') {
+        final inserted = body is List ? body : [body];
+        for (final entry in inserted) {
+          statefulRows.add({
+            'id': 'row-${statefulRows.length + 1}',
+            ...Map<String, dynamic>.from(entry as Map),
+          });
+        }
+      } else if (request.method == 'PATCH') {
+        final matching = _matching(statefulRows, request.url.queryParameters);
+        if (matching.isEmpty) {
+          record(applied: false);
+          return _json(request, const <Object>[]);
+        }
+        for (final row in matching) {
+          row.addAll(Map<String, dynamic>.from(body as Map));
+        }
+      }
+    }
+
     if (table == 'characters' && body is Map) {
       characterRow = {...characterRow, ...Map<String, dynamic>.from(body)};
     }
@@ -192,7 +238,37 @@ class FakeCharacterWriteServer {
         {'id': characterRow['id']},
       ]);
     }
+    if (statefulRows != null && wantsRepresentation) {
+      return _json(request, [
+        for (final row in _matching(statefulRows, request.url.queryParameters))
+          {'id': row['id']},
+      ]);
+    }
     return _json(request, const <Object>[]);
+  }
+
+  /// Lignes de [rows] qui passent les filtres PostgREST `col=eq.v`/`col=neq.v`
+  /// de [query] (les autres paramètres — `select`, `limit`... — sont ignorés).
+  static List<Map<String, dynamic>> _matching(
+    List<Map<String, dynamic>> rows,
+    Map<String, String> query,
+  ) {
+    const reserved = {'select', 'limit', 'order', 'offset'};
+    return [
+      for (final row in rows)
+        if (query.entries.every((filter) {
+          if (reserved.contains(filter.key)) return true;
+          final value = filter.value;
+          if (value.startsWith('eq.')) {
+            return '${row[filter.key]}' == value.substring(3);
+          }
+          if (value.startsWith('neq.')) {
+            return '${row[filter.key]}' != value.substring(4);
+          }
+          return true;
+        }))
+          row,
+    ];
   }
 
   static http.Response _json(

@@ -5,6 +5,7 @@ import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../../core/rules/spell_status.dart';
 import '../domain/currency_kind.dart';
+import '../domain/offline_state_writes.dart';
 import '../domain/rest_type.dart';
 import 'character_detail_cache.dart';
 import 'character_repository.dart';
@@ -258,6 +259,15 @@ class PendingCharacterWriteSyncer {
               return;
             }
 
+            // T5a : un payload `spellState`/`inventoryState`/`characterFlags`
+            // invalide (mauvais type, valeur hors bornes, identifiant de cible
+            // vide ou illisible) n'est jamais rejoué : ligne supprimée, rien
+            // d'écrit, autres lignes non affectées.
+            if (!_isReplayableState(write)) {
+              await _pendingWrites.removeIfUnchanged(write);
+              return;
+            }
+
             ServerValueConflict? conflict;
             try {
               conflict = await _detectConcurrentChange(write, ownerId: ownerId);
@@ -298,6 +308,7 @@ class PendingCharacterWriteSyncer {
                 isPactSlot: write.payload['isPactSlot'] == true,
               );
             }
+            await _recordStateInCache(write, ownerId: ownerId);
             await _pendingWrites.removeIfUnchanged(write);
             synced.add(write.characterId);
             if (conflict != null) conflicts.add(conflict);
@@ -508,6 +519,37 @@ class PendingCharacterWriteSyncer {
             code: '42501',
           );
         }
+      case PendingCharacterWriteKind.spellState:
+        // T5a : état absolu d'un sort (rejeu idempotent), filtré par sort ET
+        // par personnage (la RLS reste la garantie d'isolation). Zéro ligne =
+        // refus non rejouable (42501), levé par `applySpellStateOnline`. La
+        // limite de préparation n'est pas revérifiée au rejeu.
+        await _restWriter.applySpellStateOnline(
+          characterId: write.characterId,
+          spellId: parseSpellTargetId(write.targetId)!,
+          patch: parseSpellStatePayload(write.payload)!,
+        );
+      case PendingCharacterWriteKind.inventoryState:
+        await _restWriter.applyInventoryStateOnline(
+          characterId: write.characterId,
+          inventoryId: write.targetId,
+          patch: parseInventoryStatePayload(write.payload)!,
+        );
+      case PendingCharacterWriteKind.characterFlags:
+        // T5a : colonnes absolues de `characters`, filtrées id ET owner_id ;
+        // zéro ligne = refus non rejouable (42501).
+        final updated = await _client
+            .from('characters')
+            .update(_cacheColumnsOf(write)!)
+            .eq('id', write.characterId)
+            .eq('owner_id', ownerId)
+            .select('id');
+        if (updated.isEmpty) {
+          throw const PostgrestException(
+            message: 'Aucune ligne affectée (characters).',
+            code: '42501',
+          );
+        }
       case PendingCharacterWriteKind.rest:
         final type = RestType.values.byName(write.payload['type'] as String);
         final className = write.payload['className'] as String? ?? '';
@@ -583,6 +625,9 @@ class PendingCharacterWriteSyncer {
       PendingCharacterWriteKind.rest => 'un repos',
       PendingCharacterWriteKind.conditions => 'vos conditions',
       PendingCharacterWriteKind.currency => 'vos monnaies',
+      PendingCharacterWriteKind.spellState => 'vos réglages de sorts',
+      PendingCharacterWriteKind.inventoryState => "vos réglages d'inventaire",
+      PendingCharacterWriteKind.characterFlags => 'vos réglages de personnage',
     };
     return 'Un ajustement de $label resté en attente a été refusé par le '
         'serveur et a été abandonné (personnage supprimé, accès retiré, ou '
@@ -635,11 +680,75 @@ class PendingCharacterWriteSyncer {
         };
       case PendingCharacterWriteKind.currency:
         return {...?validCurrencyTotals(write.payload['totals'])};
+      case PendingCharacterWriteKind.characterFlags:
+        return parseCharacterFlagsPayload(write.payload)?.toColumns();
+      case PendingCharacterWriteKind.spellState:
+      case PendingCharacterWriteKind.inventoryState:
       case PendingCharacterWriteKind.spellSlot:
       case PendingCharacterWriteKind.innateSpell:
       case PendingCharacterWriteKind.classFeature:
       case PendingCharacterWriteKind.rest:
         return null;
+    }
+  }
+
+  /// `false` si [write] est un réglage d'état (T5a) au payload ou à la cible
+  /// invalide : il ne doit jamais être rejoué. Toujours `true` pour les
+  /// autres kinds (validés ailleurs).
+  bool _isReplayableState(PendingCharacterWrite write) {
+    switch (write.kind) {
+      case PendingCharacterWriteKind.spellState:
+        return parseSpellTargetId(write.targetId) != null &&
+            parseSpellStatePayload(write.payload) != null;
+      case PendingCharacterWriteKind.inventoryState:
+        return isValidInventoryTargetId(write.targetId) &&
+            parseInventoryStatePayload(write.payload) != null;
+      case PendingCharacterWriteKind.characterFlags:
+        return parseCharacterFlagsPayload(write.payload) != null;
+      case PendingCharacterWriteKind.hp:
+      case PendingCharacterWriteKind.xp:
+      case PendingCharacterWriteKind.spellSlot:
+      case PendingCharacterWriteKind.innateSpell:
+      case PendingCharacterWriteKind.classFeature:
+      case PendingCharacterWriteKind.rest:
+      case PendingCharacterWriteKind.conditions:
+      case PendingCharacterWriteKind.currency:
+        return true;
+    }
+  }
+
+  /// Reporte dans le cache de la fiche l'état d'un sort/objet confirmé par le
+  /// rejeu (T5a) — les réglages de `characters` passent par
+  /// [_cacheColumnsOf].
+  Future<void> _recordStateInCache(
+    PendingCharacterWrite write, {
+    required String ownerId,
+  }) async {
+    switch (write.kind) {
+      case PendingCharacterWriteKind.spellState:
+        await _detailCache.applyConfirmedSpellState(
+          ownerId: ownerId,
+          characterId: write.characterId,
+          spellId: parseSpellTargetId(write.targetId)!,
+          patch: parseSpellStatePayload(write.payload)!,
+        );
+      case PendingCharacterWriteKind.inventoryState:
+        await _detailCache.applyConfirmedInventoryState(
+          ownerId: ownerId,
+          characterId: write.characterId,
+          inventoryId: write.targetId,
+          patch: parseInventoryStatePayload(write.payload)!,
+        );
+      case PendingCharacterWriteKind.hp:
+      case PendingCharacterWriteKind.xp:
+      case PendingCharacterWriteKind.spellSlot:
+      case PendingCharacterWriteKind.innateSpell:
+      case PendingCharacterWriteKind.classFeature:
+      case PendingCharacterWriteKind.rest:
+      case PendingCharacterWriteKind.conditions:
+      case PendingCharacterWriteKind.currency:
+      case PendingCharacterWriteKind.characterFlags:
+        break;
     }
   }
 }
