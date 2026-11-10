@@ -2228,10 +2228,14 @@ class _NetworkErrorState extends StatelessWidget {
   }
 }
 
-/// Largeur du mot [word] en police pixel à la taille de base (11 px, x1,0).
+/// Largeur du mot [word] en police pixel à la taille de base
+/// ([AppTypography.minDisplayFontSize], x1,0).
 double _displayWordWidth(String word) {
   final painter = TextPainter(
-    text: TextSpan(text: word, style: AppTypography.display(fontSize: 11)),
+    text: TextSpan(
+      text: word,
+      style: AppTypography.display(fontSize: AppTypography.minDisplayFontSize),
+    ),
     textDirection: TextDirection.ltr,
   )..layout();
   final width = painter.width;
