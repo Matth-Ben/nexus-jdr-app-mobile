@@ -1,5 +1,6 @@
 import '../../characters/data/character_inventory_row_mapper.dart';
 import '../../characters/domain/armor_class_calculator.dart';
+import '../../characters/domain/condition_type.dart';
 import '../domain/group_member.dart';
 import '../domain/group_role.dart';
 
@@ -180,6 +181,7 @@ abstract final class GroupMemberRowMapper {
       isDead: (character['is_dead'] as bool?) ?? false,
       armorClass: baseArmorClass + armorClassBonus,
       armorClassBonus: armorClassBonus,
+      conditions: ConditionType.parse(character['conditions']),
     );
   }
 

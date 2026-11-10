@@ -6083,6 +6083,264 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Quitter'**
   String get characterAdventuresCardLeaveConfirmationConfirmButton;
+
+  /// Libellé de la condition D&D 5e « blinded » (clé serveur `blinded`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aveuglé'**
+  String get conditionBlindedLabel;
+
+  /// Règle résumée de la condition « blinded » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne voit pas ; ses attaques ont le désavantage, celles contre lui l\'avantage.'**
+  String get conditionBlindedRule;
+
+  /// Libellé de la condition D&D 5e « charmed » (clé serveur `charmed`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Charmé'**
+  String get conditionCharmedLabel;
+
+  /// Règle résumée de la condition « charmed » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne peut attaquer le charmeur ; celui-ci a l\'avantage aux interactions sociales.'**
+  String get conditionCharmedRule;
+
+  /// Libellé de la condition D&D 5e « deafened » (clé serveur `deafened`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Assourdi'**
+  String get conditionDeafenedLabel;
+
+  /// Règle résumée de la condition « deafened » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'N\'entend rien et rate automatiquement les tests d\'ouïe.'**
+  String get conditionDeafenedRule;
+
+  /// Libellé de la condition D&D 5e « frightened » (clé serveur `frightened`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Effrayé'**
+  String get conditionFrightenedLabel;
+
+  /// Règle résumée de la condition « frightened » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désavantage aux tests et attaques tant que la source est en vue ; ne s\'en approche pas.'**
+  String get conditionFrightenedRule;
+
+  /// Libellé de la condition D&D 5e « grappled » (clé serveur `grappled`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Agrippé'**
+  String get conditionGrappledLabel;
+
+  /// Règle résumée de la condition « grappled » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vitesse 0, sans bonus de vitesse ; fin si l\'agrippeur est neutralisé.'**
+  String get conditionGrappledRule;
+
+  /// Libellé de la condition D&D 5e « incapacitated » (clé serveur `incapacitated`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Neutralisé'**
+  String get conditionIncapacitatedLabel;
+
+  /// Règle résumée de la condition « incapacitated » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne peut effectuer ni action ni réaction.'**
+  String get conditionIncapacitatedRule;
+
+  /// Libellé de la condition D&D 5e « invisible » (clé serveur `invisible`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Invisible'**
+  String get conditionInvisibleLabel;
+
+  /// Règle résumée de la condition « invisible » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Attaques avantagées, celles contre lui désavantagées (sauf magie ou sens spécial).'**
+  String get conditionInvisibleRule;
+
+  /// Libellé de la condition D&D 5e « paralyzed » (clé serveur `paralyzed`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Paralysé'**
+  String get conditionParalyzedLabel;
+
+  /// Règle résumée de la condition « paralyzed » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Neutralisé, immobile ; rate For/Dex ; attaques contre lui avantagées, critique au contact.'**
+  String get conditionParalyzedRule;
+
+  /// Libellé de la condition D&D 5e « petrified » (clé serveur `petrified`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Pétrifié'**
+  String get conditionPetrifiedLabel;
+
+  /// Règle résumée de la condition « petrified » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Transformé en pierre : neutralisé, résiste à tout, immunisé au poison et aux maladies.'**
+  String get conditionPetrifiedRule;
+
+  /// Libellé de la condition D&D 5e « poisoned » (clé serveur `poisoned`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Empoisonné'**
+  String get conditionPoisonedLabel;
+
+  /// Règle résumée de la condition « poisoned » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désavantage aux jets d\'attaque et aux tests de caractéristique.'**
+  String get conditionPoisonedRule;
+
+  /// Libellé de la condition D&D 5e « prone » (clé serveur `prone`).
+  ///
+  /// In fr, this message translates to:
+  /// **'À terre'**
+  String get conditionProneLabel;
+
+  /// Règle résumée de la condition « prone » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne peut que ramper ; attaques au contact contre lui avantagées, à distance désavantagées.'**
+  String get conditionProneRule;
+
+  /// Libellé de la condition D&D 5e « restrained » (clé serveur `restrained`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Entravé'**
+  String get conditionRestrainedLabel;
+
+  /// Règle résumée de la condition « restrained » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vitesse 0 ; attaques contre lui avantagées, les siennes et ses JS Dex désavantagés.'**
+  String get conditionRestrainedRule;
+
+  /// Libellé de la condition D&D 5e « stunned » (clé serveur `stunned`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étourdi'**
+  String get conditionStunnedLabel;
+
+  /// Règle résumée de la condition « stunned » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Neutralisé, immobile, parle à peine ; rate For/Dex ; attaques contre lui avantagées.'**
+  String get conditionStunnedRule;
+
+  /// Libellé de la condition D&D 5e « unconscious » (clé serveur `unconscious`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Inconscient'**
+  String get conditionUnconsciousLabel;
+
+  /// Règle résumée de la condition « unconscious » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Neutralisé, à terre, inconscient ; attaques contre lui avantagées, critiques au contact.'**
+  String get conditionUnconsciousRule;
+
+  /// Libellé du bouton discret d'ajout de la zone d'état (précédé d'une icône +).
+  ///
+  /// In fr, this message translates to:
+  /// **'État'**
+  String get conditionsAddButtonLabel;
+
+  /// Libellé d'accessibilité du bouton d'ajout d'un état (aucune condition active).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un état'**
+  String get conditionsAddSemanticsLabel;
+
+  /// Libellé d'accessibilité du bouton d'édition des états (au moins une condition active).
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier les états'**
+  String get conditionsEditSemanticsLabel;
+
+  /// Libellé d'accessibilité de la zone d'état : liste des conditions actives.
+  ///
+  /// In fr, this message translates to:
+  /// **'États actifs : {names}'**
+  String conditionsZoneSemanticsLabel(String names);
+
+  /// Pastille de dépassement (« +N ») quand toutes les conditions ne tiennent pas.
+  ///
+  /// In fr, this message translates to:
+  /// **'+{count}'**
+  String conditionsMoreChipLabel(int count);
+
+  /// Libellé d'accessibilité de la pastille « +N » : liste des conditions masquées.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} autres états : {names}'**
+  String conditionsMoreChipSemanticsLabel(int count, String names);
+
+  /// Libellé d'accessibilité d'une pastille : nom puis règle de la condition.
+  ///
+  /// In fr, this message translates to:
+  /// **'{label} : {rule}'**
+  String conditionChipSemanticsLabel(String label, String rule);
+
+  /// Titre de la feuille de sélection des conditions (palier display).
+  ///
+  /// In fr, this message translates to:
+  /// **'ÉTATS'**
+  String get conditionsSheetTitle;
+
+  /// Sous-titre rappelant que les états sont informatifs.
+  ///
+  /// In fr, this message translates to:
+  /// **'Informatif : n\'a aucun effet sur les calculs.'**
+  String get conditionsSheetSubtitle;
+
+  /// Bouton d'enregistrement de la feuille des conditions.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get conditionsSheetSaveButton;
+
+  /// Bouton d'annulation de la feuille des conditions.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get conditionsSheetCancelButton;
+
+  /// Lien qui décoche toutes les conditions (visible si au moins une est cochée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout décocher'**
+  String get conditionsSheetClearAllButton;
+
+  /// Erreur générique à l'enregistrement des conditions.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer les états. Réessayez.'**
+  String get conditionsSheetGenericError;
+
+  /// Annonce d'accessibilité après enregistrement.
+  ///
+  /// In fr, this message translates to:
+  /// **'États mis à jour : {names}'**
+  String conditionsUpdatedAnnouncement(String names);
+
+  /// Annonce d'accessibilité quand plus aucune condition n'est active.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun état actif'**
+  String get conditionsNoneAnnouncement;
 }
 
 class _AppLocalizationsDelegate

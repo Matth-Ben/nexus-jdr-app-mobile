@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../characters/domain/condition_type.dart';
 import 'character_vital_status.dart';
 import 'group_role.dart';
 
@@ -77,6 +78,11 @@ abstract class GroupMember with _$GroupMember {
     /// quand il est non nul. `null` pour un membre sans personnage, même
     /// règle qu'[armorClass].
     int? armorClassBonus,
+
+    /// `characters.conditions` du personnage (P6) — marqueurs informatifs
+    /// visibles du MJ, lus tolérant (clé inconnue ignorée). Vide pour un
+    /// membre sans personnage.
+    @Default(<ConditionType>[]) List<ConditionType> conditions,
   }) = _GroupMember;
 
   /// `true` si ce membre suit le groupe sans personnage et sans avoir choisi

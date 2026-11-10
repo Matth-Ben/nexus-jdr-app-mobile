@@ -3729,4 +3729,159 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get characterAdventuresCardLeaveConfirmationConfirmButton => 'Quitter';
+
+  @override
+  String get conditionBlindedLabel => 'Aveuglé';
+
+  @override
+  String get conditionBlindedRule =>
+      'Ne voit pas ; ses attaques ont le désavantage, celles contre lui l\'avantage.';
+
+  @override
+  String get conditionCharmedLabel => 'Charmé';
+
+  @override
+  String get conditionCharmedRule =>
+      'Ne peut attaquer le charmeur ; celui-ci a l\'avantage aux interactions sociales.';
+
+  @override
+  String get conditionDeafenedLabel => 'Assourdi';
+
+  @override
+  String get conditionDeafenedRule =>
+      'N\'entend rien et rate automatiquement les tests d\'ouïe.';
+
+  @override
+  String get conditionFrightenedLabel => 'Effrayé';
+
+  @override
+  String get conditionFrightenedRule =>
+      'Désavantage aux tests et attaques tant que la source est en vue ; ne s\'en approche pas.';
+
+  @override
+  String get conditionGrappledLabel => 'Agrippé';
+
+  @override
+  String get conditionGrappledRule =>
+      'Vitesse 0, sans bonus de vitesse ; fin si l\'agrippeur est neutralisé.';
+
+  @override
+  String get conditionIncapacitatedLabel => 'Neutralisé';
+
+  @override
+  String get conditionIncapacitatedRule =>
+      'Ne peut effectuer ni action ni réaction.';
+
+  @override
+  String get conditionInvisibleLabel => 'Invisible';
+
+  @override
+  String get conditionInvisibleRule =>
+      'Attaques avantagées, celles contre lui désavantagées (sauf magie ou sens spécial).';
+
+  @override
+  String get conditionParalyzedLabel => 'Paralysé';
+
+  @override
+  String get conditionParalyzedRule =>
+      'Neutralisé, immobile ; rate For/Dex ; attaques contre lui avantagées, critique au contact.';
+
+  @override
+  String get conditionPetrifiedLabel => 'Pétrifié';
+
+  @override
+  String get conditionPetrifiedRule =>
+      'Transformé en pierre : neutralisé, résiste à tout, immunisé au poison et aux maladies.';
+
+  @override
+  String get conditionPoisonedLabel => 'Empoisonné';
+
+  @override
+  String get conditionPoisonedRule =>
+      'Désavantage aux jets d\'attaque et aux tests de caractéristique.';
+
+  @override
+  String get conditionProneLabel => 'À terre';
+
+  @override
+  String get conditionProneRule =>
+      'Ne peut que ramper ; attaques au contact contre lui avantagées, à distance désavantagées.';
+
+  @override
+  String get conditionRestrainedLabel => 'Entravé';
+
+  @override
+  String get conditionRestrainedRule =>
+      'Vitesse 0 ; attaques contre lui avantagées, les siennes et ses JS Dex désavantagés.';
+
+  @override
+  String get conditionStunnedLabel => 'Étourdi';
+
+  @override
+  String get conditionStunnedRule =>
+      'Neutralisé, immobile, parle à peine ; rate For/Dex ; attaques contre lui avantagées.';
+
+  @override
+  String get conditionUnconsciousLabel => 'Inconscient';
+
+  @override
+  String get conditionUnconsciousRule =>
+      'Neutralisé, à terre, inconscient ; attaques contre lui avantagées, critiques au contact.';
+
+  @override
+  String get conditionsAddButtonLabel => 'État';
+
+  @override
+  String get conditionsAddSemanticsLabel => 'Ajouter un état';
+
+  @override
+  String get conditionsEditSemanticsLabel => 'Modifier les états';
+
+  @override
+  String conditionsZoneSemanticsLabel(String names) {
+    return 'États actifs : $names';
+  }
+
+  @override
+  String conditionsMoreChipLabel(int count) {
+    return '+$count';
+  }
+
+  @override
+  String conditionsMoreChipSemanticsLabel(int count, String names) {
+    return '$count autres états : $names';
+  }
+
+  @override
+  String conditionChipSemanticsLabel(String label, String rule) {
+    return '$label : $rule';
+  }
+
+  @override
+  String get conditionsSheetTitle => 'ÉTATS';
+
+  @override
+  String get conditionsSheetSubtitle =>
+      'Informatif : n\'a aucun effet sur les calculs.';
+
+  @override
+  String get conditionsSheetSaveButton => 'Enregistrer';
+
+  @override
+  String get conditionsSheetCancelButton => 'Annuler';
+
+  @override
+  String get conditionsSheetClearAllButton => 'Tout décocher';
+
+  @override
+  String get conditionsSheetGenericError =>
+      'Impossible d\'enregistrer les états. Réessayez.';
+
+  @override
+  String conditionsUpdatedAnnouncement(String names) {
+    return 'États mis à jour : $names';
+  }
+
+  @override
+  String get conditionsNoneAnnouncement => 'Aucun état actif';
 }

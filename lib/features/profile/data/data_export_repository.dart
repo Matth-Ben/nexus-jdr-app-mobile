@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../characters/data/character_repository.dart';
 import '../../characters/domain/character_detail.dart';
 import '../../characters/domain/character_inventory_item.dart';
+import '../../characters/domain/condition_type.dart';
 import '../../groups/data/group_repository.dart';
 import '../../groups/domain/group_summary.dart';
 
@@ -211,6 +212,8 @@ Map<String, dynamic> _characterDetailToJson(CharacterDetail detail) {
     'currentHp': detail.currentHp,
     'maxHp': detail.maxHp,
     'temporaryHp': detail.temporaryHp,
+    // P6 : conditions actives (clés serveur), donnée du joueur.
+    'conditions': ConditionType.toStorage(detail.conditions),
     'abilityScores': detail.abilityScores,
     'skills': [
       for (final skill in detail.skills)

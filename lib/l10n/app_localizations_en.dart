@@ -3694,4 +3694,158 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get characterAdventuresCardLeaveConfirmationConfirmButton => 'Leave';
+
+  @override
+  String get conditionBlindedLabel => 'Blinded';
+
+  @override
+  String get conditionBlindedRule =>
+      'Cannot see; its attacks have disadvantage, attacks against it have advantage.';
+
+  @override
+  String get conditionCharmedLabel => 'Charmed';
+
+  @override
+  String get conditionCharmedRule =>
+      'Cannot attack the charmer; the charmer has advantage on social interactions with it.';
+
+  @override
+  String get conditionDeafenedLabel => 'Deafened';
+
+  @override
+  String get conditionDeafenedRule =>
+      'Cannot hear and automatically fails any hearing-based check.';
+
+  @override
+  String get conditionFrightenedLabel => 'Frightened';
+
+  @override
+  String get conditionFrightenedRule =>
+      'Disadvantage on checks and attacks while the source is in sight; cannot approach it.';
+
+  @override
+  String get conditionGrappledLabel => 'Grappled';
+
+  @override
+  String get conditionGrappledRule =>
+      'Speed 0, no speed bonus; ends if the grappler is incapacitated.';
+
+  @override
+  String get conditionIncapacitatedLabel => 'Incapacitated';
+
+  @override
+  String get conditionIncapacitatedRule => 'Cannot take actions or reactions.';
+
+  @override
+  String get conditionInvisibleLabel => 'Invisible';
+
+  @override
+  String get conditionInvisibleRule =>
+      'Its attacks have advantage, attacks against it disadvantage (barring magic or special sense).';
+
+  @override
+  String get conditionParalyzedLabel => 'Paralyzed';
+
+  @override
+  String get conditionParalyzedRule =>
+      'Incapacitated, cannot move; fails Str/Dex saves; attacks against it have advantage, melee crits.';
+
+  @override
+  String get conditionPetrifiedLabel => 'Petrified';
+
+  @override
+  String get conditionPetrifiedRule =>
+      'Turned to stone: incapacitated, resists all damage, immune to poison and disease.';
+
+  @override
+  String get conditionPoisonedLabel => 'Poisoned';
+
+  @override
+  String get conditionPoisonedRule =>
+      'Disadvantage on attack rolls and ability checks.';
+
+  @override
+  String get conditionProneLabel => 'Prone';
+
+  @override
+  String get conditionProneRule =>
+      'Can only crawl; melee attacks against it have advantage, ranged ones disadvantage.';
+
+  @override
+  String get conditionRestrainedLabel => 'Restrained';
+
+  @override
+  String get conditionRestrainedRule =>
+      'Speed 0; attacks against it have advantage; its attacks and Dex saves have disadvantage.';
+
+  @override
+  String get conditionStunnedLabel => 'Stunned';
+
+  @override
+  String get conditionStunnedRule =>
+      'Incapacitated, immobile, barely speaks; fails Str/Dex saves; attacks against it have advantage.';
+
+  @override
+  String get conditionUnconsciousLabel => 'Unconscious';
+
+  @override
+  String get conditionUnconsciousRule =>
+      'Incapacitated, prone, unaware; attacks against it have advantage, melee hits crit.';
+
+  @override
+  String get conditionsAddButtonLabel => 'Condition';
+
+  @override
+  String get conditionsAddSemanticsLabel => 'Add a condition';
+
+  @override
+  String get conditionsEditSemanticsLabel => 'Edit conditions';
+
+  @override
+  String conditionsZoneSemanticsLabel(String names) {
+    return 'Active conditions: $names';
+  }
+
+  @override
+  String conditionsMoreChipLabel(int count) {
+    return '+$count';
+  }
+
+  @override
+  String conditionsMoreChipSemanticsLabel(int count, String names) {
+    return '$count more conditions: $names';
+  }
+
+  @override
+  String conditionChipSemanticsLabel(String label, String rule) {
+    return '$label: $rule';
+  }
+
+  @override
+  String get conditionsSheetTitle => 'CONDITIONS';
+
+  @override
+  String get conditionsSheetSubtitle =>
+      'For information only: has no effect on any calculation.';
+
+  @override
+  String get conditionsSheetSaveButton => 'Save';
+
+  @override
+  String get conditionsSheetCancelButton => 'Cancel';
+
+  @override
+  String get conditionsSheetClearAllButton => 'Clear all';
+
+  @override
+  String get conditionsSheetGenericError =>
+      'Couldn\'t save the conditions. Please try again.';
+
+  @override
+  String conditionsUpdatedAnnouncement(String names) {
+    return 'Conditions updated: $names';
+  }
+
+  @override
+  String get conditionsNoneAnnouncement => 'No active condition';
 }

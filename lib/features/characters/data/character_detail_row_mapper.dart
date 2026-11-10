@@ -11,6 +11,7 @@ import '../domain/character_racial_trait.dart';
 import '../domain/character_skill_row.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_spell_slot.dart';
+import '../domain/condition_type.dart';
 import '../domain/multiclass_proficiencies.dart';
 import '../domain/pact_weapon_option.dart';
 import '../domain/spell_grant_source.dart';
@@ -967,6 +968,10 @@ abstract final class CharacterDetailRowMapper {
       isDead: (row['is_dead'] as bool?) ?? false,
       isArchived: (row['is_archived'] as bool?) ?? false,
       inspiration: (row['inspiration'] as bool?) ?? false,
+      // Lecture tolérante (clé inconnue ignorée, colonne absente = vide) —
+      // le cache drift stocke la ligne PostgREST brute : un ancien cache sans
+      // `conditions` donne simplement une liste vide.
+      conditions: ConditionType.parse(row['conditions']),
       // Défaut `0` si absente/`null` (même discipline défensive que
       // [edition] pour une ligne cachée écrite avant l'introduction de cette
       // colonne, voir la doc de classe de `CharacterDetail.armorClassBonus`).

@@ -470,7 +470,7 @@ class SupabaseGroupRepository implements GroupRepository {
             display_name:group_members_display_name,
             characters(
               id, name, portrait_url, current_hp, max_hp, temporary_hp,
-              is_dead, race_id, armor_class_bonus,
+              is_dead, race_id, armor_class_bonus, conditions,
               character_classes(class_id, subclass_id, level, is_primary),
               character_ability_scores(ability_id, score),
               character_class_options(class_feature_id, chosen_value),

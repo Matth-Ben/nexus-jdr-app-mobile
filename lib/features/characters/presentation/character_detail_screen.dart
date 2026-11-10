@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +20,7 @@ import '../domain/character_failure.dart';
 import '../domain/character_inventory_item.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_spell_slot.dart';
+import '../domain/condition_type.dart';
 import '../domain/spell_status_formatter.dart';
 import '../domain/currency_kind.dart';
 import '../domain/hit_dice_pool.dart';
@@ -32,6 +34,7 @@ import '../domain/saving_throw_calculator.dart';
 import '../domain/weapon_slot.dart';
 import '../domain/weapon_slot_rules.dart';
 import '../domain/write_outcome.dart';
+import 'providers/character_conditions_providers.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
 import 'providers/pact_weapon_providers.dart';
@@ -56,6 +59,7 @@ import 'widgets/character_spells_tab_body.dart';
 import 'widgets/character_story_edit_sheet.dart';
 import 'widgets/character_story_tab_body.dart';
 import 'widgets/character_vitals_card.dart';
+import 'widgets/conditions_sheet.dart';
 import 'widgets/dice_roll_sheet.dart';
 import 'widgets/hp_adjustment_sheet.dart';
 import 'widgets/pact_weapon_picker_sheet.dart';
@@ -152,6 +156,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// `ref.listen` de [build] dès que la fiche relue porte la même valeur
   /// (réouverture, ou synchronisation au retour du réseau).
   int? _localXp;
+
+  /// Conditions optimistes locales (P6), affichées dès l'enregistrement du
+  /// sélecteur d'états puis relâchées par le `ref.listen` de [build] dès que
+  /// la fiche relue les porte ; remise à sa valeur précédente si l'écriture
+  /// échoue ([_saveConditions]). `null` = rien en vol.
+  List<ConditionType>? _localConditions;
 
   /// Compteur incrémenté par tout repos réussi ([_applyRest], court ou
   /// long) — sert à détecter qu'un ajustement resté en vol (PV via
@@ -365,6 +375,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// entrées couvertes par ces deux maps peuvent être en avance.
   CharacterDetail _effectiveDetail(CharacterDetail detail) {
     var result = detail;
+
+    final localConditions = _localConditions;
+    if (localConditions != null) {
+      result = result.copyWith(conditions: localConditions);
+    }
 
     final localXp = _localXp;
     if (localXp != null) {
@@ -1876,6 +1891,42 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Enregistre la sélection du sélecteur d'états (P6) : affichage optimiste
+  /// immédiat sur la fiche, retour arrière si l'écriture échoue. Retourne
+  /// `null` en cas de succès, sinon le message d'erreur que la feuille affiche
+  /// (la sélection saisie y est conservée). Hors-ligne : rien n'est écrit
+  /// (`WriteOutcome.rejectedOffline`, mise en file prévue en P6b).
+  Future<String?> _saveConditions(List<ConditionType> selection) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
+    final previous = _localConditions;
+    setState(() => _localConditions = selection);
+    String? error;
+    try {
+      final outcome = await ref
+          .read(characterConditionsRepositoryProvider)
+          .setConditions(
+            characterId: widget.characterId,
+            conditions: selection,
+          );
+      if (outcome == WriteOutcome.rejectedOffline) {
+        error = l10n.characterOfflineNotPersistedMessage;
+      }
+    } on CharacterFailure catch (failure) {
+      error = failure.message;
+    } catch (_) {
+      error = l10n.conditionsSheetGenericError;
+    }
+    if (!mounted) return error;
+    if (error != null) {
+      setState(() => _localConditions = previous);
+      return error;
+    }
+    ref.invalidate(characterDetailProvider(widget.characterId));
+    return null;
+  }
+
   /// Ajustement manuel de CA (sheet "Ajustement de CA",
   /// `armor_class_bonus_sheet.dart`, tuile "CA" de `CharacterStatPillsRow`) :
   /// [bonus] est déjà la nouvelle valeur absolue signée, calculée par la
@@ -2256,6 +2307,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           shouldSetState = true;
         }
 
+        // Conditions (P6) : relâchées dès que la fiche relue les confirme.
+        final localConditions = _localConditions;
+        if (localConditions != null &&
+            setEquals(detail.conditions.toSet(), localConditions.toSet())) {
+          _localConditions = null;
+          shouldSetState = true;
+        }
+
         // Même principe pour [_localXp] (ajout d'XP mis en file hors
         // ligne) : relâchée dès que la fiche relue porte la même valeur.
         if (_localXp != null && detail.xp == _localXp) {
@@ -2596,6 +2655,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         ),
         onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
         onTapToggleInspiration: () => _toggleInspiration(detail),
+        onTapConditions: () => showConditionsSheet(
+          context,
+          initial: _effectiveDetail(detail).conditions,
+          onSave: _saveConditions,
+        ),
         onTapAdjustArmorClass: () => showArmorClassBonusSheet(
           context,
           currentBonus: detail.armorClassBonus,
@@ -2639,6 +2703,7 @@ class _CharacterTabBody extends StatelessWidget {
     required this.onTapAddXp,
     required this.onTapLevelUp,
     required this.onTapToggleInspiration,
+    required this.onTapConditions,
     required this.onTapAdjustArmorClass,
     required this.onTapRest,
     required this.hpActionsDisabled,
@@ -2664,6 +2729,9 @@ class _CharacterTabBody extends StatelessWidget {
   /// Tuile "Inspiration" (`CharacterStatPillsRow`) — voir
   /// `_CharacterDetailScreenState._toggleInspiration`.
   final VoidCallback onTapToggleInspiration;
+
+  /// Zone d'état (P6) — voir `CharacterVitalsCard.onTapConditions`.
+  final VoidCallback onTapConditions;
 
   /// Tuile "CA" (`CharacterStatPillsRow`) — ouvre
   /// `armor_class_bonus_sheet.dart`, voir
@@ -2724,6 +2792,7 @@ class _CharacterTabBody extends StatelessWidget {
           onTapLevelUp: onTapLevelUp,
           onTapRest: onTapRest,
           hpActionsDisabled: hpActionsDisabled,
+          onTapConditions: onTapConditions,
         ),
         const SizedBox(height: AppSpacing.md),
         CharacterAbilityScoreGrid(abilityScores: detail.abilityScores),

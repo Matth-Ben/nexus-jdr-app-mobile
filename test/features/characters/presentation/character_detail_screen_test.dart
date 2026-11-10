@@ -1646,11 +1646,11 @@ void main() {
       await tester.tap(find.text('CA'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.add));
+      await tester.tap(find.bySemanticsLabel('Augmenter'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.add));
+      await tester.tap(find.bySemanticsLabel('Augmenter'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.add));
+      await tester.tap(find.bySemanticsLabel('Augmenter'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('VALIDER'));

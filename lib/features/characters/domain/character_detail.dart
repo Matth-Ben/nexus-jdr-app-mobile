@@ -16,6 +16,7 @@ import 'character_racial_trait.dart';
 import 'character_skill_row.dart';
 import 'character_spell_entry.dart';
 import 'character_spell_slot.dart';
+import 'condition_type.dart';
 import 'inventory_weight_calculator.dart';
 import 'pact_weapon_option.dart';
 import 'pact_weapon_rules.dart';
@@ -148,6 +149,13 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// "Inspiration" de l'onglet "Personnage"
     /// (`CharacterStatPillsRow`) — voir `CharacterRepository.setInspiration`.
     @Default(false) bool inspiration,
+
+    /// `characters.conditions` — conditions D&D 5e (2014) actives, **purement
+    /// informatives** (P6) : aucune ne modifie un calcul. Lecture tolérante
+    /// ([ConditionType.parse]) : clé inconnue ignorée, colonne absente d'un
+    /// ancien cache ou d'un ancien payload de fiche partagée = liste vide.
+    /// Écrite via `CharacterRepository.setConditions` (remplacement complet).
+    @Default(<ConditionType>[]) List<ConditionType> conditions,
 
     /// Vitesse de déplacement en PIEDS (`races.speed`, convertie en mètres à
     /// l'affichage par `SpeedConverter`), `null` si la race

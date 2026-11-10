@@ -15,6 +15,7 @@ import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/data/pending_character_write_syncer.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
+import 'package:personnages/features/characters/domain/condition_type.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
@@ -248,6 +249,70 @@ void main() {
           );
         },
       );
+
+      test('conditions (P6) : le select demande `conditions` et la fiche les '
+          'porte (clé inconnue ignorée)', () async {
+        String? select;
+        final withConditions =
+            Map<String, List<Map<String, dynamic>>>.from(tableRows)
+              ..['characters'] = [
+                {
+                  ...tableRows['characters']!.first,
+                  'conditions': ['prone', 'blinded', 'futur_etat'],
+                },
+              ];
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: withConditions,
+          onRequest: (request) {
+            if (request.url.pathSegments.last == 'characters' &&
+                request.method == 'GET') {
+              select = request.url.queryParameters['select'];
+            }
+          },
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        );
+
+        final detail = await repository.fetchCharacterDetail(characterId);
+
+        expect(select, contains('conditions'));
+        expect(detail.conditions, [ConditionType.blinded, ConditionType.prone]);
+      });
+
+      test('conditions (P6) : un cache écrit avant la colonne (ligne sans '
+          '`conditions`) se relit sans crash, liste vide', () async {
+        // Réseau OK sur une ligne SANS la colonne (base/cache ancien).
+        final online = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: tableRows,
+        );
+        await SupabaseCharacterRepository(
+          online,
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        ).fetchCharacterDetail(characterId);
+
+        // Puis réseau coupé : relecture depuis le cache.
+        final offline = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          throwOnRequest: true,
+        );
+        final detail = await SupabaseCharacterRepository(
+          offline,
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        ).fetchCharacterDetail(characterId);
+
+        expect(detail.name, 'Aragorn');
+        expect(detail.conditions, isEmpty);
+      });
 
       test('classFeatures : tri alphabétique (demande utilisateur, '
           '2026-10-03), pas par niveau d\'acquisition', () async {
