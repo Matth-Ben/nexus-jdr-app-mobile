@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -102,7 +103,7 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent> {
                   ),
                   if (isCriticalSuccess || isCriticalFailure) ...[
                     const SizedBox(height: AppSpacing.xs),
-                    Text(
+                    DisplayText(
                       isCriticalSuccess
                           ? l10n.diceRollSheetCriticalSuccess
                           : l10n.diceRollSheetCriticalFailure,

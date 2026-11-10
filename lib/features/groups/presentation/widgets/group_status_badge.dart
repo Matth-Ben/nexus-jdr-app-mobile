@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -84,11 +85,13 @@ class GroupStatusBadge extends StatelessWidget {
             Icon(Icons.warning_amber_rounded, size: 14, color: accent),
             const SizedBox(width: 4),
           ],
-          Text(
-            label.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.display(fontSize: 11, color: accent),
+          Flexible(
+            child: DisplayText(
+              label.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.display(fontSize: 11, color: accent),
+            ),
           ),
         ],
       ),

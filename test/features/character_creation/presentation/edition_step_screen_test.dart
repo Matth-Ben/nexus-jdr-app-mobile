@@ -13,6 +13,8 @@ import 'package:personnages/features/character_creation/domain/character_creatio
 import 'package:personnages/features/character_creation/presentation/edition_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 
+import '../../../core/widgets/display_scale_helpers.dart';
+
 void main() {
   late ProviderContainer container;
   late GoRouter router;
@@ -141,5 +143,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Liste des personnages'), findsOneWidget);
+  });
+
+  // Plafond de la police pixel (D192, PR 2) : x2,0 et x3,0 sur 320/360 dp,
+  // sans débordement, mot coupé ni display sous 11 px (voir
+  // `display_scale_helpers.dart`).
+  group('grande police : étape Édition (bandeau CRÉATION)', () {
+    for (final scale in displayScaleFactors) {
+      for (final width in displayScaleWidths) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          await useScaledView(tester, scale: scale, width: width, height: 800);
+          await tester.pumpWidget(buildTestWidget());
+          await tester.pumpAndSettle();
+          expect(find.text('CRÉATION'), findsOneWidget);
+          expect(expectDisplayTextSane(tester), greaterThan(0));
+        });
+      }
+    }
   });
 }

@@ -28,6 +28,8 @@ import 'package:personnages/features/groups/presentation/group_list_screen.dart'
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/widgets/display_scale_helpers.dart';
+
 class _FakeGroupRepository implements GroupRepository {
   List<GroupSummary>? groupsToReturn;
   Object? errorToThrow;
@@ -617,5 +619,47 @@ void main() {
         expect(find.text('1 MORT'), findsOneWidget);
       },
     );
+  });
+
+  // Plafond de la police pixel (D192, PR 2) : x2,0 et x3,0 sur 320/360 dp,
+  // sans débordement, mot coupé ni display sous 11 px (voir
+  // `display_scale_helpers.dart`).
+  group('grande police : liste des groupes', () {
+    for (final scale in displayScaleFactors) {
+      for (final width in displayScaleWidths) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          await useScaledView(tester, scale: scale, width: width, height: 800);
+          final repository = _FakeGroupRepository()
+            ..groupsToReturn = const [
+              GroupSummary(
+                id: 'group-1',
+                name: 'Les Lames',
+                memberCount: 2,
+                founderId: 'founder-id',
+              ),
+            ];
+          await tester.pumpWidget(_buildTestWidget(repository));
+          await tester.pumpAndSettle();
+          expect(expectDisplayTextSane(tester), greaterThan(0));
+        });
+      }
+    }
+  });
+
+  // Plafond de la police pixel (D192, PR 2) : x2,0 et x3,0 sur 320/360 dp,
+  // sans débordement, mot coupé ni display sous 11 px (voir
+  // `display_scale_helpers.dart`).
+  group('grande police : liste des groupes (état vide)', () {
+    for (final scale in displayScaleFactors) {
+      for (final width in displayScaleWidths) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          await useScaledView(tester, scale: scale, width: width, height: 800);
+          final repository = _FakeGroupRepository()..groupsToReturn = const [];
+          await tester.pumpWidget(_buildTestWidget(repository));
+          await tester.pumpAndSettle();
+          expect(expectDisplayTextSane(tester), greaterThan(0));
+        });
+      }
+    }
   });
 }

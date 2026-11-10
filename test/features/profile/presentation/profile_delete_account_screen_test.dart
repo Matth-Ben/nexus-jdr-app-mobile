@@ -30,6 +30,8 @@ import 'package:personnages/features/profile/presentation/profile_delete_account
 import 'package:personnages/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/widgets/display_scale_helpers.dart';
+
 class _FakeAuthRepository implements AuthRepository {
   final Completer<void> deleteGate = Completer<void>();
   bool gateDeleteAccount = false;
@@ -477,5 +479,20 @@ void main() {
       );
       expect(find.widgetWithText(SecondaryButton, 'CANCEL'), findsOneWidget);
     });
+  });
+
+  // Plafond de la police pixel (D192, PR 2) : x2,0 et x3,0 sur 320/360 dp,
+  // sans débordement, mot coupé ni display sous 11 px (voir
+  // `display_scale_helpers.dart`).
+  group('grande police : suppression du compte', () {
+    for (final scale in displayScaleFactors) {
+      for (final width in displayScaleWidths) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          await useScaledView(tester, scale: scale, width: width, height: 2000);
+          await _pumpScreen(tester);
+          expect(expectDisplayTextSane(tester), greaterThan(0));
+        });
+      }
+    }
   });
 }

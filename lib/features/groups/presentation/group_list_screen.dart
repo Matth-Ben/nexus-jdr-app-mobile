@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/display_text.dart';
 import '../../../core/router/route_observer_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -169,7 +170,7 @@ class _Header extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.xs),
-        Text(
+        DisplayText(
           'GROUPES',
           style: AppTypography.display(
             fontSize: 15,
@@ -369,10 +370,10 @@ class _FounderBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: AppColors.woodLight, width: 1),
       ),
-      child: Text(
+      child: DisplayText(
         'TOI',
         style: AppTypography.display(
-          fontSize: 9,
+          fontSize: 11,
           color: AppColors.textSecondary,
         ),
       ),
@@ -393,8 +394,10 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Défilant : à grande taille de police, l'état vide ne tient plus dans la
+    // hauteur de l'écran.
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -417,7 +420,7 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            Text(
+            DisplayText(
               "AUCUN GROUPE POUR L'INSTANT",
               textAlign: TextAlign.center,
               style: AppTypography.display(

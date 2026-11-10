@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/display_text.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -217,7 +218,7 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
           if (isActive) ...[
             const InfoBanner.success(message: 'Partage actif'),
             const SizedBox(height: AppSpacing.md),
-            Text(
+            DisplayText(
               'LIEN DE PARTAGE',
               style: AppTypography.display(
                 fontSize: 11,
@@ -252,7 +253,7 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
             const SizedBox(height: AppSpacing.lg),
             Container(height: 1, color: AppColors.gaugeTrack),
             const SizedBox(height: AppSpacing.lg),
-            Text(
+            DisplayText(
               'ZONE DANGEREUSE',
               style: AppTypography.display(
                 fontSize: 11,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -63,7 +64,7 @@ class SpellPreparationCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: DisplayText(
                   l10n.spellPreparationCardTitle,
                   style: AppTypography.display(
                     fontSize: 11,
@@ -180,18 +181,29 @@ class PreparedSpellsCounter extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // `Wrap` (V3-1) : à grande taille de police, le compteur passe sur sa
+          // propre ligne au lieu de comprimer le libellé ; sinon, libellé à
+          // gauche et compteur à droite comme avant.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.sm,
             children: [
-              Icon(Icons.bookmark, size: 14, color: accent),
-              const SizedBox(width: AppSpacing.xs),
-              Expanded(
-                child: Text(
-                  resolvedLabel,
-                  style: AppTypography.display(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.bookmark, size: 14, color: accent),
+                  const SizedBox(width: AppSpacing.xs),
+                  Flexible(
+                    child: DisplayText(
+                      resolvedLabel,
+                      style: AppTypography.display(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
               Text(
                 '$count / $limit',

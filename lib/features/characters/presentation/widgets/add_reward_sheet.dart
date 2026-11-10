@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -155,7 +156,7 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      DisplayText(
                         l10n.addRewardSheetCurrencyLabel,
                         style: AppTypography.display(
                           fontSize: 11,
@@ -193,7 +194,7 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
                         ],
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      Text(
+                      DisplayText(
                         l10n.addRewardSheetItemsLabel,
                         style: AppTypography.display(
                           fontSize: 11,

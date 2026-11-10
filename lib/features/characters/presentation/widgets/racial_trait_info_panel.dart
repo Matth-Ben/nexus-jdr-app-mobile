@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -59,7 +60,7 @@ class _RacialTraitInfoPanelContent extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      DisplayText(
                         l10n.racialTraitInfoPanelDescriptionLabel,
                         style: AppTypography.display(
                           fontSize: 11,

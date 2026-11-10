@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -56,10 +57,14 @@ class CharacterInventoryCapacityGauge extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // `Wrap` : à grande taille de police, le poids passe sous le titre au
+          // lieu de l'écraser (« CHARGE » coupé en plein mot).
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.sm,
             children: [
-              Text(
+              DisplayText(
                 l10n.characterInventoryCapacityGaugeTitle,
                 style: AppTypography.display(
                   fontSize: 11,

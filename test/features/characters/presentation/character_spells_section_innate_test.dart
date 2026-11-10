@@ -176,7 +176,7 @@ void main() {
       await _pump(tester, _detail(const [_innate]));
 
       final badgeText = tester.widget<Text>(find.text('INNÉ'));
-      expect(badgeText.style!.fontSize, 10);
+      expect(badgeText.style!.fontSize, 11);
       expect(badgeText.style!.color, AppColors.textSecondary);
       final badge = tester.widget<Container>(
         find

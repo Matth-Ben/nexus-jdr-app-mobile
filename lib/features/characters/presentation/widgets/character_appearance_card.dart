@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -111,7 +112,7 @@ class CharacterAppearanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          DisplayText(
             l10n.characterAppearanceCardTitle,
             style: AppTypography.display(
               fontSize: 11,
@@ -146,17 +147,20 @@ class _AppearanceItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    // `Wrap` : à grande taille de police, la valeur passe sous son libellé au
+    // lieu de déborder de la carte.
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: 2,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text(
+        DisplayText(
           item.label,
           style: AppTypography.display(
             fontSize: 11,
             color: AppColors.textSecondary,
           ),
         ),
-        const SizedBox(width: AppSpacing.xs),
         Text(
           item.value,
           style: AppTypography.body(

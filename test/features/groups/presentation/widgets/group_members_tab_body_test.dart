@@ -5,6 +5,7 @@
 // personnage" (membre orphelin, voir `GroupMember.isAwaitingCharacter`).
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,8 @@ import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/features/groups/domain/group_member.dart';
 import 'package:personnages/features/groups/domain/group_role.dart';
 import 'package:personnages/features/groups/presentation/widgets/group_members_tab_body.dart';
+
+import '../../../../core/widgets/display_scale_helpers.dart';
 
 const _me = GroupMember(
   characterId: 'char-me',
@@ -416,5 +419,74 @@ void main() {
 
       expect(find.textContaining('CA '), findsNothing);
     });
+  });
+
+  // Plafond de la police pixel (D192, PR 2) : x2,0 et x3,0 sur 320/360 dp,
+  // sans débordement, mot coupé ni display sous 11 px (voir
+  // `display_scale_helpers.dart`).
+  group('grande police : onglet Membres (badges MORT / INCONSCIENT)', () {
+    for (final scale in [1.0, 2.0, 3.0]) {
+      for (final width in [320.0, 360.0, 411.0]) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          await useScaledView(tester, scale: scale, width: width, height: 2400);
+          await _pump(
+            tester,
+            _detail(const [
+              _me,
+              _friend,
+              GroupMember(
+                characterId: 'char-dead',
+                userId: 'user-dead',
+                role: GroupRole.membre,
+                name: 'Thorin',
+                isGameMaster: false,
+                level: 3,
+                currentHp: 0,
+                maxHp: 30,
+                temporaryHp: 0,
+                isDead: true,
+              ),
+              GroupMember(
+                characterId: 'char-down',
+                userId: 'user-down',
+                role: GroupRole.membre,
+                name: 'Lyra',
+                isGameMaster: false,
+                level: 3,
+                currentHp: 0,
+                maxHp: 30,
+                temporaryHp: 0,
+                isDead: false,
+              ),
+            ]),
+          );
+          expect(expectDisplayTextSane(tester), greaterThan(0));
+          // Badges en entier, sans ellipse (le helper ignore l'ellipse :
+          // assertion explicite). « INCONSCIENT » et « MORT » ne sont jamais
+          // abrégés, dès x1,0 sur 320 dp.
+          for (final word in ['INCONSCIENT', 'MORT']) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.descendant(
+                of: find.text(word),
+                matching: find.byType(RichText),
+              ),
+            );
+            expect(paragraph.didExceedMaxLines, isFalse, reason: word);
+            expect(paragraph.text.toPlainText(), word);
+            final painter = TextPainter(
+              text: TextSpan(text: word, style: paragraph.text.style),
+              textDirection: TextDirection.ltr,
+              textScaler: paragraph.textScaler,
+            )..layout();
+            expect(
+              paragraph.size.width,
+              greaterThanOrEqualTo(painter.width - 0.5),
+              reason: '$word tronqué',
+            );
+            painter.dispose();
+          }
+        });
+      }
+    }
   });
 }

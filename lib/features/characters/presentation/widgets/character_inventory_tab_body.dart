@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -419,18 +420,25 @@ class _RewardButton extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 48),
               child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                // `Wrap` : si l'icône et le libellé ne tiennent pas côte à côte
+                // (demi-largeur sur 320 dp, ou police agrandie), le libellé
+                // passe sous l'icône au lieu d'être coupé en plein mot.
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: AppSpacing.xs,
+                  runSpacing: 2,
                   children: [
                     const Icon(
                       Icons.card_giftcard,
                       size: 16,
                       color: AppColors.textSecondary,
                     ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
+                    DisplayText(
                       AppLocalizations.of(context)!
                           .characterInventoryTabBodyRewardButtonLabel,
+                      tier: DisplayTier.control,
+                      textAlign: TextAlign.center,
                       style: AppTypography.display(
                         fontSize: 11,
                         color: AppColors.textSecondary,
@@ -492,7 +500,7 @@ class _EmptyInventoryState extends StatelessWidget {
           children: [
             const Icon(Icons.backpack, size: 48, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.md),
-            Text(
+            DisplayText(
               l10n.characterInventoryTabBodyEmptyTitle,
               textAlign: TextAlign.center,
               style: AppTypography.display(

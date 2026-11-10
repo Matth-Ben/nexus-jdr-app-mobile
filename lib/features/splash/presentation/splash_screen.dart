@@ -62,7 +62,7 @@ class SplashScreen extends StatelessWidget {
                       'PERSONNAGES',
                       textAlign: TextAlign.center,
                       style: AppTypography.display(
-                        fontSize: 10,
+                        fontSize: 11,
                         color: AppColors.goldEnd,
                       ),
                     ),

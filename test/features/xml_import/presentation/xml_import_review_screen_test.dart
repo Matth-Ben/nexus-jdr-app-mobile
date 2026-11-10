@@ -63,6 +63,8 @@ import 'package:personnages/features/xml_import/domain/xml_import_save_data.dart
 import 'package:personnages/features/xml_import/presentation/providers/xml_import_providers.dart';
 import 'package:personnages/features/xml_import/presentation/xml_import_review_screen.dart';
 
+import '../../../core/widgets/display_scale_helpers.dart';
+
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   RaceCatalog raceCatalogToReturn = const RaceCatalog(races: [], subraces: []);
   ClassCatalog classCatalogToReturn = const ClassCatalog(classes: []);
@@ -1320,6 +1322,35 @@ void main() {
       expect(find.text('Race Maison Inventée'), findsOneWidget);
       expect(find.text('Donnée incomplète'), findsOneWidget);
       expect(fakePlaceholderCatalogRepository.findOrCreateRaceCallCount, 1);
+    },
+  );
+
+  // Plafond de la police pixel (D192, PR 2) : x2,0 et x3,0 sur 320/360 dp,
+  // sans débordement, mot coupé ni display sous 11 px (voir
+  // `display_scale_helpers.dart`).
+  group(
+    'grande police : revue d import XML et dialogue des champs non résolus',
+    () {
+      for (final scale in displayScaleFactors) {
+        for (final width in displayScaleWidths) {
+          testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+            await useScaledView(
+              tester,
+              scale: scale,
+              width: width,
+              height: 3000,
+            );
+            await tester.pumpWidget(
+              buildTestWidget(xmlSource: _multipleAlertsXml),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(find.text('VALIDER LE PERSONNAGE'));
+            await tester.pumpAndSettle();
+            expect(find.text('CHAMPS NON RÉSOLUS'), findsOneWidget);
+            expect(expectDisplayTextSane(tester), greaterThan(0));
+          });
+        }
+      }
     },
   );
 }

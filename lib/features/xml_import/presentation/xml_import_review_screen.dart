@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/display_text.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -341,7 +342,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              DisplayText(
                 'CHAMPS NON RÉSOLUS',
                 style: AppTypography.display(fontSize: 12),
               ),
@@ -357,23 +358,48 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: SecondaryButton(
-                      label: 'Retourner corriger',
-                      surface: SecondaryButtonSurface.parchment,
-                      onPressed: () => Navigator.of(context).pop(false),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: PrimaryButton(
-                      label: 'Continuer',
-                      onPressed: () => Navigator.of(context).pop(true),
-                    ),
-                  ),
-                ],
+              // Côte à côte quand chaque demi-largeur peut contenir le mot le
+              // plus long de son libellé à taille de base (mesuré, plus la
+              // marge interne des boutons) ; sinon empilés, pour ne jamais
+              // couper « CONTINUER » en plein mot.
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final back = SecondaryButton(
+                    label: 'Retourner corriger',
+                    surface: SecondaryButtonSurface.parchment,
+                    onPressed: () => Navigator.of(context).pop(false),
+                  );
+                  final next = PrimaryButton(
+                    label: 'Continuer',
+                    onPressed: () => Navigator.of(context).pop(true),
+                  );
+                  final halfWidth = (constraints.maxWidth - AppSpacing.sm) / 2;
+                  final needed =
+                      [
+                        for (final w in ['RETOURNER', 'CONTINUER'])
+                          _displayWordWidth(w),
+                      ].reduce((a, b) => a > b ? a : b) +
+                      2 * AppSpacing.sm +
+                      // Bordure et filet intérieurs des boutons.
+                      8;
+                  if (halfWidth < needed) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        back,
+                        const SizedBox(height: AppSpacing.sm),
+                        next,
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: back),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(child: next),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -1460,7 +1486,7 @@ class _Header extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      DisplayText(
                         title,
                         style: AppTypography.display(
                           fontSize: 13,
@@ -1522,12 +1548,16 @@ class _SummaryCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: AppTypography.body(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+          // `Flexible` : à grande taille de police, le titre passe à la ligne
+          // au lieu de déborder de la carte.
+          Flexible(
+            child: Text(
+              title,
+              style: AppTypography.body(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -2196,4 +2226,15 @@ class _NetworkErrorState extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Largeur du mot [word] en police pixel à la taille de base (11 px, x1,0).
+double _displayWordWidth(String word) {
+  final painter = TextPainter(
+    text: TextSpan(text: word, style: AppTypography.display(fontSize: 11)),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
 }

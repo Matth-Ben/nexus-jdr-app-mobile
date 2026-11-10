@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -237,116 +238,120 @@ class _MemberCard extends StatelessWidget {
           width: isDead ? AppBorders.cardEmphasis : AppBorders.card,
         ),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Portrait désaturé pour la variante "MORT" (recettage
-          // direction-artistique du 13/09) : `PortraitFrame` n'a pas de
-          // paramètre dédié, enveloppé d'un `ColorFiltered` en niveaux de
-          // gris plutôt que de lui ajouter un paramètre pour un unique usage.
-          isDead
-              ? ColorFiltered(
-                  colorFilter: const ColorFilter.matrix(_greyscaleMatrix),
-                  child: portrait,
-                )
-              : portrait,
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Ligne 1 : nom + badges (recettage direction-artistique du
-                // 13/09 — auparavant nom et badge de statut sur 2 lignes
-                // séparées).
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Portrait désaturé pour la variante "MORT" (recettage
+              // direction-artistique du 13/09) : `PortraitFrame` n'a pas de
+              // paramètre dédié, enveloppé d'un `ColorFiltered` en niveaux de
+              // gris plutôt que de lui ajouter un paramètre pour un unique usage.
+              isDead
+                  ? ColorFiltered(
+                      colorFilter: const ColorFilter.matrix(_greyscaleMatrix),
+                      child: portrait,
+                    )
+                  : portrait,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Flexible(
-                      child: Text.rich(
-                        TextSpan(
-                          children: [
+                    // Ligne 1 : le nom seul ; le badge de statut est sous la carte,
+                    // sur toute sa largeur (voir `_buildCard`).
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: member.name,
+                            style: AppTypography.body(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: nameColor,
+                            ),
+                          ),
+                          if (isSelf)
                             TextSpan(
-                              text: member.name,
+                              text: ' (toi)',
                               style: AppTypography.body(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: nameColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textMuted,
                               ),
                             ),
-                            if (isSelf)
-                              TextSpan(
-                                text: ' (toi)',
-                                style: AppTypography.body(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textMuted,
-                                ),
-                              ),
-                          ],
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    // Ligne 2 : jauge + fraction PV sur la même ligne (recettage
+                    // direction-artistique du 13/09 — auparavant la fraction PV
+                    // (+ éventuel chip PV temp.) formait une 3e ligne sous la
+                    // jauge ; la ligne "résumé race/classe/niveau" est retirée).
+                    Row(
+                      children: [
+                        Expanded(child: _MemberHpGauge(ratio: member.hpRatio)),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          '${member.currentHp}/${member.maxHp}',
+                          style: AppTypography.body(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                        if ((member.temporaryHp ?? 0) > 0) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          _TemporaryHpChip(amount: member.temporaryHp!),
+                        ],
+                      ],
                     ),
-                    if (member.vitalStatus != CharacterVitalStatus.alive) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      _StatusBadge(status: member.vitalStatus!),
+                    // Conditions actives (P6) : pastilles compactes en lecture
+                    // seule, sans zone de tap propre (la carte reste tappable) ;
+                    // aucune ligne — donc aucune hauteur en plus — sans condition.
+                    if (member.conditions.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      ConditionsZone(
+                        conditions: member.conditions,
+                        maxFullChips: 2,
+                        compact: true,
+                      ),
+                    ],
+                    if (member.armorClass != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      // Ligne 3 : "CA {valeur}" (+ suffixe signé du bonus manuel
+                      // si actif) — spec direction-artistique, voir
+                      // `GroupMember.armorClass`/`armorClassBonus`. Jamais
+                      // tappable individuellement, texte seul (pas d'icône),
+                      // même style que l'ancienne ligne "résumé race/classe/
+                      // niveau" (`CharacterCard._summaryLine`), retirée de cet
+                      // onglet par le recettage direction-artistique du 13/09.
+                      _ArmorClassLine(
+                        armorClass: member.armorClass!,
+                        armorClassBonus: member.armorClassBonus ?? 0,
+                      ),
                     ],
                   ],
                 ),
-                const SizedBox(height: AppSpacing.xs),
-                // Ligne 2 : jauge + fraction PV sur la même ligne (recettage
-                // direction-artistique du 13/09 — auparavant la fraction PV
-                // (+ éventuel chip PV temp.) formait une 3e ligne sous la
-                // jauge ; la ligne "résumé race/classe/niveau" est retirée).
-                Row(
-                  children: [
-                    Expanded(child: _MemberHpGauge(ratio: member.hpRatio)),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      '${member.currentHp}/${member.maxHp}',
-                      style: AppTypography.body(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if ((member.temporaryHp ?? 0) > 0) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      _TemporaryHpChip(amount: member.temporaryHp!),
-                    ],
-                  ],
+              ),
+              if (canRemove)
+                _RemoveMemberButton(
+                  memberName: member.name,
+                  onRemove: onRemove,
                 ),
-                // Conditions actives (P6) : pastilles compactes en lecture
-                // seule, sans zone de tap propre (la carte reste tappable) ;
-                // aucune ligne — donc aucune hauteur en plus — sans condition.
-                if (member.conditions.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  ConditionsZone(
-                    conditions: member.conditions,
-                    maxFullChips: 2,
-                    compact: true,
-                  ),
-                ],
-                if (member.armorClass != null) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  // Ligne 3 : "CA {valeur}" (+ suffixe signé du bonus manuel
-                  // si actif) — spec direction-artistique, voir
-                  // `GroupMember.armorClass`/`armorClassBonus`. Jamais
-                  // tappable individuellement, texte seul (pas d'icône),
-                  // même style que l'ancienne ligne "résumé race/classe/
-                  // niveau" (`CharacterCard._summaryLine`), retirée de cet
-                  // onglet par le recettage direction-artistique du 13/09.
-                  _ArmorClassLine(
-                    armorClass: member.armorClass!,
-                    armorClassBonus: member.armorClassBonus ?? 0,
-                  ),
-                ],
-              ],
-            ),
+            ],
           ),
-          if (canRemove)
-            _RemoveMemberButton(memberName: member.name, onRemove: onRemove),
+          // Badge « MORT » / « INCONSCIENT » sur sa propre ligne, pleine
+          // largeur de la carte : la colonne du nom (≈ 128 dp sur 320 dp, à
+          // côté du portrait et du bouton Exclure) est trop étroite pour le
+          // mot entier.
+          if (member.vitalStatus != CharacterVitalStatus.alive) ...[
+            const SizedBox(height: AppSpacing.xs),
+            _StatusBadge(status: member.vitalStatus!),
+          ],
         ],
       ),
     );
@@ -617,7 +622,7 @@ class _StatusBadge extends StatelessWidget {
             Icon(Icons.warning_amber_rounded, size: 14, color: accent),
             const SizedBox(width: 4),
           ],
-          Text(
+          DisplayText(
             isDead ? 'MORT' : 'INCONSCIENT',
             style: AppTypography.display(fontSize: 11, color: accent),
           ),

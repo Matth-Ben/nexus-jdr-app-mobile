@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/display_text.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -195,8 +196,9 @@ class _TopBanner extends StatelessWidget {
                     horizontal: AppSpacing.lg,
                     vertical: 14,
                   ),
-                  child: Text(
+                  child: DisplayText(
                     'Passer',
+                    tier: DisplayTier.control,
                     style: AppTypography.display(
                       fontSize: 11,
                       color: AppColors.textOnWoodMuted,
@@ -266,7 +268,7 @@ class _OnboardingPageView extends StatelessWidget {
                     color: page.accentColor!,
                   ),
             const SizedBox(height: AppSpacing.lg),
-            Text(
+            DisplayText(
               // `.toUpperCase()` explicite : `AppTypography.display` ne
               // transforme jamais la casse automatiquement (voir sa doc de
               // classe) — les libellés de [_onboardingPages] sont déjà
