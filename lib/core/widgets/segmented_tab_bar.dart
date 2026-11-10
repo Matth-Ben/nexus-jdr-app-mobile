@@ -103,8 +103,13 @@ class _SegmentedTab extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Palier control (x1,5), 2 lignes : la hauteur de l'onglet est
+              // élastique (minHeight 44, jamais fixe).
               DisplayText(
                 label.toUpperCase(),
+                tier: DisplayTier.control,
+                maxLines: 2,
+                textAlign: TextAlign.center,
                 style: AppTypography.display(
                   fontSize: 11,
                   color: selected ? AppColors.textPrimary : AppColors.textMuted,

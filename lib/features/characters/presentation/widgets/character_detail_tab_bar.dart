@@ -67,26 +67,33 @@ class CharacterDetailTabBar extends StatelessWidget {
 
   static const double _height = 62;
 
+  /// Largeur d'écran (dp) sous laquelle les libellés passent en police de
+  /// corps (décision du 10/11/2026) : la police pixel (1 em par glyphe) ne
+  /// tient plus dans une colonne de moins de 69,6 dp (348 / 5) sans descendre
+  /// sous 11 px (règle DA R1 prioritaire sur le 340 dp indicatif de la
+  /// décision) : un libellé de 6 lettres mesure 6 x 11 + 6 x 0,5 = 69 dp.
+  @visibleForTesting
+  static const double compactWidth = 348;
+
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
       color: AppColors.woodMedium,
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          height: _height,
-          child: Row(
-            children: [
-              for (final tab in CharacterDetailTab.values)
-                Expanded(
-                  child: _TabButton(
-                    tab: tab,
-                    selected: tab == current,
-                    onTap: () => onSelect(tab),
-                  ),
+        // Hauteur élastique : `_height` est un minimum (porté par chaque
+        // onglet, donc zone de tap complète), la barre grandit si besoin.
+        child: Row(
+          children: [
+            for (final tab in CharacterDetailTab.values)
+              Expanded(
+                child: _TabButton(
+                  tab: tab,
+                  selected: tab == current,
+                  onTap: () => onSelect(tab),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );
@@ -108,6 +115,8 @@ class _TabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final iconColor = selected ? AppColors.woodDark : AppColors.textOnWoodMuted;
+    final compact =
+        MediaQuery.sizeOf(context).width < CharacterDetailTabBar.compactWidth;
     final labelColor = selected
         ? AppColors.textOnWood
         : AppColors.textOnWoodMuted;
@@ -116,30 +125,65 @@ class _TabButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                if (selected)
-                  Container(
-                    width: 34,
-                    height: 22,
-                    decoration: const BoxDecoration(
-                      color: AppColors.goldEnd,
-                      borderRadius: BorderRadius.all(Radius.circular(11)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: CharacterDetailTabBar._height,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (selected)
+                    Container(
+                      width: 34,
+                      height: 22,
+                      decoration: const BoxDecoration(
+                        color: AppColors.goldEnd,
+                        borderRadius: BorderRadius.all(Radius.circular(11)),
+                      ),
+                    ),
+                  Icon(tab.icon, size: 20, color: iconColor),
+                ],
+              ),
+              const SizedBox(height: 2),
+              // Largeur >= 348 dp : police pixel, palier title (x1,3) et non
+              // control (1/5 de la largeur : un libellé à x1,5 ne peut pas passer
+              // à la ligne sans couper un mot). `FittedBox` : à 360 dp "PERSO"
+              // à x1,3 (74 dp) dépasse la colonne de 72 dp ; le libellé rétrécit
+              // sans passer sous 11 dp jusqu'à 6 lettres, dès 348 dp (colonne
+              // de 69,6 dp pour un libellé de 69 dp).
+              // Largeur < 348 dp : police de corps compacte (jamais de display
+              // sous 11 px, règle DA R1), mêmes mots.
+              if (compact)
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    tab.label(l10n),
+                    maxLines: 1,
+                    style: AppTypography.body(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: labelColor,
                     ),
                   ),
-                Icon(tab.icon, size: 20, color: iconColor),
-              ],
-            ),
-            const SizedBox(height: 2),
-            DisplayText(
-              tab.label(l10n),
-              style: AppTypography.display(fontSize: 11, color: labelColor),
-            ),
-          ],
+                )
+              else
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: DisplayText(
+                    tab.label(l10n),
+                    maxLines: 1,
+                    style: AppTypography.display(
+                      fontSize: 11,
+                      color: labelColor,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

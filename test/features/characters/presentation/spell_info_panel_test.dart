@@ -15,6 +15,7 @@
 // ouvre désormais directement ce panneau ([showSpellInfoPanel]).
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/core/theme/app_colors.dart';
@@ -788,7 +789,9 @@ void main() {
 
     testWidgets('la ligne de raison suit l\'échelle de texte jusqu\'à 2.0 puis '
         'ne grandit plus, alors que le libellé du bouton (police display) est '
-        'plafonné plus bas, à x1,3 (décision du 10/11/2026)', (tester) async {
+        'plafonné plus bas, à x1,5 (palier control, décision du 10/11/2026)', (
+      tester,
+    ) async {
       useScreen(tester, const Size(390, 844), 1);
       await pumpPanel(tester, spell: _fireball, spellSlots: const []);
 
@@ -816,6 +819,15 @@ void main() {
       );
       expect(labelAt2, greaterThanOrEqualTo(labelAt1));
       expect(labelAt3, labelAt2);
+      // Valeur exacte : le bouton "LANCER" (PrimaryButton, palier control) est
+      // à 11 x 1,5 = 16,5 px effectifs à l'échelle système 3.0.
+      final launchParagraph = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.text('LANCER'),
+          matching: find.byType(RichText),
+        ),
+      );
+      expect(launchParagraph.textScaler.scale(11), closeTo(11 * 1.5, 0.001));
     });
 
     testWidgets('petit écran 320x568, échelle 2.0, description très longue : '

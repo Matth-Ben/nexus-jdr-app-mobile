@@ -79,6 +79,16 @@ abstract final class AppTheme {
           ),
         ),
       ),
+      // Le `textStyle` display ci-dessous n'est pas plafonné par le thème (un
+      // `ThemeData` ne peut pas imposer un `TextScaler`) : tout `ElevatedButton`
+      // doit donc recevoir un `DisplayText(tier: DisplayTier.control)` comme
+      // enfant. Seul usage à ce jour : le bouton "Réessayer" de `lib/main.dart`
+      // (migré). Usages Material restants non migrés (texte `Text` brut, hérite
+      // de `labelLarge` pour les `TextButton`) : `TextButton` dans
+      // `ability_score_step_screen`, `appearance_and_backstory_step_screen`,
+      // `character_share_screen` (x3), `shared_character_view_screen` (x2),
+      // `group_character_reassignment_screen`, `group_join_screen`,
+      // `xml_import_review_screen` (x2) : traités par la PR 3 (textTheme).
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.goldEnd,

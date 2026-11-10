@@ -10,8 +10,11 @@ Future<void> pumpScaled(
   required double scale,
   Size surface = const Size(400, 800),
 }) async {
-  await tester.binding.setSurfaceSize(surface);
-  addTearDown(() => tester.binding.setSurfaceSize(null));
+  // `tester.view` (et non `binding.setSurfaceSize`, qui n'est pas pris en compte
+  // par le premier `MediaQuery`) : la taille est appliquée avant le montage.
+  tester.view.physicalSize = surface;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MaterialApp(
       builder: (context, c) => MediaQuery(

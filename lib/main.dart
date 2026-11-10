@@ -18,6 +18,7 @@ import 'core/notifications/push_token_registrar.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/pending_write_sync_hook_provider.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/display_text.dart';
 import 'features/app_update/domain/app_version_status.dart';
 import 'features/app_update/presentation/force_update_screen.dart';
 import 'features/app_update/presentation/providers/app_version_providers.dart';
@@ -344,7 +345,7 @@ Future<BootstrapResult> _initializeSupabaseAndFirebase() async {
 /// Si [initialize] résout `supabaseReady: false` (Supabase indisponible), ni
 /// la vérification de version ni [child] ne sont construits — tous deux
 /// dépendent de `Supabase.instance.client`, qui planterait (voir la doc de
-/// [_initializeSupabaseAndFirebase]) — [_SupabaseUnavailableScreen] prend le
+/// [_initializeSupabaseAndFirebase]) — [SupabaseUnavailableScreen] prend le
 /// relais à la place, avec un bouton "Réessayer" qui relance [initialize].
 @visibleForTesting
 class AppBootstrap extends ConsumerStatefulWidget {
@@ -395,7 +396,7 @@ class _AppBootstrapState extends ConsumerState<AppBootstrap> {
           return MaterialApp(
             theme: AppTheme.light,
             debugShowCheckedModeBanner: false,
-            home: _SupabaseUnavailableScreen(onRetry: _retryInitialization),
+            home: SupabaseUnavailableScreen(onRetry: _retryInitialization),
           );
         }
 
@@ -479,8 +480,9 @@ class _AppBootstrapState extends ConsumerState<AppBootstrap> {
 /// Volontairement sommaire (pas de maquette dédiée à cet état, contrairement
 /// à [ForceUpdateScreen]/[SplashScreen]) : juste de quoi ne jamais laisser
 /// l'utilisateur face à un écran figé sans recours.
-class _SupabaseUnavailableScreen extends StatelessWidget {
-  const _SupabaseUnavailableScreen({required this.onRetry});
+@visibleForTesting
+class SupabaseUnavailableScreen extends StatelessWidget {
+  const SupabaseUnavailableScreen({required this.onRetry});
 
   final VoidCallback onRetry;
 
@@ -505,7 +507,13 @@ class _SupabaseUnavailableScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: onRetry,
-                  child: const Text('Réessayer'),
+                  // Palier control (x1,5) : le style display vient du thème.
+                  child: const DisplayText(
+                    'Réessayer',
+                    tier: DisplayTier.control,
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),

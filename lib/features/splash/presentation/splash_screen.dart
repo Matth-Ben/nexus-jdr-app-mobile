@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/widgets/display_text.dart';
 import '../../../core/widgets/app_brand_badge.dart';
+import '../../../core/widgets/display_text.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 
 /// Écran de lancement Flutter (par opposition au splash natif statique de

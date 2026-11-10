@@ -6,6 +6,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/widgets/display_text.dart';
 import 'package:personnages/core/widgets/sheet_header_bar.dart';
 import 'package:personnages/features/characters/presentation/widgets/dice_roll_sheet.dart';
 import 'package:personnages/l10n/app_localizations.dart';
@@ -206,10 +207,18 @@ void main() {
 
     expect(find.text('RÉUSSITE CRITIQUE'), findsOneWidget);
     final header = tester.getRect(find.byType(SheetHeaderBar));
-    // Titre en police display : plafonné à x1,3, la barre ne grandit plus
-    // forcément au-delà de 56 px (elle grandit encore si le titre passe à 3
-    // lignes ou plus).
-    expect(header.height, greaterThanOrEqualTo(56));
+    // Titre en police display : plafonné à x1,3 (et non x2,0 comme le corps,
+    // que ce test exerce par le texte de la sheet) ; la barre mesure donc
+    // exactement son minimum de 56 px et le titre reste dans la barre.
+    expect(header.height, 56);
+    final title = tester.getRect(
+      find.descendant(
+        of: find.byType(SheetHeaderBar),
+        matching: find.byType(DisplayText),
+      ),
+    );
+    expect(title.top, greaterThanOrEqualTo(header.top));
+    expect(title.bottom, lessThanOrEqualTo(header.bottom));
     expect(header.top, greaterThanOrEqualTo(0));
     expect(
       tester.getRect(find.text('RELANCER')).bottom,
