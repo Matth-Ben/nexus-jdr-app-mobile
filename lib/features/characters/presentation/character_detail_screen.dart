@@ -1173,7 +1173,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             inventoryId: item.id,
             newQuantity: newQuantity,
           );
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
@@ -1210,7 +1210,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             inventoryId: item.id,
             equipped: newEquipped,
           );
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
@@ -1247,7 +1247,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             inventoryId: item.id,
             attuned: newAttuned,
           );
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
@@ -1280,7 +1280,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             characterId: widget.characterId,
             inventoryId: item.id,
           );
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
@@ -1311,7 +1311,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             currency: currency,
             newAmount: newAmount,
           );
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
@@ -1344,7 +1344,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             newCurrencyTotals: newTotals,
             items: const [],
           );
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
@@ -1376,7 +1376,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             itemId: item.id,
             quantity: quantity,
           );
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
@@ -1416,7 +1416,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             damageType: damageType,
             properties: properties,
           );
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
@@ -1474,7 +1474,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             newCurrencyTotals: newCurrencyTotals,
             items: items,
           );
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
@@ -1532,7 +1532,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           inventoryId: weapon.id,
           equipped: false,
         );
-        if (outcome == WriteOutcome.queued) {
+        if (outcome == WriteOutcome.rejectedOffline) {
           await _refreshCharacterDetail();
           _showSnackBar(l10n.characterOfflineNotPersistedMessage);
           return;
@@ -1543,7 +1543,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         inventoryId: item.id,
         slot: slot,
       );
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         await _refreshCharacterDetail();
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
@@ -1588,7 +1588,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       final outcome = await ref
           .read(pactWeaponRepositoryProvider)
           .setPactWeapon(characterId: widget.characterId, itemId: picked.id);
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
@@ -1738,7 +1738,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           .read(characterRepositoryProvider)
           .setDead(characterId: widget.characterId, isDead: !detail.isDead);
       if (!mounted) return;
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         // Voir la documentation de `CharacterRepository.setDead` : cette
         // écriture n'est jamais mise en file (même catégorie que
         // `castSpell`/`useClassFeature`), donc jamais synchronisée plus
@@ -1772,7 +1772,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             isArchived: !detail.isArchived,
           );
       if (!mounted) return;
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         // Voir la documentation de `CharacterRepository.setArchived` : même
         // convention que [_toggleDead] (jamais mis en file d'attente).
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
@@ -1809,7 +1809,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           .read(characterRepositoryProvider)
           .deleteCharacter(characterId: widget.characterId);
       if (!mounted) return;
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         // Voir la documentation de `CharacterRepository.deleteCharacter` :
         // même convention que [_toggleDead]/[_toggleArchived] (jamais mis en
         // file), le personnage n'a donc pas été supprimé.
@@ -1840,7 +1840,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             inspiration: !detail.inspiration,
           );
       if (!mounted) return;
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         // Voir la documentation de `CharacterRepository.setInspiration` :
         // même convention que [_toggleDead]/[_toggleArchived] (jamais mis en
         // file).
@@ -1873,7 +1873,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           .read(characterRepositoryProvider)
           .setArmorClassBonus(characterId: widget.characterId, bonus: bonus);
       if (!mounted) return;
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
@@ -1904,7 +1904,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             prepared: spell.status != SpellStatus.prepared,
           );
       if (!mounted) return;
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }

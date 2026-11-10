@@ -105,7 +105,7 @@ class _JournalEntryEditSheetContentState
                   body: body,
                 );
 
-      if (outcome == WriteOutcome.queued) {
+      if (outcome == WriteOutcome.rejectedOffline) {
         if (!mounted) return;
         setState(() {
           _isSaving = false;

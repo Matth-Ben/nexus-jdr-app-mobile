@@ -183,7 +183,7 @@ void main() {
         _Checker(false),
       ).setPactWeapon(characterId: 'char-1', itemId: 7);
 
-      expect(outcome, WriteOutcome.queued);
+      expect(outcome, WriteOutcome.rejectedOffline);
       expect(requests, 0);
     });
 

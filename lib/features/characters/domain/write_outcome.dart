@@ -20,4 +20,10 @@ enum WriteOutcome {
   /// prochaine synchro automatique dès le retour du réseau (voir
   /// `PendingCharacterWriteSyncer`).
   queued,
+
+  /// Aucune connectivité au moment de l'appel et cette écriture n'est pas
+  /// prise en charge par la file : **rien n'a été écrit**, ni sur le serveur
+  /// ni dans la file. L'appelant doit afficher un message d'échec
+  /// (`characterOfflineNotPersistedMessage`), jamais « sera synchronisé ».
+  rejectedOffline,
 }

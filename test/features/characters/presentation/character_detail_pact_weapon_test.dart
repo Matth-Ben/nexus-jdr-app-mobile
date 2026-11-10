@@ -215,7 +215,7 @@ void main() {
     tester,
   ) async {
     final (characters, pact) = await _pump(tester);
-    pact.outcome = WriteOutcome.queued;
+    pact.outcome = WriteOutcome.rejectedOffline;
     final fetchesBefore = characters.fetchCount;
 
     await tester.tap(find.text('Choisir une forme'));

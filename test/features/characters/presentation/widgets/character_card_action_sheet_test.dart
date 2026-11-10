@@ -592,19 +592,22 @@ void main() {
       },
     );
 
-    testWidgets('hors ligne (WriteOutcome.queued) : SnackBar "Hors ligne" sans '
-        'promettre de synchronisation', (tester) async {
-      fakeRepository.setArchivedOutcome = WriteOutcome.queued;
-      await openSheet(tester);
+    testWidgets(
+      'hors ligne (WriteOutcome.rejectedOffline) : SnackBar "Hors ligne" sans '
+      'promettre de synchronisation',
+      (tester) async {
+        fakeRepository.setArchivedOutcome = WriteOutcome.rejectedOffline;
+        await openSheet(tester);
 
-      await tester.tap(find.text('Archiver ce personnage'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Archiver ce personnage'));
+        await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining("n'a pas pu être enregistrée"),
-        findsOneWidget,
-      );
-    });
+        expect(
+          find.textContaining("n'a pas pu être enregistrée"),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('CharacterFailure code générique : affiche le message du '
         'dépôt tel quel', (tester) async {
@@ -688,19 +691,22 @@ void main() {
       expect(fakeRepository.lastSetDeadValue, isTrue);
     });
 
-    testWidgets('hors ligne (WriteOutcome.queued) : SnackBar "Hors ligne" sans '
-        'promettre de synchronisation', (tester) async {
-      fakeRepository.setDeadOutcome = WriteOutcome.queued;
-      await openSheet(tester);
+    testWidgets(
+      'hors ligne (WriteOutcome.rejectedOffline) : SnackBar "Hors ligne" sans '
+      'promettre de synchronisation',
+      (tester) async {
+        fakeRepository.setDeadOutcome = WriteOutcome.rejectedOffline;
+        await openSheet(tester);
 
-      await tester.tap(find.text('Marquer comme mort'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Marquer comme mort'));
+        await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining("n'a pas pu être enregistrée"),
-        findsOneWidget,
-      );
-    });
+        expect(
+          find.textContaining("n'a pas pu être enregistrée"),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('CharacterFailure : affiche le message du dépôt', (
       tester,
@@ -759,21 +765,24 @@ void main() {
       expect(fakeRepository.deleteCallCount, 1);
     });
 
-    testWidgets('hors ligne (WriteOutcome.queued) : SnackBar "Hors ligne" sans '
-        'promettre de synchronisation', (tester) async {
-      fakeRepository.deleteOutcome = WriteOutcome.queued;
-      await openSheet(tester);
+    testWidgets(
+      'hors ligne (WriteOutcome.rejectedOffline) : SnackBar "Hors ligne" sans '
+      'promettre de synchronisation',
+      (tester) async {
+        fakeRepository.deleteOutcome = WriteOutcome.rejectedOffline;
+        await openSheet(tester);
 
-      await tester.tap(find.text('Supprimer le personnage'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Supprimer'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Supprimer le personnage'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Supprimer'));
+        await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining("n'a pas pu être enregistrée"),
-        findsOneWidget,
-      );
-    });
+        expect(
+          find.textContaining("n'a pas pu être enregistrée"),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('échec générique : message générique', (tester) async {
       fakeRepository.deleteError = StateError('boom');

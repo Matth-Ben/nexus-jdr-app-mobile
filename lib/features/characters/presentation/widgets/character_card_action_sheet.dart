@@ -104,7 +104,7 @@ Future<void> _toggleArchived(
           isArchived: !character.isArchived,
         );
     if (!context.mounted) return;
-    if (outcome == WriteOutcome.queued) {
+    if (outcome == WriteOutcome.rejectedOffline) {
       _showSnackBar(context, l10n.characterOfflineNotPersistedMessage);
       return;
     }
@@ -132,7 +132,7 @@ Future<void> _toggleDead(
         .read(characterRepositoryProvider)
         .setDead(characterId: character.id, isDead: !character.isDead);
     if (!context.mounted) return;
-    if (outcome == WriteOutcome.queued) {
+    if (outcome == WriteOutcome.rejectedOffline) {
       _showSnackBar(context, l10n.characterOfflineNotPersistedMessage);
       return;
     }
@@ -168,7 +168,7 @@ Future<void> _delete(
         .read(characterRepositoryProvider)
         .deleteCharacter(characterId: character.id);
     if (!context.mounted) return;
-    if (outcome == WriteOutcome.queued) {
+    if (outcome == WriteOutcome.rejectedOffline) {
       _showSnackBar(context, l10n.characterOfflineNotPersistedMessage);
       return;
     }

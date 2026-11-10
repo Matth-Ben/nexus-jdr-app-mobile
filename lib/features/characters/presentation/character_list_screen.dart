@@ -233,7 +233,7 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
         final outcome = await repository.deleteCharacter(
           characterId: character.id,
         );
-        if (outcome == WriteOutcome.queued) {
+        if (outcome == WriteOutcome.rejectedOffline) {
           failedIds.add(character.id);
           offlineFailureCount++;
         }
