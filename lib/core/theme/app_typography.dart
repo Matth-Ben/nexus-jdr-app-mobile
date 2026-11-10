@@ -38,6 +38,11 @@ abstract final class AppTypography {
   /// `Text`, jamais au sous-arbre ; le texte [body] n'est pas concerné.
   static const double maxDisplayScaleFactor = 1.3;
 
+  /// Taille minimale (px, à x1,0) de la police pixel [display], décision du
+  /// 10/11/2026. Partagée par le garde `display_usage_guard_test.dart` et par
+  /// les mesures de mots en police pixel (dialogue d'import XML).
+  static const double minDisplayFontSize = 11;
+
   /// Plafond du palier "control" de `DisplayText` (libellés de boutons,
   /// onglets, segments), décision du 10/11/2026 : x1,5, avec retour à la ligne
   /// autorisé et hauteur élastique du conteneur.

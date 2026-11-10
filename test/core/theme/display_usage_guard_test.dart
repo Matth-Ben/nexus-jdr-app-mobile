@@ -13,6 +13,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/theme/app_typography.dart';
 
 /// Liste blanche : fichiers autorisés à appeler `AppTypography.display(` hors
 /// d'un `DisplayText`. Toute entrée doit être justifiée ici, et retirée dès
@@ -137,7 +138,7 @@ List<String> findTooSmallDisplayUses(String source) {
       ).firstMatch(code);
       value = decl == null ? null : double.parse(decl.group(1)!);
     }
-    if (value != null && value < 11) {
+    if (value != null && value < AppTypography.minDisplayFontSize) {
       final line = _lineOf(code, m.start);
       problems.add('ligne $line (fontSize $value px)');
     }
@@ -157,8 +158,42 @@ List<String> findDisplayTextThemeUses(String source) {
   ];
 }
 
+/// Normalise un chemin (séparateurs Windows compris) en chemin POSIX.
+String normalizeGuardPath(String path) => path.replaceAll(r'\', '/');
+
+/// Écarts d'un fichier : display sous le plancher, et usages du `textTheme`
+/// display hors de `lib/core/theme/` (exempté).
+List<String> displayGuardOffenders(String rawPath, String source) {
+  final path = normalizeGuardPath(rawPath);
+  return [
+    for (final p in findTooSmallDisplayUses(source)) '$path : $p',
+    if (!path.startsWith('lib/core/theme/'))
+      for (final p in findDisplayTextThemeUses(source)) '$path : $p',
+  ];
+}
+
 void main() {
   group('détecteurs de taille et de textTheme', () {
+    test('exempte lib/core/theme/ (POSIX et Windows), pas le reste', () {
+      const src = 'final s = Theme.of(c).textTheme.titleLarge;';
+      expect(
+        displayGuardOffenders('lib/core/theme/app_theme.dart', src),
+        isEmpty,
+      );
+      expect(
+        displayGuardOffenders(r'lib\core\theme\app_theme.dart', src),
+        isEmpty,
+      );
+      expect(
+        displayGuardOffenders('lib/features/x/presentation/y.dart', src),
+        hasLength(1),
+      );
+      expect(
+        displayGuardOffenders(r'lib\features\x\y.dart', src),
+        hasLength(1),
+      );
+    });
+
     test('refuse un display sous 11 px (littéral ou constante)', () {
       const src = '''
 const double _small = 10;
@@ -240,16 +275,9 @@ final s = 'AppTypography.display(';
     final offenders = <String>[];
     for (final entity in Directory('lib').listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
-      final path = entity.path.replaceAll(r'', '/');
-      final source = entity.readAsStringSync();
-      for (final p in findTooSmallDisplayUses(source)) {
-        offenders.add('$path : $p');
-      }
-      if (!path.startsWith('lib/core/theme/')) {
-        for (final p in findDisplayTextThemeUses(source)) {
-          offenders.add('$path : $p');
-        }
-      }
+      offenders.addAll(
+        displayGuardOffenders(entity.path, entity.readAsStringSync()),
+      );
     }
     expect(
       offenders,
