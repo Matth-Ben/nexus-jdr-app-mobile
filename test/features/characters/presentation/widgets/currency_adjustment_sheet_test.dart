@@ -2,7 +2,9 @@
 // et de la feuille de conversion de pièces (bouton "Changer", aperçu).
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/theme/app_theme.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/presentation/widgets/currency_adjustment_sheet.dart';
@@ -28,6 +30,7 @@ Future<_Result> _open(
   bool withConversion = true,
   Size? size,
   double textScale = 1,
+  ThemeData? theme,
 }) async {
   final result = _Result();
   if (size != null) {
@@ -37,6 +40,7 @@ Future<_Result> _open(
   }
   await tester.pumpWidget(
     MaterialApp(
+      theme: theme,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('fr'),
@@ -314,5 +318,41 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });
+  });
+
+  // D192 PR 3 : les ChoiceChip héritent du thème en police corps, grandissent
+  // librement (retour à la ligne du Wrap) et ne débordent pas.
+  group('chips de devise en grande police', () {
+    for (final scale in [2.0, 3.0]) {
+      for (final width in [320.0, 360.0]) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          await _open(
+            tester,
+            size: Size(width, 900),
+            textScale: scale,
+            theme: AppTheme.light,
+          );
+          await tester.ensureVisible(find.text('CHANGER'));
+          await tester.tap(find.text('CHANGER'));
+          await tester.pumpAndSettle();
+
+          final chips = find.byType(ChoiceChip);
+          expect(chips, findsWidgets);
+          for (final chip in tester.widgetList<ChoiceChip>(chips)) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find
+                  .descendant(
+                    of: find.byWidget(chip),
+                    matching: find.byType(RichText),
+                  )
+                  .first,
+            );
+            expect(paragraph.text.style?.fontFamily, 'WorkSans');
+            expect(paragraph.textScaler.scale(10), closeTo(10 * scale, 0.01));
+          }
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
   });
 }

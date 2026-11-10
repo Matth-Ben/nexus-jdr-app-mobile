@@ -10,6 +10,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:personnages/l10n/app_localizations.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/cache/app_database.dart';
 import 'package:personnages/core/cache/cache_providers.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/core/theme/app_theme.dart';
 import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/core/sync/sync_status_providers.dart';
 import 'package:personnages/core/widgets/sync_status_banner.dart';
@@ -67,6 +69,8 @@ import '../../../support/fake_connectivity_checker.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_ability_score_grid.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_equipped_weapons_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_stat_pills_row.dart';
+
+import '../../../core/widgets/display_scale_helpers.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   CharacterDetail? detailToReturn;
@@ -681,6 +685,7 @@ void main() {
   Widget buildTestWidget({
     Locale locale = const Locale('fr'),
     List<Override> extraOverrides = const [],
+    ThemeData? theme,
   }) {
     return ProviderScope(
       overrides: [
@@ -688,6 +693,7 @@ void main() {
         ...extraOverrides,
       ],
       child: MaterialApp.router(
+        theme: theme,
         // `CharacterDetailScreen` et ses widgets lisent désormais
         // `AppLocalizations.of(context)!` (chantier "traduction de l'app"
         // Phase B, lot "Characters — fiche (identité/statistiques)") : sans
@@ -1278,6 +1284,39 @@ void main() {
       expect(modifier.dy, lessThan(export.dy));
     },
   );
+
+  // D192 PR 3 : les entrées du menu "…" héritent du thème en police corps
+  // (plus de police pixel sans plafond), grandissent librement et ne débordent
+  // pas à x2,0 / x3,0 sur 320 et 360 dp.
+  group('menu "…" en grande police', () {
+    for (final scale in [2.0, 3.0]) {
+      for (final width in [320.0, 360.0]) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          fakeRepository.detailToReturn = _baseDetail;
+          await useScaledView(tester, scale: scale, width: width, height: 900);
+          await tester.pumpWidget(buildTestWidget(theme: AppTheme.light));
+          await tester.pumpAndSettle();
+          // Débordements de la fiche elle-même à grande police (ex. carte des
+          // signes vitaux), hors périmètre de ce test : on les écarte pour ne
+          // juger que le menu.
+          while (tester.takeException() != null) {}
+          await openCharacterHeaderMenu(tester);
+
+          for (final label in ['Modifier', 'Exporter en XML']) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.descendant(
+                of: find.text(label),
+                matching: find.byType(RichText),
+              ),
+            );
+            expect(paragraph.text.style?.fontFamily, 'WorkSans', reason: label);
+            expect(paragraph.textScaler.scale(10), closeTo(10 * scale, 0.01));
+          }
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+  });
 
   group('Marquer comme mort / Ressusciter (menu "…" du bandeau bois)', () {
     testWidgets(

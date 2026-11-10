@@ -23,9 +23,12 @@ import 'package:personnages/core/theme/app_typography.dart';
 /// appel) ni `display_text.dart` (son implémentation, aucun appel) : le
 /// détecteur ne les voit pas.
 const Map<String, String> _allowlist = {
-  // `TextStyle` du thème Material (`textTheme`, bouton, dialogue) : migrés en
-  // corps par la PR 3 du chantier (D192) ; ne pas les convertir ici.
-  'lib/core/theme/app_theme.dart': 'styles du thème Material, PR 3 (D192)',
+  // Seul reste `elevatedButtonTheme.textStyle` (display 11) : un `ThemeData`
+  // ne peut pas plafonner, donc tout `ElevatedButton` reçoit un `DisplayText`
+  // control (seul usage : « Réessayer » de `main.dart`). Le `textTheme` et le
+  // dialogue sont en corps depuis la PR 3 (D192) ; `findThemeDisplayLeaks`
+  // interdit tout autre display dans ce fichier.
+  'lib/core/theme/app_theme.dart': 'textStyle du bouton Material (control)',
   // `_displayWordWidth` : mesure de largeur (TextPainter) pour choisir entre
   // boutons côte à côte et empilés ; aucun texte rendu, donc rien à plafonner.
   'lib/features/xml_import/presentation/xml_import_review_screen.dart':
@@ -158,6 +161,59 @@ List<String> findDisplayTextThemeUses(String source) {
   ];
 }
 
+/// Index de la parenthèse fermante qui correspond à la `(` à [open].
+int _matchingParen(String code, int open) {
+  var depth = 0;
+  for (var i = open; i < code.length; i++) {
+    if (code[i] == '(') depth++;
+    if (code[i] == ')' && --depth == 0) return i;
+  }
+  return code.length;
+}
+
+/// Styles display tolérés dans le `textTheme` de `app_typography.dart` : le
+/// titre d'AppBar, aujourd'hui sans usage.
+const allowedDisplayTextThemeStyles = {'titleLarge'};
+
+/// Fuites de police pixel dans le thème Material :
+/// - dans le getter `textTheme` de [typographySource] (`app_typography.dart`),
+///   tout style autre que [allowedDisplayTextThemeStyles] appelant `display(` ;
+/// - dans [themeSource] (`app_theme.dart`), tout `display(` hors de
+///   `elevatedButtonTheme` (bouton, plafonné par `DisplayText` control).
+List<String> findThemeDisplayLeaks(
+  String typographySource,
+  String themeSource,
+) {
+  final problems = <String>[];
+  final typo = _blank(typographySource);
+  final start = typo.indexOf('TextTheme get textTheme');
+  if (start < 0) {
+    problems.add('getter textTheme introuvable dans app_typography.dart');
+  } else {
+    final open = typo.indexOf('TextTheme(', start) + 'TextTheme'.length;
+    final body = typo.substring(open, _matchingParen(typo, open));
+    for (final m in RegExp(r'(\w+)\s*:\s*display\(').allMatches(body)) {
+      if (!allowedDisplayTextThemeStyles.contains(m.group(1))) {
+        problems.add('textTheme.${m.group(1)} en police display');
+      }
+    }
+  }
+  final theme = _blank(themeSource);
+  final button = theme.indexOf('elevatedButtonTheme');
+  final buttonEnd = button < 0
+      ? -1
+      : _matchingParen(theme, theme.indexOf('(', button));
+  for (final m in RegExp(r'\bdisplay\(').allMatches(theme)) {
+    final inButton = button >= 0 && m.start > button && m.start < buttonEnd;
+    if (!inButton) {
+      problems.add(
+        'app_theme.dart ligne ${_lineOf(theme, m.start)} : display(',
+      );
+    }
+  }
+  return problems;
+}
+
 /// Normalise un chemin (séparateurs Windows compris) en chemin POSIX.
 String normalizeGuardPath(String path) => path.replaceAll(r'\', '/');
 
@@ -209,6 +265,69 @@ DisplayText('C', style: AppTypography.display(fontSize: 11)),
       expect(findDisplayTextThemeUses(src), hasLength(1));
       expect(findDisplayTextThemeUses('textTheme.bodyMedium'), isEmpty);
     });
+  });
+
+  group('findThemeDisplayLeaks (thème Material)', () {
+    String typo(String extra) =>
+        '''
+static TextTheme get textTheme {
+  return TextTheme(
+    headlineSmall: body(fontSize: 17),
+    titleLarge: display(fontSize: 13),
+    labelLarge: body(fontSize: 14),
+    $extra
+  );
+}
+''';
+    const okTheme = '''
+ThemeData(
+  textTheme: AppTypography.textTheme,
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(textStyle: AppTypography.display(fontSize: 11)),
+  ),
+);
+''';
+
+    test('accepte titleLarge en display et le bouton', () {
+      expect(findThemeDisplayLeaks(typo(''), okTheme), isEmpty);
+    });
+
+    test('refuse labelLarge, headlineSmall ou titleMedium en display', () {
+      for (final style in ['labelLarge', 'headlineSmall', 'titleMedium']) {
+        final src = style == 'titleMedium'
+            ? typo('titleMedium: display(fontSize: 11),')
+            : typo('').replaceFirst('$style: body(', '$style: display(');
+        expect(findThemeDisplayLeaks(src, okTheme), [
+          'textTheme.$style en police display',
+        ], reason: style);
+      }
+    });
+
+    test('refuse un display hors du bouton dans app_theme.dart', () {
+      const theme = '''
+ThemeData(
+  textTheme: AppTypography.textTheme.copyWith(
+    labelLarge: AppTypography.display(fontSize: 11),
+  ),
+  elevatedButtonTheme: ElevatedButtonThemeData(),
+);
+''';
+      expect(findThemeDisplayLeaks(typo(''), theme), hasLength(1));
+    });
+  });
+
+  test('le thème Material de lib/core/theme/ ne fuit pas de police pixel', () {
+    expect(
+      findThemeDisplayLeaks(
+        File('lib/core/theme/app_typography.dart').readAsStringSync(),
+        File('lib/core/theme/app_theme.dart').readAsStringSync(),
+      ),
+      isEmpty,
+      reason:
+          'Le textTheme (hors titleLarge) et app_theme.dart (hors bouton) '
+          'doivent rester en police corps : un ThemeData ne peut pas '
+          "plafonner l'agrandissement du texte display.",
+    );
   });
 
   group('findUncappedDisplayUses (le détecteur)', () {

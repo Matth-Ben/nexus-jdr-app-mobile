@@ -102,14 +102,15 @@ void main() {
       final textTheme = AppTypography.textTheme;
 
       for (final style in [
-        textTheme.headlineSmall,
+        // Seul `titleLarge` reste en police pixel (D192, PR 3).
         textTheme.titleLarge,
-        textTheme.titleMedium,
-        textTheme.labelLarge,
       ]) {
         expect(style?.fontFamily, 'PressStart2P');
       }
       for (final style in [
+        textTheme.headlineSmall,
+        textTheme.titleMedium,
+        textTheme.labelLarge,
         textTheme.titleSmall,
         textTheme.bodyLarge,
         textTheme.bodyMedium,
