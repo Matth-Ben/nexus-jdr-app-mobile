@@ -7,6 +7,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/info_banner.dart';
 import '../../../../core/widgets/portrait_frame.dart';
 import '../../../characters/domain/signed_modifier_formatter.dart';
+import '../../../characters/presentation/widgets/condition_chips.dart';
 import '../../domain/character_vital_status.dart';
 import '../../domain/group_detail.dart';
 import '../../domain/group_member.dart';
@@ -316,6 +317,17 @@ class _MemberCard extends StatelessWidget {
                     ],
                   ],
                 ),
+                // Conditions actives (P6) : pastilles compactes en lecture
+                // seule, sans zone de tap propre (la carte reste tappable) ;
+                // aucune ligne — donc aucune hauteur en plus — sans condition.
+                if (member.conditions.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  ConditionsZone(
+                    conditions: member.conditions,
+                    maxFullChips: 2,
+                    compact: true,
+                  ),
+                ],
                 if (member.armorClass != null) ...[
                   const SizedBox(height: AppSpacing.xs),
                   // Ligne 3 : "CA {valeur}" (+ suffixe signé du bonus manuel

@@ -31,7 +31,10 @@ mixin _$GroupMember {
 /// l'affichage du suffixe signé (`SignedModifierFormatter`) uniquement
 /// quand il est non nul. `null` pour un membre sans personnage, même
 /// règle qu'[armorClass].
- int? get armorClassBonus;
+ int? get armorClassBonus;/// `characters.conditions` du personnage (P6) — marqueurs informatifs
+/// visibles du MJ, lus tolérant (clé inconnue ignorée). Vide pour un
+/// membre sans personnage.
+ List<ConditionType> get conditions;
 /// Create a copy of GroupMember
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -42,16 +45,16 @@ $GroupMemberCopyWith<GroupMember> get copyWith => _$GroupMemberCopyWithImpl<Grou
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupMember&&(identical(other.membershipId, membershipId) || other.membershipId == membershipId)&&(identical(other.characterId, characterId) || other.characterId == characterId)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.role, role) || other.role == role)&&(identical(other.name, name) || other.name == name)&&(identical(other.isGameMaster, isGameMaster) || other.isGameMaster == isGameMaster)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.className, className) || other.className == className)&&(identical(other.level, level) || other.level == level)&&(identical(other.currentHp, currentHp) || other.currentHp == currentHp)&&(identical(other.maxHp, maxHp) || other.maxHp == maxHp)&&(identical(other.temporaryHp, temporaryHp) || other.temporaryHp == temporaryHp)&&(identical(other.isDead, isDead) || other.isDead == isDead)&&(identical(other.accountDisplayName, accountDisplayName) || other.accountDisplayName == accountDisplayName)&&(identical(other.armorClass, armorClass) || other.armorClass == armorClass)&&(identical(other.armorClassBonus, armorClassBonus) || other.armorClassBonus == armorClassBonus));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupMember&&(identical(other.membershipId, membershipId) || other.membershipId == membershipId)&&(identical(other.characterId, characterId) || other.characterId == characterId)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.role, role) || other.role == role)&&(identical(other.name, name) || other.name == name)&&(identical(other.isGameMaster, isGameMaster) || other.isGameMaster == isGameMaster)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.className, className) || other.className == className)&&(identical(other.level, level) || other.level == level)&&(identical(other.currentHp, currentHp) || other.currentHp == currentHp)&&(identical(other.maxHp, maxHp) || other.maxHp == maxHp)&&(identical(other.temporaryHp, temporaryHp) || other.temporaryHp == temporaryHp)&&(identical(other.isDead, isDead) || other.isDead == isDead)&&(identical(other.accountDisplayName, accountDisplayName) || other.accountDisplayName == accountDisplayName)&&(identical(other.armorClass, armorClass) || other.armorClass == armorClass)&&(identical(other.armorClassBonus, armorClassBonus) || other.armorClassBonus == armorClassBonus)&&const DeepCollectionEquality().equals(other.conditions, conditions));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,membershipId,characterId,userId,role,name,isGameMaster,portraitUrl,raceName,className,level,currentHp,maxHp,temporaryHp,isDead,accountDisplayName,armorClass,armorClassBonus);
+int get hashCode => Object.hash(runtimeType,membershipId,characterId,userId,role,name,isGameMaster,portraitUrl,raceName,className,level,currentHp,maxHp,temporaryHp,isDead,accountDisplayName,armorClass,armorClassBonus,const DeepCollectionEquality().hash(conditions));
 
 @override
 String toString() {
-  return 'GroupMember(membershipId: $membershipId, characterId: $characterId, userId: $userId, role: $role, name: $name, isGameMaster: $isGameMaster, portraitUrl: $portraitUrl, raceName: $raceName, className: $className, level: $level, currentHp: $currentHp, maxHp: $maxHp, temporaryHp: $temporaryHp, isDead: $isDead, accountDisplayName: $accountDisplayName, armorClass: $armorClass, armorClassBonus: $armorClassBonus)';
+  return 'GroupMember(membershipId: $membershipId, characterId: $characterId, userId: $userId, role: $role, name: $name, isGameMaster: $isGameMaster, portraitUrl: $portraitUrl, raceName: $raceName, className: $className, level: $level, currentHp: $currentHp, maxHp: $maxHp, temporaryHp: $temporaryHp, isDead: $isDead, accountDisplayName: $accountDisplayName, armorClass: $armorClass, armorClassBonus: $armorClassBonus, conditions: $conditions)';
 }
 
 
@@ -62,7 +65,7 @@ abstract mixin class $GroupMemberCopyWith<$Res>  {
   factory $GroupMemberCopyWith(GroupMember value, $Res Function(GroupMember) _then) = _$GroupMemberCopyWithImpl;
 @useResult
 $Res call({
- String? membershipId, String? characterId, String userId, GroupRole role, String name, bool isGameMaster, String? portraitUrl, String? raceName, String? className, int? level, int? currentHp, int? maxHp, int? temporaryHp, bool? isDead, String? accountDisplayName, int? armorClass, int? armorClassBonus
+ String? membershipId, String? characterId, String userId, GroupRole role, String name, bool isGameMaster, String? portraitUrl, String? raceName, String? className, int? level, int? currentHp, int? maxHp, int? temporaryHp, bool? isDead, String? accountDisplayName, int? armorClass, int? armorClassBonus, List<ConditionType> conditions
 });
 
 
@@ -79,7 +82,7 @@ class _$GroupMemberCopyWithImpl<$Res>
 
 /// Create a copy of GroupMember
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? membershipId = freezed,Object? characterId = freezed,Object? userId = null,Object? role = null,Object? name = null,Object? isGameMaster = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = freezed,Object? currentHp = freezed,Object? maxHp = freezed,Object? temporaryHp = freezed,Object? isDead = freezed,Object? accountDisplayName = freezed,Object? armorClass = freezed,Object? armorClassBonus = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? membershipId = freezed,Object? characterId = freezed,Object? userId = null,Object? role = null,Object? name = null,Object? isGameMaster = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = freezed,Object? currentHp = freezed,Object? maxHp = freezed,Object? temporaryHp = freezed,Object? isDead = freezed,Object? accountDisplayName = freezed,Object? armorClass = freezed,Object? armorClassBonus = freezed,Object? conditions = null,}) {
   return _then(GroupMember(
 membershipId: freezed == membershipId ? _self.membershipId : membershipId // ignore: cast_nullable_to_non_nullable
 as String?,characterId: freezed == characterId ? _self.characterId : characterId // ignore: cast_nullable_to_non_nullable
@@ -98,7 +101,8 @@ as int?,isDead: freezed == isDead ? _self.isDead : isDead // ignore: cast_nullab
 as bool?,accountDisplayName: freezed == accountDisplayName ? _self.accountDisplayName : accountDisplayName // ignore: cast_nullable_to_non_nullable
 as String?,armorClass: freezed == armorClass ? _self.armorClass : armorClass // ignore: cast_nullable_to_non_nullable
 as int?,armorClassBonus: freezed == armorClassBonus ? _self.armorClassBonus : armorClassBonus // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,conditions: null == conditions ? _self.conditions : conditions // ignore: cast_nullable_to_non_nullable
+as List<ConditionType>,
   ));
 }
 
@@ -183,10 +187,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? membershipId,  String? characterId,  String userId,  GroupRole role,  String name,  bool isGameMaster,  String? portraitUrl,  String? raceName,  String? className,  int? level,  int? currentHp,  int? maxHp,  int? temporaryHp,  bool? isDead,  String? accountDisplayName,  int? armorClass,  int? armorClassBonus)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? membershipId,  String? characterId,  String userId,  GroupRole role,  String name,  bool isGameMaster,  String? portraitUrl,  String? raceName,  String? className,  int? level,  int? currentHp,  int? maxHp,  int? temporaryHp,  bool? isDead,  String? accountDisplayName,  int? armorClass,  int? armorClassBonus,  List<ConditionType> conditions)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _GroupMember() when $default != null:
-return $default(_that.membershipId,_that.characterId,_that.userId,_that.role,_that.name,_that.isGameMaster,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.isDead,_that.accountDisplayName,_that.armorClass,_that.armorClassBonus);case _:
+return $default(_that.membershipId,_that.characterId,_that.userId,_that.role,_that.name,_that.isGameMaster,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.isDead,_that.accountDisplayName,_that.armorClass,_that.armorClassBonus,_that.conditions);case _:
   return orElse();
 
 }
@@ -204,10 +208,10 @@ return $default(_that.membershipId,_that.characterId,_that.userId,_that.role,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? membershipId,  String? characterId,  String userId,  GroupRole role,  String name,  bool isGameMaster,  String? portraitUrl,  String? raceName,  String? className,  int? level,  int? currentHp,  int? maxHp,  int? temporaryHp,  bool? isDead,  String? accountDisplayName,  int? armorClass,  int? armorClassBonus)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? membershipId,  String? characterId,  String userId,  GroupRole role,  String name,  bool isGameMaster,  String? portraitUrl,  String? raceName,  String? className,  int? level,  int? currentHp,  int? maxHp,  int? temporaryHp,  bool? isDead,  String? accountDisplayName,  int? armorClass,  int? armorClassBonus,  List<ConditionType> conditions)  $default,) {final _that = this;
 switch (_that) {
 case _GroupMember():
-return $default(_that.membershipId,_that.characterId,_that.userId,_that.role,_that.name,_that.isGameMaster,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.isDead,_that.accountDisplayName,_that.armorClass,_that.armorClassBonus);case _:
+return $default(_that.membershipId,_that.characterId,_that.userId,_that.role,_that.name,_that.isGameMaster,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.isDead,_that.accountDisplayName,_that.armorClass,_that.armorClassBonus,_that.conditions);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -224,10 +228,10 @@ return $default(_that.membershipId,_that.characterId,_that.userId,_that.role,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? membershipId,  String? characterId,  String userId,  GroupRole role,  String name,  bool isGameMaster,  String? portraitUrl,  String? raceName,  String? className,  int? level,  int? currentHp,  int? maxHp,  int? temporaryHp,  bool? isDead,  String? accountDisplayName,  int? armorClass,  int? armorClassBonus)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? membershipId,  String? characterId,  String userId,  GroupRole role,  String name,  bool isGameMaster,  String? portraitUrl,  String? raceName,  String? className,  int? level,  int? currentHp,  int? maxHp,  int? temporaryHp,  bool? isDead,  String? accountDisplayName,  int? armorClass,  int? armorClassBonus,  List<ConditionType> conditions)?  $default,) {final _that = this;
 switch (_that) {
 case _GroupMember() when $default != null:
-return $default(_that.membershipId,_that.characterId,_that.userId,_that.role,_that.name,_that.isGameMaster,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.isDead,_that.accountDisplayName,_that.armorClass,_that.armorClassBonus);case _:
+return $default(_that.membershipId,_that.characterId,_that.userId,_that.role,_that.name,_that.isGameMaster,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.isDead,_that.accountDisplayName,_that.armorClass,_that.armorClassBonus,_that.conditions);case _:
   return null;
 
 }
@@ -239,7 +243,7 @@ return $default(_that.membershipId,_that.characterId,_that.userId,_that.role,_th
 
 
 class _GroupMember extends GroupMember {
-  const _GroupMember({this.membershipId, this.characterId, required this.userId, required this.role, required this.name, required this.isGameMaster, this.portraitUrl, this.raceName, this.className, this.level, this.currentHp, this.maxHp, this.temporaryHp, this.isDead, this.accountDisplayName, this.armorClass, this.armorClassBonus}): super._();
+  const _GroupMember({this.membershipId, this.characterId, required this.userId, required this.role, required this.name, required this.isGameMaster, this.portraitUrl, this.raceName, this.className, this.level, this.currentHp, this.maxHp, this.temporaryHp, this.isDead, this.accountDisplayName, this.armorClass, this.armorClassBonus,  List<ConditionType> conditions = const <ConditionType>[]}): _conditions = conditions,super._();
   
 
 /// `group_members.id` (clé primaire de la ligne d'adhésion). Seule
@@ -275,6 +279,19 @@ class _GroupMember extends GroupMember {
 /// quand il est non nul. `null` pour un membre sans personnage, même
 /// règle qu'[armorClass].
 @override final  int? armorClassBonus;
+/// `characters.conditions` du personnage (P6) — marqueurs informatifs
+/// visibles du MJ, lus tolérant (clé inconnue ignorée). Vide pour un
+/// membre sans personnage.
+ final  List<ConditionType> _conditions;
+/// `characters.conditions` du personnage (P6) — marqueurs informatifs
+/// visibles du MJ, lus tolérant (clé inconnue ignorée). Vide pour un
+/// membre sans personnage.
+@override@JsonKey() List<ConditionType> get conditions {
+  if (_conditions is EqualUnmodifiableListView) return _conditions;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_conditions);
+}
+
 
 /// Create a copy of GroupMember
 /// with the given fields replaced by the non-null parameter values.
@@ -286,16 +303,16 @@ _$GroupMemberCopyWith<_GroupMember> get copyWith => __$GroupMemberCopyWithImpl<_
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupMember&&(identical(other.membershipId, membershipId) || other.membershipId == membershipId)&&(identical(other.characterId, characterId) || other.characterId == characterId)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.role, role) || other.role == role)&&(identical(other.name, name) || other.name == name)&&(identical(other.isGameMaster, isGameMaster) || other.isGameMaster == isGameMaster)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.className, className) || other.className == className)&&(identical(other.level, level) || other.level == level)&&(identical(other.currentHp, currentHp) || other.currentHp == currentHp)&&(identical(other.maxHp, maxHp) || other.maxHp == maxHp)&&(identical(other.temporaryHp, temporaryHp) || other.temporaryHp == temporaryHp)&&(identical(other.isDead, isDead) || other.isDead == isDead)&&(identical(other.accountDisplayName, accountDisplayName) || other.accountDisplayName == accountDisplayName)&&(identical(other.armorClass, armorClass) || other.armorClass == armorClass)&&(identical(other.armorClassBonus, armorClassBonus) || other.armorClassBonus == armorClassBonus));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupMember&&(identical(other.membershipId, membershipId) || other.membershipId == membershipId)&&(identical(other.characterId, characterId) || other.characterId == characterId)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.role, role) || other.role == role)&&(identical(other.name, name) || other.name == name)&&(identical(other.isGameMaster, isGameMaster) || other.isGameMaster == isGameMaster)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.className, className) || other.className == className)&&(identical(other.level, level) || other.level == level)&&(identical(other.currentHp, currentHp) || other.currentHp == currentHp)&&(identical(other.maxHp, maxHp) || other.maxHp == maxHp)&&(identical(other.temporaryHp, temporaryHp) || other.temporaryHp == temporaryHp)&&(identical(other.isDead, isDead) || other.isDead == isDead)&&(identical(other.accountDisplayName, accountDisplayName) || other.accountDisplayName == accountDisplayName)&&(identical(other.armorClass, armorClass) || other.armorClass == armorClass)&&(identical(other.armorClassBonus, armorClassBonus) || other.armorClassBonus == armorClassBonus)&&const DeepCollectionEquality().equals(other._conditions, _conditions));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,membershipId,characterId,userId,role,name,isGameMaster,portraitUrl,raceName,className,level,currentHp,maxHp,temporaryHp,isDead,accountDisplayName,armorClass,armorClassBonus);
+int get hashCode => Object.hash(runtimeType,membershipId,characterId,userId,role,name,isGameMaster,portraitUrl,raceName,className,level,currentHp,maxHp,temporaryHp,isDead,accountDisplayName,armorClass,armorClassBonus,const DeepCollectionEquality().hash(_conditions));
 
 @override
 String toString() {
-  return 'GroupMember(membershipId: $membershipId, characterId: $characterId, userId: $userId, role: $role, name: $name, isGameMaster: $isGameMaster, portraitUrl: $portraitUrl, raceName: $raceName, className: $className, level: $level, currentHp: $currentHp, maxHp: $maxHp, temporaryHp: $temporaryHp, isDead: $isDead, accountDisplayName: $accountDisplayName, armorClass: $armorClass, armorClassBonus: $armorClassBonus)';
+  return 'GroupMember(membershipId: $membershipId, characterId: $characterId, userId: $userId, role: $role, name: $name, isGameMaster: $isGameMaster, portraitUrl: $portraitUrl, raceName: $raceName, className: $className, level: $level, currentHp: $currentHp, maxHp: $maxHp, temporaryHp: $temporaryHp, isDead: $isDead, accountDisplayName: $accountDisplayName, armorClass: $armorClass, armorClassBonus: $armorClassBonus, conditions: $conditions)';
 }
 
 
@@ -306,7 +323,7 @@ abstract mixin class _$GroupMemberCopyWith<$Res> implements $GroupMemberCopyWith
   factory _$GroupMemberCopyWith(_GroupMember value, $Res Function(_GroupMember) _then) = __$GroupMemberCopyWithImpl;
 @override @useResult
 $Res call({
- String? membershipId, String? characterId, String userId, GroupRole role, String name, bool isGameMaster, String? portraitUrl, String? raceName, String? className, int? level, int? currentHp, int? maxHp, int? temporaryHp, bool? isDead, String? accountDisplayName, int? armorClass, int? armorClassBonus
+ String? membershipId, String? characterId, String userId, GroupRole role, String name, bool isGameMaster, String? portraitUrl, String? raceName, String? className, int? level, int? currentHp, int? maxHp, int? temporaryHp, bool? isDead, String? accountDisplayName, int? armorClass, int? armorClassBonus, List<ConditionType> conditions
 });
 
 
@@ -323,7 +340,7 @@ class __$GroupMemberCopyWithImpl<$Res>
 
 /// Create a copy of GroupMember
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? membershipId = freezed,Object? characterId = freezed,Object? userId = null,Object? role = null,Object? name = null,Object? isGameMaster = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = freezed,Object? currentHp = freezed,Object? maxHp = freezed,Object? temporaryHp = freezed,Object? isDead = freezed,Object? accountDisplayName = freezed,Object? armorClass = freezed,Object? armorClassBonus = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? membershipId = freezed,Object? characterId = freezed,Object? userId = null,Object? role = null,Object? name = null,Object? isGameMaster = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = freezed,Object? currentHp = freezed,Object? maxHp = freezed,Object? temporaryHp = freezed,Object? isDead = freezed,Object? accountDisplayName = freezed,Object? armorClass = freezed,Object? armorClassBonus = freezed,Object? conditions = null,}) {
   return _then(_GroupMember(
 membershipId: freezed == membershipId ? _self.membershipId : membershipId // ignore: cast_nullable_to_non_nullable
 as String?,characterId: freezed == characterId ? _self.characterId : characterId // ignore: cast_nullable_to_non_nullable
@@ -342,7 +359,8 @@ as int?,isDead: freezed == isDead ? _self.isDead : isDead // ignore: cast_nullab
 as bool?,accountDisplayName: freezed == accountDisplayName ? _self.accountDisplayName : accountDisplayName // ignore: cast_nullable_to_non_nullable
 as String?,armorClass: freezed == armorClass ? _self.armorClass : armorClass // ignore: cast_nullable_to_non_nullable
 as int?,armorClassBonus: freezed == armorClassBonus ? _self.armorClassBonus : armorClassBonus // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,conditions: null == conditions ? _self._conditions : conditions // ignore: cast_nullable_to_non_nullable
+as List<ConditionType>,
   ));
 }
 

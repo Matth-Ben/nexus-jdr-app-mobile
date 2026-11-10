@@ -25,6 +25,7 @@ import 'package:personnages/features/characters/domain/character_class_choice.da
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
+import 'package:personnages/features/characters/domain/condition_type.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_gallery_photo.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
@@ -33,6 +34,7 @@ import 'package:personnages/features/characters/domain/pact_weapon_option.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_equipped_weapons_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_pact_weapon_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_stat_pills_row.dart';
+import 'package:personnages/features/characters/presentation/widgets/condition_chips.dart';
 import 'package:personnages/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -271,6 +273,50 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(suffixFinder, findsOneWidget);
+  });
+
+  group('conditions (P6) : zone d\'état en lecture seule', () {
+    testWidgets('toutes les pastilles, sans « +N », sans bouton d\'édition ni '
+        '« + État » (T6)', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        conditions: ConditionType.values.take(6).toList(),
+      );
+
+      await pumpSharedView(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ConditionChip), findsNWidgets(6));
+      expect(
+        find.descendant(
+          of: find.byType(ConditionsZone),
+          matching: find.textContaining('+'),
+        ),
+        findsNothing,
+      );
+      expect(find.byIcon(Icons.edit_outlined), findsNothing);
+      expect(find.byIcon(Icons.add), findsNothing);
+      expect(find.text('État'), findsNothing);
+      // Lecture seule : aucune zone de tap sur les pastilles.
+      expect(
+        find.descendant(
+          of: find.byType(ConditionsZone),
+          matching: find.byType(InkWell),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('sans condition : aucune zone du tout (rien d\'éditable)', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpSharedView(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ConditionsZone), findsNothing);
+      expect(find.text('État'), findsNothing);
+    });
   });
 
   testWidgets('changer d\'onglet affiche le contenu de l\'onglet Compétences '

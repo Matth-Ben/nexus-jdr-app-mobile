@@ -1032,5 +1032,208 @@
   "characterAdventuresCardLeaveConfirmationTitle": "Leave “{storyTitle}”?",
   "characterAdventuresCardLeaveConfirmationMessage": "Your character keeps all its data. Only the link with this story disappears.",
   "characterAdventuresCardLeaveConfirmationCancelButton": "Cancel",
-  "characterAdventuresCardLeaveConfirmationConfirmButton": "Leave"
+  "characterAdventuresCardLeaveConfirmationConfirmButton": "Leave",
+  "conditionBlindedLabel": "Blinded",
+  "@conditionBlindedLabel": {
+    "description": "Libellé de la condition D&D 5e « blinded » (clé serveur `blinded`)."
+  },
+  "conditionBlindedRule": "Cannot see; its attacks have disadvantage, attacks against it have advantage.",
+  "@conditionBlindedRule": {
+    "description": "Règle résumée de la condition « blinded » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionCharmedLabel": "Charmed",
+  "@conditionCharmedLabel": {
+    "description": "Libellé de la condition D&D 5e « charmed » (clé serveur `charmed`)."
+  },
+  "conditionCharmedRule": "Cannot attack the charmer; the charmer has advantage on social interactions with it.",
+  "@conditionCharmedRule": {
+    "description": "Règle résumée de la condition « charmed » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionDeafenedLabel": "Deafened",
+  "@conditionDeafenedLabel": {
+    "description": "Libellé de la condition D&D 5e « deafened » (clé serveur `deafened`)."
+  },
+  "conditionDeafenedRule": "Cannot hear and automatically fails any hearing-based check.",
+  "@conditionDeafenedRule": {
+    "description": "Règle résumée de la condition « deafened » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionFrightenedLabel": "Frightened",
+  "@conditionFrightenedLabel": {
+    "description": "Libellé de la condition D&D 5e « frightened » (clé serveur `frightened`)."
+  },
+  "conditionFrightenedRule": "Disadvantage on checks and attacks while the source is in sight; cannot approach it.",
+  "@conditionFrightenedRule": {
+    "description": "Règle résumée de la condition « frightened » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionGrappledLabel": "Grappled",
+  "@conditionGrappledLabel": {
+    "description": "Libellé de la condition D&D 5e « grappled » (clé serveur `grappled`)."
+  },
+  "conditionGrappledRule": "Speed 0, no speed bonus; ends if the grappler is incapacitated.",
+  "@conditionGrappledRule": {
+    "description": "Règle résumée de la condition « grappled » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionIncapacitatedLabel": "Incapacitated",
+  "@conditionIncapacitatedLabel": {
+    "description": "Libellé de la condition D&D 5e « incapacitated » (clé serveur `incapacitated`)."
+  },
+  "conditionIncapacitatedRule": "Cannot take actions or reactions.",
+  "@conditionIncapacitatedRule": {
+    "description": "Règle résumée de la condition « incapacitated » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionInvisibleLabel": "Invisible",
+  "@conditionInvisibleLabel": {
+    "description": "Libellé de la condition D&D 5e « invisible » (clé serveur `invisible`)."
+  },
+  "conditionInvisibleRule": "Its attacks have advantage, attacks against it disadvantage (barring magic or special sense).",
+  "@conditionInvisibleRule": {
+    "description": "Règle résumée de la condition « invisible » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionParalyzedLabel": "Paralyzed",
+  "@conditionParalyzedLabel": {
+    "description": "Libellé de la condition D&D 5e « paralyzed » (clé serveur `paralyzed`)."
+  },
+  "conditionParalyzedRule": "Incapacitated, cannot move; fails Str/Dex saves; attacks against it have advantage, melee crits.",
+  "@conditionParalyzedRule": {
+    "description": "Règle résumée de la condition « paralyzed » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionPetrifiedLabel": "Petrified",
+  "@conditionPetrifiedLabel": {
+    "description": "Libellé de la condition D&D 5e « petrified » (clé serveur `petrified`)."
+  },
+  "conditionPetrifiedRule": "Turned to stone: incapacitated, resists all damage, immune to poison and disease.",
+  "@conditionPetrifiedRule": {
+    "description": "Règle résumée de la condition « petrified » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionPoisonedLabel": "Poisoned",
+  "@conditionPoisonedLabel": {
+    "description": "Libellé de la condition D&D 5e « poisoned » (clé serveur `poisoned`)."
+  },
+  "conditionPoisonedRule": "Disadvantage on attack rolls and ability checks.",
+  "@conditionPoisonedRule": {
+    "description": "Règle résumée de la condition « poisoned » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionProneLabel": "Prone",
+  "@conditionProneLabel": {
+    "description": "Libellé de la condition D&D 5e « prone » (clé serveur `prone`)."
+  },
+  "conditionProneRule": "Can only crawl; melee attacks against it have advantage, ranged ones disadvantage.",
+  "@conditionProneRule": {
+    "description": "Règle résumée de la condition « prone » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionRestrainedLabel": "Restrained",
+  "@conditionRestrainedLabel": {
+    "description": "Libellé de la condition D&D 5e « restrained » (clé serveur `restrained`)."
+  },
+  "conditionRestrainedRule": "Speed 0; attacks against it have advantage; its attacks and Dex saves have disadvantage.",
+  "@conditionRestrainedRule": {
+    "description": "Règle résumée de la condition « restrained » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionStunnedLabel": "Stunned",
+  "@conditionStunnedLabel": {
+    "description": "Libellé de la condition D&D 5e « stunned » (clé serveur `stunned`)."
+  },
+  "conditionStunnedRule": "Incapacitated, immobile, barely speaks; fails Str/Dex saves; attacks against it have advantage.",
+  "@conditionStunnedRule": {
+    "description": "Règle résumée de la condition « stunned » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionUnconsciousLabel": "Unconscious",
+  "@conditionUnconsciousLabel": {
+    "description": "Libellé de la condition D&D 5e « unconscious » (clé serveur `unconscious`)."
+  },
+  "conditionUnconsciousRule": "Incapacitated, prone, unaware; attacks against it have advantage, melee hits crit.",
+  "@conditionUnconsciousRule": {
+    "description": "Règle résumée de la condition « unconscious » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative."
+  },
+  "conditionsAddButtonLabel": "Condition",
+  "@conditionsAddButtonLabel": {
+    "description": "Libellé du bouton discret d'ajout de la zone d'état (précédé d'une icône +)."
+  },
+  "conditionsAddSemanticsLabel": "Add a condition",
+  "@conditionsAddSemanticsLabel": {
+    "description": "Libellé d'accessibilité du bouton d'ajout d'un état (aucune condition active)."
+  },
+  "conditionsEditSemanticsLabel": "Edit conditions",
+  "@conditionsEditSemanticsLabel": {
+    "description": "Libellé d'accessibilité du bouton d'édition des états (au moins une condition active)."
+  },
+  "conditionsZoneSemanticsLabel": "Active conditions: {names}",
+  "@conditionsZoneSemanticsLabel": {
+    "description": "Libellé d'accessibilité de la zone d'état : liste des conditions actives.",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "conditionsMoreChipLabel": "+{count}",
+  "@conditionsMoreChipLabel": {
+    "description": "Pastille de dépassement (« +N ») quand toutes les conditions ne tiennent pas.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conditionsMoreChipSemanticsLabel": "{count} more conditions: {names}",
+  "@conditionsMoreChipSemanticsLabel": {
+    "description": "Libellé d'accessibilité de la pastille « +N » : liste des conditions masquées.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "conditionChipSemanticsLabel": "{label}: {rule}",
+  "@conditionChipSemanticsLabel": {
+    "description": "Libellé d'accessibilité d'une pastille : nom puis règle de la condition.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "rule": {
+        "type": "String"
+      }
+    }
+  },
+  "conditionsSheetTitle": "CONDITIONS",
+  "@conditionsSheetTitle": {
+    "description": "Titre de la feuille de sélection des conditions (palier display)."
+  },
+  "conditionsSheetSubtitle": "For information only: has no effect on any calculation.",
+  "@conditionsSheetSubtitle": {
+    "description": "Sous-titre rappelant que les états sont informatifs."
+  },
+  "conditionsSheetSaveButton": "Save",
+  "@conditionsSheetSaveButton": {
+    "description": "Bouton d'enregistrement de la feuille des conditions."
+  },
+  "conditionsSheetCancelButton": "Cancel",
+  "@conditionsSheetCancelButton": {
+    "description": "Bouton d'annulation de la feuille des conditions."
+  },
+  "conditionsSheetClearAllButton": "Clear all",
+  "@conditionsSheetClearAllButton": {
+    "description": "Lien qui décoche toutes les conditions (visible si au moins une est cochée)."
+  },
+  "conditionsSheetGenericError": "Couldn't save the conditions. Please try again.",
+  "@conditionsSheetGenericError": {
+    "description": "Erreur générique à l'enregistrement des conditions."
+  },
+  "conditionsUpdatedAnnouncement": "Conditions updated: {names}",
+  "@conditionsUpdatedAnnouncement": {
+    "description": "Annonce d'accessibilité après enregistrement.",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "conditionsNoneAnnouncement": "No active condition",
+  "@conditionsNoneAnnouncement": {
+    "description": "Annonce d'accessibilité quand plus aucune condition n'est active."
+  }
 }

@@ -1636,6 +1636,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             is_dead,
             is_archived,
             inspiration,
+            conditions,
             armor_class_bonus,
             share_token,
             race_id,

@@ -22,6 +22,7 @@ import '../../characters/presentation/widgets/character_skills_tab_body.dart';
 import '../../characters/presentation/widgets/character_spells_tab_body.dart';
 import '../../characters/presentation/widgets/character_stat_pills_row.dart';
 import '../../characters/presentation/widgets/character_story_tab_body.dart';
+import '../../characters/presentation/widgets/condition_chips.dart';
 import 'providers/character_sharing_providers.dart';
 
 /// Écran "Vue en lecture seule" d'un personnage partagé, route `/p/:token`
@@ -399,6 +400,12 @@ class _SharedVitalsCard extends StatelessWidget {
             ratio: detail.hpRatio,
             gradient: _hpGradient(detail.hpRatio),
           ),
+          // Conditions actives (P6) : lecture seule, toutes les pastilles
+          // (pas de « +N »), aucun bouton d'édition, rien si vide.
+          if (detail.conditions.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            ConditionsZone(conditions: detail.conditions),
+          ],
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [

@@ -22,6 +22,7 @@ import 'package:http/testing.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
+import 'package:personnages/features/characters/domain/condition_type.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
@@ -292,6 +293,31 @@ void main() {
       final spells = character['spells'] as List<dynamic>;
       expect(spells, hasLength(1));
       expect((spells.single as Map<String, dynamic>)['status'], 'connu');
+    });
+
+    test('conditions (P6) : exportées sous `conditions` en clés serveur, '
+        'tableau vide sans condition', () async {
+      final base = buildDetail(id: 'char-1', name: 'Aranea');
+      final characterRepository = _FakeCharacterRepository()
+        ..summaries = [
+          const CharacterSummary(id: 'char-1', name: 'Aranea', level: 2, xp: 1),
+          const CharacterSummary(id: 'char-2', name: 'Borin', level: 1, xp: 0),
+        ]
+        ..detailsById['char-1'] = base.copyWith(
+          conditions: const [ConditionType.stunned, ConditionType.blinded],
+        )
+        ..detailsById['char-2'] = buildDetail(id: 'char-2', name: 'Borin');
+
+      final path = await (await buildRepository(
+        characterRepository: characterRepository,
+      )).exportMyData();
+
+      final payload =
+          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+      final characters = (payload['characters'] as List<dynamic>)
+          .cast<Map<String, dynamic>>();
+      expect(characters[0]['conditions'], ['blinded', 'stunned']);
+      expect(characters[1]['conditions'], isEmpty);
     });
 
     test('plusieurs personnages : un élément de `characters` par personnage, '

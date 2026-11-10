@@ -8,6 +8,7 @@ import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
+import 'condition_chips.dart';
 
 /// Carte combinant les bandeaux PV et XP de l'onglet "Personnage" — voir la
 /// spec visuelle de la tâche qui a produit ce fichier.
@@ -19,6 +20,7 @@ class CharacterVitalsCard extends StatelessWidget {
     required this.onTapLevelUp,
     required this.onTapRest,
     this.hpActionsDisabled = false,
+    this.onTapConditions,
     super.key,
   });
 
@@ -72,6 +74,13 @@ class CharacterVitalsCard extends StatelessWidget {
   /// `character_detail_screen.dart`.
   final VoidCallback onTapRest;
 
+  /// Ouvre le sélecteur d'états (`showConditionsSheet`) : tap sur une
+  /// pastille, sur « +N », sur le bouton d'édition ou sur « + État ».
+  /// **Jamais** désactivé par [hpActionsDisabled] : les états restent
+  /// modifiables même à 0 PV ou pour un personnage mort. `null` = zone en
+  /// lecture seule (pastilles sans tap, rien si aucune condition).
+  final VoidCallback? onTapConditions;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -89,6 +98,17 @@ class CharacterVitalsCard extends StatelessWidget {
             onTapAdjustHp: onTapAdjustHp,
             actionsDisabled: hpActionsDisabled,
           ),
+          // Zone d'état juste sous le bandeau PV, HORS de son `InkWell` :
+          // un tap sur une pastille n'ouvre pas la feuille PV, et
+          // inversement (P6).
+          if (onTapConditions != null || detail.conditions.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            ConditionsZone(
+              conditions: detail.conditions,
+              onEdit: onTapConditions,
+              maxFullChips: 3,
+            ),
+          ],
           const SizedBox(height: AppSpacing.sm),
           _RestButton(onTap: hpActionsDisabled ? null : onTapRest),
           const SizedBox(height: AppSpacing.sm),

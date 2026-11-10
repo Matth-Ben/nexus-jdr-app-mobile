@@ -9,6 +9,7 @@ import '../../characters/domain/character_journal_entry.dart';
 import '../../characters/domain/character_skill_row.dart';
 import '../../characters/domain/character_spell_entry.dart';
 import '../../characters/domain/character_spell_slot.dart';
+import '../../characters/domain/condition_type.dart';
 import '../../characters/domain/prepared_spells_limit.dart';
 import '../../characters/domain/spell_grant_source.dart';
 import 'shared_character_skill_catalog.dart';
@@ -78,6 +79,10 @@ CharacterDetail mapSharedCharacterJson(Map<String, dynamic> json) {
     temporaryHp: _asInt(character['temporary_hp']),
     isDead: character['is_dead'] == true,
     inspiration: character['inspiration'] == true,
+    // P6 : `characters.conditions` (incluse dans le JSON de
+    // `build_character_sheet_json`) — lecture tolérante, absente d'un ancien
+    // payload = aucune condition.
+    conditions: ConditionType.parse(character['conditions']),
     speed: character['race_speed'] is num
         ? (character['race_speed'] as num).toInt()
         : null,
