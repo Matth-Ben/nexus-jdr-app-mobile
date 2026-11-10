@@ -42,6 +42,19 @@ void main() {
 
       final client = Supabase.instance.client;
       final createdCharacterIds = <String>[];
+      final createdCharacterNames = <String>[];
+      // Nettoyage garanti même si une étape échoue : supprime par nom exact
+      // (`QA-…`, générés par ce test) tout personnage créé, idempotent.
+      addTearDown(() async {
+        for (final name in createdCharacterNames) {
+          try {
+            await client.from('characters').delete().eq('name', name);
+          } on Object catch (error) {
+            // ignore: avoid_print
+            print('CLEANUP: échec de la suppression de "$name" : $error');
+          }
+        }
+      });
 
       SpellPreparationFilter? currentFilter() {
         final finder = find.byType(SegmentedToggle<SpellPreparationFilter>);
@@ -56,6 +69,7 @@ void main() {
       // memorisee par une campagne QA anterieure sur ce meme emulateur),
       // puis ferme/rouvre la MEME fiche.
       final clercName = qaUniqueCharacterName('QA-Test-FiltrePrep-Clerc');
+      createdCharacterNames.add(clercName);
       await createCharacter(
         tester,
         characterName: clercName,
@@ -107,6 +121,7 @@ void main() {
       // preparation) -- le filtre memorise doit deja etre applique a
       // l'ouverture, sans aucun tap sur la bascule.
       final magicienName = qaUniqueCharacterName('QA-Test-FiltrePrep-Magicien');
+      createdCharacterNames.add(magicienName);
       await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
       await pumpUntilSettled(tester, attempts: 6);
       await createCharacter(
@@ -136,6 +151,7 @@ void main() {
       final ensorceleurName = qaUniqueCharacterName(
         'QA-Test-FiltrePrep-Ensorceleur',
       );
+      createdCharacterNames.add(ensorceleurName);
       await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
       await pumpUntilSettled(tester, attempts: 6);
       await createCharacter(

@@ -40,6 +40,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:personnages/core/network/env_config.dart';
 import 'package:personnages/core/widgets/numeric_amount_stepper.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_spells_section.dart';
 import 'package:personnages/features/groups/presentation/widgets/group_invite_code_chip.dart';
@@ -94,6 +95,10 @@ void main() {
     await pumpUntilSettled(tester, attempts: 6);
 
     final characterName = qaUniqueCharacterName('QA-Adventure-Clerc');
+    final groupName = qaUniqueCharacterName('QA-Adventure-Groupe');
+    // Nettoyage garanti même si une étape échoue (voir
+    // `_registerQaCleanup`) -- enregistré AVANT la création du personnage.
+    _registerQaCleanup(characterName: characterName, groupName: groupName);
     await createCharacter(
       tester,
       characterName: characterName,
@@ -281,6 +286,9 @@ void main() {
     await pumpUntilSettled(tester, attempts: 4);
     await tapText(tester, 'LANCER');
     await pumpUntilSettled(tester, attempts: 6);
+    // La liste reste défilée vers "Soins" : la carte des emplacements (en
+    // tête, liste paresseuse) n'est plus construite tant qu'on ne remonte pas.
+    await _scrollToTop(tester);
     final level1SlotsAfterCast = tester
         .widgetList<SpellSlotDots>(find.byType(SpellSlotDots))
         .where((widget) => widget.slot.level == 1)
@@ -323,6 +331,7 @@ void main() {
     }
     await tapText(tester, 'SORTS');
     await pumpUntilSettled(tester, attempts: 4);
+    await _scrollToTop(tester);
     final level1SlotsAfterRest = tester
         .widgetList<SpellSlotDots>(find.byType(SpellSlotDots))
         .where((widget) => widget.slot.level == 1)
@@ -419,6 +428,7 @@ void main() {
         'préparé "Mot de guérison". Texte visible : ${visibleTexts()}',
       );
     }
+    await _scrollToTop(tester);
     final level1SlotsAfterLevelUp = tester
         .widgetList<SpellSlotDots>(find.byType(SpellSlotDots))
         .where((widget) => widget.slot.level == 1)
@@ -443,7 +453,6 @@ void main() {
     // ---------------------------------------------------------------
     await _switchAccount(tester, login: loginWithQaTestAccount);
 
-    final groupName = qaUniqueCharacterName('QA-Adventure-Groupe');
     await tester.tap(find.byIcon(Icons.groups_outlined));
     await pumpUntilSettled(tester, attempts: 4);
     await tapText(tester, 'CRÉER UN GROUPE');
@@ -632,9 +641,10 @@ void main() {
     }
 
     // ---------------------------------------------------------------
-    // Étape 10 : nettoyage -- suppression directe du personnage et du
-    // groupe de test (même convention que
-    // `custom_inventory_item_weapon_details_test.dart`).
+    // Étape 10 : vérification du nettoyage -- suppression directe du
+    // personnage et du groupe de test. Le nettoyage garanti vit dans
+    // `_registerQaCleanup` (addTearDown, exécuté même en cas d'échec) ; ce
+    // passage nominal vérifie en plus la disparition réelle des lignes.
     // ---------------------------------------------------------------
     // Le compte actif à ce stade est le MJ (dernier `_switchAccount` à
     // l'étape 9), mais `characterId` appartient au compte joueur -- la
@@ -674,6 +684,78 @@ void main() {
       'personnage $characterName (id $characterId) et groupe $groupName '
           'supprimés (suppression du personnage vérifiée en base).',
     );
+  });
+}
+
+/// Remonte la liste de l'onglet actif en tête : la liste est paresseuse, une
+/// carte placée en haut (ex. "EMPLACEMENTS DE SORTS") n'est plus construite
+/// après un défilement vers le bas (lancer d'un sort, préparation...).
+Future<void> _scrollToTop(WidgetTester tester) async {
+  for (var i = 0; i < 3; i++) {
+    await tester.drag(find.byType(ListView).first, const Offset(0, 1500));
+    await settleQuickly(tester);
+  }
+}
+
+/// Enregistre le nettoyage des données `QA-…` créées par ce scénario dans un
+/// `addTearDown`, donc exécuté même si une étape échoue. Utilise deux
+/// `SupabaseClient` indépendants authentifiés avec chaque compte (RLS : le
+/// personnage ne se supprime que depuis le compte joueur, le groupe que
+/// depuis le compte MJ -- une suppression par le mauvais compte est un
+/// no-op silencieux). Idempotent : ne supprime que les lignes dont le nom
+/// exact est celui créé par ce test (et préfixé `QA-`), ne fait rien si elles
+/// n'existent pas (ou plus), n'échoue jamais.
+void _registerQaCleanup({
+  required String characterName,
+  required String groupName,
+}) {
+  assert(characterName.startsWith('QA-') && groupName.startsWith('QA-'));
+  addTearDown(() async {
+    Future<void> deleteByName(
+      String email,
+      String password,
+      String table,
+      String name,
+    ) async {
+      final cleanupClient = SupabaseClient(
+        EnvConfig.supabaseUrl,
+        EnvConfig.supabaseAnonKey,
+      );
+      try {
+        await cleanupClient.auth.signInWithPassword(
+          email: email,
+          password: password,
+        );
+        await cleanupClient.from(table).delete().eq('name', name);
+        final remaining = await cleanupClient
+            .from(table)
+            .select('id')
+            .eq('name', name);
+        if ((remaining as List<dynamic>).isNotEmpty) {
+          // ignore: avoid_print
+          print(
+            'CLEANUP: "$name" ($table) toujours présent après suppression.',
+          );
+        }
+      } on Object catch (error) {
+        // ignore: avoid_print
+        print('CLEANUP: échec de la suppression de "$name" ($table) : $error');
+      } finally {
+        await cleanupClient.dispose();
+      }
+    }
+
+    if (hasQaTestAccountJoueur) {
+      await deleteByName(
+        qaTestEmailJoueur,
+        qaTestPasswordJoueur,
+        'characters',
+        characterName,
+      );
+    }
+    if (hasQaTestAccount) {
+      await deleteByName(qaTestEmail, qaTestPassword, 'groups', groupName);
+    }
   });
 }
 
