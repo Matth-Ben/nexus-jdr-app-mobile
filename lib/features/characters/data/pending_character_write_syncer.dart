@@ -230,12 +230,21 @@ class PendingCharacterWriteSyncer {
             // serveur.
             final write = await _currentVersionOf(listed);
             if (write == null) return;
-            // P6b : un payload `conditions` valide en JSON mais sans liste est
-            // traité comme illisible : jamais d'écriture (un tableau vide
-            // effacerait toutes les conditions du serveur).
-            if (write.kind == PendingCharacterWriteKind.conditions &&
-                write.payload['conditions'] is! List) {
-              return;
+            // P6b : un payload `conditions` structurellement irrécupérable
+            // (pas une liste, ou une liste contenant autre chose que des
+            // chaînes, y compris une liste mixte `["blinded", 1]`) ne doit
+            // jamais être écrit : un tableau vide ou partiel effacerait des
+            // conditions du serveur. La ligne est supprimée (pas d'alerte :
+            // elle n'apporte rien au joueur) plutôt que laissée en file, sans
+            // quoi elle bloquerait le compteur de synchro, la déconnexion et
+            // la suppression de compte. Les autres lignes ne sont pas
+            // affectées.
+            if (write.kind == PendingCharacterWriteKind.conditions) {
+              final raw = write.payload['conditions'];
+              if (raw is! List || raw.any((key) => key is! String)) {
+                await _pendingWrites.removeIfUnchanged(write);
+                return;
+              }
             }
 
             ServerValueConflict? conflict;

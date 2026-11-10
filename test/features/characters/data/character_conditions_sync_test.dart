@@ -292,6 +292,12 @@ void main() {
     {},
     {'conditions': 'x'},
     {'conditions': null},
+    {
+      'conditions': [1, 2],
+    },
+    {
+      'conditions': ['blinded', 1],
+    },
   ]) {
     test('payload illisible $bad : aucune écriture conditions, les autres '
         'entrées sont rejouées, rien n est effacé du serveur', () async {
@@ -311,9 +317,14 @@ void main() {
         payload: {'currentHp': 4, 'temporaryHp': 0},
       );
 
+      expect(await queue.watchPendingCount(_ownerA).first, 2);
       final synced = await syncer.sync();
 
       expect(synced, {_characterId});
+      // File vide : compteur de synchro à 0, et ce que `_ensureNoPendingWrites`
+      // (déconnexion, suppression de compte) relit après `sync()`.
+      expect(await queue.allForOwner(_ownerA), isEmpty);
+      expect(await queue.watchPendingCount(_ownerA).first, 0);
       expect(server.characterRow['current_hp'], 4);
       expect(server.characterRow['conditions'], ['poisoned']);
       expect(
