@@ -93,6 +93,7 @@ class SecondaryButton extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -102,8 +103,11 @@ class SecondaryButton extends StatelessWidget {
                         const SizedBox(width: AppSpacing.xs),
                       ],
                       Flexible(
+                        // Palier control (x1,5), 2 lignes, hauteur élastique.
                         child: DisplayText(
                           label.toUpperCase(),
+                          tier: DisplayTier.control,
+                          maxLines: 2,
                           textAlign: TextAlign.center,
                           style: AppTypography.display(
                             fontSize: 11,

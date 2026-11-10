@@ -38,6 +38,16 @@ abstract final class AppTypography {
   /// `Text`, jamais au sous-arbre ; le texte [body] n'est pas concerné.
   static const double maxDisplayScaleFactor = 1.3;
 
+  /// Plafond du palier "control" de `DisplayText` (libellés de boutons,
+  /// onglets, segments), décision du 10/11/2026 : x1,5, avec retour à la ligne
+  /// autorisé et hauteur élastique du conteneur.
+  static const double maxControlScaleFactor = 1.5;
+
+  /// Plafond du texte [body] jumelé aux étiquettes display PV/XP de la carte
+  /// de signes vitaux (x1,6), uniquement dans un conteneur de taille contrainte
+  /// hors zone défilante, décision du 10/11/2026. Ne pas généraliser au corps.
+  static const double maxVitalsValueScaleFactor = 1.6;
+
   static TextStyle display({
     required double fontSize,
     Color color = AppColors.textPrimary,

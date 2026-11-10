@@ -110,6 +110,9 @@ class _Segment extends StatelessWidget {
                 gradient: selected ? AppColors.primaryButtonGradient : null,
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),
+              // Reste au palier title (x1,3) et non control : le segment ne peut
+              // pas absorber un retour à la ligne (3 segments sur 360 dp, un mot
+              // comme "PRÉPARÉS" serait coupé), d'où le `FittedBox` ci-dessous.
               // `FittedBox` : un libellé long sur un segment étroit (3
               // segments sur petit écran, ex. "Non préparés" de l'onglet
               // "Sorts") rétrécit au lieu de passer sur deux lignes.

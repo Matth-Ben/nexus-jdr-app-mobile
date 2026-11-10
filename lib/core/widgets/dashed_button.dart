@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
-import 'display_text.dart';
 import 'dashed_border_painter.dart';
+import 'display_text.dart';
 
 /// Bouton pleine largeur à bordure pointillée dorée — variant de
 /// [DashedAddTile] (`core/widgets/dashed_add_tile.dart`, même technique de
@@ -59,6 +59,7 @@ class DashedButton extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -66,8 +67,12 @@ class DashedButton extends StatelessWidget {
                         Icon(icon, size: 16, color: AppColors.textSecondary),
                         const SizedBox(width: AppSpacing.xs),
                         Flexible(
+                          // Palier control (x1,5), 2 lignes, hauteur
+                          // élastique (minHeight 48).
                           child: DisplayText(
                             label,
+                            tier: DisplayTier.control,
+                            maxLines: 2,
                             textAlign: TextAlign.center,
                             style: AppTypography.display(
                               fontSize: 11,
