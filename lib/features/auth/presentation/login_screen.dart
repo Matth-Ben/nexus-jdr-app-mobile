@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/display_text.dart';
 import '../../../core/widgets/apple_logo.dart';
 import '../../../core/widgets/app_brand_badge.dart';
 import '../../../core/widgets/google_g_logo.dart';
@@ -269,7 +270,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: AppSpacing.lg),
                   const AppBrandBadge(size: 72),
                   const SizedBox(height: AppSpacing.sm),
-                  Text(
+                  DisplayText(
                     l10n.authLoginBrandTitle,
                     style: AppTypography.display(
                       fontSize: 15,
@@ -445,7 +446,7 @@ class _AuthCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
+                      DisplayText(
                         isSignUp
                             ? l10n.authLoginCardTitleSignUp
                             : l10n.authLoginCardTitleLogin,
@@ -699,7 +700,7 @@ class _SignUpConfirmationView extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
+        DisplayText(
           l10n.authLoginSignUpConfirmationTitle,
           textAlign: TextAlign.center,
           style: AppTypography.display(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import 'display_text.dart';
 
 /// Hauteur minimale de la barre : celle qu'elle avait quand elle était à
 /// hauteur fixe, conservée pour tout titre qui y tient avec ses marges.
@@ -83,7 +84,7 @@ class SheetHeaderBar extends StatelessWidget {
                     // d'origine : l'`Align` ne l'impose plus au titre.
                     child: SizedBox(
                       width: double.infinity,
-                      child: Text(
+                      child: DisplayText(
                         title,
                         maxLines: _titleMaxLines,
                         overflow: TextOverflow.ellipsis,

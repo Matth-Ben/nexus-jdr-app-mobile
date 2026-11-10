@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import 'display_text.dart';
 
 /// "Bouton destructif" du design système
 /// (`docs/cahier-des-charges/10-design-system.md` section 4) : fond
@@ -130,20 +131,24 @@ class DestructiveButton extends StatelessWidget {
                             // trouvée sur "Dissoudre le groupe" (libellé
                             // long, `RenderFlex overflowed`).
                             Flexible(
-                              child: Text(
-                                filled ? label.toUpperCase() : label,
-                                textAlign: TextAlign.center,
-                                style: filled
-                                    ? AppTypography.display(
+                              child: filled
+                                  ? DisplayText(
+                                      label.toUpperCase(),
+                                      textAlign: TextAlign.center,
+                                      style: AppTypography.display(
                                         fontSize: 11,
                                         color: AppColors.textOnWood,
-                                      )
-                                    : AppTypography.body(
+                                      ),
+                                    )
+                                  : Text(
+                                      label,
+                                      textAlign: TextAlign.center,
+                                      style: AppTypography.body(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,
                                         color: AppColors.accentBrick,
                                       ),
-                              ),
+                                    ),
                             ),
                           ],
                         ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import 'display_text.dart';
 
 /// Surface sur laquelle repose un [SecondaryButton], qui détermine son
 /// habillage (voir `docs/cahier-des-charges/10-design-system.md` section 4,
@@ -101,7 +102,7 @@ class SecondaryButton extends StatelessWidget {
                         const SizedBox(width: AppSpacing.xs),
                       ],
                       Flexible(
-                        child: Text(
+                        child: DisplayText(
                           label.toUpperCase(),
                           textAlign: TextAlign.center,
                           style: AppTypography.display(

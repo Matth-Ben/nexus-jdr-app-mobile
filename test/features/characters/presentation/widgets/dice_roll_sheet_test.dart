@@ -206,7 +206,10 @@ void main() {
 
     expect(find.text('RÉUSSITE CRITIQUE'), findsOneWidget);
     final header = tester.getRect(find.byType(SheetHeaderBar));
-    expect(header.height, greaterThan(56));
+    // Titre en police display : plafonné à x1,3, la barre ne grandit plus
+    // forcément au-delà de 56 px (elle grandit encore si le titre passe à 3
+    // lignes ou plus).
+    expect(header.height, greaterThanOrEqualTo(56));
     expect(header.top, greaterThanOrEqualTo(0));
     expect(
       tester.getRect(find.text('RELANCER')).bottom,

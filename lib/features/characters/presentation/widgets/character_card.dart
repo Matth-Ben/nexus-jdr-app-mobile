@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/widgets/dashed_border_painter.dart';
 import '../../../../core/widgets/portrait_frame.dart';
 import '../../../../core/widgets/selection_checkbox.dart';
@@ -278,7 +279,7 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: AppColors.woodLight, width: 1),
       ),
-      child: Text(
+      child: DisplayText(
         _label,
         style: AppTypography.display(fontSize: 10, color: _foreground),
       ),

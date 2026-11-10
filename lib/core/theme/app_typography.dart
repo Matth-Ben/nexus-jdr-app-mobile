@@ -33,6 +33,11 @@ abstract final class AppTypography {
   /// rendre défilant.
   static const double maxTextScaleFactor = 2.0;
 
+  /// Plafond de l'agrandissement du texte en police pixel [display] (titres et
+  /// boutons), décision du 10/11/2026. Appliqué par `DisplayText` à son seul
+  /// `Text`, jamais au sous-arbre ; le texte [body] n'est pas concerné.
+  static const double maxDisplayScaleFactor = 1.3;
+
   static TextStyle display({
     required double fontSize,
     Color color = AppColors.textPrimary,
