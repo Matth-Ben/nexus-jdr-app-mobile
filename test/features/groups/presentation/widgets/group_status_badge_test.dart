@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/features/groups/presentation/widgets/group_status_badge.dart';
 
+import '../../../../core/widgets/display_scale_helpers.dart';
+
 Future<void> _pump(WidgetTester tester, Widget child) async {
   await tester.pumpWidget(MaterialApp(home: Scaffold(body: child)));
 }
@@ -89,5 +91,28 @@ void main() {
 
     final text = tester.widget<Text>(find.text('2 PV BAS'));
     expect(text.style?.color, AppColors.statusUnconsciousAccent);
+  });
+
+  // Plafond de la police pixel (D192, PR 2) : x2,0 et x3,0 sur 320/360 dp,
+  // sans débordement, mot coupé ni display sous 11 px (voir
+  // `display_scale_helpers.dart`).
+  group('grande police : badge de statut', () {
+    for (final scale in displayScaleFactors) {
+      for (final width in displayScaleWidths) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          await useScaledView(tester, scale: scale, width: width, height: 800);
+          await _pump(
+            tester,
+            const Column(
+              children: [
+                GroupStatusBadge(deadCount: 1, lowHpCount: 0),
+                GroupStatusBadge(deadCount: 0, lowHpCount: 2),
+              ],
+            ),
+          );
+          expect(expectDisplayTextSane(tester), greaterThan(0));
+        });
+      }
+    }
   });
 }

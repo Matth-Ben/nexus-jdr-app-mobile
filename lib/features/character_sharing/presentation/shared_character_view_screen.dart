@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/display_text.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -366,32 +367,41 @@ class _SharedVitalsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // `Wrap` : à grande taille de police, la valeur passe sous le titre
+          // au lieu de déborder.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.sm,
             children: [
-              Text(
+              DisplayText(
                 'POINTS DE VIE',
                 style: AppTypography.display(
                   fontSize: 11,
                   color: AppColors.textSecondary,
                 ),
               ),
-              const Spacer(),
-              Text(
-                '${detail.currentHp} / ${detail.maxHp}',
-                style: AppTypography.body(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${detail.currentHp} / ${detail.maxHp}',
+                    style: AppTypography.body(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  // "+X PV temp." affiché sur la même ligne que le texte
+                  // principal (recettage direction-artistique du 13/09/2026,
+                  // écran "Partage — Vue en lecture seule"), pas sur sa propre
+                  // ligne sous la jauge comme auparavant — même style de puce
+                  // que `_TemporaryHpChip` de `group_members_tab_body.dart`.
+                  if (detail.temporaryHp > 0) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    _TemporaryHpChip(amount: detail.temporaryHp),
+                  ],
+                ],
               ),
-              // "+X PV temp." affiché sur la même ligne que le texte
-              // principal (recettage direction-artistique du 13/09/2026,
-              // écran "Partage — Vue en lecture seule"), pas sur sa propre
-              // ligne sous la jauge comme auparavant — même style de puce
-              // que `_TemporaryHpChip` de `group_members_tab_body.dart`.
-              if (detail.temporaryHp > 0) ...[
-                const SizedBox(width: AppSpacing.xs),
-                _TemporaryHpChip(amount: detail.temporaryHp),
-              ],
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -407,16 +417,18 @@ class _SharedVitalsCard extends StatelessWidget {
             ConditionsZone(conditions: detail.conditions),
           ],
           const SizedBox(height: AppSpacing.sm),
-          Row(
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.sm,
             children: [
-              Text(
+              DisplayText(
                 'EXPÉRIENCE',
                 style: AppTypography.display(
                   fontSize: 11,
                   color: AppColors.textSecondary,
                 ),
               ),
-              const Spacer(),
               Text(
                 '${detail.xp} / ${detail.nextLevelXpThreshold ?? detail.xp}',
                 style: AppTypography.body(
@@ -537,7 +549,7 @@ class _InvalidLinkState extends StatelessWidget {
           children: [
             const Icon(Icons.link_off, size: 48, color: AppColors.accentBrick),
             const SizedBox(height: AppSpacing.md),
-            Text(
+            DisplayText(
               isGroupMember
                   ? "Cette fiche n'est plus accessible"
                   : "Ce lien de partage n'est plus valide",

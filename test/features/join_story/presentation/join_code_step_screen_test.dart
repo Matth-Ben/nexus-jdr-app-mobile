@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/join_story/presentation/join_code_step_screen.dart';
 
+import '../../../core/widgets/display_scale_helpers.dart';
+
 GoRouter _buildTestRouter() {
   return GoRouter(
     initialLocation: '/join',
@@ -105,4 +107,20 @@ void main() {
       expect(find.text('Liste des personnages'), findsOneWidget);
     },
   );
+
+  // Plafond de la police pixel (D192, PR 2) : x2,0 et x3,0 sur 320/360 dp,
+  // sans débordement, mot coupé ni display sous 11 px (voir
+  // `display_scale_helpers.dart`).
+  group('grande police : assistant Rejoindre (étape Code)', () {
+    for (final scale in displayScaleFactors) {
+      for (final width in displayScaleWidths) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          await useScaledView(tester, scale: scale, width: width, height: 800);
+          await tester.pumpWidget(_buildTestWidget());
+          await tester.pumpAndSettle();
+          expect(expectDisplayTextSane(tester), greaterThan(0));
+        });
+      }
+    }
+  });
 }

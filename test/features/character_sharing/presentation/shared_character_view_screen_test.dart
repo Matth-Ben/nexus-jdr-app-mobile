@@ -38,6 +38,8 @@ import 'package:personnages/features/characters/presentation/widgets/condition_c
 import 'package:personnages/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/widgets/display_scale_helpers.dart';
+
 class _FakeCharacterSharingRepository implements CharacterSharingRepository {
   @override
   Future<CharacterDetail?> fetchGroupMemberCharacter({
@@ -862,4 +864,21 @@ void main() {
       });
     },
   );
+
+  // Plafond de la police pixel (D192, PR 2) : x2,0 et x3,0 sur 320/360 dp,
+  // sans débordement, mot coupé ni display sous 11 px (voir
+  // `display_scale_helpers.dart`).
+  group('grande police : fiche partagée', () {
+    for (final scale in displayScaleFactors) {
+      for (final width in displayScaleWidths) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          await useScaledView(tester, scale: scale, width: width, height: 2000);
+          fakeRepository.detailToReturn = _baseDetail;
+          await tester.pumpWidget(buildTestWidget());
+          await tester.pumpAndSettle();
+          expect(expectDisplayTextSane(tester), greaterThan(0));
+        });
+      }
+    }
+  });
 }

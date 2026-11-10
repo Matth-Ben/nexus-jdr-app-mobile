@@ -43,6 +43,8 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 
+import '../../../core/widgets/display_scale_helpers.dart';
+
 class _FakeCharacterRepository implements CharacterRepository {
   CharacterDetail? detailToReturn;
 
@@ -655,4 +657,23 @@ void main() {
       );
     },
   );
+
+  // Plafond de la police pixel (D192, PR 2) : x2,0 et x3,0 sur 320/360 dp,
+  // sans débordement, mot coupé ni display sous 11 px (voir
+  // `display_scale_helpers.dart`).
+  group('grande police : partage actif', () {
+    for (final scale in displayScaleFactors) {
+      for (final width in displayScaleWidths) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          await useScaledView(tester, scale: scale, width: width, height: 3000);
+          fakeCharacterRepository.detailToReturn = _baseDetail.copyWith(
+            shareToken: 'tok-xyz',
+          );
+          await tester.pumpWidget(buildTestWidget());
+          await tester.pumpAndSettle();
+          expect(expectDisplayTextSane(tester), greaterThan(0));
+        });
+      }
+    }
+  });
 }

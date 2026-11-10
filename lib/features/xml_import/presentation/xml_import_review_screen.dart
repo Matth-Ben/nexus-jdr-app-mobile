@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/display_text.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -341,7 +342,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              DisplayText(
                 'CHAMPS NON RÉSOLUS',
                 style: AppTypography.display(fontSize: 12),
               ),
@@ -357,23 +358,38 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: SecondaryButton(
-                      label: 'Retourner corriger',
-                      surface: SecondaryButtonSurface.parchment,
-                      onPressed: () => Navigator.of(context).pop(false),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: PrimaryButton(
-                      label: 'Continuer',
-                      onPressed: () => Navigator.of(context).pop(true),
-                    ),
-                  ),
-                ],
+              // Boutons empilés quand la largeur du dialogue ne permet pas
+              // deux demi-largeurs (« CONTINUER » y serait coupé en plein
+              // mot, même à taille de police normale sur 320 dp).
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final back = SecondaryButton(
+                    label: 'Retourner corriger',
+                    surface: SecondaryButtonSurface.parchment,
+                    onPressed: () => Navigator.of(context).pop(false),
+                  );
+                  final next = PrimaryButton(
+                    label: 'Continuer',
+                    onPressed: () => Navigator.of(context).pop(true),
+                  );
+                  if (constraints.maxWidth < 290) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        back,
+                        const SizedBox(height: AppSpacing.sm),
+                        next,
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: back),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(child: next),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -1460,7 +1476,7 @@ class _Header extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      DisplayText(
                         title,
                         style: AppTypography.display(
                           fontSize: 13,
@@ -1522,12 +1538,16 @@ class _SummaryCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: AppTypography.body(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+          // `Flexible` : à grande taille de police, le titre passe à la ligne
+          // au lieu de déborder de la carte.
+          Flexible(
+            child: Text(
+              title,
+              style: AppTypography.body(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

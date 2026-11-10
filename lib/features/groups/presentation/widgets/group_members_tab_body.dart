@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -259,40 +260,40 @@ class _MemberCard extends StatelessWidget {
                 // Ligne 1 : nom + badges (recettage direction-artistique du
                 // 13/09 — auparavant nom et badge de statut sur 2 lignes
                 // séparées).
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                // `Wrap` : à grande taille de police, le badge de statut passe
+                // sous le nom au lieu de déborder de la carte.
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: AppSpacing.xs,
+                  runSpacing: 2,
                   children: [
-                    Flexible(
-                      child: Text.rich(
-                        TextSpan(
-                          children: [
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: member.name,
+                            style: AppTypography.body(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: nameColor,
+                            ),
+                          ),
+                          if (isSelf)
                             TextSpan(
-                              text: member.name,
+                              text: ' (toi)',
                               style: AppTypography.body(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: nameColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textMuted,
                               ),
                             ),
-                            if (isSelf)
-                              TextSpan(
-                                text: ' (toi)',
-                                style: AppTypography.body(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textMuted,
-                                ),
-                              ),
-                          ],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        ],
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    if (member.vitalStatus != CharacterVitalStatus.alive) ...[
-                      const SizedBox(width: AppSpacing.xs),
+                    if (member.vitalStatus != CharacterVitalStatus.alive)
                       _StatusBadge(status: member.vitalStatus!),
-                    ],
                   ],
                 ),
                 const SizedBox(height: AppSpacing.xs),
@@ -617,9 +618,16 @@ class _StatusBadge extends StatelessWidget {
             Icon(Icons.warning_amber_rounded, size: 14, color: accent),
             const SizedBox(width: 4),
           ],
-          Text(
-            isDead ? 'MORT' : 'INCONSCIENT',
-            style: AppTypography.display(fontSize: 11, color: accent),
+          // `Flexible` + ellipse : « INCONSCIENT » (≥ 127 px, jamais sous
+          // 11 px) ne tient pas dans la colonne d'une carte membre sur 320 dp ;
+          // mieux vaut une ellipse qu'un débordement.
+          Flexible(
+            child: DisplayText(
+              isDead ? 'MORT' : 'INCONSCIENT',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.display(fontSize: 11, color: accent),
+            ),
           ),
         ],
       ),

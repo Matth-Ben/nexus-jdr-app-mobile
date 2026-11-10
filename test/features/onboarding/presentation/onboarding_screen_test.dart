@@ -25,6 +25,8 @@ import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 
+import '../../../core/widgets/display_scale_helpers.dart';
+
 class _FakeAuthRepository implements AuthRepository {
   int markOnboardingSeenCallCount = 0;
   Object? markOnboardingSeenErrorToThrow;
@@ -382,5 +384,20 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+  });
+
+  // Plafond de la police pixel (D192, PR 2) : x2,0 et x3,0 sur 320/360 dp,
+  // sans débordement, mot coupé ni display sous 11 px (voir
+  // `display_scale_helpers.dart`).
+  group('grande police : onboarding (écran initial)', () {
+    for (final scale in displayScaleFactors) {
+      for (final width in displayScaleWidths) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          await useScaledView(tester, scale: scale, width: width, height: 800);
+          await pumpInitialScreen(tester);
+          expect(expectDisplayTextSane(tester), greaterThan(0));
+        });
+      }
+    }
   });
 }

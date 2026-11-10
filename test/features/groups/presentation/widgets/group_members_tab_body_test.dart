@@ -14,6 +14,8 @@ import 'package:personnages/features/groups/domain/group_member.dart';
 import 'package:personnages/features/groups/domain/group_role.dart';
 import 'package:personnages/features/groups/presentation/widgets/group_members_tab_body.dart';
 
+import '../../../../core/widgets/display_scale_helpers.dart';
+
 const _me = GroupMember(
   characterId: 'char-me',
   userId: 'user-me',
@@ -416,5 +418,50 @@ void main() {
 
       expect(find.textContaining('CA '), findsNothing);
     });
+  });
+
+  // Plafond de la police pixel (D192, PR 2) : x2,0 et x3,0 sur 320/360 dp,
+  // sans débordement, mot coupé ni display sous 11 px (voir
+  // `display_scale_helpers.dart`).
+  group('grande police : onglet Membres (badges MORT / INCONSCIENT)', () {
+    for (final scale in displayScaleFactors) {
+      for (final width in displayScaleWidths) {
+        testWidgets('x$scale sur ${width.toInt()} dp', (tester) async {
+          await useScaledView(tester, scale: scale, width: width, height: 2400);
+          await _pump(
+            tester,
+            _detail(const [
+              _me,
+              _friend,
+              GroupMember(
+                characterId: 'char-dead',
+                userId: 'user-dead',
+                role: GroupRole.membre,
+                name: 'Thorin',
+                isGameMaster: false,
+                level: 3,
+                currentHp: 0,
+                maxHp: 30,
+                temporaryHp: 0,
+                isDead: true,
+              ),
+              GroupMember(
+                characterId: 'char-down',
+                userId: 'user-down',
+                role: GroupRole.membre,
+                name: 'Lyra',
+                isGameMaster: false,
+                level: 3,
+                currentHp: 0,
+                maxHp: 30,
+                temporaryHp: 0,
+                isDead: false,
+              ),
+            ]),
+          );
+          expect(expectDisplayTextSane(tester), greaterThan(0));
+        });
+      }
+    }
   });
 }
