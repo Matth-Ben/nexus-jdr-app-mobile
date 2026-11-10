@@ -113,22 +113,6 @@ class _EditionStepScreenState extends ConsumerState<EditionStepScreen> {
               top: false,
               child: Column(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      0,
-                    ),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        "Choisis l'édition des règles D&D 5e pour ce "
-                        'personnage. Ce choix est définitif.',
-                        style: AppTypography.body(fontSize: 14),
-                      ),
-                    ),
-                  ),
                   Expanded(
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(
@@ -138,6 +122,17 @@ class _EditionStepScreenState extends ConsumerState<EditionStepScreen> {
                         AppSpacing.md,
                       ),
                       children: [
+                        // Dans la liste (et non au-dessus) : à grande taille de police,
+                        // le texte d'introduction défile au lieu de laisser sans
+                        // hauteur la liste des éditions (débordement vertical).
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                          child: Text(
+                            "Choisis l'édition des règles D&D 5e pour ce "
+                            'personnage. Ce choix est définitif.',
+                            style: AppTypography.body(fontSize: 14),
+                          ),
+                        ),
                         SelectableOptionTile(
                           title: '2014 — Manuel des Joueurs',
                           subtitle:
@@ -248,12 +243,7 @@ class _Header extends StatelessWidget {
                         color: AppColors.textOnWood,
                       ),
                     ),
-                    CreationModeTitle(
-                      style: AppTypography.display(
-                        fontSize: 11,
-                        color: AppColors.textOnWood,
-                      ),
-                    ),
+                    const CreationModeTitle(),
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
@@ -271,8 +261,12 @@ class _Header extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    // `Wrap` : à grande taille de police, « Étape N / M » passe sous le titre
+                    // au lieu de déborder.
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: AppSpacing.sm,
                       children: [
                         Text(
                           '1. Édition',

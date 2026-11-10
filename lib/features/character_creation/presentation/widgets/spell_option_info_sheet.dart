@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -80,7 +81,7 @@ class _SpellOptionInfoContent extends StatelessWidget {
                         if (i < rows.length - 1) const SheetActionDivider(),
                       ],
                       const SizedBox(height: AppSpacing.md),
-                      Text(
+                      DisplayText(
                         'DESCRIPTION',
                         style: AppTypography.display(
                           fontSize: 11,

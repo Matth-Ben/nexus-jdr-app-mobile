@@ -762,12 +762,7 @@ class _Header extends StatelessWidget {
                         color: AppColors.textOnWood,
                       ),
                     ),
-                    CreationModeTitle(
-                      style: AppTypography.display(
-                        fontSize: 11,
-                        color: AppColors.textOnWood,
-                      ),
-                    ),
+                    const CreationModeTitle(),
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
@@ -785,8 +780,12 @@ class _Header extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    // `Wrap` : à grande taille de police, « Étape N / M » passe sous le titre
+                    // au lieu de déborder.
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: AppSpacing.sm,
                       children: [
                         Text(
                           '6. Compétences',
@@ -849,12 +848,7 @@ class _MinimalHeader extends StatelessWidget {
                   color: AppColors.textOnWood,
                 ),
               ),
-              CreationModeTitle(
-                style: AppTypography.display(
-                  fontSize: 11,
-                  color: AppColors.textOnWood,
-                ),
-              ),
+              const CreationModeTitle(),
               const Spacer(),
               IconButton(
                 onPressed: onHelp,
