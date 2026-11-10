@@ -1895,8 +1895,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// Enregistre la sélection du sélecteur d'états (P6) : affichage optimiste
   /// immédiat sur la fiche, retour arrière si l'écriture échoue. Retourne
   /// `null` en cas de succès, sinon le message d'erreur que la feuille affiche
-  /// (la sélection saisie y est conservée). Hors-ligne : rien n'est écrit
-  /// (`WriteOutcome.rejectedOffline`, mise en file prévue en P6b).
+  /// (la sélection saisie y est conservée). Hors-ligne (P6b) : l'écriture est
+  /// mise en file (`WriteOutcome.queued`), traitée comme un succès : feuille
+  /// fermée, sélection conservée à l'écran, message « sera synchronisé ».
   Future<String?> _saveConditions(
     List<ConditionType> selection,
     List<String> unknownKeys,
@@ -1907,6 +1908,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     final previous = _localConditions;
     setState(() => _localConditions = selection);
     String? error;
+    var queued = false;
     try {
       final outcome = await ref
           .read(characterConditionsRepositoryProvider)
@@ -1915,9 +1917,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             conditions: selection,
             unknownKeys: unknownKeys,
           );
-      if (outcome == WriteOutcome.rejectedOffline) {
-        error = l10n.characterOfflineNotPersistedMessage;
-      }
+      queued = outcome == WriteOutcome.queued;
     } on CharacterFailure catch (failure) {
       error = failure.code == CharacterErrorCode.accessDenied
           ? l10n.conditionsAccessDeniedMessage
@@ -1931,6 +1931,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       return error;
     }
     ref.invalidate(characterDetailProvider(widget.characterId));
+    if (queued) _showSnackBar(_offlineQueuedMessage(l10n));
     return null;
   }
 

@@ -13,6 +13,7 @@ class RecordedRequest {
     required this.table,
     required this.body,
     required this.applied,
+    this.query = const {},
   });
 
   final String method;
@@ -24,6 +25,9 @@ class RecordedRequest {
   /// `true` si l'effet a été appliqué à l'état du serveur (même quand la
   /// réponse a ensuite été perdue, voir [FakeCharacterWriteServer.failAfterApply]).
   final bool applied;
+
+  /// Paramètres de requête (filtres PostgREST `id=eq...`, `owner_id=eq...`).
+  final Map<String, String> query;
 
   bool get isWrite => method != 'GET';
 
@@ -114,6 +118,7 @@ class FakeCharacterWriteServer {
         table: table,
         body: body,
         applied: applied,
+        query: request.url.queryParameters,
       );
       requests.add(entry);
       return entry;
@@ -150,6 +155,26 @@ class FakeCharacterWriteServer {
       }, statusCode: 400);
     }
 
+    // `.select('id')` après un `PATCH` (en-tête `Prefer: return=representation`) :
+    // comme PostgREST, les filtres `id`/`owner_id` décident des lignes
+    // affectées ; zéro ligne = rien d'appliqué, réponse `[]` (RLS silencieuse
+    // ou personnage disparu). Sans ce `Prefer`, comportement historique.
+    final wantsRepresentation =
+        request.method == 'PATCH' &&
+        (request.headers['Prefer'] ?? '').contains('return=representation');
+    if (table == 'characters' && wantsRepresentation) {
+      final idFilter = request.url.queryParameters['id'];
+      final ownerFilter = request.url.queryParameters['owner_id'];
+      final matches =
+          (idFilter == null || idFilter == 'eq.${characterRow['id']}') &&
+          (ownerFilter == null ||
+              ownerFilter == 'eq.${characterRow['owner_id']}');
+      if (!matches) {
+        record(applied: false);
+        return _json(request, const <Object>[]);
+      }
+    }
+
     if (table == 'characters' && body is Map) {
       characterRow = {...characterRow, ...Map<String, dynamic>.from(body)};
     }
@@ -161,6 +186,11 @@ class FakeCharacterWriteServer {
       throw const SocketException(
         'Réponse perdue après application (faux serveur).',
       );
+    }
+    if (table == 'characters' && wantsRepresentation) {
+      return _json(request, [
+        {'id': characterRow['id']},
+      ]);
     }
     return _json(request, const <Object>[]);
   }

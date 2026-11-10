@@ -32,6 +32,7 @@ import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/data/pending_character_write_syncer.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
+import 'package:personnages/features/characters/domain/condition_type.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_detail_provider.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
@@ -212,6 +213,76 @@ void main() {
         expect((cached['row'] as Map)['current_hp'], 10);
       },
     );
+  });
+
+  group('conditions (P6b) : cache hors ligne et superposition', () {
+    Future<void> queueConditions(List<String> keys) => pendingWrites.enqueue(
+      characterId: _characterId,
+      ownerId: _ownerId,
+      kind: PendingCharacterWriteKind.conditions,
+      targetId: '',
+      payload: {'conditions': keys},
+    );
+
+    test('hors ligne : conditions du cache + superposition de la file '
+        '(clés inconnues préservées)', () async {
+      server.characterRow['conditions'] = ['blinded', 'futur_etat'];
+      await openOnlineOnce();
+      goOffline();
+
+      final cachedOnly = await repository.fetchCharacterDetail(_characterId);
+      expect(cachedOnly.conditions, [ConditionType.blinded]);
+      expect(cachedOnly.unknownConditionKeys, ['futur_etat']);
+
+      await queueConditions(['prone', 'charmed', 'autre_futur']);
+
+      final overlaid = await repository.fetchCharacterDetail(_characterId);
+      expect(overlaid.conditions, [ConditionType.charmed, ConditionType.prone]);
+      expect(overlaid.unknownConditionKeys, ['autre_futur']);
+    });
+
+    test('en ligne, file non vidée : la valeur en file masque la valeur '
+        'serveur', () async {
+      server.characterRow['conditions'] = ['blinded'];
+      await openOnlineOnce();
+      await queueConditions([]);
+
+      final detail = await repository.fetchCharacterDetail(_characterId);
+
+      expect(detail.conditions, isEmpty, reason: 'tableau vide en file');
+    });
+
+    test('ancien cache sans la colonne conditions : liste vide, sans '
+        'crash, la file se superpose quand même', () async {
+      server.characterRow.remove('conditions');
+      await openOnlineOnce();
+      goOffline();
+
+      final legacy = await repository.fetchCharacterDetail(_characterId);
+      expect(legacy.conditions, isEmpty);
+      expect(legacy.unknownConditionKeys, isEmpty);
+
+      await queueConditions(['stunned']);
+      final overlaid = await repository.fetchCharacterDetail(_characterId);
+      expect(overlaid.conditions, [ConditionType.stunned]);
+    });
+
+    test('payload de file illisible : ignoré, fiche inchangée', () async {
+      server.characterRow['conditions'] = ['blinded'];
+      await openOnlineOnce();
+      goOffline();
+      await pendingWrites.enqueue(
+        characterId: _characterId,
+        ownerId: _ownerId,
+        kind: PendingCharacterWriteKind.conditions,
+        targetId: '',
+        payload: {'conditions': 'pas une liste'},
+      );
+
+      final detail = await repository.fetchCharacterDetail(_characterId);
+
+      expect(detail.conditions, [ConditionType.blinded]);
+    });
   });
 
   group('retour du réseau', () {

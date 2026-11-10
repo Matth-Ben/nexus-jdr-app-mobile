@@ -127,7 +127,8 @@ class PendingCharacterWriteSyncer {
   /// Une entrée dont l'écriture réussit :
   /// - est reportée dans le cache de la fiche
   ///   (`CharacterDetailCache.applyConfirmedColumns`), **seulement pour
-  ///   `hp`/`xp`** (voir [_cacheColumnsOf]) : la synchro passe souvent fiche
+  ///   `hp`/`xp`/`conditions`** (voir [_cacheColumnsOf]) : la synchro passe
+  ///   souvent fiche
   ///   fermée (démarrage de l'app, retour du réseau), personne ne relit alors
   ///   la fiche et le cache resterait sur l'état serveur d'avant. Les autres
   ///   kinds (D11) ne touchent jamais `characters` directement — rien à
@@ -229,6 +230,22 @@ class PendingCharacterWriteSyncer {
             // serveur.
             final write = await _currentVersionOf(listed);
             if (write == null) return;
+            // P6b : un payload `conditions` structurellement irrécupérable
+            // (pas une liste, ou une liste contenant autre chose que des
+            // chaînes, y compris une liste mixte `["blinded", 1]`) ne doit
+            // jamais être écrit : un tableau vide ou partiel effacerait des
+            // conditions du serveur. La ligne est supprimée (pas d'alerte :
+            // elle n'apporte rien au joueur) plutôt que laissée en file, sans
+            // quoi elle bloquerait le compteur de synchro, la déconnexion et
+            // la suppression de compte. Les autres lignes ne sont pas
+            // affectées.
+            if (write.kind == PendingCharacterWriteKind.conditions) {
+              final raw = write.payload['conditions'];
+              if (raw is! List || raw.any((key) => key is! String)) {
+                await _pendingWrites.removeIfUnchanged(write);
+                return;
+              }
+            }
 
             ServerValueConflict? conflict;
             try {
@@ -396,6 +413,23 @@ class PendingCharacterWriteSyncer {
           'class_feature_id': classFeatureId,
           'uses_remaining': usesRemaining,
         }, onConflict: 'character_id,class_feature_id');
+      case PendingCharacterWriteKind.conditions:
+        // P6b : remplacement complet du tableau (valeur absolue, donc rejeu
+        // idempotent), filtré id ET owner_id. Zéro ligne affectée = refus
+        // silencieux de la RLS ou personnage disparu : non rejouable, classé
+        // comme un refus 42501 (abandon après le seuil, alerte persistée).
+        final updated = await _client
+            .from('characters')
+            .update(_cacheColumnsOf(write)!)
+            .eq('id', write.characterId)
+            .eq('owner_id', ownerId)
+            .select('id');
+        if (updated.isEmpty) {
+          throw const PostgrestException(
+            message: 'Aucune ligne affectée (conditions).',
+            code: '42501',
+          );
+        }
       case PendingCharacterWriteKind.rest:
         final type = RestType.values.byName(write.payload['type'] as String);
         final className = write.payload['className'] as String? ?? '';
@@ -469,6 +503,7 @@ class PendingCharacterWriteSyncer {
       PendingCharacterWriteKind.classFeature =>
         'une utilisation d\'aptitude de classe',
       PendingCharacterWriteKind.rest => 'un repos',
+      PendingCharacterWriteKind.conditions => 'vos conditions',
     };
     return 'Un ajustement de $label resté en attente a été refusé par le '
         'serveur et a été abandonné (personnage supprimé, accès retiré, ou '
@@ -510,6 +545,15 @@ class PendingCharacterWriteSyncer {
         };
       case PendingCharacterWriteKind.xp:
         return {'xp': (write.payload['newXp'] as num).toInt()};
+      case PendingCharacterWriteKind.conditions:
+        final raw = write.payload['conditions'];
+        return {
+          'conditions': [
+            if (raw is List)
+              for (final key in raw)
+                if (key is String) key,
+          ],
+        };
       case PendingCharacterWriteKind.spellSlot:
       case PendingCharacterWriteKind.innateSpell:
       case PendingCharacterWriteKind.classFeature:

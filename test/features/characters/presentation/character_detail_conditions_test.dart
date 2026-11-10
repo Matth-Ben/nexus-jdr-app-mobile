@@ -6,8 +6,22 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:drift/native.dart';
+import 'package:personnages/core/cache/app_database.dart';
+import 'package:personnages/core/cache/cache_providers.dart';
+import 'package:personnages/core/cache/pending_character_write_queue.dart';
+import 'package:personnages/core/cache/reference_data_cache.dart';
+import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/core/sync/sync_status_providers.dart';
+import 'package:personnages/features/characters/data/pending_character_write_syncer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../../support/fake_character_write_server.dart';
+import '../../../support/fake_connectivity_checker.dart';
+
 import 'package:personnages/core/widgets/alert_banner.dart';
 import 'package:personnages/core/widgets/selection_checkbox.dart';
 import 'package:personnages/features/characters/data/character_conditions_repository.dart';
@@ -103,6 +117,8 @@ Future<(_FakeCharacterRepository, _FakeConditionsRepository)> _pump(
   WidgetTester tester, {
   List<ConditionType> conditions = const [],
   List<String> unknownConditionKeys = const [],
+  List<Override> extraOverrides = const [],
+  CharacterConditionsRepository? conditionsRepositoryOverride,
 }) async {
   final characters = _FakeCharacterRepository(
     _fighter(
@@ -119,8 +135,9 @@ Future<(_FakeCharacterRepository, _FakeConditionsRepository)> _pump(
       overrides: [
         characterRepositoryProvider.overrideWithValue(characters),
         characterConditionsRepositoryProvider.overrideWithValue(
-          conditionsRepository,
+          conditionsRepositoryOverride ?? conditionsRepository,
         ),
+        ...extraOverrides,
       ],
       child: MaterialApp.router(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -303,10 +320,12 @@ void main() {
     expect(find.byType(ConditionChip), findsOneWidget);
   });
 
-  testWidgets('hors-ligne : message existant, rien d\'enregistré, sélection '
-      'conservée', (tester) async {
+  testWidgets('hors-ligne (mise en file) : feuille fermée comme un succès, '
+      'pastille affichée, message « sera synchronisé », pas d\'erreur', (
+    tester,
+  ) async {
     final (characters, repo) = await _pump(tester);
-    repo.outcome = WriteOutcome.rejectedOffline;
+    repo.outcome = WriteOutcome.queued;
 
     await _openSelector(tester);
     await _check(tester, 'Charmé');
@@ -314,21 +333,91 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text(
-        "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-        'fois reconnecté.',
-      ),
+      find.text('Hors ligne : sera synchronisé dès que la connexion revient.'),
       findsOneWidget,
     );
-    expect(characters.current.conditions, isEmpty);
-    expect(find.byType(ConditionChip), findsNothing);
-    expect(find.text('ÉTATS'), findsOneWidget);
-    expect(
-      tester
-          .widgetList<SelectionCheckbox>(find.byType(SelectionCheckbox))
-          .where((c) => c.checked)
-          .length,
-      1,
+    expect(find.textContaining("n'a pas pu être enregistrée"), findsNothing);
+    expect(find.text('ÉTATS'), findsNothing, reason: 'feuille fermée');
+    expect(find.byType(ConditionChip), findsOneWidget);
+    expect(repo.calls.single.$2, [ConditionType.charmed]);
+    expect(characters.current.conditions, isEmpty, reason: 'rien côté serveur');
+  });
+
+  testWidgets('hors-ligne, pile réelle (file drift + dépôt + synchroniseur) : '
+      'pastilles à jour, bandeau « 1 modification en attente », puis retour '
+      'réseau -> synchro', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    final connectivity = FakeConnectivityChecker();
+    final queue = PendingCharacterWriteQueue(db);
+    final cache = ReferenceDataCache(db);
+    final server = FakeCharacterWriteServer(
+      characterRow: {
+        'id': '1',
+        'owner_id': 'owner-1',
+        'conditions': <String>[],
+      },
     );
+    late SupabaseClient client;
+    await tester.runAsync(() async {
+      client = await buildSignedInClient(server, ownerId: 'owner-1');
+    });
+    final realRepository = SupabaseCharacterConditionsRepository(
+      client,
+      connectivity,
+      queue,
+      cache,
+    );
+    final syncer = PendingCharacterWriteSyncer(
+      client,
+      queue,
+      cache,
+      SupabaseCharacterRepository(client, cache, queue, connectivity),
+    );
+    addTearDown(() async {
+      await connectivity.close();
+      await db.close();
+    });
+
+    await _pump(
+      tester,
+      conditionsRepositoryOverride: realRepository,
+      extraOverrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        syncOwnerIdProvider.overrideWithValue('owner-1'),
+        connectivityCheckerProvider.overrideWithValue(connectivity),
+      ],
+    );
+
+    connectivity.goOffline();
+    await tester.pump();
+    await _openSelector(tester);
+    await _check(tester, 'Charmé');
+    await tester.tap(find.text('ENREGISTRER'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('ÉTATS'), findsNothing, reason: 'feuille fermée');
+    expect(find.byType(ConditionChip), findsOneWidget);
+    expect(find.textContaining("n'a pas pu être enregistrée"), findsNothing);
+    expect(find.text('Hors ligne · 1 modification en attente'), findsOneWidget);
+    expect(server.requests.where((r) => r.isWrite), isEmpty);
+
+    connectivity.goOnline();
+    await tester.runAsync(() async {
+      expect(await syncer.sync(), {'1'});
+    });
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(server.characterRow['conditions'], ['charmed']);
+    expect(find.textContaining('modification en attente'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump(const Duration(seconds: 10));
   });
 }

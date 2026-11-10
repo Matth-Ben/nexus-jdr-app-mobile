@@ -1,13 +1,20 @@
-// Écriture des conditions (P6) : remplacement complet du tableau, hors-ligne
-// = rejectedOffline (rien d'envoyé), erreurs d'autorisation gérées.
+// Écriture des conditions (P6, P6b) : remplacement complet du tableau,
+// hors-ligne ou erreur de transport = mise en file (queued), erreurs
+// d'autorisation gérées (jamais mises en file).
 
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:personnages/core/cache/app_database.dart'
+    hide PendingCharacterWrite;
+import 'package:personnages/core/cache/pending_character_write_queue.dart';
+import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
+import 'package:personnages/features/characters/data/character_detail_cache.dart';
 import 'package:personnages/features/characters/data/character_conditions_repository.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/condition_type.dart';
@@ -68,6 +75,17 @@ http.Response _json(Object body, int status, http.Request request) =>
 
 void main() {
   const characterId = 'char-1';
+  late AppDatabase db;
+  late PendingCharacterWriteQueue queue;
+  late ReferenceDataCache cache;
+
+  setUp(() {
+    db = AppDatabase(NativeDatabase.memory());
+    queue = PendingCharacterWriteQueue(db);
+    cache = ReferenceDataCache(db);
+  });
+
+  tearDown(() => db.close());
 
   test('connecté : PATCH characters avec le tableau complet des clés '
       'canoniques, filtré sur id ET owner_id', () async {
@@ -84,6 +102,8 @@ void main() {
         ),
       ),
       _Connectivity(true),
+      queue,
+      cache,
     );
 
     final outcome = await repository.setConditions(
@@ -120,6 +140,8 @@ void main() {
         ),
       ),
       _Connectivity(true),
+      queue,
+      cache,
     );
 
     await repository.setConditions(
@@ -147,6 +169,8 @@ void main() {
         ),
       ),
       _Connectivity(true),
+      queue,
+      cache,
     );
 
     await repository.setConditions(characterId: characterId, conditions: []);
@@ -156,7 +180,8 @@ void main() {
     });
   });
 
-  test('hors-ligne : rejectedOffline, aucune requête envoyée', () async {
+  test('hors-ligne : queued, aucune requête envoyée, une ligne en file '
+      '(tableau complet, clés inconnues préservées)', () async {
     final sent = <http.Request>[];
     final repository = SupabaseCharacterConditionsRepository(
       await _client(
@@ -164,15 +189,133 @@ void main() {
         respond: (r) => throw const SocketException('pas de réseau'),
       ),
       _Connectivity(false),
+      queue,
+      cache,
     );
 
     final outcome = await repository.setConditions(
       characterId: characterId,
       conditions: [ConditionType.prone],
+      unknownKeys: ['futur_etat'],
     );
 
-    expect(outcome, WriteOutcome.rejectedOffline);
+    expect(outcome, WriteOutcome.queued);
     expect(sent, isEmpty);
+    final rows = await queue.allForOwner('owner-1');
+    expect(rows, hasLength(1));
+    expect(rows.single.kind, PendingCharacterWriteKind.conditions);
+    expect(rows.single.targetId, '');
+    expect(rows.single.characterId, characterId);
+    expect(rows.single.payload, {
+      'conditions': ['prone', 'futur_etat'],
+    });
+  });
+
+  test(
+    'deux sélections hors ligne : une seule ligne, la dernière gagne',
+    () async {
+      final repository = SupabaseCharacterConditionsRepository(
+        await _client(respond: (r) => throw const SocketException('x')),
+        _Connectivity(false),
+        queue,
+        cache,
+      );
+
+      await repository.setConditions(
+        characterId: characterId,
+        conditions: [ConditionType.prone],
+      );
+      await repository.setConditions(
+        characterId: characterId,
+        conditions: [ConditionType.blinded, ConditionType.charmed],
+      );
+
+      final rows = await queue.allForOwner('owner-1');
+      expect(rows, hasLength(1));
+      expect(rows.single.payload['conditions'], ['blinded', 'charmed']);
+    },
+  );
+
+  test('refus Postgres 42501 : échec, rien en file', () async {
+    final repository = SupabaseCharacterConditionsRepository(
+      await _client(
+        respond: (r) => _json({'message': 'denied', 'code': '42501'}, 403, r),
+      ),
+      _Connectivity(true),
+      queue,
+      cache,
+    );
+
+    await expectLater(
+      repository.setConditions(
+        characterId: characterId,
+        conditions: [ConditionType.prone],
+      ),
+      throwsA(isA<CharacterFailure>()),
+    );
+    expect(await queue.allForOwner('owner-1'), isEmpty);
+  });
+
+  test('0 ligne mise à jour : échec, rien en file', () async {
+    final repository = SupabaseCharacterConditionsRepository(
+      await _client(respond: (r) => _json([], 200, r)),
+      _Connectivity(true),
+      queue,
+      cache,
+    );
+
+    await expectLater(
+      repository.setConditions(
+        characterId: characterId,
+        conditions: [ConditionType.prone],
+      ),
+      throwsA(isA<CharacterFailure>()),
+    );
+    expect(await queue.allForOwner('owner-1'), isEmpty);
+  });
+
+  test('écriture en ligne réussie : retire l\'entrée périmée de la file et '
+      'reporte les conditions dans le cache de la fiche', () async {
+    await queue.enqueue(
+      characterId: characterId,
+      ownerId: 'owner-1',
+      kind: PendingCharacterWriteKind.conditions,
+      targetId: '',
+      payload: {
+        'conditions': ['prone'],
+      },
+    );
+    await cache.put(
+      CharacterDetailCache.keyFor(ownerId: 'owner-1', characterId: characterId),
+      {
+        CharacterDetailCache.rowKey: {'id': characterId, 'conditions': []},
+      },
+    );
+    final repository = SupabaseCharacterConditionsRepository(
+      await _client(
+        respond: (r) => _json(
+          [
+            {'id': characterId},
+          ],
+          200,
+          r,
+        ),
+      ),
+      _Connectivity(true),
+      queue,
+      cache,
+    );
+
+    final outcome = await repository.setConditions(
+      characterId: characterId,
+      conditions: [ConditionType.blinded],
+    );
+
+    expect(outcome, WriteOutcome.synced);
+    expect(await queue.allForOwner('owner-1'), isEmpty);
+    final row = await CharacterDetailCache(cache)
+        .readRow(ownerId: 'owner-1', characterId: characterId);
+    expect(row?['conditions'], ['blinded']);
   });
 
   test('session absente : CharacterFailure, aucune requête', () async {
@@ -184,6 +327,8 @@ void main() {
         respond: (r) => _json([], 200, r),
       ),
       _Connectivity(true),
+      queue,
+      cache,
     );
 
     await expectLater(
@@ -199,6 +344,8 @@ void main() {
       final repository = SupabaseCharacterConditionsRepository(
         await _client(respond: (r) => _json([], 200, r)),
         _Connectivity(true),
+        queue,
+        cache,
       );
 
       await expectLater(
@@ -223,6 +370,8 @@ void main() {
         respond: (r) => _json({'message': 'denied', 'code': '42501'}, 403, r),
       ),
       _Connectivity(true),
+      queue,
+      cache,
     );
 
     await expectLater(
@@ -240,24 +389,24 @@ void main() {
     );
   });
 
-  test('erreur réseau : CharacterFailure de type network', () async {
-    final repository = SupabaseCharacterConditionsRepository(
-      await _client(respond: (r) => throw const SocketException('coupé')),
-      _Connectivity(true),
-    );
+  test(
+    'erreur de transport (en ligne déclaré) : queued, mise en file',
+    () async {
+      final repository = SupabaseCharacterConditionsRepository(
+        await _client(respond: (r) => throw const SocketException('coupé')),
+        _Connectivity(true),
+        queue,
+        cache,
+      );
 
-    await expectLater(
-      repository.setConditions(
+      final outcome = await repository.setConditions(
         characterId: characterId,
         conditions: [ConditionType.prone],
-      ),
-      throwsA(
-        isA<CharacterFailure>().having(
-          (f) => f.code,
-          'code',
-          CharacterErrorCode.network,
-        ),
-      ),
-    );
-  });
+      );
+
+      expect(outcome, WriteOutcome.queued);
+      final rows = await queue.allForOwner('owner-1');
+      expect(rows.single.payload['conditions'], ['prone']);
+    },
+  );
 }
