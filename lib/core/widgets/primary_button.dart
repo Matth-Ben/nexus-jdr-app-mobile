@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import 'display_text.dart';
 
 /// Bouton primaire du design système
 /// (`docs/cahier-des-charges/10-design-system.md` section 4, "Bouton
@@ -70,7 +71,7 @@ class PrimaryButton extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.sm,
                         ),
-                        child: Text(
+                        child: DisplayText(
                           label.toUpperCase(),
                           textAlign: TextAlign.center,
                           style: AppTypography.display(

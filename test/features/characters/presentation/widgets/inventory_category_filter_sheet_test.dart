@@ -90,7 +90,7 @@ void main() {
     expect(result.value, isNull);
   });
 
-  testWidgets('texte agrandi à 200 % sur petit écran (320×568) avec marges '
+  testWidgets('texte agrandi à 300 % sur petit écran (320×568) avec marges '
       'système (barre d\'état, barre de navigation à 3 boutons) : pas de '
       'débordement, barre de tête fixe, dernière option atteignable par '
       'défilement et sélectionnable', (tester) async {
@@ -99,7 +99,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     tester.view.padding = systemPadding;
     tester.view.viewPadding = systemPadding;
-    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    tester.platformDispatcher.textScaleFactorTestValue = 3;
     addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
@@ -108,7 +108,8 @@ void main() {
 
     // La barre de tête a grandi avec son titre.
     final header = tester.getRect(find.byType(SheetHeaderBar));
-    expect(header.height, greaterThan(56));
+    // Titre en police display : plafonné à x1,3, la barre garde au moins 56 px.
+    expect(header.height, greaterThanOrEqualTo(56));
 
     // Les options ne tiennent plus toutes entre la barre de tête et la barre
     // de navigation : la dernière est ramenée à l'écran par défilement.

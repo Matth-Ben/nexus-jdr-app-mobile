@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/display_text.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// Les 5 onglets de la fiche personnage — voir
@@ -134,7 +135,7 @@ class _TabButton extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 2),
-            Text(
+            DisplayText(
               tab.label(l10n),
               style: AppTypography.display(fontSize: 11, color: labelColor),
             ),

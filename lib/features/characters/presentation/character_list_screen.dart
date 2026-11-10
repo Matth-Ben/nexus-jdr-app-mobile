@@ -10,6 +10,7 @@ import '../../../core/router/route_observer_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/display_text.dart';
 import '../../../core/widgets/dashed_border_painter.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
@@ -577,7 +578,7 @@ class _Header extends StatelessWidget {
         // `Expanded` : le titre passe à la ligne au lieu de pousser les
         // boutons groupes/profil hors de l'écran avec une police agrandie.
         Expanded(
-          child: Text(
+          child: DisplayText(
             l10n.characterListHeaderTitle,
             style: AppTypography.display(
               fontSize: 15,
@@ -987,7 +988,7 @@ class _SearchEmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            Text(
+            DisplayText(
               query.isEmpty
                   ? l10n.characterListSearchEmptyTitleNoQuery
                   : l10n.characterListSearchEmptyTitleWithQuery(
@@ -1101,7 +1102,7 @@ class _EmptyState extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  Text(
+                  DisplayText(
                     l10n.characterListEmptyTitle,
                     textAlign: TextAlign.center,
                     style: AppTypography.display(

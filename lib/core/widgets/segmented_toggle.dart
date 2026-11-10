@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import 'display_text.dart';
 
 /// Une option de [SegmentedToggle].
 class SegmentedToggleOption<T> {
@@ -116,7 +117,7 @@ class _Segment extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: Text(
+                  child: DisplayText(
                     label.toUpperCase(),
                     maxLines: 1,
                     style: AppTypography.display(

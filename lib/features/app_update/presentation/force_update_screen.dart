@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/display_text.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import 'app_store_launcher.dart';
@@ -50,7 +51,7 @@ class ForceUpdateScreen extends StatelessWidget {
               children: [
                 const _UpdateBadge(),
                 const SizedBox(height: AppSpacing.md),
-                Text(
+                DisplayText(
                   'MISE À JOUR',
                   textAlign: TextAlign.center,
                   style: AppTypography.display(
@@ -58,7 +59,7 @@ class ForceUpdateScreen extends StatelessWidget {
                     color: AppColors.textOnWood,
                   ),
                 ),
-                Text(
+                DisplayText(
                   'REQUISE',
                   textAlign: TextAlign.center,
                   style: AppTypography.display(

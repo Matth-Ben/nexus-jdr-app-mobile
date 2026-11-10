@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import 'display_text.dart';
 
 /// Une option de [SegmentedTabBar].
 class SegmentedTabBarOption<T> {
@@ -102,7 +103,7 @@ class _SegmentedTab extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
+              DisplayText(
                 label.toUpperCase(),
                 style: AppTypography.display(
                   fontSize: 11,

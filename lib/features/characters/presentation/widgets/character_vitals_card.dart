@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -160,7 +161,7 @@ class _HpSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(
+                DisplayText(
                   l10n.characterVitalsCardHpLabel,
                   style: AppTypography.display(
                     fontSize: 11,
@@ -359,7 +360,7 @@ class _XpSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
+            DisplayText(
               l10n.characterVitalsCardXpLabel,
               style: AppTypography.display(
                 fontSize: 11,
@@ -463,7 +464,7 @@ class _LevelUpAvailableBanner extends StatelessWidget {
                 color: AppColors.accentBrick,
               ),
               const SizedBox(width: AppSpacing.xs),
-              Text(
+              DisplayText(
                 AppLocalizations.of(context)!
                     .characterVitalsCardLevelUpBanner(targetLevel),
                 style: AppTypography.display(

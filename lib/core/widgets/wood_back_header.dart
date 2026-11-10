@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import 'display_text.dart';
 
 /// Bandeau bois plein en tête d'écran, avec un bouton retour et un titre en
 /// majuscules (`font.display`) — voir
@@ -60,7 +61,7 @@ class WoodBackHeader extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: Text(
+                child: DisplayText(
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

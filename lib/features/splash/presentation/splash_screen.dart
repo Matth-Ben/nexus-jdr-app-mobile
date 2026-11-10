@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/display_text.dart';
 import '../../../core/widgets/app_brand_badge.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 
@@ -48,7 +49,7 @@ class SplashScreen extends StatelessWidget {
                   children: [
                     const AppBrandBadge(size: 96),
                     const SizedBox(height: AppSpacing.md),
-                    Text(
+                    DisplayText(
                       'NEXUS JDR',
                       textAlign: TextAlign.center,
                       style: AppTypography.display(
@@ -57,7 +58,7 @@ class SplashScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    Text(
+                    DisplayText(
                       'PERSONNAGES',
                       textAlign: TextAlign.center,
                       style: AppTypography.display(

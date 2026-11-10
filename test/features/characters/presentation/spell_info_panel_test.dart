@@ -787,8 +787,8 @@ void main() {
     }
 
     testWidgets('la ligne de raison suit l\'échelle de texte jusqu\'à 2.0 puis '
-        'ne grandit plus, alors que le libellé du bouton continue de la '
-        'suivre', (tester) async {
+        'ne grandit plus, alors que le libellé du bouton (police display) est '
+        'plafonné plus bas, à x1,3 (décision du 10/11/2026)', (tester) async {
       useScreen(tester, const Size(390, 844), 1);
       await pumpPanel(tester, spell: _fireball, spellSlots: const []);
 
@@ -814,8 +814,8 @@ void main() {
             .scale(12),
         24,
       );
-      expect(labelAt2, greaterThan(labelAt1));
-      expect(labelAt3, greaterThan(labelAt2));
+      expect(labelAt2, greaterThanOrEqualTo(labelAt1));
+      expect(labelAt3, labelAt2);
     });
 
     testWidgets('petit écran 320x568, échelle 2.0, description très longue : '

@@ -139,7 +139,7 @@ void main() {
 
   group('croissance avec le titre', () {
     for (final (description, title, textScale) in [
-      ('titre de 2 lignes à l\'échelle 2', 'CHOISIR UN SET', 2.0),
+      ('titre de 3 mots longs à l\'échelle 2', _threeLineTitle, 2.0),
       ('libellé réel à l\'échelle 2', _twoLineTitle, 2.0),
       ('titre très long à l\'échelle 2', _veryLongTitle, 2.0),
     ]) {
@@ -337,8 +337,8 @@ void main() {
         final barInColumn = _barRect(tester);
         final titleInColumn = _titleRect(tester, _veryLongTitle);
         expect(_lineCount(tester, _veryLongTitle), 3);
-        // 3 lignes de 31 px + 2 marges de 4 px.
-        expect(barInColumn.height, 101);
+        // 3 lignes de 20 px (police display plafonnée à x1,3) + 2 marges de 4 px.
+        expect(barInColumn.height, 68);
 
         await pumpBoundedBar(
           tester,
