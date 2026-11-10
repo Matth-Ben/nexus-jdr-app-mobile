@@ -1,4 +1,4 @@
-// Onglets du pied de fiche (décision du 10/11/2026) : à partir de 340 dp de
+// Onglets du pied de fiche (décision du 10/11/2026) : à partir de 348 dp de
 // largeur, police pixel au palier title (x1,3) ; en dessous, police de corps
 // compacte (règle DA R1 : jamais de display sous 11 px). Aucun mot changé,
 // aucun débordement.
@@ -39,14 +39,14 @@ Future<void> _pump(
 }
 
 void main() {
-  test('le seuil de bascule est 340 dp', () {
-    expect(CharacterDetailTabBar.compactWidth, 340);
+  test('le seuil de bascule est 348 dp', () {
+    expect(CharacterDetailTabBar.compactWidth, 348);
   });
 
   for (final locale in ['fr', 'en']) {
-    for (final width in [320.0, 339.0, 340.0, 360.0]) {
+    for (final width in [320.0, 347.0, 348.0, 360.0]) {
       for (final scale in [1.0, 1.3, 2.0]) {
-        final font = width < 340 ? 'de corps' : 'pixel';
+        final font = width < 348 ? 'de corps' : 'pixel';
         testWidgets('$locale, ${width}dp, x$scale : police $font, aucun '
             'débordement, mots entiers', (tester) async {
           await _pump(tester, locale: locale, width: width, scale: scale);
@@ -67,7 +67,7 @@ void main() {
             // Taille de base lue dans le style, jamais un 11 en dur.
             final base = style.fontSize!;
             final isPixel = style.fontFamily!.contains('PressStart2P');
-            expect(isPixel, width >= 340, reason: '$label à ${width}dp');
+            expect(isPixel, width >= 348, reason: '$label à ${width}dp');
             if (isPixel) {
               // Palier title : plafond x1,3.
               expect(
@@ -88,7 +88,7 @@ void main() {
                 .first;
             final rendered = tester.getSize(fitted).width;
             expect(rendered, lessThanOrEqualTo(cell), reason: '$label coupé');
-            if (isPixel && width >= 360) {
+            if (isPixel) {
               final effective =
                   paragraph.textScaler.scale(base) * rendered / painter.width;
               expect(

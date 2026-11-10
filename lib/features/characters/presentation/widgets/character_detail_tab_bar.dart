@@ -69,10 +69,11 @@ class CharacterDetailTabBar extends StatelessWidget {
 
   /// Largeur d'écran (dp) sous laquelle les libellés passent en police de
   /// corps (décision du 10/11/2026) : la police pixel (1 em par glyphe) ne
-  /// tient plus dans une colonne de moins de 68 dp sans descendre sous 11 px
-  /// (règle DA R1).
+  /// tient plus dans une colonne de moins de 69,6 dp (348 / 5) sans descendre
+  /// sous 11 px (règle DA R1 prioritaire sur le 340 dp indicatif de la
+  /// décision) : un libellé de 6 lettres mesure 6 x 11 + 6 x 0,5 = 69 dp.
   @visibleForTesting
-  static const double compactWidth = 340;
+  static const double compactWidth = 348;
 
   @override
   Widget build(BuildContext context) {
@@ -148,13 +149,13 @@ class _TabButton extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 2),
-              // Largeur >= 340 dp : police pixel, palier title (x1,3) et non
+              // Largeur >= 348 dp : police pixel, palier title (x1,3) et non
               // control (1/5 de la largeur : un libellé à x1,5 ne peut pas passer
               // à la ligne sans couper un mot). `FittedBox` : à 360 dp "PERSO"
               // à x1,3 (74 dp) dépasse la colonne de 72 dp ; le libellé rétrécit
-              // sans passer sous 11 dp jusqu'à 6 lettres, à 360 dp seulement
-              // (au-delà, la largeur de colonne augmente).
-              // Largeur < 340 dp : police de corps compacte (jamais de display
+              // sans passer sous 11 dp jusqu'à 6 lettres, dès 348 dp (colonne
+              // de 69,6 dp pour un libellé de 69 dp).
+              // Largeur < 348 dp : police de corps compacte (jamais de display
               // sous 11 px, règle DA R1), mêmes mots.
               if (compact)
                 FittedBox(
