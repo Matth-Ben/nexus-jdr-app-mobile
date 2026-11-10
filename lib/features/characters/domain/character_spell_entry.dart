@@ -174,8 +174,6 @@ class CharacterSpellEntry {
   /// fusionnées en une seule entrée.
   final bool hasInnateRoute;
 
-  /// Copie avec un autre compteur d'usages innés dépensés — surcouche
-  /// optimiste de `character_detail_screen.dart::_effectiveDetail`.
   /// Copie avec l'état « préparé »/« favori » superposé depuis la file hors
   /// ligne (T5a) — voir `SupabaseCharacterRepository._withPendingWrites`. Un
   /// sort accordé par une sous-classe reste préparé (seul [storedStatus] suit) ;
@@ -218,6 +216,8 @@ class CharacterSpellEntry {
     );
   }
 
+  /// Copie avec un autre compteur d'usages innés dépensés — surcouche
+  /// optimiste de `character_detail_screen.dart::_effectiveDetail`.
   CharacterSpellEntry copyWithInnateUsesSpent(int innateUsesSpent) =>
       CharacterSpellEntry(
         id: id,

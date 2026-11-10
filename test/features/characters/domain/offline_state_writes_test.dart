@@ -61,10 +61,17 @@ void main() {
     });
 
     test('réglages : bonus de CA entier dans les bornes', () {
-      expect(parseCharacterFlagsPayload({'armorClassBonus': 99}), isNotNull);
-      expect(parseCharacterFlagsPayload({'armorClassBonus': -99}), isNotNull);
-      expect(parseCharacterFlagsPayload({'armorClassBonus': 100}), isNull);
-      expect(parseCharacterFlagsPayload({'armorClassBonus': -100}), isNull);
+      for (final ok in [100, -100, 2147483647, -2147483648]) {
+        expect(parseCharacterFlagsPayload({'armorClassBonus': ok}), isNotNull);
+      }
+      expect(
+        parseCharacterFlagsPayload({'armorClassBonus': 2147483648}),
+        isNull,
+      );
+      expect(
+        parseCharacterFlagsPayload({'armorClassBonus': -2147483649}),
+        isNull,
+      );
       expect(parseCharacterFlagsPayload({'armorClassBonus': 1.5}), isNull);
       expect(parseCharacterFlagsPayload({'inspiration': 'oui'}), isNull);
       expect(parseCharacterFlagsPayload({}), isNull);

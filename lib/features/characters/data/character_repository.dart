@@ -19,7 +19,9 @@ import '../../character_creation/domain/spellcasting_rules.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
+import '../domain/character_inventory_item.dart';
 import '../domain/character_list_sorter.dart';
+import '../domain/character_spell_entry.dart';
 import '../domain/character_spell_slot.dart';
 import '../domain/condition_type.dart';
 import '../domain/character_summary.dart';
@@ -45,10 +47,8 @@ import '../domain/level_up_metamagic_swap.dart';
 import '../domain/level_up_rune_option.dart';
 import '../domain/level_up_subclass_option.dart';
 import '../domain/multiclass_prerequisites.dart';
-import '../domain/portrait_storage_path_resolver.dart';
-import '../domain/character_inventory_item.dart';
-import '../domain/character_spell_entry.dart';
 import '../domain/offline_state_writes.dart';
+import '../domain/portrait_storage_path_resolver.dart';
 import '../domain/prepared_caster_spell_list.dart';
 import '../domain/prepared_spells_limit.dart';
 import '../domain/rest_type.dart';
@@ -364,7 +364,11 @@ abstract class CharacterRepository {
   /// `_SpellRow` (`presentation/widgets/character_spells_section.dart`),
   /// épinglage pour accès rapide en combat
   /// (`docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
-  /// "Onglet Sorts"). Simple flag.
+  /// "Onglet Sorts"). Simple flag, réservé aux sorts persistés (ayant une
+  /// ligne `character_spells`) : sur un sort sans ligne, zéro ligne affectée
+  /// est un refus (`accessDenied` en ligne ; hors ligne, mis en file puis
+  /// abandonné au rejeu avec alerte) — contrairement à dé-préparer un sort
+  /// sans ligne, qui est un succès sans écriture.
   ///
   /// Mode hors ligne (T5a, P15) : mis en file ([PendingCharacterWriteKind
   /// .spellState], `targetId` = [spellId], fusion champ par champ avec une
@@ -2511,8 +2515,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// `PendingCharacterWriteSyncer`. Ne vérifie pas la connectivité.
   ///
   /// Lève une [PostgrestException] `42501` (zéro ligne) pour un favori sans
-  /// ligne `character_spells` ; dé-préparer un sort sans aucune ligne est un
-  /// succès sans écriture (l'état voulu est déjà atteint).
+  /// ligne `character_spells` (décision : on ne favorise pas un sort non
+  /// persisté ; en ligne `accessDenied`, hors ligne mis en file puis abandonné
+  /// au rejeu avec alerte) — contraste voulu avec dé-préparer un sort sans
+  /// aucune ligne, qui est un succès sans écriture (l'état voulu est déjà
+  /// atteint).
   Future<void> applySpellStateOnline({
     required String characterId,
     required int spellId,
@@ -2850,10 +2857,19 @@ class SupabaseCharacterRepository implements CharacterRepository {
   Future<WriteOutcome> setArmorClassBonus({
     required String characterId,
     required int bonus,
-  }) => _writeCharacterFlags(
-    characterId: characterId,
-    change: CharacterFlagsPatch(armorClassBonus: bonus),
-  );
+  }) async {
+    // Même validation à l'enfilage et au rejeu : jamais accepté puis supprimé
+    // en silence. La colonne est un `integer` Postgres sans autre contrainte.
+    if (bonus < postgresIntMin || bonus > postgresIntMax) {
+      throw const CharacterFailure(
+        'Ce bonus de CA est hors de la plage autorisée.',
+      );
+    }
+    return _writeCharacterFlags(
+      characterId: characterId,
+      change: CharacterFlagsPatch(armorClassBonus: bonus),
+    );
+  }
 
   @override
   Future<String> uploadPortrait({

@@ -301,6 +301,44 @@ void main() {
       },
     );
 
+    for (final bonus in [100, -100, 2147483647]) {
+      test(
+        'bonus de CA $bonus : accepté hors ligne et rejoué tel quel',
+        () async {
+          connectivity.goOffline();
+          expect(
+            await repository.setArmorClassBonus(
+              characterId: _characterId,
+              bonus: bonus,
+            ),
+            WriteOutcome.queued,
+          );
+          goOnline();
+
+          expect(await syncer.sync(), {_characterId});
+
+          expect(server.characterRow['armor_class_bonus'], bonus);
+          expect(await queue.allForOwner(_ownerA), isEmpty);
+        },
+      );
+    }
+
+    test('bonus de CA hors plage integer : refusé à l’enfilage, rien en '
+        'file', () async {
+      for (final offline in [true, false]) {
+        if (offline) connectivity.goOffline();
+        await expectLater(
+          repository.setArmorClassBonus(
+            characterId: _characterId,
+            bonus: 2147483648,
+          ),
+          throwsA(isA<CharacterFailure>()),
+        );
+      }
+      expect(await queue.allForOwner(_ownerA), isEmpty);
+      expect(server.writes, isEmpty);
+    });
+
     test('en ligne : écriture filtrée id + owner_id, cache mis à jour, '
         'entrée périmée fusionnée puis retirée', () async {
       await openOnline();
@@ -462,8 +500,8 @@ void main() {
       {'inspiration': 1},
       {'armorClassBonus': 2.5},
       {'armorClassBonus': '2'},
-      {'armorClassBonus': 100},
-      {'armorClassBonus': -100},
+      {'armorClassBonus': 2147483648},
+      {'armorClassBonus': -2147483649},
       {'inspiration': true, 'armorClassBonus': null},
     ]) {
       test('payload invalide $bad : aucune écriture, ligne supprimée, les '
@@ -886,6 +924,27 @@ void main() {
       final patch = server.appliedWrites.single;
       expect(patch.query['character_id'], 'eq.$_characterId');
       expect(patch.query['spell_id'], 'eq.11');
+    });
+
+    test('contraste : dé-préparer un sort sans aucune ligne est un succès '
+        'sans écriture (favori sans ligne = refus, voir plus haut)', () async {
+      await openOnline();
+      spellRows.clear();
+      goOffline();
+      expect(
+        await repository.setSpellPrepared(
+          characterId: _characterId,
+          spellId: 11,
+          prepared: false,
+        ),
+        WriteOutcome.queued,
+      );
+      goOnline();
+
+      expect(await syncer.sync(), {_characterId});
+
+      expect(await queue.allForOwner(_ownerA), isEmpty);
+      expect(server.appliedWrites, isEmpty);
     });
 
     test('rejeu : préparer un sort sans aucune ligne la crée', () async {

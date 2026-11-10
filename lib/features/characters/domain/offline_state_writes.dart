@@ -12,11 +12,11 @@ import 'weapon_slot.dart';
 /// clé connue doit être présente ; les clés inconnues (version plus récente de
 /// l'app) sont ignorées sans invalider la ligne.
 
-/// Bornes (incluses) du bonus de CA manuel. La feuille d'ajustement n'impose
-/// aucune borne ; au-delà de cette plage large, la valeur est considérée
-/// comme corrompue et n'est jamais écrite.
-const int armorClassBonusMin = -99;
-const int armorClassBonusMax = 99;
+/// Plage (incluse) d'un `integer` Postgres : seule contrainte de
+/// `characters.armor_class_bonus` (`integer not null default 0`, sans autre
+/// plage). Validée à l'enfilage ET au rejeu.
+const int postgresIntMin = -2147483648;
+const int postgresIntMax = 2147483647;
 
 /// Clés des payloads de file.
 abstract final class OfflineStateKeys {
@@ -175,8 +175,7 @@ InventoryStatePatch? parseInventoryStatePayload(Object? raw) {
 }
 
 /// Analyse stricte d'un payload `characterFlags` ; `null` s'il est invalide
-/// (type incorrect, bonus de CA hors de [armorClassBonusMin]..
-/// [armorClassBonusMax]).
+/// (type incorrect, bonus de CA hors de la plage `integer` Postgres).
 CharacterFlagsPatch? parseCharacterFlagsPayload(Object? raw) {
   if (raw is! Map) return null;
   final inspiration = raw[OfflineStateKeys.inspiration];
@@ -185,9 +184,7 @@ CharacterFlagsPatch? parseCharacterFlagsPayload(Object? raw) {
     return null;
   }
   if (raw.containsKey(OfflineStateKeys.armorClassBonus)) {
-    if (bonus is! int ||
-        bonus < armorClassBonusMin ||
-        bonus > armorClassBonusMax) {
+    if (bonus is! int || bonus < postgresIntMin || bonus > postgresIntMax) {
       return null;
     }
   }
