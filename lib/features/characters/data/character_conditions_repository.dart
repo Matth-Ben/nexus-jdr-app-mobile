@@ -20,12 +20,17 @@ abstract class CharacterConditionsRepository {
   /// Remplace **entièrement** le tableau `characters.conditions` par
   /// [conditions] (clés canoniques, sans doublon).
   ///
+  /// [unknownKeys] : clés non reconnues lues avec la fiche, réinjectées dans
+  /// le tableau écrit (une condition d'une version plus récente n'est jamais
+  /// supprimée) ; désélectionner une condition connue reste effectif.
+  ///
   /// Le dépôt ne suppose jamais un accès plus large que la RLS
   /// (`auth.uid() = owner_id`) : une mise à jour qui n'affecte aucune ligne
   /// (RLS qui refuse en silence) est remontée comme un refus d'accès.
   Future<WriteOutcome> setConditions({
     required String characterId,
     required List<ConditionType> conditions,
+    List<String> unknownKeys = const [],
   });
 }
 
@@ -40,6 +45,7 @@ class SupabaseCharacterConditionsRepository
   Future<WriteOutcome> setConditions({
     required String characterId,
     required List<ConditionType> conditions,
+    List<String> unknownKeys = const [],
   }) async {
     final ownerId = _client.auth.currentUser?.id;
     if (ownerId == null) {
@@ -54,13 +60,18 @@ class SupabaseCharacterConditionsRepository
     try {
       final updated = await _client
           .from('characters')
-          .update({'conditions': ConditionType.toStorage(conditions)})
+          .update({
+            'conditions': ConditionType.toStorage(
+              conditions,
+              unknownKeys: unknownKeys,
+            ),
+          })
           .eq('id', characterId)
           .eq('owner_id', ownerId)
           .select('id');
       if (updated.isEmpty) {
         throw const CharacterFailure(
-          "Vous n'avez pas accès à ces personnages.",
+          "Vous n'avez pas accès à ce personnage.",
           code: CharacterErrorCode.accessDenied,
         );
       }

@@ -1896,7 +1896,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// `null` en cas de succès, sinon le message d'erreur que la feuille affiche
   /// (la sélection saisie y est conservée). Hors-ligne : rien n'est écrit
   /// (`WriteOutcome.rejectedOffline`, mise en file prévue en P6b).
-  Future<String?> _saveConditions(List<ConditionType> selection) async {
+  Future<String?> _saveConditions(
+    List<ConditionType> selection,
+    List<String> unknownKeys,
+  ) async {
     // Capturé avant le premier `await` — voir la doc de
     // [_offlineQueuedMessage].
     final l10n = AppLocalizations.of(context)!;
@@ -1909,12 +1912,15 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           .setConditions(
             characterId: widget.characterId,
             conditions: selection,
+            unknownKeys: unknownKeys,
           );
       if (outcome == WriteOutcome.rejectedOffline) {
         error = l10n.characterOfflineNotPersistedMessage;
       }
     } on CharacterFailure catch (failure) {
-      error = failure.message;
+      error = failure.code == CharacterErrorCode.accessDenied
+          ? l10n.conditionsAccessDeniedMessage
+          : failure.message;
     } catch (_) {
       error = l10n.conditionsSheetGenericError;
     }
@@ -2658,7 +2664,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         onTapConditions: () => showConditionsSheet(
           context,
           initial: _effectiveDetail(detail).conditions,
-          onSave: _saveConditions,
+          onSave: (selection) =>
+              _saveConditions(selection, detail.unknownConditionKeys),
         ),
         onTapAdjustArmorClass: () => showArmorClassBonusSheet(
           context,

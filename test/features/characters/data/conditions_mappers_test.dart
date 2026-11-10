@@ -45,6 +45,15 @@ void main() {
       expect(detail.conditions, [ConditionType.poisoned, ConditionType.prone]);
     });
 
+    test('clés inconnues conservées à part pour la réécriture', () {
+      final detail = _detail({
+        'conditions': ['blinded', 'futur_etat'],
+      });
+      expect(detail.conditions, [ConditionType.blinded]);
+      expect(detail.unknownConditionKeys, ['futur_etat']);
+      expect(_detail({}).unknownConditionKeys, isEmpty);
+    });
+
     test(
       'colonne absente (ancien cache) ou null : liste vide, pas de crash',
       () {

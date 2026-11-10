@@ -6105,7 +6105,7 @@ abstract class AppLocalizations {
   /// Règle résumée de la condition « charmed » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
   ///
   /// In fr, this message translates to:
-  /// **'Ne peut attaquer le charmeur ; celui-ci a l\'avantage aux interactions sociales.'**
+  /// **'Ne peut cibler le charmeur de façon nuisible ; celui-ci a l\'avantage social.'**
   String get conditionCharmedRule;
 
   /// Libellé de la condition D&D 5e « deafened » (clé serveur `deafened`).
@@ -6177,7 +6177,7 @@ abstract class AppLocalizations {
   /// Règle résumée de la condition « paralyzed » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
   ///
   /// In fr, this message translates to:
-  /// **'Neutralisé, immobile ; rate For/Dex ; attaques contre lui avantagées, critique au contact.'**
+  /// **'Neutralisé, immobile ; rate For/Dex ; attaques contre lui avantagées, critique ≤ 1,50 m.'**
   String get conditionParalyzedRule;
 
   /// Libellé de la condition D&D 5e « petrified » (clé serveur `petrified`).
@@ -6189,7 +6189,7 @@ abstract class AppLocalizations {
   /// Règle résumée de la condition « petrified » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
   ///
   /// In fr, this message translates to:
-  /// **'Transformé en pierre : neutralisé, résiste à tout, immunisé au poison et aux maladies.'**
+  /// **'Pierre : neutralisé, avantage contre lui, rate For/Dex, résiste à tout, immunisé poison.'**
   String get conditionPetrifiedRule;
 
   /// Libellé de la condition D&D 5e « poisoned » (clé serveur `poisoned`).
@@ -6213,7 +6213,7 @@ abstract class AppLocalizations {
   /// Règle résumée de la condition « prone » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
   ///
   /// In fr, this message translates to:
-  /// **'Ne peut que ramper ; attaques au contact contre lui avantagées, à distance désavantagées.'**
+  /// **'Rampe ; désavantage à ses attaques ; contre lui : avantage ≤ 1,50 m, sinon désavantage.'**
   String get conditionProneRule;
 
   /// Libellé de la condition D&D 5e « restrained » (clé serveur `restrained`).
@@ -6249,7 +6249,7 @@ abstract class AppLocalizations {
   /// Règle résumée de la condition « unconscious » (D&D 5e, édition 2014), ≤ 90 caractères, purement informative.
   ///
   /// In fr, this message translates to:
-  /// **'Neutralisé, à terre, inconscient ; attaques contre lui avantagées, critiques au contact.'**
+  /// **'Neutralisé, lâche tout, à terre ; rate For/Dex ; contre lui : avantage, critique ≤ 1,50 m.'**
   String get conditionUnconsciousRule;
 
   /// Libellé du bouton discret d'ajout de la zone d'état (précédé d'une icône +).
@@ -6341,6 +6341,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Aucun état actif'**
   String get conditionsNoneAnnouncement;
+
+  /// Refus d'accès (RLS) à l'enregistrement des conditions d'un personnage (singulier).
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous n\'avez pas accès à ce personnage.'**
+  String get conditionsAccessDeniedMessage;
 }
 
 class _AppLocalizationsDelegate

@@ -3742,7 +3742,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get conditionCharmedRule =>
-      'Ne peut attaquer le charmeur ; celui-ci a l\'avantage aux interactions sociales.';
+      'Ne peut cibler le charmeur de façon nuisible ; celui-ci a l\'avantage social.';
 
   @override
   String get conditionDeafenedLabel => 'Assourdi';
@@ -3784,14 +3784,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get conditionParalyzedRule =>
-      'Neutralisé, immobile ; rate For/Dex ; attaques contre lui avantagées, critique au contact.';
+      'Neutralisé, immobile ; rate For/Dex ; attaques contre lui avantagées, critique ≤ 1,50 m.';
 
   @override
   String get conditionPetrifiedLabel => 'Pétrifié';
 
   @override
   String get conditionPetrifiedRule =>
-      'Transformé en pierre : neutralisé, résiste à tout, immunisé au poison et aux maladies.';
+      'Pierre : neutralisé, avantage contre lui, rate For/Dex, résiste à tout, immunisé poison.';
 
   @override
   String get conditionPoisonedLabel => 'Empoisonné';
@@ -3805,7 +3805,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get conditionProneRule =>
-      'Ne peut que ramper ; attaques au contact contre lui avantagées, à distance désavantagées.';
+      'Rampe ; désavantage à ses attaques ; contre lui : avantage ≤ 1,50 m, sinon désavantage.';
 
   @override
   String get conditionRestrainedLabel => 'Entravé';
@@ -3826,7 +3826,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get conditionUnconsciousRule =>
-      'Neutralisé, à terre, inconscient ; attaques contre lui avantagées, critiques au contact.';
+      'Neutralisé, lâche tout, à terre ; rate For/Dex ; contre lui : avantage, critique ≤ 1,50 m.';
 
   @override
   String get conditionsAddButtonLabel => 'État';
@@ -3884,4 +3884,8 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get conditionsNoneAnnouncement => 'Aucun état actif';
+
+  @override
+  String get conditionsAccessDeniedMessage =>
+      'Vous n\'avez pas accès à ce personnage.';
 }

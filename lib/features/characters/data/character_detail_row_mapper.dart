@@ -972,6 +972,7 @@ abstract final class CharacterDetailRowMapper {
       // le cache drift stocke la ligne PostgREST brute : un ancien cache sans
       // `conditions` donne simplement une liste vide.
       conditions: ConditionType.parse(row['conditions']),
+      unknownConditionKeys: ConditionType.unknownKeys(row['conditions']),
       // Défaut `0` si absente/`null` (même discipline défensive que
       // [edition] pour une ligne cachée écrite avant l'introduction de cette
       // colonne, voir la doc de classe de `CharacterDetail.armorClassBonus`).

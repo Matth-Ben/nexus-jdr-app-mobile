@@ -157,6 +157,11 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// Écrite via `CharacterRepository.setConditions` (remplacement complet).
     @Default(<ConditionType>[]) List<ConditionType> conditions,
 
+    /// Clés brutes de `characters.conditions` non reconnues par cette version
+    /// (ajoutées par une version plus récente) : jamais affichées, mais
+    /// réinjectées à l'écriture pour ne pas être supprimées.
+    @Default(<String>[]) List<String> unknownConditionKeys,
+
     /// Vitesse de déplacement en PIEDS (`races.speed`, convertie en mètres à
     /// l'affichage par `SpeedConverter`), `null` si la race
     /// n'a pas pu être résolue (race personnalisée/non renseignée) — voir
