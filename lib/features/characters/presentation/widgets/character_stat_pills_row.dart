@@ -161,42 +161,53 @@ class _StatPill extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.body(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
+          // `FittedBox` (V3-2) : à grande taille de police, le libellé complet
+          // (« INIT. », « INSP. ») est réduit pour tenir sur la largeur de la
+          // tuile au lieu d'être tronqué en « IN… ». Il n'est réduit que s'il
+          // déborde (rendu inchangé sinon).
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              style: AppTypography.body(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           const SizedBox(height: 2),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                value,
-                style: AppTypography.body(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              if (valueSuffix != null) ...[
-                const SizedBox(width: AppSpacing.xs),
+          // Même réduction pour la valeur (« 9 m », « +3 ») : plus de
+          // débordement de la tuile « VIT. » à x3,0 (V3-2).
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
                 Text(
-                  valueSuffix!,
+                  value,
                   style: AppTypography.body(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.accentTeal,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
+                if (valueSuffix != null) ...[
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    valueSuffix!,
+                    style: AppTypography.body(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.accentTeal,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ],
       ),

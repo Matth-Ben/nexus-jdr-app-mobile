@@ -126,30 +126,36 @@ class _AbilityScoreCard extends StatelessWidget {
               // Score et modificateur côte à côte (demande utilisateur,
               // 2026-09-15 : le modificateur était auparavant affiché seul
               // sur sa propre ligne, sous le score) plutôt qu'empilés.
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    '$score',
-                    style: AppTypography.body(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
+              // `FittedBox` : à très grande taille de police, score et
+              // modificateur sont réduits pour tenir dans la tuile au lieu
+              // de déborder (même traitement que `character_stat_pills_row`).
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      '$score',
+                      style: AppTypography.body(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    SignedModifierFormatter.format(modifier),
-                    style: AppTypography.body(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: modifier < 0
-                          ? AppColors.accentBrick
-                          : AppColors.textSecondary,
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      SignedModifierFormatter.format(modifier),
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: modifier < 0
+                            ? AppColors.accentBrick
+                            : AppColors.textSecondary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

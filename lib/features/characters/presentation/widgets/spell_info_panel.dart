@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/rules/spell_status.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -256,7 +257,7 @@ class _SpellInfoPanelContent extends StatelessWidget {
                         if (i < infoRows.length - 1) const SheetActionDivider(),
                       ],
                       const SizedBox(height: AppSpacing.md),
-                      Text(
+                      DisplayText(
                         l10n.spellInfoPanelDescriptionTitle,
                         style: AppTypography.display(
                           fontSize: 11,

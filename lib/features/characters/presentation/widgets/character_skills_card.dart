@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -60,7 +61,7 @@ class CharacterSkillsCard extends StatelessWidget {
               // `Expanded`/`Flexible` (F21) : titre et légende passent à la
               // ligne au lieu de déborder à droite avec une police agrandie.
               Expanded(
-                child: Text(
+                child: DisplayText(
                   AppLocalizations.of(context)!.characterSkillsCardTitle,
                   style: AppTypography.display(
                     fontSize: 11,
@@ -189,7 +190,7 @@ class _D20Chip extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: AppColors.woodLight, width: 1),
       ),
-      child: Text(
+      child: DisplayText(
         AppLocalizations.of(context)!.characterSkillsCardD20Chip,
         style: AppTypography.display(fontSize: 9, color: AppColors.textMuted),
       ),

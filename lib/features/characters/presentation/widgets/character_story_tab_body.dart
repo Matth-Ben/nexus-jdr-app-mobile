@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -181,7 +182,7 @@ class _StoryFieldCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        DisplayText(
           field.label,
           style: AppTypography.display(
             fontSize: 11,
@@ -258,7 +259,7 @@ class _EmptyStoryState extends StatelessWidget {
               color: AppColors.textMuted,
             ),
             const SizedBox(height: AppSpacing.md),
-            Text(
+            DisplayText(
               l10n.characterStoryTabBodyEmptyStateTitle,
               textAlign: TextAlign.center,
               style: AppTypography.display(

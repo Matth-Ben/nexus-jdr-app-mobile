@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -84,7 +85,7 @@ class _FeatInfoPanelContent extends StatelessWidget {
                         ),
                         const SizedBox(height: AppSpacing.md),
                       ],
-                      Text(
+                      DisplayText(
                         l10n.featInfoPanelDescriptionLabel,
                         style: AppTypography.display(
                           fontSize: 11,

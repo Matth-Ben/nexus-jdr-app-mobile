@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/rules/class_spellcasting_rule.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -396,7 +397,7 @@ class _EmptySpellsState extends StatelessWidget {
               color: AppColors.textMuted,
             ),
             const SizedBox(height: AppSpacing.md),
-            Text(
+            DisplayText(
               l10n.characterSpellsTabBodyEmptyStateTitle,
               textAlign: TextAlign.center,
               style: AppTypography.display(
@@ -481,7 +482,7 @@ class _SpellSlotsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          DisplayText(
             l10n.characterSpellsTabBodySlotsCardTitle,
             style: AppTypography.display(
               fontSize: 11,

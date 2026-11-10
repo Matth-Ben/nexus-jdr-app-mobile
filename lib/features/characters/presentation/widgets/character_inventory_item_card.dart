@@ -36,6 +36,9 @@ class CharacterInventoryItemCard extends StatelessWidget {
     final dice = item.weaponProperties?.damageDice != null
         ? DiceNotationParser.parse(item.weaponProperties!.damageDice!)
         : null;
+    // Police très agrandie : poids / badge « ÉQUIPÉ » sous le nom plutôt qu'à
+    // sa droite, où ils écraseraient la colonne du nom (V3-1).
+    final stacked = MediaQuery.textScalerOf(context).scale(14) / 14 >= 1.5;
 
     return Material(
       color: Colors.transparent,
@@ -60,34 +63,41 @@ class CharacterInventoryItemCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    // `Wrap` (V3-1) : le nom garde sa propre ligne et passe à
+                    // la ligne au lieu d'être tronqué ; le badge de dé descend
+                    // sous le nom quand la largeur manque (police agrandie).
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        if (item.isAttuned) ...[
-                          const Icon(
-                            Icons.link,
-                            size: 12,
-                            color: AppColors.goldEnd,
-                          ),
-                          const SizedBox(width: 2),
-                        ],
-                        Flexible(
-                          child: Text(
-                            item.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.body(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (item.isAttuned) ...[
+                              const Icon(
+                                Icons.link,
+                                size: 12,
+                                color: AppColors.goldEnd,
+                              ),
+                              const SizedBox(width: 2),
+                            ],
+                            Flexible(
+                              child: Text(
+                                item.name,
+                                style: AppTypography.body(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                        if (dice != null) ...[
-                          const SizedBox(width: AppSpacing.xs),
+                        if (dice != null)
                           DiceTypeBadge(
                             sides: dice.sides,
                             label: '${dice.count}d${dice.sides}',
                           ),
-                        ],
                       ],
                     ),
                     Text(
@@ -95,18 +105,23 @@ class CharacterInventoryItemCard extends StatelessWidget {
                         InventoryCategoryRules.labelFor(item.category),
                         item.quantity,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: AppTypography.body(
                         fontSize: 12,
                         color: AppColors.textMuted,
                       ),
                     ),
+                    if (stacked)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _Trailing(item: item),
+                      ),
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              _Trailing(item: item),
+              if (!stacked) ...[
+                const SizedBox(width: AppSpacing.sm),
+                _Trailing(item: item),
+              ],
             ],
           ),
         ),

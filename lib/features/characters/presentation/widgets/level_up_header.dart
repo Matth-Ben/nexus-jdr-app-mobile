@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -54,7 +55,7 @@ class LevelUpHeader extends StatelessWidget {
         children: [
           const AppBrandBadge(size: 64),
           const SizedBox(height: AppSpacing.sm),
-          Text(
+          DisplayText(
             eyebrow,
             textAlign: TextAlign.center,
             style: AppTypography.display(
@@ -65,7 +66,7 @@ class LevelUpHeader extends StatelessWidget {
           ),
           if (levelLabel != null) ...[
             const SizedBox(height: AppSpacing.xs),
-            Text(
+            DisplayText(
               levelLabel!,
               textAlign: TextAlign.center,
               // `color.text.on-wood`, PAS `goldEnd` : correctif de contraste

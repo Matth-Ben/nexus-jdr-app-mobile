@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -480,7 +481,7 @@ class _PreparedSpellsChoice extends StatelessWidget {
               color: AppColors.textSecondary,
             ),
             const SizedBox(width: AppSpacing.xs),
-            Text(
+            DisplayText(
               l10n.restSheetPreparedSpellsTitle,
               style: AppTypography.display(
                 fontSize: 11,

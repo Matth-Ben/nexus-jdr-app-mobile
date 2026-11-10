@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -110,7 +111,7 @@ class CharacterSpellsSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                DisplayText(
                   l10n.characterSpellsSectionTitle,
                   style: AppTypography.display(
                     fontSize: 11,
@@ -543,7 +544,7 @@ class _PreparationStatus extends StatelessWidget {
           color: prepared ? AppColors.accentTeal : AppColors.textMuted,
         ),
         const SizedBox(width: 3),
-        Text(
+        DisplayText(
           label.toUpperCase(),
           style: AppTypography.display(
             fontSize: 10,
@@ -590,7 +591,7 @@ class _RowBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = Text(
+    final text = DisplayText(
       label,
       style: AppTypography.display(
         fontSize: _rowBadgeFontSize,
