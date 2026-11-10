@@ -121,7 +121,11 @@ void main() {
       PendingCharacterWriteKind.fromStorageKey('hp'),
       PendingCharacterWriteKind.hp,
     );
-    expect(PendingCharacterWriteKind.fromStorageKey('currency'), isNull);
+    expect(PendingCharacterWriteKind.fromStorageKey('inventory'), isNull);
+    expect(
+      PendingCharacterWriteKind.fromStorageKey('currency'),
+      PendingCharacterWriteKind.currency,
+    );
     expect(PendingCharacterWriteKind.fromStorageKey(''), isNull);
   });
 

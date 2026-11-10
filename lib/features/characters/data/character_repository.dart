@@ -1896,6 +1896,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
                     feature,
               ],
             );
+          case PendingCharacterWriteKind.currency:
+            final totals = validCurrencyTotals(write.payload['totals']);
+            if (totals == null) break;
+            result = result.copyWith(
+              currencyPp: totals['currency_pp'] ?? result.currencyPp,
+              currencyGp: totals['currency_gp'] ?? result.currencyGp,
+              currencyEp: totals['currency_ep'] ?? result.currencyEp,
+              currencySp: totals['currency_sp'] ?? result.currencySp,
+              currencyCp: totals['currency_cp'] ?? result.currencyCp,
+            );
           case PendingCharacterWriteKind.conditions:
             // P6b : tableau complet de clés (dernière écriture gagnante),
             // clés inconnues préservées comprises.
@@ -2073,6 +2083,145 @@ class SupabaseCharacterRepository implements CharacterRepository {
         columns: columns,
       );
     }
+  }
+
+  /// Écriture de monnaies (`characters.currency_*`, valeurs **absolues**) —
+  /// partagée par [adjustCurrency] et [addReward] sans objet (T3, P15).
+  ///
+  /// Hors ligne, ou erreur de transport : mise en file
+  /// ([PendingCharacterWriteKind.currency]) et [WriteOutcome.queued]. En
+  /// ligne : écriture immédiate verrouillée (`runExclusive`) ; une entrée
+  /// restée en file est fusionnée (les monnaies qu'elle porte et que
+  /// [totals] ne touche pas sont écrites avec, sans quoi son retrait les
+  /// perdrait), puis retirée par `removeIfUnchanged`. Un refus Postgrest ou
+  /// zéro ligne affectée (RLS silencieuse) est un échec, jamais mis en file.
+  Future<WriteOutcome> _writeCurrencyTotals({
+    required String characterId,
+    required Map<CurrencyKind, int> totals,
+  }) async {
+    final ownerId = _requireOwnerId();
+    final columns = <String, int>{
+      for (final entry in totals.entries) entry.key.columnName: entry.value,
+    };
+    if (!await _connectivityChecker.hasConnection()) {
+      await _enqueueCurrency(
+        characterId: characterId,
+        ownerId: ownerId,
+        columns: columns,
+      );
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _pendingWrites.runExclusive(
+        characterId: characterId,
+        kind: PendingCharacterWriteKind.currency,
+        targetId: '',
+        action: () async {
+          final supersededWrite = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.currency,
+            targetId: '',
+          );
+          final body = <String, dynamic>{
+            ...?validCurrencyTotals(supersededWrite?.payload['totals']),
+            ...columns,
+          };
+          final updated = await _client
+              .from('characters')
+              .update(body)
+              .eq('id', characterId)
+              .eq('owner_id', ownerId)
+              .select('id');
+          if (updated.isEmpty) {
+            throw const CharacterFailure(
+              "Vous n'avez pas accès à ce personnage.",
+              code: CharacterErrorCode.accessDenied,
+            );
+          }
+          await _recordConfirmedWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            columns: body,
+            supersededWrite: supersededWrite,
+          );
+        },
+      );
+      return WriteOutcome.synced;
+    } on CharacterFailure {
+      rethrow;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (error, stackTrace) {
+      if (isTransportFailure(error)) {
+        // Même traitement que `updateHp` (D12/D184).
+        await _enqueueCurrency(
+          characterId: characterId,
+          ownerId: ownerId,
+          columns: columns,
+        );
+        return WriteOutcome.queued;
+      }
+      // Remonté à Crashlytics (dette D13) : écriture monétaire, un bug
+      // silencieux ici pourrait désynchroniser durablement la bourse
+      // affichée de la valeur serveur réelle.
+      reportNonFatal(error, stackTrace);
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  /// Met en file des totaux de monnaie absolus. Payload :
+  /// `{"totals": {"currency_gp": 12, ...}, "bases": {"currency_gp": 10, ...}}`.
+  ///
+  /// `totals` ne contient que les monnaies **touchées** (cumulées sur les
+  /// mises en file successives : une seconde modification hors ligne d'une
+  /// autre monnaie complète l'entrée au lieu de la remplacer) — rejouer les
+  /// monnaies non touchées écraserait inutilement une modification faite
+  /// ailleurs. `bases` mémorise, par monnaie, la valeur serveur connue au
+  /// **premier** enfilage (lue dans le cache de la fiche) : base de la
+  /// détection de modification concurrente (F19/D178), jamais réécrite par
+  /// un enfilage suivant. Sans base connue (fiche jamais mise en cache), pas
+  /// de détection pour cette monnaie.
+  Future<void> _enqueueCurrency({
+    required String characterId,
+    required String ownerId,
+    required Map<String, int> columns,
+  }) async {
+    final existing = await _pendingWriteBeforeOnlineWrite(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: PendingCharacterWriteKind.currency,
+      targetId: '',
+    );
+    final totals = <String, int>{
+      ...?validCurrencyTotals(existing?.payload['totals']),
+      ...columns,
+    };
+    final bases = <String, int>{
+      ...?validCurrencyTotals(existing?.payload['bases']),
+    };
+    final missingBase = [
+      for (final column in columns.keys)
+        if (!bases.containsKey(column)) column,
+    ];
+    if (missingBase.isNotEmpty) {
+      final row = await _detailCache.readRow(
+        ownerId: ownerId,
+        characterId: characterId,
+      );
+      for (final column in missingBase) {
+        final value = row?[column];
+        if (value is num) bases[column] = value.toInt();
+      }
+    }
+    await _pendingWrites.enqueue(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: PendingCharacterWriteKind.currency,
+      targetId: '',
+      payload: {'totals': totals, 'bases': bases},
+    );
   }
 
   @override
@@ -3422,31 +3571,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String characterId,
     required CurrencyKind currency,
     required int newAmount,
-  }) async {
-    // `characters` porte bien `owner_id` (contrairement à
-    // `character_inventory`) : même filtre explicite que [updateHp]/[addXp].
-    final ownerId = _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
-    }
-
-    try {
-      await _client
-          .from('characters')
-          .update({currency.columnName: newAmount})
-          .eq('id', characterId)
-          .eq('owner_id', ownerId);
-      return WriteOutcome.synced;
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
-    } catch (error, stackTrace) {
-      // Remonté à Crashlytics (dette D13) : écriture monétaire, un bug
-      // silencieux ici pourrait désynchroniser durablement la bourse
-      // affichée de la valeur serveur réelle.
-      reportNonFatal(error, stackTrace);
-      throw mapUnknownCharacterError();
-    }
-  }
+  }) => _writeCurrencyTotals(
+    characterId: characterId,
+    totals: {currency: newAmount},
+  );
 
   @override
   Future<WriteOutcome> addInventoryItem({
@@ -3512,6 +3640,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required Map<CurrencyKind, int> newCurrencyTotals,
     required List<RewardItemDraft> items,
   }) async {
+    // T3 : une récompense en monnaie seule (gain/dépense, conversion de
+    // pièces) est hors-ligne-capable. Avec des objets, elle dépend de
+    // l'inventaire (tranche T5) : comportement inchangé ci-dessous
+    // (`rejectedOffline` hors ligne).
+    if (items.isEmpty && newCurrencyTotals.isNotEmpty) {
+      return _writeCurrencyTotals(
+        characterId: characterId,
+        totals: newCurrencyTotals,
+      );
+    }
     final ownerId = _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
       return WriteOutcome.rejectedOffline;

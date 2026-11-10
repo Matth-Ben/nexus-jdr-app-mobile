@@ -4,6 +4,7 @@ import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../../core/rules/spell_status.dart';
+import '../domain/currency_kind.dart';
 import '../domain/rest_type.dart';
 import 'character_detail_cache.dart';
 import 'character_repository.dart';
@@ -127,7 +128,7 @@ class PendingCharacterWriteSyncer {
   /// Une entrée dont l'écriture réussit :
   /// - est reportée dans le cache de la fiche
   ///   (`CharacterDetailCache.applyConfirmedColumns`), **seulement pour
-  ///   `hp`/`xp`/`conditions`** (voir [_cacheColumnsOf]) : la synchro passe
+  ///   `hp`/`xp`/`conditions`/`currency`** (voir [_cacheColumnsOf]) : la synchro passe
   ///   souvent fiche
   ///   fermée (démarrage de l'app, retour du réseau), personne ne relit alors
   ///   la fiche et le cache resterait sur l'état serveur d'avant. Les autres
@@ -247,6 +248,16 @@ class PendingCharacterWriteSyncer {
               }
             }
 
+            // T3 : un payload `currency` invalide (pas un objet, totaux
+            // manquants, valeur non entière ou négative) n'est jamais rejoué
+            // — même traitement que `conditions` ci-dessus : ligne
+            // supprimée, rien d'écrit, autres lignes non affectées.
+            if (write.kind == PendingCharacterWriteKind.currency &&
+                validCurrencyTotals(write.payload['totals']) == null) {
+              await _pendingWrites.removeIfUnchanged(write);
+              return;
+            }
+
             ServerValueConflict? conflict;
             try {
               conflict = await _detectConcurrentChange(write, ownerId: ownerId);
@@ -335,6 +346,9 @@ class PendingCharacterWriteSyncer {
     PendingCharacterWrite write, {
     required String ownerId,
   }) async {
+    if (write.kind == PendingCharacterWriteKind.currency) {
+      return _detectCurrencyChange(write, ownerId: ownerId);
+    }
     if (write.kind != PendingCharacterWriteKind.hp) return null;
     final baseCurrent = write.payload['baseCurrentHp'];
     final baseTemporary = write.payload['baseTemporaryHp'];
@@ -365,6 +379,54 @@ class PendingCharacterWriteSyncer {
       kind: write.kind,
       serverValue: {'currentHp': serverCurrent, 'temporaryHp': serverTemporary},
       queuedValue: {'currentHp': queuedCurrent, 'temporaryHp': queuedTemporary},
+    );
+  }
+
+  /// Détection F19/D178 pour une écriture `currency`, **monnaie par monnaie** :
+  /// une monnaie est en conflit si le serveur n'a ni la valeur en file (déjà
+  /// appliquée, réponse perdue : pas un conflit) ni la base mémorisée au
+  /// premier enfilage (inchangé). Monnaie sans base connue : pas de
+  /// détection. L'écriture part dans tous les cas.
+  Future<ServerValueConflict?> _detectCurrencyChange(
+    PendingCharacterWrite write, {
+    required String ownerId,
+  }) async {
+    final totals = validCurrencyTotals(write.payload['totals']);
+    if (totals == null) return null;
+    final rawBases = write.payload['bases'];
+    final bases = rawBases is Map
+        ? {
+            for (final entry in rawBases.entries)
+              if (entry.key is String && entry.value is num)
+                entry.key as String: (entry.value as num).toInt(),
+          }
+        : const <String, int>{};
+    if (bases.isEmpty) return null;
+
+    final row = await _client
+        .from('characters')
+        .select(totals.keys.join(', '))
+        .eq('id', write.characterId)
+        .eq('owner_id', ownerId)
+        .maybeSingle();
+    if (row == null) return null;
+
+    final serverValue = <String, dynamic>{};
+    final queuedValue = <String, dynamic>{};
+    for (final entry in totals.entries) {
+      final base = bases[entry.key];
+      final server = (row[entry.key] as num?)?.toInt();
+      if (base == null || server == null) continue;
+      if (server == entry.value || server == base) continue;
+      serverValue[entry.key] = server;
+      queuedValue[entry.key] = entry.value;
+    }
+    if (serverValue.isEmpty) return null;
+    return ServerValueConflict(
+      characterId: write.characterId,
+      kind: write.kind,
+      serverValue: serverValue,
+      queuedValue: queuedValue,
     );
   }
 
@@ -427,6 +489,22 @@ class PendingCharacterWriteSyncer {
         if (updated.isEmpty) {
           throw const PostgrestException(
             message: 'Aucune ligne affectée (conditions).',
+            code: '42501',
+          );
+        }
+      case PendingCharacterWriteKind.currency:
+        // T3 : totaux absolus (rejeu idempotent), filtré id ET owner_id. Zéro
+        // ligne = refus silencieux de la RLS ou personnage disparu : non
+        // rejouable (42501), comme `conditions`.
+        final updated = await _client
+            .from('characters')
+            .update(_cacheColumnsOf(write)!)
+            .eq('id', write.characterId)
+            .eq('owner_id', ownerId)
+            .select('id');
+        if (updated.isEmpty) {
+          throw const PostgrestException(
+            message: 'Aucune ligne affectée (currency).',
             code: '42501',
           );
         }
@@ -504,6 +582,7 @@ class PendingCharacterWriteSyncer {
         'une utilisation d\'aptitude de classe',
       PendingCharacterWriteKind.rest => 'un repos',
       PendingCharacterWriteKind.conditions => 'vos conditions',
+      PendingCharacterWriteKind.currency => 'vos monnaies',
     };
     return 'Un ajustement de $label resté en attente a été refusé par le '
         'serveur et a été abandonné (personnage supprimé, accès retiré, ou '
@@ -554,6 +633,8 @@ class PendingCharacterWriteSyncer {
                 if (key is String) key,
           ],
         };
+      case PendingCharacterWriteKind.currency:
+        return {...?validCurrencyTotals(write.payload['totals'])};
       case PendingCharacterWriteKind.spellSlot:
       case PendingCharacterWriteKind.innateSpell:
       case PendingCharacterWriteKind.classFeature:

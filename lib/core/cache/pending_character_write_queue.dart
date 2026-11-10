@@ -6,7 +6,7 @@ import 'package:drift/drift.dart';
 import 'app_database.dart';
 import 'app_database.dart' as drift_rows show PendingCharacterWrite;
 
-/// Les sept types d'écriture rendus hors-ligne-capables — voir la doc de
+/// Les huit types d'écriture rendus hors-ligne-capables — voir la doc de
 /// classe de [PendingCharacterWrites]. Périmètre étendu le 09/10/2026 (D11 du
 /// registre de dette technique, catégorie A « bloque la mise en production ») :
 /// `castSpell`/`setInnateSpellUsesSpent`/`useClassFeature`/`applyRest`
@@ -51,7 +51,15 @@ enum PendingCharacterWriteKind {
   /// complet `characters.conditions` (clés canoniques + clés inconnues
   /// préservées). Au plus une entrée par personnage (`targetId` vide) :
   /// dernière écriture gagnante. Payload `{"conditions": [clés]}`.
-  conditions('conditions');
+  conditions('conditions'),
+
+  /// `SupabaseCharacterRepository.adjustCurrency`/`addReward` sans objet
+  /// (T3, P15) : totaux **absolus** des monnaies touchées. Au plus une entrée
+  /// par personnage (`targetId` vide) : dernière écriture gagnante par
+  /// monnaie. Payload `{"totals": {"currency_gp": n, ...}, "bases":
+  /// {"currency_gp": n, ...}}` — `bases` = valeur serveur connue au premier
+  /// enfilage, pour la détection de modification concurrente (F19/D178).
+  currency('currency');
 
   const PendingCharacterWriteKind(this.storageKey);
 
