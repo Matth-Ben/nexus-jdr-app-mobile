@@ -24,7 +24,8 @@ extension ConditionTypeTexts on ConditionType {
     ConditionType.unconscious => l10n.conditionUnconsciousLabel,
   };
 
-  /// Règle résumée (≤ 90 caractères), purement informative.
+  /// Règle résumée (≤ 90 caractères en français, ≤ 100 en anglais — vérifié par
+  /// `condition_texts_test.dart`), purement informative.
   String rule(AppLocalizations l10n) => switch (this) {
     ConditionType.blinded => l10n.conditionBlindedRule,
     ConditionType.charmed => l10n.conditionCharmedRule,

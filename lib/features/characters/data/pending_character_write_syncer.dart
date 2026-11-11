@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/crash_reporting/crash_reporter.dart';
+import '../../../core/network/transport_failure.dart';
 import '../../../core/rules/spell_status.dart';
 import '../domain/currency_kind.dart';
 import '../domain/offline_inventory_writes.dart';
@@ -280,8 +281,16 @@ class PendingCharacterWriteSyncer {
             try {
               conflict = await _detectConcurrentChange(write, ownerId: ownerId);
               await _applyWrite(write, ownerId: ownerId);
-            } on PostgrestException catch (error) {
-              if (_isNonRetryable(error)) {
+            } catch (error) {
+              // D194 : un certificat TLS invalide ne se résout pas en
+              // retentant — compté comme un refus non rejouable (abandon au
+              // seuil avec alerte) plutôt que retenté indéfiniment. Le seuil
+              // laisse passer un certificat transitoirement faux (portail
+              // captif).
+              final nonRetryable = error is PostgrestException
+                  ? _isNonRetryable(error)
+                  : isCertificateFailure(error);
+              if (nonRetryable) {
                 final justAbandoned = await _pendingWrites
                     .recordNonRetryableFailure(
                       write: write,

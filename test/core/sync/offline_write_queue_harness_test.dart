@@ -1156,6 +1156,17 @@ void main() {
     expect(isTransportFailure(TimeoutException('x')), isTrue);
     expect(isTransportFailure(http.ClientException('x')), isTrue);
     expect(isTransportFailure(const HandshakeException('x')), isTrue);
+    // D194 : un certificat invalide n'est pas récupérable en retentant.
+    expect(isTransportFailure(const CertificateException('x')), isFalse);
+    expect(
+      isTransportFailure(
+        const HandshakeException('x', OSError('CERTIFICATE_VERIFY_FAILED', 1)),
+      ),
+      isFalse,
+    );
+    expect(isCertificateFailure(const CertificateException('x')), isTrue);
+    expect(isCertificateFailure(const HandshakeException('x')), isFalse);
+    expect(isCertificateFailure(const SocketException('x')), isFalse);
     expect(isTransportFailure(const HttpException('x')), isTrue);
     expect(
       isTransportFailure(PostgrestException(message: 'x', code: '42501')),

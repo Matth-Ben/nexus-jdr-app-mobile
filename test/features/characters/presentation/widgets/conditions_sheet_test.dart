@@ -397,24 +397,28 @@ void main() {
   });
 
   group('T8 : police x2,0 avec bannière d erreur', () {
-    testWidgets('pied non défilant + bannière : aucun débordement', (
-      tester,
-    ) async {
-      await _open(
-        tester,
-        scale: 2,
-        onSave: (_) async =>
-            'Hors ligne : cette action n a pas pu être enregistrée. Réessayez '
-            'une fois reconnecté.',
-      );
-      await _tapRow(tester, 'Charmé');
-      await tester.tap(find.text('ENREGISTRER'));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'pied défilant + bannière : aucun débordement, ENREGISTRER atteignable',
+      (tester) async {
+        await _open(
+          tester,
+          scale: 2,
+          onSave: (_) async =>
+              'Hors ligne : cette action n a pas pu être enregistrée. Réessayez '
+              'une fois reconnecté.',
+        );
+        await _tapRow(tester, 'Charmé');
+        await tester.tap(find.text('ENREGISTRER'));
+        await tester.pumpAndSettle();
 
-      expect(find.byType(AlertBanner), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      expect(find.text('ENREGISTRER'), findsOneWidget);
-    });
+        expect(find.byType(AlertBanner), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        expect(find.text('ENREGISTRER'), findsOneWidget);
+        // D195 (d) : le bouton reste atteignable (non masqué, hors de l'écran
+        // ou recouvert) malgré la bannière et la police x2,0.
+        expect(find.text('ENREGISTRER').hitTestable(), findsOneWidget);
+      },
+    );
   });
 
   group('T11 : cases accessibles', () {

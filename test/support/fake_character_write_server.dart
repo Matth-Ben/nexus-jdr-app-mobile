@@ -93,6 +93,7 @@ class FakeCharacterWriteServer {
   int _failBefore = 0;
   int _failAfterApply = 0;
   String? _rejectSqlstate;
+  Object? _writeError;
 
   /// Appelé après chaque requête d'écriture appliquée (avant la perte
   /// éventuelle de réponse) : permet à un test d'injecter un
@@ -112,6 +113,12 @@ class FakeCharacterWriteServer {
   void rejectWith(String sqlstate) => _rejectSqlstate = sqlstate;
 
   void clearRejection() => _rejectSqlstate = null;
+
+  /// Toute écriture lève [error] (ex. une erreur de certificat TLS), sans rien
+  /// appliquer, jusqu'à [clearWriteError].
+  void failWritesWith(Object error) => _writeError = error;
+
+  void clearWriteError() => _writeError = null;
 
   /// Modification par un autre client : fusionnée dans [characterRow].
   void concurrentChange(Map<String, dynamic> columns) {
@@ -171,6 +178,12 @@ class FakeCharacterWriteServer {
       _failBefore--;
       record(applied: false);
       throw const SocketException('Requête perdue avant envoi (faux serveur).');
+    }
+
+    final writeError = _writeError;
+    if (writeError != null) {
+      record(applied: false);
+      throw writeError;
     }
 
     final sqlstate = _rejectSqlstate;
