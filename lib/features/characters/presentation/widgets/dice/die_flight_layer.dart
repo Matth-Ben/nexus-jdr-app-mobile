@@ -9,20 +9,25 @@ import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/theme/app_typography.dart';
 import '../../../../../l10n/app_localizations.dart';
 import '../../../domain/dice3d/d20_orientation.dart';
+import '../../../domain/dice3d/dice_flight_simulator.dart';
 import '../../../domain/dice_roller.dart';
 import 'die_flight.dart';
-import 'die_motion.dart';
+import 'die_flight_runner.dart';
 import 'die_number_badge.dart';
 import 'die_painter.dart';
 import 'die_shader_cache.dart';
 import 'die_skin.dart';
 
 /// Ce que la couche plein écran doit montrer pour un jet : résultat (déjà
-/// tiré), skin, et les points d'injection de test.
+/// tiré), skin, mise en page, piste simulée (ou `null` = repli niveau 0) et
+/// les points d'injection de test.
 class DiceFlightConfig {
   DiceFlightConfig({
     required this.result,
     required this.skin,
+    required this.layout,
+    required this.track,
+    required this.skip,
     required this.flightRandom,
     required this.onFailure,
     this.shaderCache,
@@ -31,9 +36,17 @@ class DiceFlightConfig {
 
   final RollResult result;
   final DieSkin skin;
+  final DiceFlightLayout layout;
 
-  /// `Random` **distinct** de celui du tirage : il ne choisit que le chemin
-  /// du dé (cosmétique), jamais le résultat.
+  /// Piste simulée ; `null` : la simulation a échoué, repli « niveau 0 »
+  /// (ancienne polyligne).
+  final DiceFlightTrack? track;
+
+  /// Saut au tap (glissement de 160 ms), partagé par les deux dés.
+  final DieSkipState skip;
+
+  /// `Random` **distinct** de celui du tirage : il ne sert qu'au chemin du
+  /// repli niveau 0, jamais au résultat.
   final math.Random flightRandom;
   final DieShaderCache? shaderCache;
   final VoidCallback? paintProbe;
@@ -57,38 +70,38 @@ class DiceFlightLayer extends StatelessWidget {
     required this.progress,
     required this.config,
     required this.settled,
-    required this.restTop,
     required this.onSkip,
     super.key,
   });
 
-  /// Valeur (0..1) du contrôleur unique de la feuille.
+  /// Valeur (0..1) du contrôleur linéaire de la feuille.
   final Animation<double> progress;
   final ValueListenable<DiceFlightConfig> config;
 
   /// `true` une fois le dé posé : la couche laisse alors passer les taps.
   final ValueListenable<bool> settled;
-
-  /// Haut de la feuille (coordonnée écran), mesuré une fois la feuille
-  /// arrivée ; `null` tant qu'inconnu.
-  final ValueListenable<double?> restTop;
   final VoidCallback onSkip;
 
   @override
   Widget build(BuildContext context) {
-    return ExcludeSemantics(
-      child: ValueListenableBuilder<bool>(
-        valueListenable: settled,
-        builder: (context, done, child) =>
-            IgnorePointer(ignoring: done, child: child),
-        child: ValueListenableBuilder<DiceFlightConfig>(
-          valueListenable: config,
-          builder: (context, cfg, _) => _FlightScene(
-            key: ValueKey(cfg),
-            config: cfg,
-            progress: progress,
-            restTop: restTop,
-            onSkip: onSkip,
+    // L'Overlay racine est hors de tout Material : sans ce `Material`, les
+    // textes de la couche héritent du `DefaultTextStyle` d'erreur de
+    // MaterialApp (souligné jaune double).
+    return Material(
+      type: MaterialType.transparency,
+      child: ExcludeSemantics(
+        child: ValueListenableBuilder<bool>(
+          valueListenable: settled,
+          builder: (context, done, child) =>
+              IgnorePointer(ignoring: done, child: child),
+          child: ValueListenableBuilder<DiceFlightConfig>(
+            valueListenable: config,
+            builder: (context, cfg, _) => _FlightScene(
+              key: ValueKey(cfg),
+              config: cfg,
+              progress: progress,
+              onSkip: onSkip,
+            ),
           ),
         ),
       ),
@@ -100,14 +113,12 @@ class _FlightScene extends StatefulWidget {
   const _FlightScene({
     required this.config,
     required this.progress,
-    required this.restTop,
     required this.onSkip,
     super.key,
   });
 
   final DiceFlightConfig config;
   final Animation<double> progress;
-  final ValueListenable<double?> restTop;
   final VoidCallback onSkip;
 
   @override
@@ -115,71 +126,47 @@ class _FlightScene extends StatefulWidget {
 }
 
 class _FlightSceneState extends State<_FlightScene> {
-  List<DieFlightPlan>? _plans;
-  Size? _planSize;
-  late final List<PlateProgress> _progress = [
-    for (var i = 0; i < widget.config.result.dice.length; i++)
-      PlateProgress(widget.progress, i, widget.config.result.dice.length),
-  ];
+  late final List<DieFlightRunner> _runners = _buildRunners();
 
-  @override
-  void initState() {
-    super.initState();
-    widget.restTop.addListener(_onRestTop);
-  }
-
-  @override
-  void dispose() {
-    widget.restTop.removeListener(_onRestTop);
-    super.dispose();
-  }
-
-  void _onRestTop() {
-    if (mounted) setState(() => _plans = null);
-  }
-
-  double _dieSize(double width) => widget.config.result.dice.length == 1
-      ? DieFlightSizes.single(width)
-      : DieFlightSizes.pair(width);
-
-  List<DieFlightPlan> _buildPlans(MediaQueryData media) {
-    final result = widget.config.result;
-    final dieSize = _dieSize(media.size.width);
-    final table = tableRect(
-      media.size,
-      top: media.padding.top,
-      bottom: media.padding.bottom,
-    );
-    final sheetTop = widget.restTop.value ?? media.size.height * 0.5;
-    final rests = restPoints(
-      table: table,
-      sheetTop: sheetTop,
-      dieSize: dieSize,
-      count: result.dice.length,
-    );
+  List<DieFlightRunner> _buildRunners() {
+    final cfg = widget.config;
+    final dice = cfg.result.dice;
+    final layout = cfg.layout;
+    final track = cfg.track;
     return [
-      for (var i = 0; i < result.dice.length; i++)
-        DieFlightPlan.build(
-          table: table,
-          rest: rests[i],
-          radius: dieSize * kDieRadiusFraction,
-          random: widget.config.flightRandom,
-        ),
+      for (var i = 0; i < dice.length; i++)
+        if (track != null)
+          DieFlightRunner.track(
+            track: track,
+            die: i,
+            rest: layout.rests[i],
+            target: D20Orientation.forValue(dice[i]),
+            diameter: layout.diameter,
+            skip: cfg.skip,
+          )
+        else
+          DieFlightRunner.plan(
+            plan: DieFlightPlan.build(
+              table: layout.table,
+              rest: layout.rests[i],
+              radius: layout.radius,
+              random: cfg.flightRandom,
+            ),
+            die: i,
+            count: dice.length,
+            rest: layout.rests[i],
+            target: D20Orientation.forValue(dice[i]),
+            diameter: layout.diameter,
+            skip: cfg.skip,
+          ),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    if (_plans == null || _planSize != media.size) {
-      // Un changement de taille en vol est géré par la feuille (saut à
-      // l'état posé) ; ici on recalcule seulement le repos.
-      _plans = _buildPlans(media);
-      _planSize = media.size;
-    }
-    final result = widget.config.result;
+    final cfg = widget.config;
+    final result = cfg.result;
     final pair = result.dice.length == 2;
-    final dieSize = _dieSize(media.size.width);
     final natural = result.isNaturalTwenty
         ? DieNatural.twenty
         : result.isNaturalOne
@@ -191,19 +178,18 @@ class _FlightSceneState extends State<_FlightScene> {
       children: [
         for (var i = 0; i < result.dice.length; i++)
           _Shadow(
-            progress: _progress[i],
-            plan: _plans![i],
-            dieSize: dieSize,
+            progress: widget.progress,
+            runner: _runners[i],
+            layout: cfg.layout,
             opacity: result.discardedIndex == i ? 0.55 : 1,
           ),
         for (var i = 0; i < result.dice.length; i++)
           _FlyingDie(
             key: ValueKey('flying-die-$i'),
-            config: widget.config,
+            config: cfg,
             value: result.dice[i],
-            progress: _progress[i],
-            plan: _plans![i],
-            dieSize: dieSize,
+            progress: widget.progress,
+            runner: _runners[i],
             natural: result.discardedIndex == i ? DieNatural.none : natural,
             discarded: result.discardedIndex == i,
             kept: pair && result.discardedIndex != i,
@@ -222,23 +208,24 @@ class _FlightSceneState extends State<_FlightScene> {
   }
 }
 
-/// Ombre ellipse au sol : taille et opacité décroissent avec la hauteur.
+/// Ombre ellipse au sol : taille, opacité et décalage dépendent de la
+/// hauteur ; flou créé une fois.
 class _Shadow extends StatelessWidget {
   const _Shadow({
     required this.progress,
-    required this.plan,
-    required this.dieSize,
+    required this.runner,
+    required this.layout,
     required this.opacity,
   });
 
   final Animation<double> progress;
-  final DieFlightPlan plan;
-  final double dieSize;
+  final DieFlightRunner runner;
+  final DiceFlightLayout layout;
   final double opacity;
 
   @override
   Widget build(BuildContext context) {
-    final box = dieSize * DieFlightSizes.boxFactor;
+    final box = layout.box;
     return Positioned(
       left: 0,
       top: 0,
@@ -247,15 +234,15 @@ class _Shadow extends StatelessWidget {
       child: AnimatedBuilder(
         animation: progress,
         builder: (context, child) {
-          final g = plan.groundAt(progress.value);
+          runner.update(progress.value);
           return Transform.translate(
-            offset: Offset(g.dx - box / 2, g.dy - box / 2),
+            offset: Offset(runner.x - box / 2, runner.y - box / 2),
             child: child,
           );
         },
         child: RepaintBoundary(
           child: CustomPaint(
-            painter: _ShadowPainter(progress, dieSize, opacity),
+            painter: _ShadowPainter(progress, runner, opacity),
           ),
         ),
       ),
@@ -264,26 +251,38 @@ class _Shadow extends StatelessWidget {
 }
 
 class _ShadowPainter extends CustomPainter {
-  _ShadowPainter(this.progress, this.dieSize, this.opacity)
-    : super(repaint: progress);
+  _ShadowPainter(this.progress, this.runner, this.opacity)
+    : super(repaint: progress) {
+    _paint.maskFilter = MaskFilter.blur(
+      BlurStyle.normal,
+      runner.diameter * 0.05,
+    );
+  }
 
   final Animation<double> progress;
-  final double dieSize;
+  final DieFlightRunner runner;
   final double opacity;
   final Paint _paint = Paint();
 
   @override
   void paint(Canvas canvas, Size size) {
-    final h = DieFlightPlan.heightAt(progress.value).clamp(0.0, 1.0);
-    final radius = dieSize * kDieRadiusFraction;
+    runner.update(progress.value);
+    final h = runner.h.clamp(0.0, 1.0);
+    final d = runner.diameter;
+    final r = d / 2;
+    // Pose : ombre x 1,15.
+    final pose = 1 + 0.15 * runner.poseU;
     _paint.color = AppColors.cardDiffuseShadow.withValues(
-      alpha: 0.2 * (1 - 0.6 * h) * opacity,
+      alpha: (0.2 * (1 - 0.6 * h) * opacity * pose).clamp(0.0, 1.0),
     );
     canvas.drawOval(
       Rect.fromCenter(
-        center: Offset(size.width / 2, size.height / 2 + radius * 0.92),
-        width: radius * 1.7 * (1 - 0.35 * h),
-        height: radius * 0.4 * (1 - 0.35 * h),
+        center: Offset(
+          size.width / 2 + 0.06 * d * (1 + h),
+          size.height / 2 + 0.92 * r,
+        ),
+        width: 1.7 * r * (1 - 0.35 * h) * pose,
+        height: 0.4 * r * (1 - 0.35 * h) * pose,
       ),
       _paint,
     );
@@ -291,20 +290,21 @@ class _ShadowPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ShadowPainter old) =>
-      old.progress != progress || old.opacity != opacity;
+      old.progress != progress ||
+      old.runner != runner ||
+      old.opacity != opacity;
 }
 
-/// Un dé en vol : boîte de 1,25 × sa taille nominale, translatée hors du
+/// Un dé en vol : boîte de 1,25 × son côté nominal, translatée hors du
 /// `RepaintBoundary` (seule la translation se reconstruit, le dessin est
-/// piloté par le painter), pastille du chiffre et étiquette qui apparaissent
-/// à la pose.
+/// piloté par le painter), pastille du chiffre et étiquette (ancrée sous le
+/// bord du dé) qui apparaissent à la pose.
 class _FlyingDie extends StatefulWidget {
   const _FlyingDie({
     required this.config,
     required this.value,
     required this.progress,
-    required this.plan,
-    required this.dieSize,
+    required this.runner,
     required this.natural,
     required this.discarded,
     required this.kept,
@@ -315,8 +315,7 @@ class _FlyingDie extends StatefulWidget {
   final DiceFlightConfig config;
   final int value;
   final Animation<double> progress;
-  final DieFlightPlan plan;
-  final double dieSize;
+  final DieFlightRunner runner;
   final DieNatural natural;
   final bool discarded;
   final bool kept;
@@ -330,8 +329,9 @@ class _FlyingDieState extends State<_FlyingDie> {
   late final DieSkin _skin = widget.config.skin.ensureReadable();
   late DieSurfacePainter _painter;
   ui.FragmentShader? _shader;
-  late final Animation<double> _fade = widget.progress.drive(
-    CurveTween(curve: const ResultFadeCurve()),
+  late final Animation<double> _fade = RunnerFade(
+    widget.progress,
+    widget.runner,
   );
 
   DieShaderCache get _cache =>
@@ -366,13 +366,13 @@ class _FlyingDieState extends State<_FlyingDie> {
 
   DieSurfacePainter _buildPainter() => DieSurfacePainter(
     progress: widget.progress,
+    runner: widget.runner,
     value: widget.value,
     skin: _skin,
     shader: _shader,
     natural: widget.natural,
     struck: widget.discarded,
     opacity: widget.discarded ? 0.55 : 1,
-    free: true,
     onFailure: (_) => widget.config.onFailure(),
     debugProbe: widget.config.paintProbe,
   );
@@ -386,10 +386,12 @@ class _FlyingDieState extends State<_FlyingDie> {
 
   @override
   Widget build(BuildContext context) {
-    final box = widget.dieSize * DieFlightSizes.boxFactor;
-    final fraction = kDieRadiusFraction / DieFlightSizes.boxFactor;
+    final layout = widget.config.layout;
+    final box = layout.box;
+    final fraction = kDieRadiusFraction / DiceFlightLayout.boxFactor;
     final center = D20Orientation.restCenter(widget.value);
     final opacity = widget.discarded ? 0.55 : 1.0;
+    final runner = widget.runner;
 
     return Positioned(
       left: 0,
@@ -399,11 +401,12 @@ class _FlyingDieState extends State<_FlyingDie> {
       child: AnimatedBuilder(
         animation: widget.progress,
         builder: (context, child) {
-          final t = widget.progress.value;
-          final g = widget.plan.groundAt(t);
-          final lift = DieFlightPlan.liftPx(t, widget.dieSize);
+          runner.update(widget.progress.value);
           return Transform.translate(
-            offset: Offset(g.dx - box / 2, g.dy - lift - box / 2),
+            offset: Offset(
+              runner.x - box / 2,
+              runner.y - runner.lift - box / 2,
+            ),
             child: child,
           );
         },
@@ -429,11 +432,17 @@ class _FlyingDieState extends State<_FlyingDie> {
               ),
             ),
             if (widget.labelled)
-              Align(
-                alignment: const Alignment(0, 0.94),
-                child: FadeTransition(
-                  opacity: _fade,
-                  child: _DieLabel(kept: widget.kept),
+              // Étiquette ancrée 4 dp sous le bord du dé (centre + 0,42·S + 4),
+              // elle suit le dé où qu'il se pose.
+              Positioned(
+                left: 0,
+                right: 0,
+                top: layout.labelTop,
+                child: Center(
+                  child: FadeTransition(
+                    opacity: _fade,
+                    child: _DieLabel(kept: widget.kept),
+                  ),
                 ),
               ),
           ],

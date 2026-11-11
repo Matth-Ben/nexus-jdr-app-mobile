@@ -5,11 +5,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_colors.dart';
-import '../../../domain/dice3d/d20_orientation.dart';
 import '../../../domain/dice3d/die_math.dart';
 import '../../../domain/dice3d/icosahedron.dart';
 import 'die_flight.dart';
-import 'die_motion.dart';
+import 'die_flight_runner.dart';
 import 'die_skin.dart';
 
 /// Rayon du dé (sphère circonscrite) en fraction du plateau.
@@ -44,17 +43,16 @@ enum DieRenderLevel {
 class DieSurfacePainter extends CustomPainter {
   DieSurfacePainter({
     required this.progress,
+    required this.runner,
     required this.value,
     required this.skin,
     this.shader,
     this.natural = DieNatural.none,
     this.struck = false,
     this.opacity = 1,
-    this.free = false,
     this.onFailure,
     this.debugProbe,
-  }) : _target = D20Orientation.forValue(value),
-       _targetFace = Icosahedron.faceIndexOf(value),
+  }) : _targetFace = Icosahedron.faceIndexOf(value),
        super(repaint: progress) {
     for (var step = 0; step < skin.shadeSteps; step++) {
       _stepColors[step] = skin.faceColorArgb(step, opacity: opacity);
@@ -85,7 +83,11 @@ class DieSurfacePainter extends CustomPainter {
 
   static const double _digitFontSize = 14;
 
+  /// Valeur (0..1) du contrôleur linéaire : seule source de repeinte.
   final Animation<double> progress;
+
+  /// Lecteur de la piste : position, orientation, échelle, squash, fondu.
+  final DieFlightRunner runner;
   final int value;
   final DieSkin skin;
 
@@ -99,11 +101,6 @@ class DieSurfacePainter extends CustomPainter {
   /// Opacité globale (0,55 pour le dé écarté).
   final double opacity;
 
-  /// Mode « couche plein écran » : le dé est dessiné au centre de sa boîte
-  /// (la boîte est déplacée par la couche), ni décalage ni hauteur ni ombre
-  /// propres (l'ombre est un widget à part), échelle de vol en plus.
-  final bool free;
-
   final void Function(Object error)? onFailure;
 
   /// Appelé au début de chaque dessin (tests : simuler une panne).
@@ -115,9 +112,7 @@ class DieSurfacePainter extends CustomPainter {
   bool get failed => _failed;
   bool _failed = false;
 
-  final Quat _target;
   final int _targetFace;
-  final DiePose _pose = DiePose();
 
   // Tampons réutilisés.
   final Float64List _rotated = Float64List(Icosahedron.vertexCount * 3);
@@ -134,7 +129,6 @@ class DieSurfacePainter extends CustomPainter {
   );
   final Paint _facePaint = Paint();
   final Paint _edgePaint = Paint();
-  final Paint _shadowPaint = Paint();
   final Paint _haloPaint = Paint();
   final Paint _strikePaint = Paint()
     ..style = PaintingStyle.stroke
@@ -165,26 +159,29 @@ class DieSurfacePainter extends CustomPainter {
 
   void _paint(Canvas canvas, Size size) {
     debugProbe?.call();
-    final t = progress.value;
-    DieMotion.evaluate(t, _target.w, _target.x, _target.y, _target.z, _pose);
-    final fade = DieTimeline.resultFade(t);
+    runner.update(progress.value);
+    final fade = runner.fade;
 
+    // Le dé est dessiné au centre de sa boîte ; la couche déplace la boîte
+    // (position, hauteur) et l'ombre est un widget à part.
     final side = math.min(size.width, size.height);
-    final fraction = free
-        ? kDieRadiusFraction / DieFlightSizes.boxFactor
-        : kDieRadiusFraction;
-    final baseRadius = fraction * side;
-    final flight = free ? DieFlightPlan.flightScale(t) : 1.0;
-    final radius = baseRadius * _pose.scale * flight;
-    final shake = natural == DieNatural.one ? DieTimeline.shakeOffsetDp(t) : 0;
-    final cx = free
-        ? size.width / 2 + shake
-        : size.width / 2 + _pose.offsetX * size.width + shake;
-    final cy = free ? size.height / 2 : size.height / 2 - _pose.lift * side;
+    final baseRadius = kDieRadiusFraction / DiceFlightLayout.boxFactor * side;
+    final radius = baseRadius * runner.scale;
+    final cx =
+        size.width / 2 + (natural == DieNatural.one ? runner.shakeDp : 0);
+    final cy = size.height / 2;
 
     _paintHalo(canvas, size, baseRadius, fade);
-    if (!free) _paintShadow(canvas, size, baseRadius);
     _rotateVertices();
+    final squashed = runner.squashX != 1 || runner.squashY != 1;
+    if (squashed) {
+      // Squash d'impact autour du centre du dé (pas de saveLayer).
+      canvas
+        ..save()
+        ..translate(cx, cy)
+        ..scale(runner.squashX, runner.squashY)
+        ..translate(-cx, -cy);
+    }
     final visible = _fillFaces(cx, cy, radius);
     if (visible > 0) {
       final vertices = ui.Vertices.raw(
@@ -207,6 +204,7 @@ class DieSurfacePainter extends CustomPainter {
         _edgePaint,
       );
     }
+    if (squashed) canvas.restore();
     if (struck && fade > 0) {
       // Trait parchemin de 3 dp cerné de bois foncé (1 dp de chaque côté).
       final from = Offset(size.width * 0.25, size.height * 0.75);
@@ -237,27 +235,8 @@ class DieSurfacePainter extends CustomPainter {
       ..drawCircle(center, baseRadius * 1.4, _haloPaint);
   }
 
-  void _paintShadow(Canvas canvas, Size size, double baseRadius) {
-    final airborne = (_pose.lift / 0.3).clamp(0.0, 1.0);
-    final alpha = 0.2 * (1 - 0.6 * airborne) * opacity;
-    _shadowPaint.color = AppColors.cardDiffuseShadow.withValues(alpha: alpha);
-    final rx = baseRadius * 0.85 * (1 - 0.35 * airborne);
-    final ry = baseRadius * 0.2 * (1 - 0.35 * airborne);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(
-          size.width / 2 + _pose.offsetX * size.width,
-          size.height / 2 + baseRadius * 0.92,
-        ),
-        width: rx * 2,
-        height: ry * 2,
-      ),
-      _shadowPaint,
-    );
-  }
-
   void _rotateVertices() {
-    final w = _pose.qw, x = _pose.qx, y = _pose.qy, z = _pose.qz;
+    final w = runner.qw, x = runner.qx, y = runner.qy, z = runner.qz;
     final r00 = 1 - 2 * (y * y + z * z);
     final r01 = 2 * (x * y - z * w);
     final r02 = 2 * (x * z + y * w);
@@ -370,5 +349,5 @@ class DieSurfacePainter extends CustomPainter {
       oldDelegate.natural != natural ||
       oldDelegate.struck != struck ||
       oldDelegate.opacity != opacity ||
-      oldDelegate.free != free;
+      oldDelegate.runner != runner;
 }

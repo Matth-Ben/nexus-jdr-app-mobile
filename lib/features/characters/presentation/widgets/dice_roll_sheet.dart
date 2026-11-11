@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
@@ -14,12 +15,26 @@ import '../../../../core/widgets/segmented_toggle.dart';
 import '../../../../core/widgets/selectable_option_tile.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/dice3d/d20_orientation.dart';
+import '../../domain/dice3d/dice_flight_simulator.dart';
+import '../../domain/dice3d/die_math.dart';
 import '../../domain/dice_roller.dart';
 import '../../domain/signed_modifier_formatter.dart';
+import 'dice/dice_haptics.dart';
+import 'dice/die_flight.dart';
 import 'dice/die_flight_layer.dart';
+import 'dice/die_flight_runner.dart';
 import 'dice/die_motion.dart';
 import 'dice/die_shader_cache.dart';
 import 'dice/die_skin.dart';
+
+/// Construit la piste d'un lancer (remplace la simulation dans les tests) ;
+/// `null` = la simulation a échoué (repli niveau 0).
+typedef DiceFlightTrackBuilder = DiceFlightTrack? Function(
+  DiceFlightLayout layout,
+  List<Quat> targets,
+  double duration,
+);
 
 /// Annonce d'accessibilité du résultat d'un jet (remplaçable dans les tests).
 typedef DiceRollAnnouncer = void Function(BuildContext context, String text);
@@ -67,6 +82,8 @@ Future<void> showDiceRollSheet(
   @visibleForTesting DieShaderCache? shaderCache,
   @visibleForTesting VoidCallback? paintProbe,
   @visibleForTesting Random? flightRandom,
+  @visibleForTesting DiceFlightTrackBuilder? trackBuilder,
+  @visibleForTesting DiceHapticPlayer? haptics,
 }) {
   // Chargement du shader pendant l'ouverture de la feuille, jamais pendant
   // l'animation (ne lève jamais : un échec = rendu de niveau 1).
@@ -77,7 +94,9 @@ Future<void> showDiceRollSheet(
     backgroundColor: Colors.transparent,
     // Le dé vole sur la page entière : la feuille laisse de la place (62 % de
     // la hauteur au plus).
+    // `maxWidth` 640 : conserve la contrainte M3 par défaut des feuilles.
     constraints: BoxConstraints(
+      maxWidth: 640,
       maxHeight: MediaQuery.sizeOf(context).height * 0.62,
     ),
     builder: (sheetContext) => _DiceRollSheetContent(
@@ -89,6 +108,8 @@ Future<void> showDiceRollSheet(
       shaderCache: shaderCache,
       paintProbe: paintProbe,
       flightRandom: flightRandom,
+      trackBuilder: trackBuilder,
+      haptics: haptics,
     ),
   );
 }
@@ -103,6 +124,8 @@ class _DiceRollSheetContent extends StatefulWidget {
     this.shaderCache,
     this.paintProbe,
     this.flightRandom,
+    this.trackBuilder,
+    this.haptics,
   });
 
   final String label;
@@ -119,6 +142,12 @@ class _DiceRollSheetContent extends StatefulWidget {
 
   /// `Random` de la trajectoire du dé (cosmétique, distinct de [random]).
   final Random? flightRandom;
+
+  /// Remplace la simulation (tests : piste fixe ou échec simulé).
+  final DiceFlightTrackBuilder? trackBuilder;
+
+  /// Retour haptique (remplaçable dans les tests).
+  final DiceHapticPlayer? haptics;
 
   @override
   State<_DiceRollSheetContent> createState() => _DiceRollSheetContentState();
@@ -145,11 +174,19 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
   /// Couche plein écran qui possède le vol du dé (insérée dans l'`Overlay`
   /// racine, retirée au `dispose`).
   OverlayEntry? _entry;
-  late final ValueNotifier<DiceFlightConfig> _flightConfig;
+  ValueNotifier<DiceFlightConfig>? _flightConfig;
   final ValueNotifier<bool> _settledNotifier = ValueNotifier<bool>(false);
-  final ValueNotifier<double?> _restTop = ValueNotifier<double?>(null);
-  final GlobalKey _sheetKey = GlobalKey();
-  Animation<double>? _routeAnimation;
+
+  /// Retours haptiques du lancer (joués depuis le contrôleur, jamais depuis
+  /// `paint`).
+  late final DiceHapticsDriver _haptics = DiceHapticsDriver(
+    widget.haptics ?? const SystemDiceHapticPlayer(),
+  );
+
+  /// Piste simulée du lancer courant (`null` : repli niveau 0).
+  DiceFlightTrack? _track;
+  double _durationSeconds = DiceFlightLayout.durationFor(1);
+  DieSkipState _skipState = DieSkipState();
 
   /// La couche n'a pas pu être posée ou dessinée : retour au dé statique
   /// dans la feuille.
@@ -160,26 +197,72 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: DieTimeline.totalDuration(1),
+      duration: const Duration(milliseconds: 1600),
     )..addStatusListener(_onStatus);
-    _flightConfig = ValueNotifier(_flightConfigFor(_result));
+    // Contrôleur linéaire : seules courbes = ressort et orientation de la
+    // simulation (aucune courbe ici).
+    _controller.addListener(_onTick);
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _insertOverlay());
   }
 
-  DiceFlightConfig _flightConfigFor(RollResult result) => DiceFlightConfig(
-    result: result,
-    skin: widget.skin,
-    flightRandom: widget.flightRandom ?? Random(),
-    shaderCache: widget.shaderCache,
-    paintProbe: widget.paintProbe,
-    onFailure: _onOverlayFailure,
-  );
+  /// Mise en page, simulation et saut du lancer courant. La simulation est
+  /// calculée **une seule fois** par lancer (< 1 ms) ; si elle échoue,
+  /// [DiceFlightConfig.track] est `null` (repli niveau 0).
+  DiceFlightConfig _buildFlightConfig() {
+    final view = View.of(context);
+    final dpr = view.devicePixelRatio;
+    final result = _result;
+    final layout = DiceFlightLayout.compute(
+      view.physicalSize / dpr,
+      paddingTop: view.padding.top / dpr,
+      paddingBottom: view.padding.bottom / dpr,
+      count: result.dice.length,
+    );
+    final duration = DiceFlightLayout.durationFor(result.dice.length);
+    final targets = [
+      for (final value in result.dice) D20Orientation.forValue(value),
+    ];
+    final random = widget.flightRandom ?? Random();
+    DiceFlightTrack? track;
+    try {
+      track =
+          widget.trackBuilder?.call(layout, targets, duration) ??
+          (widget.trackBuilder == null
+              ? DiceFlightSimulator.simulate(
+                  layout.arena(targets, duration),
+                  random,
+                )
+              : null);
+    } on Object catch (error) {
+      if (kDebugMode) debugPrint('Simulation du dé échouée : $error');
+    }
+    _track = track;
+    _skipState = DieSkipState();
+    _durationSeconds =
+        track?.duration ??
+        DieTimeline.totalDuration(result.dice.length).inMilliseconds / 1000;
+    return DiceFlightConfig(
+      result: result,
+      skin: widget.skin,
+      layout: layout,
+      track: track,
+      skip: _skipState,
+      flightRandom: random,
+      shaderCache: widget.shaderCache,
+      paintProbe: widget.paintProbe,
+      onFailure: _onOverlayFailure,
+    );
+  }
+
+  /// Animations coupées : pose immédiate, aucune haptique.
+  bool get _animationsDisabled => MediaQuery.disableAnimationsOf(context);
+
+  /// Navigation accessible : pose immédiate, seulement le clic de pose.
+  bool get _accessibleNavigation => MediaQuery.accessibleNavigationOf(context);
 
   /// Animations coupées ou navigation accessible : pose immédiate.
-  bool get _reducedMotion =>
-      MediaQuery.disableAnimationsOf(context) ||
-      MediaQuery.accessibleNavigationOf(context);
+  bool get _reducedMotion => _animationsDisabled || _accessibleNavigation;
 
   void _insertOverlay() {
     if (!mounted || _overlayFailed || _entry != null) return;
@@ -191,42 +274,12 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
     _entry = OverlayEntry(
       builder: (_) => DiceFlightLayer(
         progress: _controller,
-        config: _flightConfig,
+        config: _flightConfig!,
         settled: _settledNotifier,
-        restTop: _restTop,
         onSkip: _skip,
       ),
     );
     overlay.insert(_entry!);
-    _scheduleMeasure();
-  }
-
-  /// Lit le haut de la feuille (point de repos du dé au-dessus), une fois la
-  /// feuille arrivée.
-  void _scheduleMeasure() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final animation = ModalRoute.of(context)?.animation;
-      if (animation == null || animation.isCompleted) {
-        _measureSheetTop();
-        return;
-      }
-      if (_routeAnimation != animation) {
-        _routeAnimation?.removeStatusListener(_onRouteStatus);
-        _routeAnimation = animation..addStatusListener(_onRouteStatus);
-      }
-    });
-  }
-
-  void _onRouteStatus(AnimationStatus status) {
-    if (status == AnimationStatus.completed) _scheduleMeasure();
-  }
-
-  void _measureSheetTop() {
-    final box = _sheetKey.currentContext?.findRenderObject();
-    if (box is! RenderBox || !box.attached || !box.hasSize) return;
-    final top = box.localToGlobal(Offset.zero).dy;
-    if (_restTop.value != top) _restTop.value = top;
   }
 
   void _onOverlayFailure() {
@@ -250,9 +303,13 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
 
   @override
   void didChangeMetrics() {
-    // Changement de métriques en vol : saut à l'état posé, repos recalculé.
+    // Changement de métriques en vol : saut à l'état posé et repos recalculé
+    // pour la nouvelle taille d'écran.
     if (_controller.isAnimating) _controller.value = 1;
-    _scheduleMeasure();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _flightConfig == null) return;
+      _flightConfig!.value = _buildFlightConfig();
+    });
   }
 
   @override
@@ -271,13 +328,11 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _routeAnimation?.removeStatusListener(_onRouteStatus);
     // La couche plein écran disparaît avec la feuille.
     _removeEntry();
     _controller.dispose();
-    _flightConfig.dispose();
+    _flightConfig?.dispose();
     _settledNotifier.dispose();
-    _restTop.dispose();
     super.dispose();
   }
 
@@ -293,10 +348,8 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
     if (_isRolling) return;
     setState(() {
       _result = _roll();
-      _flightConfig.value = _flightConfigFor(_result);
       _startRoll();
     });
-    _scheduleMeasure();
   }
 
   /// Lance l'animation du jet courant (ou pose immédiatement si les
@@ -305,8 +358,26 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
     _starting = true;
     _settled = false;
     _settledNotifier.value = false;
-    _controller.duration = DieTimeline.totalDuration(_result.dice.length);
-    if (_reducedMotion) {
+    final config = _buildFlightConfig();
+    if (_flightConfig == null) {
+      _flightConfig = ValueNotifier(config);
+    } else {
+      _flightConfig!.value = config;
+    }
+    _controller.duration = Duration(
+      milliseconds: (_durationSeconds * 1000).round(),
+    );
+    _haptics.start(
+      DiceHapticsPlan.build(
+        impacts: _track?.impacts ?? const [],
+        duration: _durationSeconds,
+        reducedMotion: _animationsDisabled,
+        accessibleNavigation: _accessibleNavigation,
+      ),
+    );
+    // Couche en échec : pas de vol, pose immédiate (le dé statique ne doit
+    // pas révéler le résultat avant le fondu).
+    if (_reducedMotion || _overlayFailed) {
       _controller.value = 1;
       // Déjà à 1 (relance) : aucun changement de statut n'est notifié.
       _settle();
@@ -320,17 +391,32 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
     if (status == AnimationStatus.completed) _settle();
   }
 
+  void _onTick() {
+    if (_controller.isAnimating && !_skipState.active) {
+      _haptics.tick(_controller.value * _durationSeconds);
+    }
+  }
+
   void _settle() {
     if (_settled) return;
     _settled = true;
     _settledNotifier.value = true;
+    _haptics.settle();
     if (!_starting && mounted) setState(() {});
     _announceAfterFrame();
   }
 
-  /// Tap sur le plateau pendant le lancer : saute directement à l'état posé.
+  /// Tap pendant le lancer : glissement doux de 160 ms vers l'état posé (la
+  /// pose, l'annonce et le clic de pose suivent à la fin du glissement).
   void _skip() {
-    if (_controller.isAnimating) _controller.value = 1;
+    if (!_controller.isAnimating || _skipState.active) return;
+    _skipState.begin(_controller.value);
+    _haptics.cancelImpacts();
+    _controller.animateTo(
+      1,
+      duration: const Duration(milliseconds: DieSkipState.durationMs),
+      curve: Curves.linear,
+    );
   }
 
   void _announceAfterFrame() {
@@ -356,7 +442,6 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
     return SafeArea(
       top: false,
       child: Container(
-        key: _sheetKey,
         decoration: const BoxDecoration(color: AppColors.parchmentBg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -405,7 +490,7 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
                             FadeTransition(
                               opacity: _controller.drive(
                                 CurveTween(
-                                  curve: _EndFadeCurve(result.dice.length),
+                                  curve: _EndFadeCurve(_durationSeconds),
                                 ),
                               ),
                               child: Column(
@@ -461,16 +546,13 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
 
 /// Fondu de la formule : derniers 200 ms du contrôleur unique.
 class _EndFadeCurve extends Curve {
-  const _EndFadeCurve(this.plateCount);
+  const _EndFadeCurve(this.totalSeconds);
 
-  final int plateCount;
+  final double totalSeconds;
 
   @override
-  double transformInternal(double t) {
-    final total = DieTimeline.totalDuration(plateCount).inMilliseconds;
-    return ((t * total - (total - DieTimeline.fadeMs)) / DieTimeline.fadeMs)
-        .clamp(0.0, 1.0);
-  }
+  double transformInternal(double t) =>
+      ((t * totalSeconds - (totalSeconds - 0.2)) / 0.2).clamp(0.0, 1.0);
 }
 
 String _modeName(AppLocalizations l10n, RollMode mode) => switch (mode) {

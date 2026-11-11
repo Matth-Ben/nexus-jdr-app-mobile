@@ -60,9 +60,6 @@ void main() {
         expect(pose.qx, closeTo(target.x, 1e-12));
         expect(pose.qy, closeTo(target.y, 1e-12));
         expect(pose.qz, closeTo(target.z, 1e-12));
-        expect(pose.offsetX, closeTo(0, 1e-12));
-        expect(pose.lift, 0);
-        expect(pose.scale, closeTo(1, 1e-12));
       }
     });
 
@@ -101,28 +98,6 @@ void main() {
         expect(a, lessThanOrEqualTo(last + 1e-9));
         last = a;
       }
-    });
-
-    test('deux rebonds : le second à 35 % du premier', () {
-      var first = 0.0;
-      var second = 0.0;
-      for (var i = 0; i <= 1000; i++) {
-        final t = 0.15 + 0.55 * i / 1000;
-        final h = DieMotion.lift(t);
-        if (t < 0.15 + 0.55 * 0.55) {
-          first = math.max(first, h);
-        } else {
-          second = math.max(second, h);
-        }
-      }
-      expect(second / first, closeTo(0.35, 0.02));
-      expect(DieMotion.lift(0.70), closeTo(0, 1e-9));
-    });
-
-    test('échelle 1,00 -> 1,04 -> 1,00 pendant la pose seulement', () {
-      expect(DieMotion.scale(0.5), 1);
-      expect(DieMotion.scale(0.85), closeTo(1.04, 1e-9));
-      expect(DieMotion.scale(1), closeTo(1, 1e-12));
     });
   });
 

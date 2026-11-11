@@ -1,31 +1,15 @@
-/// Trajectoire cosmétique d'un dé lancé sur toute la page (P2b, addendum du
-/// 11/11/2026) : fonctions pures du temps. Le résultat est tiré avant par
-/// `DiceRoller` ; rien ici ne l'influence, seul le chemin varie (via un
-/// `Random` distinct et injectable).
+/// Géométrie du lancer sur toute la page (P2b, addendum 2 du 11/11/2026) :
+/// mise en page ([DiceFlightLayout]) et ancienne polyligne [DieFlightPlan],
+/// conservée comme repli « niveau 0 » si la simulation échoue. Le résultat est
+/// tiré avant par `DiceRoller` ; rien ici ne l'influence.
 library;
 
 import 'dart:math' as math;
 
 import 'package:flutter/animation.dart';
 
-/// Tailles du dé (côté de sa boîte « nominale », hors échelle de vol).
-abstract final class DieFlightSizes {
-  /// Un dé : 176 dp (tablette >= 600 dp : 220).
-  static double single(double screenWidth) => screenWidth >= 600 ? 220 : 176;
-
-  /// Deux dés : 136 dp chacun (tablette 168).
-  static double pair(double screenWidth) => screenWidth >= 600 ? 168 : 136;
-
-  /// Écart entre deux dés au repos.
-  static const double pairGap = 16;
-
-  /// La boîte de dessin est 25 % plus grande que le dé nominal (échelle de
-  /// vol jusqu'à 1,25).
-  static const double boxFactor = 1.25;
-
-  /// Marge de la table (écran moins zones système).
-  static const double tableMargin = 8;
-}
+import '../../../domain/dice3d/dice_flight_simulator.dart';
+import '../../../domain/dice3d/die_math.dart';
 
 /// Plan de vol d'un dé : polyligne de points de passage (positions au sol,
 /// dans le repère de l'écran).
@@ -112,38 +96,109 @@ class DieFlightPlan {
     if (c < 0.70) return arc(0.55, 0.70, 0.12, c);
     return 0;
   }
-
-  /// Échelle de vol : `1 + 0,25 · hauteur`.
-  static double flightScale(double t) => 1 + 0.25 * heightAt(t);
-
-  /// Décalage visuel vers le haut du dé par rapport à son ombre (dp).
-  static double liftPx(double t, double dieSize) =>
-      heightAt(t) * dieSize * 0.22;
 }
 
-/// Zone de jeu : écran moins zones système, marge de 8 dp.
-Rect tableRect(Size screen, {required double top, required double bottom}) {
-  const m = DieFlightSizes.tableMargin;
-  return Rect.fromLTRB(
-    m,
-    top + m,
-    screen.width - m,
-    screen.height - bottom - m,
+/// Mise en page du lancer : taille des dés, zone de jeu (« table ») et points
+/// de repos au-dessus de la feuille à son plafond de 62 % (sans attendre
+/// aucune mesure). `D` = diamètre visible ; côté nominal `S = D / 0,84` ;
+/// boîte de dessin `1,25 · S`.
+class DiceFlightLayout {
+  DiceFlightLayout._({
+    required this.screen,
+    required this.count,
+    required this.diameter,
+    required this.table,
+    required this.rests,
+    required this.freeTop,
+    required this.freeBottom,
+  });
+
+  /// Écart entre deux dés au repos.
+  static const double pairGap = 12;
+
+  /// Hauteur de la bande d'étiquette sous un dé (groupe dé + étiquette).
+  static const double labelBand = 24;
+
+  /// Plafond de la feuille (fraction de la hauteur) : les dés se posent
+  /// au-dessus.
+  static const double sheetCeiling = 0.62;
+  static const double margin = 8;
+  static const double minDiameter = 96;
+
+  /// Rapport diamètre visible / côté nominal.
+  static const double visibleRatio = 0.84;
+
+  /// La boîte de dessin est 25 % plus grande que le côté nominal.
+  static const double boxFactor = 1.25;
+
+  final Size screen;
+  final int count;
+
+  /// Diamètre visible D.
+  final double diameter;
+  final Rect table;
+  final List<Offset> rests;
+  final double freeTop;
+  final double freeBottom;
+
+  double get nominal => diameter / visibleRatio;
+  double get box => nominal * boxFactor;
+  double get radius => diameter / 2;
+
+  /// Haut de l'étiquette « Retenu/Écarté » dans la boîte du dé (4 dp sous le
+  /// bord du dé : centre + 0,42·S + 4).
+  double get labelTop => box / 2 + 0.42 * nominal + 4;
+
+  factory DiceFlightLayout.compute(
+    Size screen, {
+    required double paddingTop,
+    required double paddingBottom,
+    required int count,
+  }) {
+    final w = screen.width;
+    final h = screen.height;
+    final freeTop = paddingTop + margin;
+    final freeBottom = (1 - sheetCeiling) * h - margin;
+    final hf = freeBottom - freeTop;
+    final d = count == 1
+        ? math.max(minDiameter, math.min(0.55 * w, math.min(hf - 20, 280.0)))
+        : math.max(minDiameter, math.min(0.45 * w, math.min(hf - 36, 240.0)));
+    final yc = (freeTop + freeBottom) / 2;
+    final rests = count == 1
+        ? [Offset(w / 2, yc)]
+        : [
+            Offset(w / 2 - (d + pairGap) / 2, yc - labelBand / 2),
+            Offset(w / 2 + (d + pairGap) / 2, yc - labelBand / 2),
+          ];
+    return DiceFlightLayout._(
+      screen: screen,
+      count: count,
+      diameter: d,
+      table: Rect.fromLTRB(
+        margin,
+        paddingTop + margin,
+        w - margin,
+        h - paddingBottom - margin,
+      ),
+      rests: rests,
+      freeTop: freeTop,
+      freeBottom: freeBottom,
+    );
+  }
+
+  /// Arène de simulation pour les orientations cibles [targets].
+  DiceArena arena(List<Quat> targets, double duration) => DiceArena(
+    left: table.left,
+    top: table.top,
+    right: table.right,
+    bottom: table.bottom,
+    diameter: diameter,
+    restX: [for (final r in rests) r.dx],
+    restY: [for (final r in rests) r.dy],
+    targets: targets,
+    duration: duration,
   );
-}
 
-/// Points de repos des dés au-dessus de la feuille : centre horizontal de la
-/// table, milieu vertical de la zone libre ([table].top .. [sheetTop]).
-List<Offset> restPoints({
-  required Rect table,
-  required double sheetTop,
-  required double dieSize,
-  required int count,
-}) {
-  final freeBottom = math.max(table.top + dieSize, sheetTop - 8);
-  final y = (table.top + freeBottom) / 2;
-  final gap = DieFlightSizes.pairGap;
-  if (count == 1) return [Offset(table.center.dx, y)];
-  final dx = (dieSize + gap) / 2;
-  return [Offset(table.center.dx - dx, y), Offset(table.center.dx + dx, y)];
+  /// Durée de la piste simulée : 1,6 s (1 dé) / 1,8 s (2 dés).
+  static double durationFor(int count) => count == 1 ? 1.6 : 1.8;
 }
