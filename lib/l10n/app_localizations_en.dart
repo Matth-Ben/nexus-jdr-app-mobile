@@ -4108,4 +4108,108 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get spellSlotCorrectionErrorMessage =>
       'Could not correct the slots. Try again.';
+
+  @override
+  String get spellFilterButtonLabel => 'Filters';
+
+  @override
+  String spellFilterButtonActiveSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Filters, $count active',
+      one: 'Filters, 1 active',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get spellFilterSheetTitle => 'FILTER SPELLS';
+
+  @override
+  String get spellFilterLevelSection => 'Level';
+
+  @override
+  String get spellFilterSchoolSection => 'School';
+
+  @override
+  String get spellFilterConcentrationSection => 'Concentration';
+
+  @override
+  String get spellFilterCantripsLabel => 'Cantrips';
+
+  @override
+  String get spellFilterSchoolAbjuration => 'Abjuration';
+
+  @override
+  String get spellFilterSchoolConjuration => 'Conjuration';
+
+  @override
+  String get spellFilterSchoolDivination => 'Divination';
+
+  @override
+  String get spellFilterSchoolEnchantment => 'Enchantment';
+
+  @override
+  String get spellFilterSchoolEvocation => 'Evocation';
+
+  @override
+  String get spellFilterSchoolIllusion => 'Illusion';
+
+  @override
+  String get spellFilterSchoolNecromancy => 'Necromancy';
+
+  @override
+  String get spellFilterSchoolTransmutation => 'Transmutation';
+
+  @override
+  String get spellFilterConcentrationAll => 'All';
+
+  @override
+  String get spellFilterConcentrationOnly => 'Concentration';
+
+  @override
+  String get spellFilterConcentrationNone => 'No concentration';
+
+  @override
+  String get spellFilterResetButton => 'Reset';
+
+  @override
+  String get spellFilterApplyButton => 'Apply';
+
+  @override
+  String spellFilterApplyCountButton(int count) {
+    return 'Apply ($count)';
+  }
+
+  @override
+  String get spellFilterClearAll => 'Clear all';
+
+  @override
+  String spellFilterRemoveSemanticLabel(String label) {
+    return 'Remove filter $label';
+  }
+
+  @override
+  String spellFilterSelectedSemanticLabel(String label) {
+    return '$label, selected';
+  }
+
+  @override
+  String spellFilterResultCountAnnouncement(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count spells shown',
+      one: '1 spell shown',
+      zero: 'No spells shown',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get spellFilterNoMatchMessage => 'No spell matches these filters.';
+
+  @override
+  String get spellFilterNoMatchResetButton => 'Reset filters';
 }

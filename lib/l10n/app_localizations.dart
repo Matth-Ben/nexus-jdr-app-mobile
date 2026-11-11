@@ -6677,6 +6677,168 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Impossible de corriger les emplacements. Réessayez.'**
   String get spellSlotCorrectionErrorMessage;
+
+  /// Libellé du bouton d'ouverture des filtres de l'onglet Sorts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtres'**
+  String get spellFilterButtonLabel;
+
+  /// Libellé d'accessibilité du bouton Filtres quand des filtres sont actifs.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Filtres, 1 actif} other{Filtres, {count} actifs}}'**
+  String spellFilterButtonActiveSemanticLabel(int count);
+
+  /// Titre de la feuille de filtres de sorts.
+  ///
+  /// In fr, this message translates to:
+  /// **'FILTRER LES SORTS'**
+  String get spellFilterSheetTitle;
+
+  /// Section Niveau de la feuille de filtres de sorts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau'**
+  String get spellFilterLevelSection;
+
+  /// Section École de la feuille de filtres de sorts.
+  ///
+  /// In fr, this message translates to:
+  /// **'École'**
+  String get spellFilterSchoolSection;
+
+  /// Section Concentration de la feuille de filtres de sorts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Concentration'**
+  String get spellFilterConcentrationSection;
+
+  /// Libellé du niveau 0 dans les filtres de sorts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sorts mineurs'**
+  String get spellFilterCantripsLabel;
+
+  /// École de magie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Abjuration'**
+  String get spellFilterSchoolAbjuration;
+
+  /// École de magie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Invocation'**
+  String get spellFilterSchoolConjuration;
+
+  /// École de magie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Divination'**
+  String get spellFilterSchoolDivination;
+
+  /// École de magie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enchantement'**
+  String get spellFilterSchoolEnchantment;
+
+  /// École de magie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Évocation'**
+  String get spellFilterSchoolEvocation;
+
+  /// École de magie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Illusion'**
+  String get spellFilterSchoolIllusion;
+
+  /// École de magie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nécromancie'**
+  String get spellFilterSchoolNecromancy;
+
+  /// École de magie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Transmutation'**
+  String get spellFilterSchoolTransmutation;
+
+  /// Concentration : pas de filtre.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous'**
+  String get spellFilterConcentrationAll;
+
+  /// Concentration : uniquement les sorts à concentration.
+  ///
+  /// In fr, this message translates to:
+  /// **'Concentration'**
+  String get spellFilterConcentrationOnly;
+
+  /// Concentration : uniquement les sorts sans concentration.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans concentration'**
+  String get spellFilterConcentrationNone;
+
+  /// Bouton secondaire de la feuille de filtres de sorts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser'**
+  String get spellFilterResetButton;
+
+  /// Bouton primaire de la feuille de filtres, aucun filtre sélectionné.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appliquer'**
+  String get spellFilterApplyButton;
+
+  /// Bouton primaire de la feuille de filtres avec le nombre de filtres sélectionnés.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appliquer ({count})'**
+  String spellFilterApplyCountButton(int count);
+
+  /// Lien d'effacement de tous les filtres de sorts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout effacer'**
+  String get spellFilterClearAll;
+
+  /// Libellé d'accessibilité de la croix d'une puce de filtre actif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer le filtre {label}'**
+  String spellFilterRemoveSemanticLabel(String label);
+
+  /// Libellé d'accessibilité d'une puce de la feuille de filtres sélectionnée.
+  ///
+  /// In fr, this message translates to:
+  /// **'{label}, sélectionné'**
+  String spellFilterSelectedSemanticLabel(String label);
+
+  /// Annonce d'accessibilité après un changement de filtre.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun sort affiché} =1{1 sort affiché} other{{count} sorts affichés}}'**
+  String spellFilterResultCountAnnouncement(int count);
+
+  /// Message de l'état vide quand les filtres de sorts ne laissent rien.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun sort ne correspond à ces filtres.'**
+  String get spellFilterNoMatchMessage;
+
+  /// Bouton de l'état vide des filtres de sorts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser les filtres'**
+  String get spellFilterNoMatchResetButton;
 }
 
 class _AppLocalizationsDelegate

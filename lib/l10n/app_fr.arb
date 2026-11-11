@@ -5487,5 +5487,138 @@
   "spellSlotCorrectionErrorMessage": "Impossible de corriger les emplacements. Réessayez.",
   "@spellSlotCorrectionErrorMessage": {
     "description": "SnackBar d'échec d'une annulation de lancer ou d'une correction d'emplacement."
+  },
+  "spellFilterButtonLabel": "Filtres",
+  "@spellFilterButtonLabel": {
+    "description": "Libellé du bouton d'ouverture des filtres de l'onglet Sorts."
+  },
+  "spellFilterButtonActiveSemanticLabel": "{count, plural, =1{Filtres, 1 actif} other{Filtres, {count} actifs}}",
+  "@spellFilterButtonActiveSemanticLabel": {
+    "description": "Libellé d'accessibilité du bouton Filtres quand des filtres sont actifs.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spellFilterSheetTitle": "FILTRER LES SORTS",
+  "@spellFilterSheetTitle": {
+    "description": "Titre de la feuille de filtres de sorts."
+  },
+  "spellFilterLevelSection": "Niveau",
+  "@spellFilterLevelSection": {
+    "description": "Section Niveau de la feuille de filtres de sorts."
+  },
+  "spellFilterSchoolSection": "École",
+  "@spellFilterSchoolSection": {
+    "description": "Section École de la feuille de filtres de sorts."
+  },
+  "spellFilterConcentrationSection": "Concentration",
+  "@spellFilterConcentrationSection": {
+    "description": "Section Concentration de la feuille de filtres de sorts."
+  },
+  "spellFilterCantripsLabel": "Sorts mineurs",
+  "@spellFilterCantripsLabel": {
+    "description": "Libellé du niveau 0 dans les filtres de sorts."
+  },
+  "spellFilterSchoolAbjuration": "Abjuration",
+  "@spellFilterSchoolAbjuration": {
+    "description": "École de magie."
+  },
+  "spellFilterSchoolConjuration": "Invocation",
+  "@spellFilterSchoolConjuration": {
+    "description": "École de magie."
+  },
+  "spellFilterSchoolDivination": "Divination",
+  "@spellFilterSchoolDivination": {
+    "description": "École de magie."
+  },
+  "spellFilterSchoolEnchantment": "Enchantement",
+  "@spellFilterSchoolEnchantment": {
+    "description": "École de magie."
+  },
+  "spellFilterSchoolEvocation": "Évocation",
+  "@spellFilterSchoolEvocation": {
+    "description": "École de magie."
+  },
+  "spellFilterSchoolIllusion": "Illusion",
+  "@spellFilterSchoolIllusion": {
+    "description": "École de magie."
+  },
+  "spellFilterSchoolNecromancy": "Nécromancie",
+  "@spellFilterSchoolNecromancy": {
+    "description": "École de magie."
+  },
+  "spellFilterSchoolTransmutation": "Transmutation",
+  "@spellFilterSchoolTransmutation": {
+    "description": "École de magie."
+  },
+  "spellFilterConcentrationAll": "Tous",
+  "@spellFilterConcentrationAll": {
+    "description": "Concentration : pas de filtre."
+  },
+  "spellFilterConcentrationOnly": "Concentration",
+  "@spellFilterConcentrationOnly": {
+    "description": "Concentration : uniquement les sorts à concentration."
+  },
+  "spellFilterConcentrationNone": "Sans concentration",
+  "@spellFilterConcentrationNone": {
+    "description": "Concentration : uniquement les sorts sans concentration."
+  },
+  "spellFilterResetButton": "Réinitialiser",
+  "@spellFilterResetButton": {
+    "description": "Bouton secondaire de la feuille de filtres de sorts."
+  },
+  "spellFilterApplyButton": "Appliquer",
+  "@spellFilterApplyButton": {
+    "description": "Bouton primaire de la feuille de filtres, aucun filtre sélectionné."
+  },
+  "spellFilterApplyCountButton": "Appliquer ({count})",
+  "@spellFilterApplyCountButton": {
+    "description": "Bouton primaire de la feuille de filtres avec le nombre de filtres sélectionnés.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spellFilterClearAll": "Tout effacer",
+  "@spellFilterClearAll": {
+    "description": "Lien d'effacement de tous les filtres de sorts."
+  },
+  "spellFilterRemoveSemanticLabel": "Retirer le filtre {label}",
+  "@spellFilterRemoveSemanticLabel": {
+    "description": "Libellé d'accessibilité de la croix d'une puce de filtre actif.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "spellFilterSelectedSemanticLabel": "{label}, sélectionné",
+  "@spellFilterSelectedSemanticLabel": {
+    "description": "Libellé d'accessibilité d'une puce de la feuille de filtres sélectionnée.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "spellFilterResultCountAnnouncement": "{count, plural, =0{Aucun sort affiché} =1{1 sort affiché} other{{count} sorts affichés}}",
+  "@spellFilterResultCountAnnouncement": {
+    "description": "Annonce d'accessibilité après un changement de filtre.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spellFilterNoMatchMessage": "Aucun sort ne correspond à ces filtres.",
+  "@spellFilterNoMatchMessage": {
+    "description": "Message de l'état vide quand les filtres de sorts ne laissent rien."
+  },
+  "spellFilterNoMatchResetButton": "Réinitialiser les filtres",
+  "@spellFilterNoMatchResetButton": {
+    "description": "Bouton de l'état vide des filtres de sorts."
   }
 }
