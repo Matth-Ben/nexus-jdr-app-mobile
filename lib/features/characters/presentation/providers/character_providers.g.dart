@@ -426,7 +426,7 @@ final class InventoryCatalogProvider
   }
 }
 
-String _$inventoryCatalogHash() => r'25db2545cf6c120403b6705c857e32d786e9933f';
+String _$inventoryCatalogHash() => r'5ad20eb1d5a06b2cbb9449c5272dd1a27ae332fb';
 
 /// Enregistre les abandons/conflits de synchro comme alertes persistées —
 /// voir `SyncAlertRecorder`. Seul consommateur : le coordinateur de synchro.

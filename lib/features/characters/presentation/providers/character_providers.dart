@@ -109,16 +109,23 @@ Future<List<CharacterSummary>> characters(Ref ref) {
 Future<List<InventoryCatalogItem>> inventoryCatalog(Ref ref) async {
   final checker = ref.watch(connectivityCheckerProvider);
   var needsReload = false;
+  // Surveillance du réseau best-effort : une erreur du canal de plateforme ne
+  // doit jamais empêcher d'afficher le catalogue (ni remonter comme erreur
+  // non gérée).
   final subscription = checker.onConnectivityRestored.listen((_) {
     if (needsReload) ref.invalidateSelf();
-  });
+  }, onError: (_) {});
   ref.onDispose(subscription.cancel);
   try {
     final items = await ref
         .watch(characterRepositoryProvider)
         .fetchInventoryCatalog();
     // Servi hors ligne (cache périmé) : à recharger dès que le réseau revient.
-    needsReload = !await checker.hasConnection();
+    try {
+      needsReload = !await checker.hasConnection();
+    } catch (_) {
+      needsReload = false;
+    }
     return items;
   } catch (_) {
     needsReload = true;

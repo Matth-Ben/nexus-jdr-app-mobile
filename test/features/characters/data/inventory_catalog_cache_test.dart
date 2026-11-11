@@ -70,5 +70,18 @@ void main() {
 
       expect((await InventoryCatalogCache.read(cache))!.itemRows.keys, [1]);
     });
+
+    test('donnée de référence publique : la purge totale du cache à la '
+        'déconnexion (ReferenceDataCache.clear) la vide, sans conséquence '
+        'au-delà d une relecture réseau', () async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final cache = ReferenceDataCache(db);
+      await cache.put(InventoryCatalogCache.key, {'version': 2, 'items': []});
+
+      await cache.clear();
+
+      expect(await InventoryCatalogCache.read(cache), isNull);
+    });
   });
 }
