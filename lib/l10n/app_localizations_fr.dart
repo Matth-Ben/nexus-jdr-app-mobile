@@ -4377,4 +4377,37 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get diceRollDiscardedLabel => 'Écarté';
+
+  @override
+  String get characterDetailRestLongDoneMessage =>
+      'Repos long effectué. PV restaurés au maximum.';
+
+  @override
+  String characterDetailRestLongDoneWithHitDiceMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '+$count dés de vie récupérés',
+      one: '+1 dé de vie récupéré',
+    );
+    return 'Repos long effectué. PV restaurés au maximum. $_temp0.';
+  }
+
+  @override
+  String get characterDetailRestShortDoneMessage => 'Repos court effectué.';
+
+  @override
+  String characterDetailRestShortDoneWithHitDiceMessage(int gain, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dés de vie dépensés',
+      one: '1 dé de vie dépensé',
+    );
+    return 'Repos court effectué. +$gain PV ($_temp0).';
+  }
+
+  @override
+  String get characterDetailRestFailedMessage =>
+      'Impossible d\'effectuer le repos. Réessayez.';
 }

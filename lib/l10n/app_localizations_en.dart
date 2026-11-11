@@ -4339,4 +4339,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get diceRollDiscardedLabel => 'Discarded';
+
+  @override
+  String get characterDetailRestLongDoneMessage =>
+      'Long rest complete. HP restored to maximum.';
+
+  @override
+  String characterDetailRestLongDoneWithHitDiceMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '+$count hit dice recovered',
+      one: '+1 hit die recovered',
+    );
+    return 'Long rest complete. HP restored to maximum. $_temp0.';
+  }
+
+  @override
+  String get characterDetailRestShortDoneMessage => 'Short rest complete.';
+
+  @override
+  String characterDetailRestShortDoneWithHitDiceMessage(int gain, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hit dice spent',
+      one: '1 hit die spent',
+    );
+    return 'Short rest complete. +$gain HP ($_temp0).';
+  }
+
+  @override
+  String get characterDetailRestFailedMessage =>
+      'Unable to complete the rest. Please try again.';
 }

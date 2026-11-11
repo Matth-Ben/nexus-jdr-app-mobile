@@ -2426,16 +2426,32 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _showSnackBar(_offlineQueuedMessage(l10n));
         return true;
       }
-      ref.invalidate(characterDetailProvider(widget.characterId));
+      // F13 : la confirmation part tout de suite, puis on attend la fiche
+      // relue AVANT de rendre la main (et donc avant
+      // de relâcher [_isApplyingRest], qui verrouille le bouton « Repos ») :
+      // sans cela, `skipLoadingOnRefresh` laissait une fenêtre où un repos
+      // enchaîné partait des pools de dés de vie périmés (voir
+      // [_refreshCharacterDetail]).
       if (!mounted) return false;
+      final recoveredDice = hitDiceRecoveredByClassId.values.fold(
+        0,
+        (sum, count) => sum + count,
+      );
       _showSnackBar(
         type == RestType.long
-            ? 'Repos long effectué. PV restaurés au maximum.'
+            ? (recoveredDice > 0
+                  ? l10n.characterDetailRestLongDoneWithHitDiceMessage(
+                      recoveredDice,
+                    )
+                  : l10n.characterDetailRestLongDoneMessage)
             : diceSpent > 0
-            ? 'Repos court effectué. +$appliedGain PV ($diceSpent dé(s) de '
-                  'vie dépensé(s)).'
-            : 'Repos court effectué.',
+            ? l10n.characterDetailRestShortDoneWithHitDiceMessage(
+                appliedGain,
+                diceSpent,
+              )
+            : l10n.characterDetailRestShortDoneMessage,
       );
+      await _refreshCharacterDetail();
       return true;
     } on CharacterFailure catch (failure) {
       if (touchesHp && mounted && _restGeneration == myRestGeneration) {
@@ -2471,7 +2487,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           }
         });
       }
-      _showSnackBar("Impossible d'effectuer le repos. Réessayez.");
+      _showSnackBar(l10n.characterDetailRestFailedMessage);
       return false;
     } finally {
       // Repos long résolu (succès ou échec) : l'instantané n'a plus d'usage.

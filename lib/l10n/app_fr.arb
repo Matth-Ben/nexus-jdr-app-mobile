@@ -5819,5 +5819,38 @@
   "diceRollDiscardedLabel": "Écarté",
   "@diceRollDiscardedLabel": {
     "description": "Étiquette sous le d20 écarté (55 %, barré) d'un jet avec avantage/désavantage (dé animé, P2b)."
+  },
+  "characterDetailRestLongDoneMessage": "Repos long effectué. PV restaurés au maximum.",
+  "@characterDetailRestLongDoneMessage": {
+    "description": "Confirmation (SnackBar) d'un repos long synchronisé, quand aucun dé de vie n'a été récupéré (`character_detail_screen.dart::_applyRest`)."
+  },
+  "characterDetailRestLongDoneWithHitDiceMessage": "Repos long effectué. PV restaurés au maximum. {count, plural, =1{+1 dé de vie récupéré} other{+{count} dés de vie récupérés}}.",
+  "@characterDetailRestLongDoneWithHitDiceMessage": {
+    "description": "Confirmation (SnackBar) d'un repos long synchronisé avec {count} dé(s) de vie récupéré(s) (somme de `hitDiceRecoveredByClassId`) ; jamais utilisée quand count vaut 0.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "characterDetailRestShortDoneMessage": "Repos court effectué.",
+  "@characterDetailRestShortDoneMessage": {
+    "description": "Confirmation (SnackBar) d'un repos court sans dé de vie dépensé."
+  },
+  "characterDetailRestShortDoneWithHitDiceMessage": "Repos court effectué. +{gain} PV ({count, plural, =1{1 dé de vie dépensé} other{{count} dés de vie dépensés}}).",
+  "@characterDetailRestShortDoneWithHitDiceMessage": {
+    "description": "Confirmation (SnackBar) d'un repos court avec {count} dé(s) de vie dépensé(s) pour {gain} PV regagnés.",
+    "placeholders": {
+      "gain": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "characterDetailRestFailedMessage": "Impossible d'effectuer le repos. Réessayez.",
+  "@characterDetailRestFailedMessage": {
+    "description": "Erreur générique (SnackBar) d'un repos qui a échoué sans message métier (`_applyRest`)."
   }
 }

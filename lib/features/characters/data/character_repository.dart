@@ -1196,11 +1196,12 @@ abstract class CharacterRepository {
   ///   `class_features` de **toutes** les classes du personnage
   ///   (multiclassage inclus) ET de leurs éventuelles sous-classes déjà
   ///   choisies, atteintes par leur niveau respectif, quel que soit leur
-  ///   `rest_type` ; et récupère (RAW 5e) des dés de vie sur la
-  ///   classe primaire : `character_classes.hit_dice_spent = max(0,
-  ///   hit_dice_spent - max(1, level ~/ 2))`. Purement silencieux côté UI
-  ///   (aucun retour transporté par cette méthode ne le reflète) — voir la
-  ///   spec visuelle direction-artistique de `rest_sheet.dart`. Remet aussi
+  ///   `rest_type` ; et récupère (RAW 5e) des dés de vie : la
+  ///   moitié du niveau TOTAL (`max(1, totalLevel ~/ 2)`), répartie par
+  ///   classe selon [hitDiceRecoveredByClassId] déjà calculé par l'appelant
+  ///   (`character_classes.hit_dice_spent` décrémenté, plancher 0). Le
+  ///   retour utilisateur (nombre de dés récupérés) est affiché par l'écran
+  ///   appelant, pas par cette méthode. Remet aussi
   ///   à 0 `character_spells.innate_uses_spent` (sorts innés lancés sans
   ///   emplacement, voir [setInnateSpellUsesSpent]) — juste après les
   ///   emplacements de sorts et AVANT la récupération des dés de vie, seule
