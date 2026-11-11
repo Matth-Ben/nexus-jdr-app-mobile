@@ -28,11 +28,21 @@ class ArmorProficiencyClassLevel {
     required this.className,
     required this.level,
     this.subclassName,
+    this.subclassUnresolved = false,
+    this.isPrimary = false,
   });
 
   final String className;
   final int level;
   final String? subclassName;
+
+  /// `true` quand une sous-classe est choisie (id présent) mais que son nom
+  /// n'a pas pu être résolu (cache, hors ligne, requête partielle) : on ne
+  /// sait pas si elle accorde une maîtrise d'armure.
+  final bool subclassUnresolved;
+
+  /// Classe principale du personnage.
+  final bool isPrimary;
 }
 
 /// Tout ce qui peut accorder une maîtrise d'armure à un personnage, extrait
@@ -84,6 +94,9 @@ class ArmorProficiencyProfile {
               className: row.className,
               level: row.level,
               subclassName: row.subclassName,
+              subclassUnresolved:
+                  row.subclassName == null && row.subclassId != null,
+              isPrimary: row.isPrimary,
             ),
         ],
         canEvaluate: detail.classes.isNotEmpty,
@@ -161,14 +174,27 @@ abstract final class ArmorProficiencyRules {
     var undecidable = false;
     for (final row in profile.classes) {
       final grant = _subclassGrantOf(row);
-      if (grant == null) continue;
-      if (row.level <= 0) {
-        // Niveau indisponible : on ne peut pas dire que la maîtrise n'est
-        // pas encore acquise.
+      if (grant != null) {
+        if (row.level <= 0) {
+          // Niveau indisponible : on ne peut pas dire que la maîtrise n'est
+          // pas encore acquise.
+          undecidable = true;
+        } else if (row.level >= grant.minLevel) {
+          granted.addAll(grant.gears);
+        }
+      } else if (_subclassIsUndecidable(row)) {
         undecidable = true;
-      } else if (row.level >= grant.minLevel) {
-        granted.addAll(grant.gears);
       }
+    }
+    // Jetons de la classe principale non chargés (relation `classes` absente) :
+    // une liste vide serait un faux « aucune maîtrise ».
+    if (profile.tokens.isEmpty &&
+        profile.classes.any(
+          (row) =>
+              row.isPrimary &&
+              !_classesWithoutArmor.contains(_key(row.className)),
+        )) {
+      return ArmorProficiency.unknown;
     }
 
     if (granted.contains(gear)) return ArmorProficiency.proficient;
@@ -236,6 +262,22 @@ abstract final class ArmorProficiencyRules {
     };
   }
 
+  /// Cas où l'absence de maîtrise de sous-classe ne peut pas être affirmée :
+  /// sous-classe choisie mais non résolue ; sous-classe absente alors que le
+  /// niveau l'exige pour une classe dont une sous-classe peut accorder une
+  /// armure ; sous-classe renseignée mais ni cartographiée ni connue comme
+  /// n'accordant rien. Principe : jamais deviné.
+  static bool _subclassIsUndecidable(ArmorProficiencyClassLevel row) {
+    if (row.subclassUnresolved) return true;
+    final className = _key(row.className);
+    final minLevel = _subclassRequiredFrom[className];
+    if (minLevel == null) return false;
+    final subclass = row.subclassName;
+    if (subclass == null) return row.level >= minLevel;
+    final knownWithout = _subclassesWithoutArmor[className];
+    return !(knownWithout?.contains(_key(subclass)) ?? false);
+  }
+
   static _SubclassGrant? _subclassGrantOf(ArmorProficiencyClassLevel row) {
     final subclass = row.subclassName;
     if (subclass == null) return null;
@@ -278,6 +320,80 @@ abstract final class ArmorProficiencyRules {
   /// n'est pas résolu).
   static final Map<String, Set<_Gear>> _traitGrants = {
     _key('Entraînement au combat nain (armures)'): {_Gear.light, _Gear.medium},
+  };
+
+  /// Classes sans aucune maîtrise d'armure de départ (jetons vides normaux).
+  static final Set<String> _classesWithoutArmor = {
+    _key('Magicien'),
+    _key('Moine'),
+    _key('Ensorceleur'),
+  };
+
+  /// Classes dont une sous-classe peut accorder une armure, et niveau de
+  /// classe à partir duquel la sous-classe existe.
+  static final Map<String, int> _subclassRequiredFrom = {
+    _key('Clerc'): 1,
+    _key('Occultiste'): 1,
+    _key('Barde'): 3,
+    _key('Magicien'): 2,
+    _key('Artificier'): 3,
+  };
+
+  /// Sous-classes (noms des seeds) dont on est sûr qu'elles n'accordent
+  /// aucune maîtrise d'armure. Toute autre sous-classe non cartographiée est
+  /// indécidable (Clerc Tombe/Mort volontairement absents : à valider).
+  static final Map<String, Set<String>> _subclassesWithoutArmor = {
+    _key('Clerc'): {
+      'Lumière',
+      'Domaine de la Lumière',
+      'Savoir',
+      'Domaine du Savoir',
+      'Duperie',
+      'Domaine de la Duperie',
+      'Arcanes',
+      'Domaine des Arcanes',
+      'Paix',
+      'Domaine de la Paix',
+    }.map(_key).toSet(),
+    _key('Occultiste'): {
+      'Archifée',
+      'Grand Ancien',
+      'Céleste',
+      'Génie - Dao',
+      'Génie - Djinn',
+      'Génie - Éfrit',
+      'Génie - Maride',
+      'Insondable',
+      'Mort-vivant',
+      'Protecteur Fiélon',
+      'Fiélon',
+    }.map(_key).toSet(),
+    _key('Barde'): {
+      'Collège du Savoir',
+      "Collège de l'éloquence",
+      'Collège de la création',
+      'Collège de la séduction',
+      'Collège des esprits',
+      'Collège des murmures',
+    }.map(_key).toSet(),
+    _key('Magicien'): {
+      'Abjuration',
+      'Divination',
+      'Enchantement',
+      'Évocation',
+      "École de l'évocation",
+      'Illusion',
+      'Invocation',
+      'Nécromancie',
+      'Transmutation',
+      'Magie de guerre',
+      'Scribes',
+    }.map(_key).toSet(),
+    _key('Artificier'): {
+      'Alchimiste',
+      'Artilleur',
+      'Forgeron de guerre',
+    }.map(_key).toSet(),
   };
 
   static const List<_SubclassGrant> _subclassGrants = [

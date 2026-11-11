@@ -1330,5 +1330,5 @@
   "inventoryNotProficientArmorBanner": "Not proficient with this armor: disadvantage on Strength/Dexterity checks, saves and attacks; can't cast spells.",
   "inventoryNotProficientShieldBanner": "Not proficient with this shield: disadvantage on Strength/Dexterity checks, saves and attacks; can't cast spells.",
   "characterDetailItemEquippedMessage": "Equipped: {item}.",
-  "characterDetailItemUnequippedMessage": "Unequipped: {item}."
+  "characterDetailItemUnequippedMessage": "Unequipped: {item}."
 }

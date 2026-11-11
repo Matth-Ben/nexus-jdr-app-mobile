@@ -394,9 +394,14 @@ void main() {
       );
     });
 
-    test('la sous-classe ne compte que pour sa propre classe', () {
+    test("la sous-classe d'une autre classe n'accorde rien (un nom inconnu "
+        'du Magicien reste indécidable)', () {
       expect(
         _eval(_chainMail, sub('Magicien', 'Forge', 5)),
+        ArmorProficiency.unknown,
+      );
+      expect(
+        _eval(_chainMail, sub('Magicien', 'Abjuration', 5)),
         ArmorProficiency.notProficient,
       );
     });
@@ -420,6 +425,112 @@ void main() {
         ],
       );
       expect(_eval(_chainMail, p), ArmorProficiency.proficient);
+    });
+  });
+
+  group('sous-classe absente, non résolue ou inconnue : jamais devinée', () {
+    const clericTokens = ['légère', 'intermédiaire', 'boucliers'];
+
+    ArmorProficiencyProfile cleric({
+      String? subclass,
+      bool unresolved = false,
+      int level = 3,
+      List<String> tokens = clericTokens,
+    }) => ArmorProficiencyProfile(
+      tokens: tokens,
+      classes: [
+        ArmorProficiencyClassLevel(
+          className: 'Clerc',
+          level: level,
+          subclassName: subclass,
+          subclassUnresolved: unresolved,
+          isPrimary: true,
+        ),
+      ],
+    );
+
+    test('Clerc niveau 3 sans sous-classe, cotte de mailles : indécidable', () {
+      expect(_eval(_chainMail, cleric()), ArmorProficiency.unknown);
+    });
+
+    test('sous-classe choisie mais non résolue : indécidable', () {
+      expect(
+        _eval(_chainMail, cleric(unresolved: true)),
+        ArmorProficiency.unknown,
+      );
+    });
+
+    test('Domaine de la Lumière (aucune armure lourde) : non maîtrisé', () {
+      expect(
+        _eval(_chainMail, cleric(subclass: 'Domaine de la Lumière')),
+        ArmorProficiency.notProficient,
+      );
+    });
+
+    test('sous-classe inconnue : indécidable', () {
+      expect(
+        _eval(_chainMail, cleric(subclass: 'Domaine du Futur')),
+        ArmorProficiency.unknown,
+      );
+    });
+
+    test('les jetons de classe suffisent : maîtrisé malgré tout', () {
+      expect(_eval(_chainShirt, cleric()), ArmorProficiency.proficient);
+    });
+
+    test('Guerrier (jetons complets) : inchangé, sans sous-classe', () {
+      const p = ArmorProficiencyProfile(
+        tokens: _fighterTokens,
+        classes: [
+          ArmorProficiencyClassLevel(
+            className: 'Guerrier',
+            level: 3,
+            isPrimary: true,
+          ),
+        ],
+      );
+      expect(_eval(_chainMail, p), ArmorProficiency.proficient);
+    });
+
+    test('Magicien niveau 1 : lourde non maîtrisée (pas de sous-classe avant '
+        'le niveau 2)', () {
+      const p = ArmorProficiencyProfile(
+        classes: [
+          ArmorProficiencyClassLevel(
+            className: 'Magicien',
+            level: 1,
+            isPrimary: true,
+          ),
+        ],
+      );
+      expect(_eval(_chainMail, p), ArmorProficiency.notProficient);
+    });
+
+    test('Magicien niveau 3 sans école résolue : indécidable', () {
+      const p = ArmorProficiencyProfile(
+        classes: [
+          ArmorProficiencyClassLevel(
+            className: 'Magicien',
+            level: 3,
+            isPrimary: true,
+          ),
+        ],
+      );
+      expect(_eval(_chainMail, p), ArmorProficiency.unknown);
+    });
+
+    test('Guerrier sans jetons chargés (classe non résolue) : indécidable', () {
+      const p = ArmorProficiencyProfile(
+        classes: [
+          ArmorProficiencyClassLevel(
+            className: 'Guerrier',
+            level: 3,
+            isPrimary: true,
+          ),
+        ],
+      );
+      expect(_eval(_chainMail, p), ArmorProficiency.unknown);
+      expect(_eval(_shield, p), ArmorProficiency.unknown);
     });
   });
 

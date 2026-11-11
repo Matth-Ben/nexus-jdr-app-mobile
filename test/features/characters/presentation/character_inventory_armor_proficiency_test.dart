@@ -90,6 +90,9 @@ CharacterDetail _detail(
       isPrimary: true,
       savingThrowProficiencies: const [],
       hitDie: 6,
+      // Un Magicien de niveau 3 a toujours une école : sans elle, le verdict
+      // serait indécidable (voir `ArmorProficiencyRules`).
+      subclassName: className == 'Magicien' ? 'Abjuration' : null,
     ),
   ],
   xp: 0,
