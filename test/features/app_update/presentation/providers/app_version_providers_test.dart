@@ -7,9 +7,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/features/app_update/data/app_version_repository.dart';
 import 'package:personnages/features/app_update/domain/app_version_status.dart';
 import 'package:personnages/features/app_update/presentation/providers/app_version_providers.dart';
+
+import '../../../../support/fake_connectivity_checker.dart';
 
 class _FakeAppVersionRepository implements AppVersionRepository {
   _FakeAppVersionRepository.returning(this._row) : _errorToThrow = null;
@@ -39,8 +42,16 @@ void main() {
   });
 
   ProviderContainer buildContainer(AppVersionRepository repository) {
+    // Réseau factice : en cas de repli, la vérification surveille le retour du
+    // réseau (relance en arrière-plan), ce qui exige un canal natif absent d'un
+    // test unitaire.
+    final connectivity = FakeConnectivityChecker();
+    addTearDown(connectivity.close);
     final container = ProviderContainer(
-      overrides: [appVersionRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        appVersionRepositoryProvider.overrideWithValue(repository),
+        connectivityCheckerProvider.overrideWithValue(connectivity),
+      ],
     );
     addTearDown(container.dispose);
     return container;

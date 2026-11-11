@@ -380,6 +380,100 @@ void main() {
       expect(await boundSecondaryInit(Future.value(42)), 42);
     });
   });
+
+  // Usage réel de `boundSecondaryInit` dans le bootstrap (pas seulement la
+  // fonction isolée) : des SDK qui ne répondent jamais ne retardent pas la
+  // sortie du splash au-delà d'UN seul délai (parallèle, Firebase en bloc).
+  group('initializeSdks : SDK secondaires qui ne répondent jamais', () {
+    Future<void> neverVoid() => Completer<void>().future;
+
+    testWidgets('PostHog et Firebase muets : résultat après un seul délai '
+        '(pas la somme), SDK indisponibles, Supabase prêt', (tester) async {
+      final previous = FlutterError.onError;
+      FlutterError.onError = (_) {};
+      BootstrapResult? result;
+      unawaited(
+        initializeSdks(
+          initSupabase: () async {},
+          readAnalyticsEnabled: () async => true,
+          startPostHog: (_) => neverVoid(),
+          startFirebase: (_, _) => neverVoid(),
+          postHogConfigured: true,
+          firebaseSupported: true,
+        ).then((value) => result = value),
+      );
+
+      await tester.pump(secondaryInitTimeout - const Duration(seconds: 1));
+      expect(result, isNull);
+
+      await tester.pump(const Duration(seconds: 2));
+      FlutterError.onError = previous;
+
+      expect(result, isNotNull);
+      expect(result!.supabaseReady, isTrue);
+      expect(result!.postHogReady, isFalse);
+      expect(result!.firebaseAnalyticsReady, isFalse);
+    });
+
+    testWidgets('Firebase expiré : isAbandoned vrai pour que Crashlytics ne '
+        's\'active pas tardivement', (tester) async {
+      final previous = FlutterError.onError;
+      FlutterError.onError = (_) {};
+      late bool Function() isAbandoned;
+      unawaited(
+        initializeSdks(
+          initSupabase: () async {},
+          readAnalyticsEnabled: () async => true,
+          startPostHog: (_) async {},
+          startFirebase: (_, abandoned) {
+            isAbandoned = abandoned;
+            return neverVoid();
+          },
+          postHogConfigured: true,
+          firebaseSupported: true,
+        ),
+      );
+      await tester.pump();
+      expect(isAbandoned(), isFalse);
+
+      await tester.pump(secondaryInitTimeout + const Duration(seconds: 1));
+      FlutterError.onError = previous;
+
+      expect(isAbandoned(), isTrue);
+    });
+
+    testWidgets('SDK qui répondent : prêts', (tester) async {
+      final result = await initializeSdks(
+        initSupabase: () async {},
+        readAnalyticsEnabled: () async => true,
+        startPostHog: (_) async {},
+        startFirebase: (_, _) async {},
+        postHogConfigured: true,
+        firebaseSupported: true,
+      );
+
+      expect(result.postHogReady, isTrue);
+      expect(result.firebaseAnalyticsReady, isTrue);
+    });
+
+    testWidgets('Supabase en échec : Firebase non démarré', (tester) async {
+      final previous = FlutterError.onError;
+      FlutterError.onError = (_) {};
+      var firebaseStarted = false;
+      final result = await initializeSdks(
+        initSupabase: () async => throw StateError('boom'),
+        readAnalyticsEnabled: () async => true,
+        startPostHog: (_) async {},
+        startFirebase: (_, _) async => firebaseStarted = true,
+        postHogConfigured: false,
+        firebaseSupported: true,
+      );
+      FlutterError.onError = previous;
+
+      expect(result.supabaseReady, isFalse);
+      expect(firebaseStarted, isFalse);
+    });
+  });
 }
 
 class _NeverRespondingRepository implements AppVersionRepository {
