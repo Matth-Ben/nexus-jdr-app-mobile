@@ -229,6 +229,11 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Shaders de fragment du dé animé (P2b, `shaders/`) : compilés au build,
+  # chargés une fois par `DieShaderCache`. Liste fermée, voir `DieShaderId`.
+  shaders:
+    - shaders/die_texture.frag
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

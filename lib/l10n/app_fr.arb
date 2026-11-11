@@ -5811,5 +5811,13 @@
   "characterSavingThrowNotProficient": "non maîtrisé",
   "@characterSavingThrowNotProficient": {
     "description": "État lu par les lecteurs d'écran sur une ligne de `CharacterSavingThrowsCard` sans maîtrise."
+  },
+  "diceRollKeptLabel": "Retenu",
+  "@diceRollKeptLabel": {
+    "description": "Étiquette sous le d20 retenu d'un jet avec avantage/désavantage (dé animé, P2b)."
+  },
+  "diceRollDiscardedLabel": "Écarté",
+  "@diceRollDiscardedLabel": {
+    "description": "Étiquette sous le d20 écarté (55 %, barré) d'un jet avec avantage/désavantage (dé animé, P2b)."
   }
 }

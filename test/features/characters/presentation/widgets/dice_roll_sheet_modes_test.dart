@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/widgets/pixel_icon.dart';
 import 'package:personnages/core/widgets/segmented_toggle.dart';
 import 'package:personnages/core/widgets/selectable_option_tile.dart';
 import 'package:personnages/core/widgets/sheet_header_bar.dart';
@@ -271,7 +272,10 @@ void main() {
       await _openSheet(tester, random: _Seq([20]));
 
       expect(find.text('20 NATUREL'), findsOneWidget);
-      expect(find.byIcon(Icons.star_rounded), findsOneWidget);
+      // P2b : l'icône Material est remplacée par l'icône pixel provisoire
+      // (étoile) prévue par la spec ; la mention texte reste obligatoire.
+      expect(find.byKey(const ValueKey('natural-icon-star')), findsOneWidget);
+      expect(find.byType(PixelIcon), findsOneWidget);
       expect(
         _texts(tester).any((t) => t.toLowerCase().contains('critique')),
         isFalse,
@@ -284,7 +288,9 @@ void main() {
       await _openSheet(tester, random: _Seq([1]));
 
       expect(find.text('1 NATUREL'), findsOneWidget);
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      // P2b : icône pixel provisoire (crâne) à la place de la croix Material.
+      expect(find.byKey(const ValueKey('natural-icon-skull')), findsOneWidget);
+      expect(find.byType(PixelIcon), findsOneWidget);
       expect(
         _texts(tester).any((t) => t.toLowerCase().contains('critique')),
         isFalse,
@@ -359,6 +365,10 @@ void main() {
       await setLarge(tester, 2);
       await _openSheet(tester, random: _Seq([5, 12, 18]), modifier: -12);
       await tester.tap(find.text('Avantage'));
+      await tester.pumpAndSettle();
+      // P2b : la boîte du dé (192 dp de haut, spec) pousse « Relancer » sous
+      // le pli à x2,0 sur 640 dp ; la feuille est défilable par conception.
+      await tester.ensureVisible(find.text('RELANCER'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('RELANCER'));
       await tester.pumpAndSettle();

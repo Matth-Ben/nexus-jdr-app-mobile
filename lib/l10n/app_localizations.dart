@@ -7030,6 +7030,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'non maîtrisé'**
   String get characterSavingThrowNotProficient;
+
+  /// Étiquette sous le d20 retenu d'un jet avec avantage/désavantage (dé animé, P2b).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retenu'**
+  String get diceRollKeptLabel;
+
+  /// Étiquette sous le d20 écarté (55 %, barré) d'un jet avec avantage/désavantage (dé animé, P2b).
+  ///
+  /// In fr, this message translates to:
+  /// **'Écarté'**
+  String get diceRollDiscardedLabel;
 }
 
 class _AppLocalizationsDelegate
