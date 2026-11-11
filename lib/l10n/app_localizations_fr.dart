@@ -2734,6 +2734,17 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de charger le catalogue d\'objets. Réessayez.';
 
   @override
+  String get addItemFlowCatalogOfflineMessage =>
+      'Le catalogue d\'objets n\'est pas encore disponible : il n\'a jamais été chargé sur cet appareil et la connexion est indisponible. Vous pouvez ajouter un objet personnalisé dès maintenant, ou réessayer une fois reconnecté.';
+
+  @override
+  String get addItemFlowCatalogOfflineCustomButton =>
+      'Ajouter un objet personnalisé';
+
+  @override
+  String get addItemFlowCatalogOfflineRetryButton => 'Réessayer';
+
+  @override
   String get addItemFlowAddButtonLabel => 'Ajouter';
 
   @override

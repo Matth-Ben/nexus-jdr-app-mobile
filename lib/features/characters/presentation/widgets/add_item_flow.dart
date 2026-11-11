@@ -115,21 +115,32 @@ Future<PickedInventoryAddition?> pickInventoryAddition(
 
   switch (choice) {
     case AddItemEntryChoice.catalog:
-      final picked = await showItemCatalogPickerSheet(context);
-      if (picked == null) return null;
-      return PickedInventoryAddition.catalog(picked.item, picked.quantity);
+      final picked = await _showCatalogSheet(context, multiSelect: false);
+      if (picked is CatalogPickResult) {
+        return PickedInventoryAddition.catalog(picked.item, picked.quantity);
+      }
+      // F20 : catalogue indisponible hors ligne, le joueur a choisi
+      // l'objet personnalisé depuis la feuille du catalogue.
+      if (picked != AddItemEntryChoice.custom || !context.mounted) return null;
+      return _pickCustomAddition(context);
     case AddItemEntryChoice.custom:
-      final picked = await showCustomItemPickerSheet(context);
-      if (picked == null) return null;
-      return PickedInventoryAddition.custom(
-        picked.name,
-        picked.quantity,
-        description: picked.description,
-        damageDice: picked.damageDice,
-        damageType: picked.damageType,
-        properties: picked.properties,
-      );
+      return _pickCustomAddition(context);
   }
+}
+
+Future<PickedInventoryAddition?> _pickCustomAddition(
+  BuildContext context,
+) async {
+  final picked = await showCustomItemPickerSheet(context);
+  if (picked == null) return null;
+  return PickedInventoryAddition.custom(
+    picked.name,
+    picked.quantity,
+    description: picked.description,
+    damageDice: picked.damageDice,
+    damageType: picked.damageType,
+    properties: picked.properties,
+  );
 }
 
 /// Variante « plusieurs objets » de [pickInventoryAddition] (demande
@@ -145,24 +156,21 @@ Future<List<PickedInventoryAddition>> pickInventoryAdditions(
 
   switch (choice) {
     case AddItemEntryChoice.catalog:
-      final picked = await showItemCatalogMultiPickerSheet(context);
-      return [
-        for (final result in picked)
-          PickedInventoryAddition.catalog(result.item, result.quantity),
-      ];
+      final picked = await _showCatalogSheet(context, multiSelect: true);
+      if (picked is List<CatalogPickResult>) {
+        return [
+          for (final result in picked)
+            PickedInventoryAddition.catalog(result.item, result.quantity),
+        ];
+      }
+      if (picked != AddItemEntryChoice.custom || !context.mounted) {
+        return const [];
+      }
+      final custom = await _pickCustomAddition(context);
+      return custom == null ? const [] : [custom];
     case AddItemEntryChoice.custom:
-      final picked = await showCustomItemPickerSheet(context);
-      if (picked == null) return const [];
-      return [
-        PickedInventoryAddition.custom(
-          picked.name,
-          picked.quantity,
-          description: picked.description,
-          damageDice: picked.damageDice,
-          damageType: picked.damageType,
-          properties: picked.properties,
-        ),
-      ];
+      final custom = await _pickCustomAddition(context);
+      return custom == null ? const [] : [custom];
   }
 }
 
@@ -206,12 +214,27 @@ class CatalogPickResult {
 /// catégorie (calque `equipment_step_screen.dart::_shopSection`), tap sur
 /// une ligne -> sheet légère de quantité -> ferme les 2 sheets, retourne le
 /// résultat final.
-Future<CatalogPickResult?> showItemCatalogPickerSheet(BuildContext context) {
-  return showModalBottomSheet<CatalogPickResult>(
+Future<CatalogPickResult?> showItemCatalogPickerSheet(
+  BuildContext context,
+) async {
+  final result = await _showCatalogSheet(context, multiSelect: false);
+  return result is CatalogPickResult ? result : null;
+}
+
+/// Ouvre la sheet du catalogue. Résultat : un [CatalogPickResult] (simple), une
+/// `List<CatalogPickResult>` (multiple), [AddItemEntryChoice.custom] (F20 :
+/// catalogue indisponible hors ligne, le joueur demande l'objet personnalisé)
+/// ou `null` (fermée).
+Future<Object?> _showCatalogSheet(
+  BuildContext context, {
+  required bool multiSelect,
+}) {
+  return showModalBottomSheet<Object>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (sheetContext) => const _ItemCatalogPickerContent(),
+    builder: (sheetContext) =>
+        _ItemCatalogPickerContent(multiSelect: multiSelect),
   );
 }
 
@@ -221,14 +244,8 @@ Future<CatalogPickResult?> showItemCatalogPickerSheet(BuildContext context) {
 Future<List<CatalogPickResult>> showItemCatalogMultiPickerSheet(
   BuildContext context,
 ) async {
-  final result = await showModalBottomSheet<List<CatalogPickResult>>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (sheetContext) =>
-        const _ItemCatalogPickerContent(multiSelect: true),
-  );
-  return result ?? const [];
+  final result = await _showCatalogSheet(context, multiSelect: true);
+  return result is List<CatalogPickResult> ? result : const [];
 }
 
 class _ItemCatalogPickerContent extends ConsumerStatefulWidget {
@@ -335,12 +352,25 @@ class _ItemCatalogPickerContentState
                       color: AppColors.woodMedium,
                     ),
                   ),
-                  error: (error, stackTrace) => ErrorRetryState(
-                    message: error is CharacterFailure
-                        ? error.message
-                        : l10n.addItemFlowCatalogLoadErrorMessage,
-                    onRetry: () => ref.invalidate(inventoryCatalogProvider),
-                  ),
+                  error: (error, stackTrace) =>
+                      error is CharacterFailure &&
+                          error.code == CharacterErrorCode.network
+                      // F20 : catalogue jamais chargé et réseau indisponible —
+                      // propose l'objet personnalisé (disponible hors ligne).
+                      ? _CatalogOfflineState(
+                          onRetry: () =>
+                              ref.invalidate(inventoryCatalogProvider),
+                          onCustomItem: () =>
+                              Navigator.of(context)
+                                  .pop(AddItemEntryChoice.custom),
+                        )
+                      : ErrorRetryState(
+                          message: error is CharacterFailure
+                              ? error.message
+                              : l10n.addItemFlowCatalogLoadErrorMessage,
+                          onRetry: () =>
+                              ref.invalidate(inventoryCatalogProvider),
+                        ),
                 ),
               ),
               if (widget.multiSelect)
@@ -445,6 +475,52 @@ class _ItemCatalogPickerContentState
         AppSpacing.lg,
       ),
       children: widgets,
+    );
+  }
+}
+
+/// État de la sheet du catalogue quand il n'a jamais été chargé et que
+/// l'appareil est hors ligne (F20) : message dédié, « Réessayer » et accès à
+/// l'objet personnalisé, seul ajout possible sans catalogue.
+class _CatalogOfflineState extends StatelessWidget {
+  const _CatalogOfflineState({
+    required this.onRetry,
+    required this.onCustomItem,
+  });
+
+  final VoidCallback onRetry;
+  final VoidCallback onCustomItem;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off, size: 48, color: AppColors.textMuted),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              l10n.addItemFlowCatalogOfflineMessage,
+              textAlign: TextAlign.center,
+              style: AppTypography.body(color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            PrimaryButton(
+              label: l10n.addItemFlowCatalogOfflineCustomButton,
+              onPressed: onCustomItem,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            SecondaryButton(
+              label: l10n.addItemFlowCatalogOfflineRetryButton,
+              onPressed: onRetry,
+              surface: SecondaryButtonSurface.parchment,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

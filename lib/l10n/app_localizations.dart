@@ -4462,6 +4462,24 @@ abstract class AppLocalizations {
   /// **'Impossible de charger le catalogue d\'objets. Réessayez.'**
   String get addItemFlowCatalogLoadErrorMessage;
 
+  /// Message de la sheet "Depuis le catalogue" quand le catalogue n'a jamais été chargé et que l'appareil est hors ligne (F20) : propose l'objet personnalisé, disponible hors ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le catalogue d\'objets n\'est pas encore disponible : il n\'a jamais été chargé sur cet appareil et la connexion est indisponible. Vous pouvez ajouter un objet personnalisé dès maintenant, ou réessayer une fois reconnecté.'**
+  String get addItemFlowCatalogOfflineMessage;
+
+  /// Bouton de l'état « catalogue indisponible hors ligne » de la sheet "Depuis le catalogue" : ouvre la saisie d'un objet personnalisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un objet personnalisé'**
+  String get addItemFlowCatalogOfflineCustomButton;
+
+  /// Bouton de l'état « catalogue indisponible hors ligne » de la sheet "Depuis le catalogue" : relance le chargement du catalogue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get addItemFlowCatalogOfflineRetryButton;
+
   /// Libellé du bouton "Ajouter" de la sheet "Depuis le catalogue" en sélection multiple, aucun objet coché.
   ///
   /// In fr, this message translates to:

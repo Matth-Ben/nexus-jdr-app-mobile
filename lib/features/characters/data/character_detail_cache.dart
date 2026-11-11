@@ -3,6 +3,7 @@ import '../../../core/rules/spell_status.dart';
 import '../domain/offline_inventory_writes.dart';
 import '../domain/offline_journal_writes.dart';
 import '../domain/offline_state_writes.dart';
+import 'inventory_catalog_cache.dart';
 
 /// Point unique de connaissance de l'entrée de cache de la fiche personnage
 /// (`SupabaseCharacterRepository.fetchCharacterDetail`) : sa clé, et
@@ -179,31 +180,96 @@ class CharacterDetailCache {
   /// Reporte dans le cache l'écriture [write] confirmée par le serveur pour la
   /// ligne d'inventaire [inventoryId] (T5b-1) : ajout (ligne créée, ou
   /// remplacée si déjà là) ou retrait de la ligne.
+  ///
+  /// Un objet du catalogue (T5b-2) est reporté avec ses **données complètes** :
+  /// la ligne `items` embarquée, puis son nom et sa description dans les lignes
+  /// de traduction du payload, lues dans le cache du catalogue
+  /// ([InventoryCatalogCache]) — sans quoi la fiche relue hors ligne depuis ce
+  /// cache afficherait « Objet #id » sans poids ni CA. Objet absent du cache du
+  /// catalogue : ligne partielle, jamais d'erreur.
   Future<void> applyConfirmedInventoryItem({
     required String ownerId,
     required String characterId,
     required String inventoryId,
     required InventoryItemWrite write,
-  }) => applyConfirmedRelation(
-    ownerId: ownerId,
-    characterId: characterId,
-    relation: 'character_inventory',
-    transform: (rows) {
-      final others = [
-        for (final row in rows)
-          if (row['id'] != inventoryId) row,
-      ];
-      switch (write.op) {
-        case InventoryItemOp.delete:
-          return others;
-        case InventoryItemOp.add:
-          return [
-            ...others,
-            write.toRow(inventoryId: inventoryId, characterId: characterId),
-          ];
+  }) async {
+    final itemId = write.itemId;
+    final catalog = write.op == InventoryItemOp.add && itemId != null
+        ? await InventoryCatalogCache.read(_cache)
+        : null;
+    await applyConfirmedRelation(
+      ownerId: ownerId,
+      characterId: characterId,
+      relation: 'character_inventory',
+      transform: (rows) {
+        final others = [
+          for (final row in rows)
+            if (row['id'] != inventoryId) row,
+        ];
+        switch (write.op) {
+          case InventoryItemOp.delete:
+            return others;
+          case InventoryItemOp.add:
+            return [
+              ...others,
+              write.toRow(
+                inventoryId: inventoryId,
+                characterId: characterId,
+                itemRow: catalog?.itemRows[itemId],
+              ),
+            ];
+        }
+      },
+    );
+    if (catalog == null || itemId == null) return;
+    await _mergeItemTranslations(
+      ownerId: ownerId,
+      characterId: characterId,
+      itemId: itemId,
+      name: catalog.names['$itemId'],
+      description: catalog.descriptions['$itemId'],
+    );
+  }
+
+  /// Ajoute au payload de la fiche en cache les lignes de traduction (nom,
+  /// description) de l'objet [itemId] absentes (`itemNameRows`/
+  /// `itemDescriptionRows`). Best-effort, rien si la fiche n'est pas en cache.
+  Future<void> _mergeItemTranslations({
+    required String ownerId,
+    required String characterId,
+    required int itemId,
+    required String? name,
+    required String? description,
+  }) async {
+    List<Object?> merged(Object? raw, String? value) {
+      final rows = raw is List ? List<Object?>.of(raw) : <Object?>[];
+      final id = '$itemId';
+      final present = rows.any((row) => row is Map && row['entity_id'] == id);
+      if (!present && value != null) {
+        rows.add({'entity_id': id, 'value': value});
       }
-    },
-  );
+      return rows;
+    }
+
+    try {
+      await _cache.updateIfPresent(
+        keyFor(ownerId: ownerId, characterId: characterId),
+        (payload) {
+          if (payload is! Map) return null;
+          return <String, dynamic>{
+            ...Map<String, dynamic>.from(payload),
+            'itemNameRows': merged(payload['itemNameRows'], name),
+            'itemDescriptionRows': merged(
+              payload['itemDescriptionRows'],
+              description,
+            ),
+          };
+        },
+      );
+    } catch (_) {
+      // Best-effort : voir la documentation de cette méthode.
+    }
+  }
 
   /// Reporte dans le cache l'écriture de journal [write] confirmée par le
   /// serveur pour l'entrée [entryId] (T4) : ajout (ligne créée, ou remplacée si

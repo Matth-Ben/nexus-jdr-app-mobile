@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/cache/cache_providers.dart';
@@ -99,9 +101,40 @@ Future<List<CharacterSummary>> characters(Ref ref) {
 ///
 /// `autoDispose` par défaut : ce catalogue n'a pas besoin de survivre à la
 /// fermeture de la sheet qui l'affiche, même rationale que [characters].
+///
+/// F20 : rechargé automatiquement au retour du réseau
+/// (`ConnectivityChecker.onConnectivityRestored`) quand le dernier chargement a
+/// échoué ou n'a pu se faire que depuis un cache périmé hors ligne — la sheet
+/// d'ajout ne reste pas bloquée sur une erreur de catalogue. Chargé seulement
+/// quand la sheet l'écoute (jamais au démarrage).
 @Riverpod(retry: _noRetry)
-Future<List<InventoryCatalogItem>> inventoryCatalog(Ref ref) {
-  return ref.watch(characterRepositoryProvider).fetchInventoryCatalog();
+Future<List<InventoryCatalogItem>> inventoryCatalog(Ref ref) async {
+  final checker = ref.watch(connectivityCheckerProvider);
+  var needsReload = false;
+  // Surveillance du réseau best-effort : une erreur du canal de plateforme ne
+  // doit jamais empêcher d'afficher le catalogue (ni remonter comme erreur
+  // non gérée).
+  final subscription = checker.onConnectivityRestored.listen((_) {
+    if (needsReload) ref.invalidateSelf();
+  }, onError: (_) {});
+  ref.onDispose(subscription.cancel);
+  try {
+    final items = await ref
+        .watch(characterRepositoryProvider)
+        .fetchInventoryCatalog();
+    // Servi hors ligne (cache périmé) : à recharger dès que le réseau revient.
+    // Déterminé sans bloquer l'affichage du catalogue (best-effort).
+    unawaited(
+      checker
+          .hasConnection()
+          .then((connected) => needsReload = !connected)
+          .catchError((_) => false),
+    );
+    return items;
+  } catch (_) {
+    needsReload = true;
+    rethrow;
+  }
 }
 
 Duration? _noRetry(int retryCount, Object error) => null;

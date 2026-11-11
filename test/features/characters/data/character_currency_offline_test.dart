@@ -202,21 +202,30 @@ void main() {
       });
     });
 
-    test('butin avec objets hors ligne : rejectedOffline, rien en file '
-        '(tranche T5)', () async {
-      connectivity.goOffline();
+    test(
+      'butin avec objets hors ligne (T5b-2) : queued, monnaie + objet en '
+      'file (détail dans character_inventory_catalog_offline_test)',
+      () async {
+        connectivity.goOffline();
 
-      final outcome = await repository.addReward(
-        characterId: _characterId,
-        newCurrencyTotals: const {CurrencyKind.gold: 50},
-        items: const [
-          RewardItemDraft(itemId: 5, displayName: 'Dague', quantity: 1),
-        ],
-      );
+        final outcome = await repository.addReward(
+          characterId: _characterId,
+          newCurrencyTotals: const {CurrencyKind.gold: 50},
+          items: const [
+            RewardItemDraft(itemId: 5, displayName: 'Dague', quantity: 1),
+          ],
+        );
 
-      expect(outcome, WriteOutcome.rejectedOffline);
-      expect(await queue.allForOwner(_ownerA), isEmpty);
-    });
+        expect(outcome, WriteOutcome.queued);
+        expect(
+          (await queue.allForOwner(_ownerA)).map((l) => l.kind),
+          unorderedEquals([
+            PendingCharacterWriteKind.currency,
+            PendingCharacterWriteKind.inventoryItem,
+          ]),
+        );
+      },
+    );
 
     test('en ligne : écriture immédiate filtrée id + owner_id, cache mis à '
         'jour, rien en file', () async {

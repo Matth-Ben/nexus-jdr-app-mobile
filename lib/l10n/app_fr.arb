@@ -3611,6 +3611,18 @@
   "@addItemFlowCatalogLoadErrorMessage": {
     "description": "Message d'erreur de repli affiché quand le chargement du catalogue échoue sans `CharacterFailure` exploitable."
   },
+  "addItemFlowCatalogOfflineMessage": "Le catalogue d'objets n'est pas encore disponible : il n'a jamais été chargé sur cet appareil et la connexion est indisponible. Vous pouvez ajouter un objet personnalisé dès maintenant, ou réessayer une fois reconnecté.",
+  "@addItemFlowCatalogOfflineMessage": {
+    "description": "Message de la sheet \"Depuis le catalogue\" quand le catalogue n'a jamais été chargé et que l'appareil est hors ligne (F20) : propose l'objet personnalisé, disponible hors ligne."
+  },
+  "addItemFlowCatalogOfflineCustomButton": "Ajouter un objet personnalisé",
+  "@addItemFlowCatalogOfflineCustomButton": {
+    "description": "Bouton de l'état « catalogue indisponible hors ligne » de la sheet \"Depuis le catalogue\" : ouvre la saisie d'un objet personnalisé."
+  },
+  "addItemFlowCatalogOfflineRetryButton": "Réessayer",
+  "@addItemFlowCatalogOfflineRetryButton": {
+    "description": "Bouton de l'état « catalogue indisponible hors ligne » de la sheet \"Depuis le catalogue\" : relance le chargement du catalogue."
+  },
   "addItemFlowAddButtonLabel": "Ajouter",
   "@addItemFlowAddButtonLabel": {
     "description": "Libellé du bouton \"Ajouter\" de la sheet \"Depuis le catalogue\" en sélection multiple, aucun objet coché."

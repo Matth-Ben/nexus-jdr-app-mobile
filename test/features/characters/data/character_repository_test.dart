@@ -1929,8 +1929,8 @@ void main() {
         },
       );
 
-      test('addReward : connectivité absente -> retourne queued sans tenter le '
-          'réseau, jamais mise en file', () async {
+      test('addReward : connectivité absente -> queued sans tenter le réseau, '
+          'monnaie + objet mis en file (T5b-2)', () async {
         final client = await _buildSignedInFakeSupabaseClient(
           ownerId: ownerId,
           throwOnRequest: true,
@@ -1950,13 +1950,20 @@ void main() {
           ],
         );
 
-        expect(outcome, WriteOutcome.rejectedOffline);
-        expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+        expect(outcome, WriteOutcome.queued);
+        expect(await pendingWrites.allForOwner(ownerId), hasLength(2));
       });
 
       test('addReward : connectivité présente, monnaie et objets -> un appel '
           'currency + un appel batché objets, synced', () async {
-        final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: {
+            'characters': [
+              {'id': characterId},
+            ],
+          },
+        );
         final repository = SupabaseCharacterRepository(
           client,
           cache,

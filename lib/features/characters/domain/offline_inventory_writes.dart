@@ -2,13 +2,15 @@ import '../../../core/utils/uuid_v4.dart';
 import 'offline_state_writes.dart';
 import 'weapon_slot.dart';
 
-/// Ajout d'un objet personnalisé et retrait d'une ligne d'inventaire rendus
-/// hors-ligne-capables (T5b-1, P15). Une ligne de file `inventoryItem` porte
-/// l'**état voulu d'une ligne** `character_inventory` (`targetId` = UUID de la
-/// ligne, généré côté client à l'ajout) :
+/// Ajout d'un objet (personnalisé : T5b-1 ; du catalogue : T5b-2) et retrait
+/// d'une ligne d'inventaire rendus hors-ligne-capables (P15). Une ligne de
+/// file `inventoryItem` porte l'**état voulu d'une ligne** `character_inventory`
+/// (`targetId` = UUID de la ligne, généré côté client à l'ajout) :
 ///
-/// - ajout, pas encore synchronisé : `{"op": "add", "customName": "...",
-///   "quantity": n, + champs personnalisés non vides, + état initial
+/// - ajout, pas encore synchronisé : `{"op": "add", "itemId": n` (objet du
+///   catalogue) et/ou `"customName": "..."` (objet personnalisé ; au moins
+///   l'un des deux, comme le CHECK de la table), `"quantity": n, + champs
+///   personnalisés non vides, + état initial
 ///   optionnel equipped / weaponSlot / attuned}` — c'est un `INSERT` complet :
 ///   équiper, placer en set ou harmoniser une ligne encore en file se
 ///   **fusionne** ici au lieu de créer une ligne `inventoryState` ;
@@ -21,6 +23,7 @@ import 'weapon_slot.dart';
 /// de synchro, la déconnexion et la suppression de compte.
 abstract final class InventoryItemPayloadKeys {
   static const op = 'op';
+  static const itemId = 'itemId';
   static const customName = 'customName';
   static const quantity = 'quantity';
   static const customDescription = 'customDescription';
@@ -40,17 +43,23 @@ enum InventoryItemOp { add, delete }
 /// complet, ou retrait.
 class InventoryItemWrite {
   const InventoryItemWrite.add({
-    required String this.customName,
+    this.itemId,
+    this.customName,
     required int this.quantity,
     this.customDescription,
     this.customDamageDice,
     this.customDamageType,
     this.customProperties = const [],
     this.state,
-  }) : op = InventoryItemOp.add;
+  }) : assert(
+         itemId != null || customName != null,
+         'Un ajout porte un itemId ou un customName.',
+       ),
+       op = InventoryItemOp.add;
 
   const InventoryItemWrite.delete()
     : op = InventoryItemOp.delete,
+      itemId = null,
       customName = null,
       quantity = null,
       customDescription = null,
@@ -60,6 +69,10 @@ class InventoryItemWrite {
       state = null;
 
   final InventoryItemOp op;
+
+  /// `items.id` d'un objet du catalogue (`character_inventory.item_id`), `null`
+  /// pour un objet personnalisé.
+  final int? itemId;
   final String? customName;
   final int? quantity;
   final String? customDescription;
@@ -77,7 +90,8 @@ class InventoryItemWrite {
     }
     return {
       InventoryItemPayloadKeys.op: 'add',
-      InventoryItemPayloadKeys.customName: customName,
+      InventoryItemPayloadKeys.itemId: ?itemId,
+      InventoryItemPayloadKeys.customName: ?customName,
       InventoryItemPayloadKeys.quantity: quantity,
       InventoryItemPayloadKeys.customDescription: ?customDescription,
       InventoryItemPayloadKeys.customDamageDice: ?customDamageDice,
@@ -120,7 +134,8 @@ class InventoryItemWrite {
   }) => {
     'id': inventoryId,
     'character_id': characterId,
-    'custom_name': customName,
+    'item_id': ?itemId,
+    'custom_name': ?customName,
     'quantity': quantity,
     'custom_description': ?customDescription,
     'custom_damage_dice': ?customDamageDice,
@@ -132,8 +147,13 @@ class InventoryItemWrite {
   /// Colonnes de l'`UPDATE` de réalignement après un `23505` (la ligne existe
   /// déjà, réponse d'un envoi précédent perdue) : nom et état initial, pas la
   /// quantité (elle a pu être consommée depuis le premier envoi).
+  ///
+  /// Un objet du catalogue sans nom ni état à réaligner réécrit `item_id` à la
+  /// même valeur : un `UPDATE` au corps vide serait un no-op dont la réponse
+  /// vide serait prise pour « zéro ligne affectée ».
   Map<String, dynamic> toRealignColumns() => {
-    'custom_name': customName,
+    'custom_name': ?customName,
+    if (customName == null) 'item_id': itemId,
     ..._stateColumns(),
   };
 
@@ -141,13 +161,18 @@ class InventoryItemWrite {
   /// PostgREST) : alimente la superposition ([CharacterInventoryRowMapper]) et
   /// le cache de la fiche, avec exactement les mêmes règles de mapping qu'une
   /// ligne du serveur.
+  ///
+  /// [itemRow] : ligne `items` du catalogue (en cache) embarquée sous `items`
+  /// pour un objet du catalogue — sans elle (objet absent du cache), la ligne
+  /// reste partielle (nom générique, pas de poids ni de CA) mais valide.
   Map<String, dynamic> toRow({
     required String inventoryId,
     required String characterId,
+    Map<String, dynamic>? itemRow,
   }) => {
     'id': inventoryId,
     'character_id': characterId,
-    'item_id': null,
+    'item_id': itemId,
     'custom_name': customName,
     'quantity': quantity,
     'equipped': state?.equipped ?? false,
@@ -158,6 +183,7 @@ class InventoryItemWrite {
     'custom_damage_dice': customDamageDice,
     'custom_damage_type': customDamageType,
     'custom_properties': customProperties.isEmpty ? null : customProperties,
+    'items': ?itemRow,
   };
 }
 
@@ -167,6 +193,11 @@ bool isValidInventoryCustomName(Object? name) =>
     name is String &&
     name.trim().isNotEmpty &&
     name.length <= inventoryCustomNameMaxLength;
+
+/// Un `item_id` valide est un entier ≥ 1 dans la plage `integer` Postgres
+/// (`items.id` : `int`). Refuse 0, négatifs, flottants (`3.0`), chaînes.
+bool isValidInventoryItemId(Object? itemId) =>
+    itemId is int && itemId >= 1 && itemId <= postgresIntMax;
 
 /// Une quantité valide est un entier ≥ 1 dans la plage `integer` Postgres
 /// (`character_inventory.quantity` : `integer not null`).
@@ -178,7 +209,8 @@ bool isValidInventoryQuantity(Object? quantity) =>
 bool isValidInventoryItemTargetId(String targetId) => isUuid(targetId);
 
 /// Analyse stricte d'un payload `inventoryItem` ; `null` s'il est invalide
-/// (pas un objet, `op` absente ou inconnue, nom vide/trop long/non texte,
+/// (pas un objet, `op` absente ou inconnue, ni `itemId` ni `customName`,
+/// `itemId` non entier ou ≤ 0, nom vide/trop long/non texte,
 /// quantité non entière ou hors plage, champs personnalisés d'un mauvais type,
 /// `customProperties` autre qu'une liste de textes, état d'un mauvais type,
 /// set d'arme inconnu ou donné pour un objet explicitement non équipé). Les
@@ -189,8 +221,22 @@ InventoryItemWrite? parseInventoryItemPayload(Object? raw) {
   if (op == 'delete') return const InventoryItemWrite.delete();
   if (op != 'add') return null;
 
-  final name = raw[InventoryItemPayloadKeys.customName];
-  if (!isValidInventoryCustomName(name)) return null;
+  // Au moins un `itemId` (catalogue) ou un `customName` (personnalisé), comme
+  // le CHECK `item_id` OU `custom_name` de la table ; une clé présente doit
+  // être valide.
+  int? itemId;
+  if (raw.containsKey(InventoryItemPayloadKeys.itemId)) {
+    final rawItemId = raw[InventoryItemPayloadKeys.itemId];
+    if (!isValidInventoryItemId(rawItemId)) return null;
+    itemId = rawItemId as int;
+  }
+  String? name;
+  if (raw.containsKey(InventoryItemPayloadKeys.customName)) {
+    final rawName = raw[InventoryItemPayloadKeys.customName];
+    if (!isValidInventoryCustomName(rawName)) return null;
+    name = rawName as String;
+  }
+  if (itemId == null && name == null) return null;
   final quantity = raw[InventoryItemPayloadKeys.quantity];
   if (!isValidInventoryQuantity(quantity)) return null;
 
@@ -236,7 +282,8 @@ InventoryItemWrite? parseInventoryItemPayload(Object? raw) {
   }
   final hasState = equipped != null || attuned != null || weaponSlot != null;
   return InventoryItemWrite.add(
-    customName: name as String,
+    itemId: itemId,
+    customName: name,
     quantity: quantity as int,
     customDescription: description,
     customDamageDice: dice,
@@ -265,7 +312,8 @@ InventoryItemWrite mergeStateIntoPendingAdd(
       ? patch
       : pendingAdd.state!.merge(patch);
   return InventoryItemWrite.add(
-    customName: pendingAdd.customName!,
+    itemId: pendingAdd.itemId,
+    customName: pendingAdd.customName,
     quantity: pendingAdd.quantity!,
     customDescription: pendingAdd.customDescription,
     customDamageDice: pendingAdd.customDamageDice,
@@ -301,3 +349,12 @@ InventoryRemovalPlan planInventoryRemoval({
 }) => InventoryRemovalPlan._(
   alreadyRemoved: pending?.op == InventoryItemOp.delete,
 );
+
+/// Un ajout d'objet à mettre en file avec son UUID de ligne client (butin avec
+/// objets, T5b-2).
+class PendingInventoryAdd {
+  const PendingInventoryAdd({required this.inventoryId, required this.write});
+
+  final String inventoryId;
+  final InventoryItemWrite write;
+}

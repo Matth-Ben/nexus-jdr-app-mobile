@@ -142,6 +142,24 @@ class AbandonedWrite {
   final String message;
 }
 
+/// Une écriture à mettre en file par [PendingCharacterWriteQueue.enqueueAll] —
+/// mêmes champs que [PendingCharacterWriteQueue.enqueue].
+class PendingWriteRequest {
+  const PendingWriteRequest({
+    required this.characterId,
+    required this.ownerId,
+    required this.kind,
+    required this.targetId,
+    required this.payload,
+  });
+
+  final String characterId;
+  final String ownerId;
+  final PendingCharacterWriteKind kind;
+  final String targetId;
+  final Map<String, dynamic> payload;
+}
+
 /// Une ligne de [PendingCharacterWrites] déjà décodée — voir
 /// [PendingCharacterWriteQueue.allForOwner]/[PendingCharacterWriteQueue.forCharacter].
 class PendingCharacterWrite {
@@ -328,53 +346,90 @@ class PendingCharacterWriteQueue {
     required PendingCharacterWriteKind kind,
     required String targetId,
     required Map<String, dynamic> payload,
-  }) async {
-    await _db.transaction(() async {
-      final existing =
-          await (_db.select(_db.pendingCharacterWrites)..where(
-                (row) =>
-                    row.ownerId.equals(ownerId) &
-                    row.characterId.equals(characterId) &
-                    row.kind.equals(kind.storageKey) &
-                    row.targetId.equals(targetId),
-              ))
-              .getSingleOrNull();
+  }) => _db.transaction(
+    () => _upsert(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: kind,
+      targetId: targetId,
+      payload: payload,
+    ),
+  );
 
-      var queuedAt = _now();
-      if (existing != null) {
-        final earliest = existing.queuedAt.add(const Duration(seconds: 1));
-        if (queuedAt.isBefore(earliest)) {
-          queuedAt = earliest;
-        }
+  /// Met en file **plusieurs** écritures en une seule transaction drift : tout
+  /// ou rien (T5b-2). Sert au butin hors ligne (monnaie + N objets) : si l'app
+  /// est tuée, ou si l'un des enfilages échoue, aucune des écritures n'est
+  /// conservée — jamais un butin à moitié en file. Chaque entrée suit les
+  /// règles d'[enqueue] (upsert, `queuedAt` avancé, compteur d'échecs remis à
+  /// zéro).
+  Future<void> enqueueAll(List<PendingWriteRequest> requests) {
+    if (requests.isEmpty) return Future<void>.value();
+    return _db.transaction(() async {
+      for (final request in requests) {
+        await _upsert(
+          characterId: request.characterId,
+          ownerId: request.ownerId,
+          kind: request.kind,
+          targetId: request.targetId,
+          payload: request.payload,
+        );
       }
-
-      await _db
-          .into(_db.pendingCharacterWrites)
-          .insertOnConflictUpdate(
-            PendingCharacterWritesCompanion.insert(
-              characterId: characterId,
-              ownerId: ownerId,
-              kind: kind.storageKey,
-              targetId: Value(targetId),
-              payload: jsonEncode(payload),
-              queuedAt: queuedAt,
-              // Remet à zéro le compteur d'échecs (D34) : une entrée mise en
-              // file ici est une **nouvelle** valeur saisie par le joueur
-              // (même upsert que [existing] remplacée ci-dessus), jamais un
-              // simple renvoi de la même valeur — elle mérite un budget de
-              // tentatives neuf, même si l'entrée qu'elle remplace avait déjà
-              // été abandonnée. Sans ce reset explicite,
-              // `insertOnConflictUpdate` laisserait `failureCount`/`abandoned`
-              // de l'ancienne ligne tels quels (colonnes absentes de ce
-              // companion) : la nouvelle valeur du joueur serait alors
-              // ignorée pour toujours par `forCharacter`/`allForOwner`
-              // (filtrées sur `abandoned`), sans jamais repartir.
-              failureCount: const Value(0),
-              abandoned: const Value(false),
-              lastFailureMessage: const Value(null),
-            ),
-          );
     });
+  }
+
+  /// Corps d'[enqueue], **sans** transaction propre : l'appelant ouvre la
+  /// transaction (une seule pour [enqueueAll]).
+  Future<void> _upsert({
+    required String characterId,
+    required String ownerId,
+    required PendingCharacterWriteKind kind,
+    required String targetId,
+    required Map<String, dynamic> payload,
+  }) async {
+    final existing =
+        await (_db.select(_db.pendingCharacterWrites)..where(
+              (row) =>
+                  row.ownerId.equals(ownerId) &
+                  row.characterId.equals(characterId) &
+                  row.kind.equals(kind.storageKey) &
+                  row.targetId.equals(targetId),
+            ))
+            .getSingleOrNull();
+
+    var queuedAt = _now();
+    if (existing != null) {
+      final earliest = existing.queuedAt.add(const Duration(seconds: 1));
+      if (queuedAt.isBefore(earliest)) {
+        queuedAt = earliest;
+      }
+    }
+
+    await _db
+        .into(_db.pendingCharacterWrites)
+        .insertOnConflictUpdate(
+          PendingCharacterWritesCompanion.insert(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: kind.storageKey,
+            targetId: Value(targetId),
+            payload: jsonEncode(payload),
+            queuedAt: queuedAt,
+            // Remet à zéro le compteur d'échecs (D34) : une entrée mise en
+            // file ici est une **nouvelle** valeur saisie par le joueur
+            // (même upsert que [existing] remplacée ci-dessus), jamais un
+            // simple renvoi de la même valeur — elle mérite un budget de
+            // tentatives neuf, même si l'entrée qu'elle remplace avait déjà
+            // été abandonnée. Sans ce reset explicite,
+            // `insertOnConflictUpdate` laisserait `failureCount`/`abandoned`
+            // de l'ancienne ligne tels quels (colonnes absentes de ce
+            // companion) : la nouvelle valeur du joueur serait alors
+            // ignorée pour toujours par `forCharacter`/`allForOwner`
+            // (filtrées sur `abandoned`), sans jamais repartir.
+            failureCount: const Value(0),
+            abandoned: const Value(false),
+            lastFailureMessage: const Value(null),
+          ),
+        );
   }
 
   /// Retire [write] de la file **seulement si elle y est encore telle
