@@ -37,6 +37,10 @@ showSpellSlotUsedSnackBar(
   final messenger = ScaffoldMessenger.of(context);
   messenger.hideCurrentSnackBar();
   final accessible = MediaQuery.accessibleNavigationOf(context);
+  // Garde « déjà déclenché » (comme celle d'un `SnackBarAction`) : pendant
+  // l'animation de fermeture le bouton reste dans l'arbre et cliquable, un
+  // second appui ne doit pas rendre un deuxième emplacement.
+  var undone = false;
   return messenger.showSnackBar(
     SnackBar(
       duration: accessible
@@ -67,6 +71,8 @@ showSpellSlotUsedSnackBar(
             excludeSemantics: true,
             child: InkWell(
               onTap: () {
+                if (undone) return;
+                undone = true;
                 messenger.hideCurrentSnackBar(
                   reason: SnackBarClosedReason.action,
                 );

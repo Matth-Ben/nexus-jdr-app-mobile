@@ -16,6 +16,7 @@ import 'package:personnages/features/characters/domain/character_spell_slot.dart
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_detail_provider.dart';
+import 'package:personnages/features/characters/presentation/widgets/spell_slot_used_snack_bar.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/l10n/app_localizations.dart';
 
@@ -48,6 +49,11 @@ Future<FakeSlotRepository> _pump(
               builder: (context, state) => CharacterDetailScreen(
                 characterId: state.pathParameters['id']!,
               ),
+            ),
+            GoRoute(
+              path: '/other',
+              builder: (context, state) =>
+                  const Scaffold(body: Text('Autre écran')),
             ),
           ],
         ),
@@ -394,6 +400,91 @@ void main() {
       await _cast(tester, 'Rayon de givre', castLabel: 'CAST');
 
       expect(find.text('Pact slot used'), findsOneWidget);
+    });
+  });
+
+  group('garde-fous du SnackBar', () {
+    testWidgets('double appui sur ANNULER (aussi pendant la '
+        'fermeture animée) : un seul emplacement rendu', (tester) async {
+      final repository = await _pump(tester, wizardDetail());
+      await _cast(tester, 'Boule de feu'); // used 1
+      await _cast(tester, 'Contresort'); // used 2
+
+      await tester.tap(find.text('ANNULER'));
+      await tester.pump(const Duration(milliseconds: 30));
+      // Le bouton est encore dans l'arbre, le SnackBar en cours de fermeture.
+      await tester.tap(find.text('ANNULER'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(repository.writes.map((w) => w.used), [1, 2, 1]);
+    });
+
+    testWidgets('deux appuis dans la même image : un seul emplacement rendu', (
+      tester,
+    ) async {
+      final repository = await _pump(tester, wizardDetail());
+      await _cast(tester, 'Boule de feu');
+      await _cast(tester, 'Contresort');
+
+      await tester.tap(find.text('ANNULER'));
+      await tester.tap(find.text('ANNULER'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(repository.writes.map((w) => w.used), [1, 2, 1]);
+    });
+
+    testWidgets('sortie de la fiche : aucun SnackBar orphelin, aucune '
+        'écriture, aucune exception', (tester) async {
+      final repository = await _pump(tester, wizardDetail());
+      await _cast(tester, 'Boule de feu');
+      expect(find.text('ANNULER'), findsOneWidget);
+      final writesBefore = repository.writes.length;
+
+      GoRouter.of(tester.element(find.byType(CharacterDetailScreen)))
+          .go('/other');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Autre écran'), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(find.text('ANNULER'), findsNothing);
+      expect(repository.writes, hasLength(writesBefore));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('showSpellSlotUsedSnackBar remplace lui-même le SnackBar '
+        'affiché (un seul visible après deux appels)', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => Column(
+                children: [
+                  for (final label in ['Premier', 'Second'])
+                    TextButton(
+                      onPressed: () => showSpellSlotUsedSnackBar(
+                        context,
+                        message: label,
+                        undoLabel: 'Annuler',
+                        announcement: label,
+                        onUndo: () {},
+                      ),
+                      child: Text('Afficher $label'),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Afficher Premier'));
+      await tester.pump();
+      await tester.tap(find.text('Afficher Second'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.text('Premier'), findsNothing);
+      expect(find.text('Second'), findsOneWidget);
     });
   });
 }
