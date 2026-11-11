@@ -6604,6 +6604,30 @@ abstract class AppLocalizations {
   /// **'{message}. Bouton Annuler.'**
   String spellSlotUsedSnackBarAnnouncement(String message);
 
+  /// Ligne ajoutée au SnackBar de lancer d'un sort à concentration (informatif, aucun suivi d'état).
+  ///
+  /// In fr, this message translates to:
+  /// **'Concentration requise'**
+  String get spellConcentrationRequiredMessage;
+
+  /// Encadré d'aide du panneau d'information d'un sort à concentration : règle du jet de Constitution quand le lanceur subit des dégâts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dégâts subis : jet de Constitution, DD 10 ou moitié des dégâts (le plus haut). Un jet par source.'**
+  String get spellInfoPanelConcentrationHint;
+
+  /// Libellé de la pastille marquant un sort à concentration dans la liste des sorts.
+  ///
+  /// In fr, this message translates to:
+  /// **'C'**
+  String get characterSpellsSectionConcentrationBadgeLabel;
+
+  /// Libellé lecteur d'écran de la pastille « C » d'un sort à concentration.
+  ///
+  /// In fr, this message translates to:
+  /// **'Concentration'**
+  String get characterSpellsSectionConcentrationSemanticLabel;
+
   /// Bouton de l'en-tête de la carte Emplacements qui ouvre la feuille de correction manuelle.
   ///
   /// In fr, this message translates to:

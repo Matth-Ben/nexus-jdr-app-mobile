@@ -20,7 +20,9 @@ const Duration spellSlotUsedSnackBarAccessibleDuration = Duration(seconds: 10);
 ///
 /// [offlineMessage] non nul : le lancer a été mis en file hors ligne ; le
 /// message « sera synchronisé » est fusionné dans ce même SnackBar plutôt
-/// qu'affiché dans un second.
+/// qu'affiché dans un second. [concentrationMessage] non nul (sort à
+/// concentration, P3a) : ligne informative supplémentaire du même SnackBar ;
+/// l'appelant l'inclut aussi dans [announcement].
 ///
 /// Le bouton « Annuler » est un contrôle maison (`DisplayText` palier
 /// control, 44 px de haut minimum) plutôt qu'un `SnackBarAction`, dont le
@@ -33,6 +35,7 @@ showSpellSlotUsedSnackBar(
   required String announcement,
   required VoidCallback onUndo,
   String? offlineMessage,
+  String? concentrationMessage,
 }) {
   final messenger = ScaffoldMessenger.of(context);
   messenger.hideCurrentSnackBar();
@@ -60,6 +63,7 @@ showSpellSlotUsedSnackBar(
                   excludeSemantics: true,
                   child: Text(message),
                 ),
+                if (concentrationMessage != null) Text(concentrationMessage),
                 if (offlineMessage != null) Text(offlineMessage),
               ],
             ),

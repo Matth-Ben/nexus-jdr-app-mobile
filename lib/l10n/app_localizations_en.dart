@@ -4060,6 +4060,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get spellConcentrationRequiredMessage => 'Concentration required';
+
+  @override
+  String get spellInfoPanelConcentrationHint =>
+      'When damaged: Constitution save, DC 10 or half the damage (higher). One save per source.';
+
+  @override
+  String get characterSpellsSectionConcentrationBadgeLabel => 'C';
+
+  @override
+  String get characterSpellsSectionConcentrationSemanticLabel =>
+      'Concentration';
+
+  @override
   String get spellSlotCorrectionOpenButton => 'Correct';
 
   @override

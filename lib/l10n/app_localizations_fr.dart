@@ -4097,6 +4097,20 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get spellConcentrationRequiredMessage => 'Concentration requise';
+
+  @override
+  String get spellInfoPanelConcentrationHint =>
+      'Dégâts subis : jet de Constitution, DD 10 ou moitié des dégâts (le plus haut). Un jet par source.';
+
+  @override
+  String get characterSpellsSectionConcentrationBadgeLabel => 'C';
+
+  @override
+  String get characterSpellsSectionConcentrationSemanticLabel =>
+      'Concentration';
+
+  @override
   String get spellSlotCorrectionOpenButton => 'Corriger';
 
   @override
