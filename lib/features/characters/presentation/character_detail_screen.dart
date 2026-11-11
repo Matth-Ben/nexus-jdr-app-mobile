@@ -1321,8 +1321,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
+      // T5b-1 : hors ligne, le retrait est mis en file (la relecture masque la
+      // ligne), traité comme un succès avec le message « sera synchronisé ».
       await _refreshCharacterDetail();
-      _showSnackBar('${item.name} retiré de l\'inventaire.');
+      _showSnackBar(
+        outcome == WriteOutcome.queued
+            ? _offlineQueuedMessage(l10n)
+            : '${item.name} retiré de l\'inventaire.',
+      );
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
@@ -1465,8 +1471,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
+      // T5b-1 : hors ligne, l'ajout est mis en file (la relecture superpose la
+      // ligne), traité comme un succès avec le message « sera synchronisé ».
       await _refreshCharacterDetail();
-      _showSnackBar('$customName ajouté à l\'inventaire.');
+      _showSnackBar(
+        outcome == WriteOutcome.queued
+            ? _offlineQueuedMessage(l10n)
+            : '$customName ajouté à l\'inventaire.',
+      );
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {

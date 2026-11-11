@@ -49,6 +49,7 @@ import '../domain/level_up_metamagic_swap.dart';
 import '../domain/level_up_rune_option.dart';
 import '../domain/level_up_subclass_option.dart';
 import '../domain/multiclass_prerequisites.dart';
+import '../domain/offline_inventory_writes.dart';
 import '../domain/offline_journal_writes.dart';
 import '../domain/offline_state_writes.dart';
 import '../domain/portrait_storage_path_resolver.dart';
@@ -553,7 +554,11 @@ abstract class CharacterRepository {
   /// Action "Retirer" (avec confirmation côté sheet) — supprime la ligne
   /// `character_inventory` [inventoryId].
   ///
-  /// Mode hors ligne : mêmes règles que [useInventoryItem].
+  /// Mode hors ligne (T5b-1, P15) : mis en file (`inventoryItem`, tombstone ;
+  /// l'éventuel réglage d'état en file de la ligne est purgé) hors ligne ou
+  /// sur erreur de transport — [WriteOutcome.queued] ; un refus est un échec,
+  /// jamais mis en file. Retirer une ligne déjà retirée en file est un
+  /// succès sans effet.
   Future<WriteOutcome> removeInventoryItem({
     required String characterId,
     required String inventoryId,
@@ -598,7 +603,12 @@ abstract class CharacterRepository {
   /// renseignées (même convention que le reste de ce dépôt, ex.
   /// [addReward]).
   ///
-  /// Mode hors ligne : mêmes règles que [useInventoryItem].
+  /// Mode hors ligne (T5b-1, P15) : mis en file (`inventoryItem`, UUID de la
+  /// ligne généré côté client) hors ligne ou sur erreur de transport —
+  /// [WriteOutcome.queued] ; la ligne est visible dans la fiche et accepte
+  /// équipé/harmonisé/set d'arme avant sa synchronisation. Un refus est un
+  /// échec, jamais mis en file. Nom vide/trop long ou quantité < 1 :
+  /// [CharacterFailure].
   Future<WriteOutcome> addCustomInventoryItem({
     required String characterId,
     required String customName,
@@ -2013,6 +2023,23 @@ class SupabaseCharacterRepository implements CharacterRepository {
                 journalWrite,
               ),
             );
+          case PendingCharacterWriteKind.inventoryItem:
+            // T5b-1 : ajouts d'objets personnalisés (ligne complète, état
+            // initial compris) et retraits (tombstones). Poids total,
+            // harmonisés, CA, armes équipées : getters dérivés de l'inventaire.
+            final itemWrite = parseInventoryItemPayload(write.payload);
+            if (itemWrite == null ||
+                !isValidInventoryItemTargetId(write.targetId)) {
+              break;
+            }
+            result = result.copyWith(
+              inventory: _superposeInventoryItemWrite(
+                result.inventory,
+                characterId,
+                write.targetId,
+                itemWrite,
+              ),
+            );
           case PendingCharacterWriteKind.rest:
           // Jamais superposée — voir la documentation de cette méthode.
         }
@@ -2022,6 +2049,32 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // Best-effort : voir la documentation de cette méthode.
       return detail;
     }
+  }
+
+  /// Applique [write] à l'inventaire [items] (superposition d'une ligne de
+  /// file `inventoryItem`, T5b-1) : un retrait masque la ligne ; un ajout
+  /// insère la ligne complète (remplace la ligne du même id si le serveur
+  /// l'a déjà, réponse d'un envoi précédent perdue). La ligne est construite
+  /// par le même mapper qu'une ligne du serveur.
+  List<CharacterInventoryItem> _superposeInventoryItemWrite(
+    List<CharacterInventoryItem> items,
+    String characterId,
+    String inventoryId,
+    InventoryItemWrite write,
+  ) {
+    final others = [
+      for (final item in items)
+        if (item.id != inventoryId) item,
+    ];
+    if (write.op == InventoryItemOp.delete) return others;
+    return [
+      ...others,
+      ...CharacterInventoryRowMapper.toCharacterInventoryItems(
+        [write.toRow(inventoryId: inventoryId, characterId: characterId)],
+        names: const {},
+        descriptions: const {},
+      ),
+    ];
   }
 
   /// Applique [write] à la liste [entries] du journal (superposition d'une
@@ -2717,7 +2770,77 @@ class SupabaseCharacterRepository implements CharacterRepository {
     ),
   );
 
+  /// Réglage d'état d'un objet (équipé, set d'arme, harmonisé), T5a + T5b-1.
+  ///
+  /// Verrouillé par `runExclusive(characterId, inventoryItem, inventoryId)`
+  /// (même verrou que l'ajout/retrait/rejeu de la ligne) : si l'**ajout** de la
+  /// ligne est encore en file (la ligne n'existe pas côté serveur), le
+  /// réglage est **fusionné dans le payload d'ajout** (un `INSERT` complet) et
+  /// jamais mis en file comme `inventoryState` — y compris en ligne : un
+  /// `UPDATE` sur zéro ligne échouerait ; la ligne part à la prochaine
+  /// synchro ([WriteOutcome.queued]). Si un retrait de la ligne est en file,
+  /// le réglage est refusé. Sinon : réglage d'état absolu habituel.
   Future<WriteOutcome> _writeInventoryState({
+    required String characterId,
+    required String inventoryId,
+    required InventoryStatePatch change,
+  }) async {
+    final ownerId = _requireOwnerId();
+    try {
+      return await _pendingWrites.runExclusive(
+        characterId: characterId,
+        kind: PendingCharacterWriteKind.inventoryItem,
+        targetId: inventoryId,
+        action: () async {
+          final pending = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.inventoryItem,
+            targetId: inventoryId,
+          );
+          final pendingItem = pending == null
+              ? null
+              : parseInventoryItemPayload(pending.payload);
+          if (pendingItem == null) {
+            return _writeInventoryStateAbsolute(
+              characterId: characterId,
+              inventoryId: inventoryId,
+              change: change,
+            );
+          }
+          if (pendingItem.op == InventoryItemOp.delete) {
+            throw const CharacterFailure(
+              'Cet objet a déjà été retiré de l\'inventaire.',
+            );
+          }
+          if (change.attuned == true) {
+            await _enforceAttunementCapOffline(
+              ownerId: ownerId,
+              characterId: characterId,
+              inventoryId: inventoryId,
+            );
+          }
+          await _pendingWrites.enqueue(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.inventoryItem,
+            targetId: inventoryId,
+            payload: mergeStateIntoPendingAdd(pendingItem, change).toPayload(),
+          );
+          return WriteOutcome.queued;
+        },
+      );
+    } on CharacterFailure {
+      rethrow;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (error, stackTrace) {
+      reportNonFatal(error, stackTrace);
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  Future<WriteOutcome> _writeInventoryStateAbsolute({
     required String characterId,
     required String inventoryId,
     required InventoryStatePatch change,
@@ -4132,23 +4255,199 @@ class SupabaseCharacterRepository implements CharacterRepository {
   Future<WriteOutcome> removeInventoryItem({
     required String characterId,
     required String inventoryId,
-  }) async {
-    _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
-    }
+  }) => _writeInventoryItem(
+    characterId: characterId,
+    inventoryId: inventoryId,
+    requested: const InventoryItemWrite.delete(),
+  );
 
+  /// Moteur commun de l'ajout d'objet personnalisé et du retrait (T5b-1, P15),
+  /// verrouillé par `runExclusive(characterId, inventoryItem, inventoryId)`
+  /// (même verrou que le rejeu et que le réglage d'état de la ligne) :
+  ///
+  /// - hors ligne, ou erreur de transport : mise en file
+  ///   (`inventoryItem`) et [WriteOutcome.queued]. Un retrait met toujours en
+  ///   file un **tombstone** (même pour une ligne dont l'ajout est encore en
+  ///   file, voir [planInventoryRemoval]) et **purge** l'entrée
+  ///   `inventoryState` de la ligne (son rejeu ferait un `UPDATE` sur zéro
+  ///   ligne : refus 42501, abandon, alerte parasite) ; un retrait déjà en
+  ///   file est idempotent ;
+  /// - en ligne : écriture immédiate ([applyInventoryItemWriteOnline], l'ajout
+  ///   avec l'UUID client : `INSERT` idempotent), retrait de l'entrée périmée
+  ///   (`removeIfUnchanged`), purge de l'état en file (retrait), puis report
+  ///   dans le cache de la fiche ;
+  /// - refus Postgrest (RLS, contrainte) : échec, rien en file.
+  Future<WriteOutcome> _writeInventoryItem({
+    required String characterId,
+    required String inventoryId,
+    required InventoryItemWrite requested,
+  }) async {
+    final ownerId = _requireOwnerId();
+    final isRemoval = requested.op == InventoryItemOp.delete;
     try {
-      await _client
-          .from('character_inventory')
-          .delete()
-          .eq('id', inventoryId)
-          .eq('character_id', characterId);
-      return WriteOutcome.synced;
+      return await _pendingWrites.runExclusive(
+        characterId: characterId,
+        kind: PendingCharacterWriteKind.inventoryItem,
+        targetId: inventoryId,
+        action: () async {
+          final pending = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.inventoryItem,
+            targetId: inventoryId,
+          );
+          if (isRemoval &&
+              planInventoryRemoval(
+                pending: pending == null
+                    ? null
+                    : parseInventoryItemPayload(pending.payload),
+              ).alreadyRemoved) {
+            return WriteOutcome.queued;
+          }
+
+          Future<WriteOutcome> queue() async {
+            // Un identifiant illisible serait supprimé au rejeu : jamais
+            // accepté puis perdu en silence.
+            if (!isValidInventoryItemTargetId(inventoryId)) {
+              throw const CharacterFailure('Objet introuvable.');
+            }
+            await _pendingWrites.enqueue(
+              characterId: characterId,
+              ownerId: ownerId,
+              kind: PendingCharacterWriteKind.inventoryItem,
+              targetId: inventoryId,
+              payload: requested.toPayload(),
+            );
+            if (isRemoval) {
+              await _purgePendingInventoryState(
+                characterId: characterId,
+                ownerId: ownerId,
+                inventoryId: inventoryId,
+              );
+            }
+            return WriteOutcome.queued;
+          }
+
+          if (!await _connectivityChecker.hasConnection()) return queue();
+          try {
+            await applyInventoryItemWriteOnline(
+              characterId: characterId,
+              inventoryId: inventoryId,
+              write: requested,
+            );
+          } on CharacterFailure {
+            rethrow;
+          } on PostgrestException {
+            rethrow;
+          } catch (error) {
+            if (isTransportFailure(error)) return queue();
+            rethrow;
+          }
+          await _recordConfirmedWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            columns: null,
+            supersededWrite: pending,
+          );
+          if (isRemoval) {
+            await _purgePendingInventoryState(
+              characterId: characterId,
+              ownerId: ownerId,
+              inventoryId: inventoryId,
+            );
+          }
+          await _detailCache.applyConfirmedInventoryItem(
+            ownerId: ownerId,
+            characterId: characterId,
+            inventoryId: inventoryId,
+            write: requested,
+          );
+          return WriteOutcome.synced;
+        },
+      );
+    } on CharacterFailure {
+      rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
+    }
+  }
+
+  /// Retire l'entrée `inventoryState` en file de la ligne [inventoryId]
+  /// (verrou `inventoryState` de la ligne, donc jamais pendant son rejeu), par
+  /// `removeIfUnchanged`. Appelée au retrait de la ligne : un réglage d'état
+  /// sur une ligne supprimée n'a plus de sens. Best-effort.
+  Future<void> _purgePendingInventoryState({
+    required String characterId,
+    required String ownerId,
+    required String inventoryId,
+  }) async {
+    try {
+      await _pendingWrites.runExclusive(
+        characterId: characterId,
+        kind: PendingCharacterWriteKind.inventoryState,
+        targetId: inventoryId,
+        action: () async {
+          final state = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.inventoryState,
+            targetId: inventoryId,
+          );
+          if (state != null) await _pendingWrites.removeIfUnchanged(state);
+        },
+      );
+    } catch (_) {
+      // Best-effort : voir la documentation de cette méthode.
+    }
+  }
+
+  /// Écrit [write] sur `character_inventory` pour la ligne [inventoryId] —
+  /// partagé par l'écriture en ligne et par le rejeu de la file
+  /// (`PendingCharacterWriteSyncer`), donc public comme
+  /// [applyJournalWriteOnline]. Toujours filtré par `character_id` (la RLS
+  /// reste la garantie d'isolation).
+  ///
+  /// - ajout : `INSERT` avec l'`id` client. **Idempotent** : un `23505` (clé
+  ///   primaire déjà présente, réponse d'un envoi précédent perdue) n'est pas
+  ///   une erreur, jamais de doublon — le nom et l'état initial sont alors
+  ///   réalignés par un `UPDATE` filtré `id` + `character_id` (zéro ligne :
+  ///   [PostgrestException] `42501`, non rejouable) ;
+  /// - retrait : `DELETE` ; zéro ligne = déjà supprimée = succès.
+  Future<void> applyInventoryItemWriteOnline({
+    required String characterId,
+    required String inventoryId,
+    required InventoryItemWrite write,
+  }) async {
+    switch (write.op) {
+      case InventoryItemOp.add:
+        try {
+          await _client
+              .from('character_inventory')
+              .insert(
+                write.toInsertColumns(
+                  inventoryId: inventoryId,
+                  characterId: characterId,
+                ),
+              );
+        } on PostgrestException catch (error) {
+          if (error.code != '23505') rethrow;
+          final updated = await _client
+              .from('character_inventory')
+              .update(write.toRealignColumns())
+              .eq('id', inventoryId)
+              .eq('character_id', characterId)
+              .select('id');
+          if (updated.isEmpty) throw _noRowAffected('character_inventory');
+        }
+      case InventoryItemOp.delete:
+        await _client
+            .from('character_inventory')
+            .delete()
+            .eq('id', inventoryId)
+            .eq('character_id', characterId);
     }
   }
 
@@ -4197,27 +4496,33 @@ class SupabaseCharacterRepository implements CharacterRepository {
     String? damageType,
     List<String> properties = const [],
   }) async {
-    _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
+    // Mêmes bornes à l'enfilage et au rejeu : jamais accepté puis supprimé en
+    // silence de la file.
+    if (!isValidInventoryCustomName(customName)) {
+      throw const CharacterFailure(
+        'Le nom de l\'objet ne peut pas être vide (200 caractères au plus).',
+      );
     }
-
-    try {
-      await _client.from('character_inventory').insert({
-        'character_id': characterId,
-        'custom_name': customName,
-        'quantity': quantity,
-        'custom_description': ?description,
-        'custom_damage_dice': ?damageDice,
-        'custom_damage_type': ?damageType,
-        if (properties.isNotEmpty) 'custom_properties': properties,
-      });
-      return WriteOutcome.synced;
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
-    } catch (_) {
-      throw mapUnknownCharacterError();
+    if (!isValidInventoryQuantity(quantity)) {
+      throw const CharacterFailure('La quantité doit être au moins 1.');
     }
+    String? nonEmpty(String? value) =>
+        value == null || value.isEmpty ? null : value;
+    // L'UUID de la ligne est généré ici (colonne `uuid` acceptant un `id`
+    // explicite) : même identifiant en ligne, en file et au rejeu, donc un
+    // `INSERT` idempotent.
+    return _writeInventoryItem(
+      characterId: characterId,
+      inventoryId: generateUuidV4(),
+      requested: InventoryItemWrite.add(
+        customName: customName,
+        quantity: quantity,
+        customDescription: nonEmpty(description),
+        customDamageDice: nonEmpty(damageDice),
+        customDamageType: nonEmpty(damageType),
+        customProperties: properties,
+      ),
+    );
   }
 
   @override
