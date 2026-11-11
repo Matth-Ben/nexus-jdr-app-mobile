@@ -365,6 +365,53 @@ void main() {
       await finish(tester);
     });
 
+    // V3-8 : un nom de 32 caractères ne doit pas gonfler le bandeau (5 lignes,
+    // ~150 dp) ; abrégé à l'écran, complet pour la sémantique.
+    for (final kind in SyncAlertKind.values) {
+      testWidgets('nom de 32 caractères (${kind.name}) à 411 dp, police x1,3 : '
+          'nom abrégé à l’écran, complet en sémantique', (tester) async {
+        const longName = 'Ambrelune de Vaucluse-Halltesse!';
+        expect(longName.length, 32);
+        tester.view.physicalSize = const Size(411, 800);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
+        final semantics = tester.ensureSemantics();
+
+        await tester.pumpWidget(app());
+        await addAlert(
+          tester,
+          name: longName,
+          kind: kind,
+          value: kind == SyncAlertKind.conflict
+              ? const {
+                  'currentHp': 7,
+                  'temporaryHp': 0,
+                  'queuedCurrentHp': 5,
+                  'queuedTemporaryHp': 0,
+                  'maxHp': 12,
+                }
+              : const {'currentHp': 7, 'maxHp': 12},
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.byType(AlertBanner), findsOneWidget);
+        expect(find.textContaining(longName), findsNothing);
+        expect(
+          find.textContaining('Ambrelune de Vaucluse-Ha…'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(RegExp(RegExp.escape(longName))),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+        await finish(tester);
+        semantics.dispose();
+      });
+    }
+
     testWidgets('conflit T8 (objet) à 360 dp, police x2,0, EN : texte complet '
         'sans troncature, une seule région live, bouton >= 44 dp', (
       tester,

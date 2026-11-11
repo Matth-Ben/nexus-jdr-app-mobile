@@ -38,6 +38,7 @@ class AlertBanner extends StatelessWidget {
     required this.message,
     this.onDismiss,
     this.dismissTooltip,
+    this.semanticsMessage,
     super.key,
   });
 
@@ -49,6 +50,11 @@ class AlertBanner extends StatelessWidget {
   /// Info-bulle/libellé d'accessibilité du bouton de fermeture (localisé par
   /// l'appelant).
   final String? dismissTooltip;
+
+  /// Texte lu par les technologies d'assistance quand il diffère de
+  /// [message] (ex. nom abrégé à l'écran, complet pour le lecteur d'écran).
+  /// `null` : [message] sert aux deux.
+  final String? semanticsMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -86,12 +92,16 @@ class AlertBanner extends StatelessWidget {
               padding: EdgeInsets.symmetric(
                 vertical: onDismiss == null ? 0 : AppSpacing.sm,
               ),
-              child: Text(
-                message,
-                style: AppTypography.body(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+              child: Semantics(
+                label: semanticsMessage,
+                excludeSemantics: semanticsMessage != null,
+                child: Text(
+                  message,
+                  style: AppTypography.body(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ),
