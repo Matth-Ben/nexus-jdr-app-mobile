@@ -466,26 +466,30 @@ void main() {
   });
 
   // ---------------------------------------------------------------------
-  group('useInventoryItem : garde sur les lignes en file (T5b-1)', () {
-    test(
-      'ajout en file, réseau revenu : usage refusé, aucune requête',
-      () async {
-        final id = await addOffline('Potion');
-        goOnline();
+  group('useInventoryItem : lignes en file (T5b-1, fusion T5b-3)', () {
+    // T5b-3 : le garde « ajout en file : usage refusé » de T5b-1 est remplacé
+    // par une fusion (voir character_inventory_use_offline_test.dart) ; seul
+    // le tombstone en file refuse encore l'usage (la ligne est déjà retirée).
+    test("ajout en file, réseau revenu : usage fusionné dans l'ajout (queued), "
+        'aucune requête', () async {
+      final id = await addOffline('Potion', quantity: 3);
+      goOnline();
 
-        final outcome = await repository.useInventoryItem(
-          characterId: _characterId,
-          inventoryId: id,
-          newQuantity: 0,
-        );
+      final outcome = await repository.useInventoryItem(
+        characterId: _characterId,
+        inventoryId: id,
+        newQuantity: 2,
+      );
 
-        expect(outcome, WriteOutcome.rejectedOffline);
-        expect(server.requests, isEmpty);
-        expect((await lines()).single.payload['op'], 'add');
-      },
-    );
+      expect(outcome, WriteOutcome.queued);
+      expect(server.requests, isEmpty);
+      final payload = (await lines()).single.payload;
+      expect(payload['op'], 'add');
+      expect(payload['quantity'], 2);
+    });
 
-    test('tombstone en file : usage refusé, aucune requête', () async {
+    test('tombstone en file : usage refusé (CharacterFailure), aucune '
+        'requête, le tombstone reste', () async {
       goOffline();
       await repository.removeInventoryItem(
         characterId: _characterId,
@@ -493,14 +497,17 @@ void main() {
       );
       goOnline();
 
-      final outcome = await repository.useInventoryItem(
-        characterId: _characterId,
-        inventoryId: _srv1,
-        newQuantity: 2,
+      await expectLater(
+        repository.useInventoryItem(
+          characterId: _characterId,
+          inventoryId: _srv1,
+          newQuantity: 2,
+        ),
+        throwsA(isA<CharacterFailure>()),
       );
 
-      expect(outcome, WriteOutcome.rejectedOffline);
       expect(server.requests, isEmpty);
+      expect((await lines()).single.payload, {'op': 'delete'});
     });
 
     test(
@@ -837,11 +844,9 @@ void main() {
       expect(patch.query['id'], 'eq.$id');
       expect(patch.query['character_id'], 'eq.$_characterId');
       expect((patch.body! as Map)['is_attuned'], true);
-      expect(
-        (patch.body! as Map).containsKey('quantity'),
-        isFalse,
-        reason: 'la quantité a pu être consommée depuis le premier envoi',
-      );
+      // T5b-3 : la quantité du payload d'ajout est la quantité effective (un
+      // usage hors ligne la modifie) : elle est réalignée avec le reste.
+      expect((patch.body! as Map)['quantity'], 1);
     });
 
     test(

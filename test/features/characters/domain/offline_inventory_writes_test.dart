@@ -229,9 +229,10 @@ void main() {
       });
     });
 
-    test('réalignement : nom et état, jamais la quantité', () {
+    test('réalignement : nom, quantité effective (T5b-3) et état', () {
       expect(add.toRealignColumns(), {
         'custom_name': 'Zanbato',
+        'quantity': 2,
         'equipped': true,
         'weapon_slot': 'principal',
         'is_attuned': true,
@@ -423,7 +424,7 @@ void main() {
           itemId: 11,
           quantity: 1,
         ).toRealignColumns(),
-        {'item_id': 11},
+        {'quantity': 1, 'item_id': 11},
       );
       expect(
         const InventoryItemWrite.add(
@@ -431,7 +432,7 @@ void main() {
           quantity: 1,
           state: InventoryStatePatch(attuned: true),
         ).toRealignColumns(),
-        {'item_id': 11, 'is_attuned': true},
+        {'quantity': 1, 'item_id': 11, 'is_attuned': true},
       );
     });
 
@@ -452,6 +453,151 @@ void main() {
         ).toRow(inventoryId: _uuid, characterId: 'c1').containsKey('items'),
         isFalse,
       );
+    });
+  });
+
+  group("usage d'un objet : quantity (T5b-3)", () {
+    test('parse : quantité absolue et base', () {
+      final write = parseInventoryItemPayload({
+        'op': 'quantity',
+        'quantity': 2,
+        'base': 3,
+      });
+
+      expect(write!.op, InventoryItemOp.quantity);
+      expect(write.quantity, 2);
+      expect(write.base, 3);
+      expect(write.toPayload(), {'op': 'quantity', 'quantity': 2, 'base': 3});
+    });
+
+    test('parse : quantité 0 et 2147483647 valides, base absente = null', () {
+      expect(
+        parseInventoryItemPayload({'op': 'quantity', 'quantity': 0})!.quantity,
+        0,
+      );
+      final max = parseInventoryItemPayload({
+        'op': 'quantity',
+        'quantity': 2147483647,
+      });
+      expect(max!.quantity, 2147483647);
+      expect(max.base, isNull);
+      expect(max.toPayload(), {'op': 'quantity', 'quantity': 2147483647});
+    });
+
+    test('parse : base invalide ignorée (pas un payload invalide)', () {
+      for (final base in <Object?>[-1, 1.5, 'x', null, 2147483648]) {
+        final write = parseInventoryItemPayload({
+          'op': 'quantity',
+          'quantity': 2,
+          'base': base,
+        });
+        expect(write, isNotNull, reason: '$base');
+        expect(write!.base, isNull, reason: '$base');
+      }
+    });
+
+    test('parse : quantité invalide ou op inconnue = payload invalide', () {
+      for (final payload in <Object?>[
+        {'op': 'quantity'},
+        {'op': 'quantity', 'quantity': -1},
+        {'op': 'quantity', 'quantity': 1.5},
+        {'op': 'quantity', 'quantity': '2'},
+        {'op': 'quantity', 'quantity': null},
+        {'op': 'quantity', 'quantity': 2147483648},
+        {'op': 'inconnue', 'quantity': 2},
+        'quantity',
+        null,
+      ]) {
+        expect(parseInventoryItemPayload(payload), isNull, reason: '$payload');
+      }
+    });
+
+    test('planInventoryUse : tombstone en file = refus', () {
+      final plan = planInventoryUse(
+        pending: const InventoryItemWrite.delete(),
+        newQuantity: 2,
+      );
+
+      expect(plan.isRejected, isTrue);
+      expect(plan.write, isNull);
+    });
+
+    test(
+      'planInventoryUse : ligne serveur, base = quantité serveur connue',
+      () {
+        final plan = planInventoryUse(
+          pending: null,
+          newQuantity: 2,
+          serverQuantity: 3,
+        );
+
+        expect(plan.write!.toPayload(), {
+          'op': 'quantity',
+          'quantity': 2,
+          'base': 3,
+        });
+        expect(plan.mergedIntoPendingAdd, isFalse);
+      },
+    );
+
+    test('planInventoryUse : usage en file, base du premier enfilage '
+        'conservée (même si la quantité serveur connue a changé)', () {
+      final plan = planInventoryUse(
+        pending: const InventoryItemWrite.quantity(quantity: 2, base: 3),
+        newQuantity: 1,
+        serverQuantity: 9,
+      );
+
+      expect(plan.write!.toPayload(), {
+        'op': 'quantity',
+        'quantity': 1,
+        'base': 3,
+      });
+    });
+
+    test('planInventoryUse : à 0 ou moins, tombstone (remplace tout)', () {
+      for (final pending in <InventoryItemWrite?>[
+        null,
+        const InventoryItemWrite.quantity(quantity: 2, base: 3),
+        const InventoryItemWrite.add(customName: 'A', quantity: 2),
+      ]) {
+        for (final quantity in [0, -1]) {
+          final plan = planInventoryUse(
+            pending: pending,
+            newQuantity: quantity,
+            serverQuantity: 3,
+          );
+          expect(plan.write!.toPayload(), {'op': 'delete'});
+          expect(plan.mergedIntoPendingAdd, pending?.op == InventoryItemOp.add);
+        }
+      }
+    });
+
+    test("planInventoryUse : ajout en file, la quantité de l'ajout est "
+        'modifiée, le reste (champs, état) est conservé', () {
+      final plan = planInventoryUse(
+        pending: const InventoryItemWrite.add(
+          itemId: 5,
+          quantity: 3,
+          state: InventoryStatePatch(attuned: true),
+        ),
+        newQuantity: 2,
+        serverQuantity: 9,
+      );
+
+      expect(plan.mergedIntoPendingAdd, isTrue);
+      expect(plan.write!.toPayload(), {
+        'op': 'add',
+        'itemId': 5,
+        'quantity': 2,
+        'attuned': true,
+      });
+    });
+
+    test("réalignement : la quantité effective de l'ajout est réalignée", () {
+      const add = InventoryItemWrite.add(customName: 'A', quantity: 4);
+
+      expect(add.toRealignColumns(), {'custom_name': 'A', 'quantity': 4});
     });
   });
 }

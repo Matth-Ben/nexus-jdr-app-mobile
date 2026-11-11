@@ -690,17 +690,34 @@ void main() {
       expect(rows.where((r) => r['id'] == id), isEmpty);
     });
 
-    test('useInventoryItem garde son refus (T5b-3 hors périmètre)', () async {
-      final id = await addCatalogOffline(_dagger);
+    test("usage d'un objet du catalogue dont l'ajout est en file (T5b-3) : "
+        "fusionné dans l'ajout, jamais refusé ; à 0 = tombstone, aucune "
+        'requête', () async {
+      final id = await addCatalogOffline(_dagger, quantity: 3);
       goOnline();
 
-      final outcome = await repository.useInventoryItem(
-        characterId: _characterId,
-        inventoryId: id,
-        newQuantity: 0,
+      expect(
+        await repository.useInventoryItem(
+          characterId: _characterId,
+          inventoryId: id,
+          newQuantity: 2,
+        ),
+        WriteOutcome.queued,
       );
+      final payload = (await lines()).single.payload;
+      expect(payload['op'], 'add');
+      expect(payload['itemId'], isNotNull);
+      expect(payload['quantity'], 2);
 
-      expect(outcome, WriteOutcome.rejectedOffline);
+      expect(
+        await repository.useInventoryItem(
+          characterId: _characterId,
+          inventoryId: id,
+          newQuantity: 0,
+        ),
+        WriteOutcome.queued,
+      );
+      expect((await lines()).single.payload, {'op': 'delete'});
       expect(server.writes, isEmpty);
     });
   });
@@ -1042,7 +1059,8 @@ void main() {
       expect(posts.map((r) => r.applied), [true, false]);
       final patch = inventoryWrites().last;
       expect(patch.method, 'PATCH');
-      expect(patch.body, {'item_id': _dagger});
+      // T5b-3 : la quantité effective de l'ajout est réalignée avec `item_id`.
+      expect(patch.body, {'quantity': 1, 'item_id': _dagger});
       expect(patch.query['id'], 'eq.$id');
       expect(patch.query['character_id'], 'eq.$_characterId');
     });

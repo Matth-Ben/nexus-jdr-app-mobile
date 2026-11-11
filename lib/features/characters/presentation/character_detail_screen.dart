@@ -1194,8 +1194,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// `item_action_sheet.dart`) : décrémente [item.quantity] de 1, ou
   /// supprime la ligne côté serveur si la nouvelle quantité atteint 0
   /// (décision UX tranchée par le chef de projet — voir
-  /// `CharacterRepository.useInventoryItem`). Verrouille tout l'onglet le
-  /// temps de l'appel réseau, refetch inclus (voir [_isWritingInventory]).
+  /// `CharacterRepository.useInventoryItem`). Hors ligne (T5b-3), l'usage est
+  /// mis en file. Verrouille tout l'onglet le temps de l'appel réseau, refetch
+  /// inclus (voir [_isWritingInventory]).
   Future<void> _useInventoryItem(CharacterInventoryItem item) async {
     // Capturé avant le premier `await` — voir la doc de
     // [_offlineQueuedMessage].
@@ -1214,9 +1215,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
+      // T5b-3 : hors ligne, l'usage est mis en file (la relecture superpose la
+      // quantité effective, ou masque la ligne à 0) : message « sera
+      // synchronisé », pas de confirmation serveur trompeuse.
       await _refreshCharacterDetail();
       _showSnackBar(
-        newQuantity <= 0
+        outcome == WriteOutcome.queued
+            ? _offlineQueuedMessage(l10n)
+            : newQuantity <= 0
             ? '${item.name} utilisé — retiré de l\'inventaire.'
             : '${item.name} utilisé.',
       );
