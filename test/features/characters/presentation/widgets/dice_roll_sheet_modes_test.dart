@@ -381,13 +381,14 @@ void main() {
         expect(size.height, greaterThanOrEqualTo(44));
       }
       expect(find.text('18'), findsOneWidget);
+      // P2b (dé sur la page entière) : le dé n'est plus une pastille de la
+      // feuille mais une boîte de la couche plein écran (136 dp nominaux
+      // avec avantage, boîte de dessin x1,25).
       final die = tester.getSize(
-        find
-            .ancestor(of: find.text('18'), matching: find.byType(Container))
-            .first,
+        find.byKey(const ValueKey('die-surface')).first,
       );
-      expect(die.width, greaterThanOrEqualTo(88));
-      expect(die.height, greaterThanOrEqualTo(88));
+      expect(die.width, greaterThanOrEqualTo(136));
+      expect(die.height, greaterThanOrEqualTo(136));
     });
 
     testWidgets(

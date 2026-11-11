@@ -168,3 +168,27 @@ abstract final class DieMotion {
 
   static double _lerp(double a, double b, double u) => a + (b - a) * u;
 }
+
+/// Progression (0..1) d'un plateau, dérivée du contrôleur unique de la
+/// feuille : le plateau d'indice i démarre [DieTimeline.staggerMs] × i après
+/// le premier.
+class PlateProgress extends Animation<double>
+    with AnimationWithParentMixin<double> {
+  PlateProgress(this.parent, this.index, this.count);
+
+  @override
+  final Animation<double> parent;
+  final int index;
+  final int count;
+
+  @override
+  double get value => DieTimeline.plateProgress(parent.value, index, count);
+}
+
+/// Courbe du fondu de résultat (derniers 200 ms) d'un plateau.
+class ResultFadeCurve extends Curve {
+  const ResultFadeCurve();
+
+  @override
+  double transformInternal(double t) => DieTimeline.resultFade(t);
+}

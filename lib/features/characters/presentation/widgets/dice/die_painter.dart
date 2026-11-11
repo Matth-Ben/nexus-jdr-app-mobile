@@ -8,6 +8,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../domain/dice3d/d20_orientation.dart';
 import '../../../domain/dice3d/die_math.dart';
 import '../../../domain/dice3d/icosahedron.dart';
+import 'die_flight.dart';
 import 'die_motion.dart';
 import 'die_skin.dart';
 
@@ -49,6 +50,7 @@ class DieSurfacePainter extends CustomPainter {
     this.natural = DieNatural.none,
     this.struck = false,
     this.opacity = 1,
+    this.free = false,
     this.onFailure,
     this.debugProbe,
   }) : _target = D20Orientation.forValue(value),
@@ -96,6 +98,11 @@ class DieSurfacePainter extends CustomPainter {
 
   /// Opacité globale (0,55 pour le dé écarté).
   final double opacity;
+
+  /// Mode « couche plein écran » : le dé est dessiné au centre de sa boîte
+  /// (la boîte est déplacée par la couche), ni décalage ni hauteur ni ombre
+  /// propres (l'ombre est un widget à part), échelle de vol en plus.
+  final bool free;
 
   final void Function(Object error)? onFailure;
 
@@ -163,14 +170,20 @@ class DieSurfacePainter extends CustomPainter {
     final fade = DieTimeline.resultFade(t);
 
     final side = math.min(size.width, size.height);
-    final baseRadius = kDieRadiusFraction * side;
-    final radius = baseRadius * _pose.scale;
+    final fraction = free
+        ? kDieRadiusFraction / DieFlightSizes.boxFactor
+        : kDieRadiusFraction;
+    final baseRadius = fraction * side;
+    final flight = free ? DieFlightPlan.flightScale(t) : 1.0;
+    final radius = baseRadius * _pose.scale * flight;
     final shake = natural == DieNatural.one ? DieTimeline.shakeOffsetDp(t) : 0;
-    final cx = size.width / 2 + _pose.offsetX * size.width + shake;
-    final cy = size.height / 2 - _pose.lift * side;
+    final cx = free
+        ? size.width / 2 + shake
+        : size.width / 2 + _pose.offsetX * size.width + shake;
+    final cy = free ? size.height / 2 : size.height / 2 - _pose.lift * side;
 
     _paintHalo(canvas, size, baseRadius, fade);
-    _paintShadow(canvas, size, baseRadius);
+    if (!free) _paintShadow(canvas, size, baseRadius);
     _rotateVertices();
     final visible = _fillFaces(cx, cy, radius);
     if (visible > 0) {
@@ -195,12 +208,17 @@ class DieSurfacePainter extends CustomPainter {
       );
     }
     if (struck && fade > 0) {
-      _strikePaint.color = AppColors.woodDark.withValues(alpha: fade);
-      canvas.drawLine(
-        Offset(size.width * 0.18, size.height * 0.82),
-        Offset(size.width * 0.82, size.height * 0.18),
-        _strikePaint,
-      );
+      // Trait parchemin de 3 dp cerné de bois foncé (1 dp de chaque côté).
+      final from = Offset(size.width * 0.25, size.height * 0.75);
+      final to = Offset(size.width * 0.75, size.height * 0.25);
+      _strikePaint
+        ..strokeWidth = 5
+        ..color = AppColors.woodDark.withValues(alpha: fade);
+      canvas.drawLine(from, to, _strikePaint);
+      _strikePaint
+        ..strokeWidth = 3
+        ..color = AppColors.parchmentCard.withValues(alpha: fade);
+      canvas.drawLine(from, to, _strikePaint);
     }
   }
 
@@ -351,5 +369,6 @@ class DieSurfacePainter extends CustomPainter {
       oldDelegate.shader != shader ||
       oldDelegate.natural != natural ||
       oldDelegate.struck != struck ||
-      oldDelegate.opacity != opacity;
+      oldDelegate.opacity != opacity ||
+      oldDelegate.free != free;
 }

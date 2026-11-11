@@ -16,9 +16,8 @@ import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/dice_roller.dart';
 import '../../domain/signed_modifier_formatter.dart';
-import 'dice/dice_board.dart';
+import 'dice/die_flight_layer.dart';
 import 'dice/die_motion.dart';
-import 'dice/die_painter.dart';
 import 'dice/die_shader_cache.dart';
 import 'dice/die_skin.dart';
 
@@ -67,6 +66,7 @@ Future<void> showDiceRollSheet(
   @visibleForTesting DieSkin skin = DieSkin.defaultSkin,
   @visibleForTesting DieShaderCache? shaderCache,
   @visibleForTesting VoidCallback? paintProbe,
+  @visibleForTesting Random? flightRandom,
 }) {
   // Chargement du shader pendant l'ouverture de la feuille, jamais pendant
   // l'animation (ne lève jamais : un échec = rendu de niveau 1).
@@ -75,6 +75,11 @@ Future<void> showDiceRollSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
+    // Le dé vole sur la page entière : la feuille laisse de la place (62 % de
+    // la hauteur au plus).
+    constraints: BoxConstraints(
+      maxHeight: MediaQuery.sizeOf(context).height * 0.62,
+    ),
     builder: (sheetContext) => _DiceRollSheetContent(
       label: label,
       modifier: modifier,
@@ -83,6 +88,7 @@ Future<void> showDiceRollSheet(
       skin: skin,
       shaderCache: shaderCache,
       paintProbe: paintProbe,
+      flightRandom: flightRandom,
     ),
   );
 }
@@ -96,6 +102,7 @@ class _DiceRollSheetContent extends StatefulWidget {
     this.random,
     this.shaderCache,
     this.paintProbe,
+    this.flightRandom,
   });
 
   final String label;
@@ -110,12 +117,15 @@ class _DiceRollSheetContent extends StatefulWidget {
   final DieShaderCache? shaderCache;
   final VoidCallback? paintProbe;
 
+  /// `Random` de la trajectoire du dé (cosmétique, distinct de [random]).
+  final Random? flightRandom;
+
   @override
   State<_DiceRollSheetContent> createState() => _DiceRollSheetContentState();
 }
 
 class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   /// Mode choisi pour le PROCHAIN jet : jamais persisté, Normal à chaque
   /// ouverture.
   RollMode _mode = RollMode.normal;
@@ -132,6 +142,19 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
   bool _starting = false;
   RollResult? _announcedFor;
 
+  /// Couche plein écran qui possède le vol du dé (insérée dans l'`Overlay`
+  /// racine, retirée au `dispose`).
+  OverlayEntry? _entry;
+  late final ValueNotifier<DiceFlightConfig> _flightConfig;
+  final ValueNotifier<bool> _settledNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<double?> _restTop = ValueNotifier<double?>(null);
+  final GlobalKey _sheetKey = GlobalKey();
+  Animation<double>? _routeAnimation;
+
+  /// La couche n'a pas pu être posée ou dessinée : retour au dé statique
+  /// dans la feuille.
+  bool _overlayFailed = false;
+
   @override
   void initState() {
     super.initState();
@@ -139,6 +162,97 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
       vsync: this,
       duration: DieTimeline.totalDuration(1),
     )..addStatusListener(_onStatus);
+    _flightConfig = ValueNotifier(_flightConfigFor(_result));
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _insertOverlay());
+  }
+
+  DiceFlightConfig _flightConfigFor(RollResult result) => DiceFlightConfig(
+    result: result,
+    skin: widget.skin,
+    flightRandom: widget.flightRandom ?? Random(),
+    shaderCache: widget.shaderCache,
+    paintProbe: widget.paintProbe,
+    onFailure: _onOverlayFailure,
+  );
+
+  /// Animations coupées ou navigation accessible : pose immédiate.
+  bool get _reducedMotion =>
+      MediaQuery.disableAnimationsOf(context) ||
+      MediaQuery.accessibleNavigationOf(context);
+
+  void _insertOverlay() {
+    if (!mounted || _overlayFailed || _entry != null) return;
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    if (overlay == null) {
+      _failOverlay();
+      return;
+    }
+    _entry = OverlayEntry(
+      builder: (_) => DiceFlightLayer(
+        progress: _controller,
+        config: _flightConfig,
+        settled: _settledNotifier,
+        restTop: _restTop,
+        onSkip: _skip,
+      ),
+    );
+    overlay.insert(_entry!);
+    _scheduleMeasure();
+  }
+
+  /// Lit le haut de la feuille (point de repos du dé au-dessus), une fois la
+  /// feuille arrivée.
+  void _scheduleMeasure() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final animation = ModalRoute.of(context)?.animation;
+      if (animation == null || animation.isCompleted) {
+        _measureSheetTop();
+        return;
+      }
+      if (_routeAnimation != animation) {
+        _routeAnimation?.removeStatusListener(_onRouteStatus);
+        _routeAnimation = animation..addStatusListener(_onRouteStatus);
+      }
+    });
+  }
+
+  void _onRouteStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) _scheduleMeasure();
+  }
+
+  void _measureSheetTop() {
+    final box = _sheetKey.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.attached || !box.hasSize) return;
+    final top = box.localToGlobal(Offset.zero).dy;
+    if (_restTop.value != top) _restTop.value = top;
+  }
+
+  void _onOverlayFailure() {
+    // Appelé depuis la phase de dessin : on attend la fin de l'image.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _failOverlay());
+  }
+
+  void _failOverlay() {
+    if (!mounted || _overlayFailed) return;
+    _removeEntry();
+    setState(() => _overlayFailed = true);
+    _controller.value = 1;
+    _settle();
+  }
+
+  void _removeEntry() {
+    _entry?.remove();
+    _entry?.dispose();
+    _entry = null;
+  }
+
+  @override
+  void didChangeMetrics() {
+    // Changement de métriques en vol : saut à l'état posé, repos recalculé.
+    if (_controller.isAnimating) _controller.value = 1;
+    _scheduleMeasure();
   }
 
   @override
@@ -147,8 +261,7 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
     if (!_started) {
       _started = true;
       _startRoll();
-    } else if (MediaQuery.disableAnimationsOf(context) &&
-        _controller.isAnimating) {
+    } else if (_reducedMotion && _controller.isAnimating) {
       // Les animations viennent d'être coupées en cours de lancer : pose
       // immédiate.
       _controller.value = 1;
@@ -157,7 +270,14 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _routeAnimation?.removeStatusListener(_onRouteStatus);
+    // La couche plein écran disparaît avec la feuille.
+    _removeEntry();
     _controller.dispose();
+    _flightConfig.dispose();
+    _settledNotifier.dispose();
+    _restTop.dispose();
     super.dispose();
   }
 
@@ -173,8 +293,10 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
     if (_isRolling) return;
     setState(() {
       _result = _roll();
+      _flightConfig.value = _flightConfigFor(_result);
       _startRoll();
     });
+    _scheduleMeasure();
   }
 
   /// Lance l'animation du jet courant (ou pose immédiatement si les
@@ -182,8 +304,9 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
   void _startRoll() {
     _starting = true;
     _settled = false;
+    _settledNotifier.value = false;
     _controller.duration = DieTimeline.totalDuration(_result.dice.length);
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (_reducedMotion) {
       _controller.value = 1;
       // Déjà à 1 (relance) : aucun changement de statut n'est notifié.
       _settle();
@@ -200,6 +323,7 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
   void _settle() {
     if (_settled) return;
     _settled = true;
+    _settledNotifier.value = true;
     if (!_starting && mounted) setState(() {});
     _announceAfterFrame();
   }
@@ -232,6 +356,7 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
     return SafeArea(
       top: false,
       child: Container(
+        key: _sheetKey,
         decoration: const BoxDecoration(color: AppColors.parchmentBg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -261,20 +386,19 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            DiceBoard(
-                              result: result,
-                              progress: _controller,
-                              skin: widget.skin,
-                              onTap: _skip,
-                              shaderCache: widget.shaderCache,
-                              debugPaintProbe: widget.paintProbe,
-                              fallbackBuilder: (context, value, natural) =>
-                                  _DieFace(
-                                    value: value,
-                                    isNatural20: natural == DieNatural.twenty,
-                                    isNatural1: natural == DieNatural.one,
-                                  ),
-                            ),
+                            // Repli : si la couche plein écran échoue, l'ancien
+                            // dé statique reprend sa place dans la feuille.
+                            if (_overlayFailed)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.md,
+                                ),
+                                child: _DieFace(
+                                  value: result.kept,
+                                  isNatural20: isNatural20,
+                                  isNatural1: isNatural1,
+                                ),
+                              ),
                             const SizedBox(height: AppSpacing.md),
                             // La formule (source de vérité) apparaît en fondu
                             // en fin de lancer.
@@ -444,7 +568,7 @@ class _ResultDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final style = AppTypography.body(fontSize: 15, fontWeight: FontWeight.w700);
+    final style = AppTypography.body(fontSize: 20, fontWeight: FontWeight.w800);
 
     if (result.discardedIndex == null) {
       return Text(
