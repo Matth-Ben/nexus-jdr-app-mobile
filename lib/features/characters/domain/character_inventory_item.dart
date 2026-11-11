@@ -188,6 +188,37 @@ class CharacterInventoryItem {
   /// badge en pointillés plutôt qu'une icône de catégorie, voir
   /// `presentation/widgets/character_inventory_item_card.dart`.
   bool get isCustom => itemId == null;
+
+  /// Copie avec l'état équipé/set d'arme/harmonisé superposé depuis la file
+  /// hors ligne (T5a). [weaponSlot] n'est pris en compte que si
+  /// [changeWeaponSlot] (distingue « ne pas toucher » de « effacer »).
+  CharacterInventoryItem copyWithPendingState({
+    bool? equipped,
+    bool changeWeaponSlot = false,
+    WeaponSlot? weaponSlot,
+    bool? isAttuned,
+  }) => CharacterInventoryItem(
+    id: id,
+    itemId: itemId,
+    name: name,
+    category: category,
+    quantity: quantity,
+    equipped: equipped ?? this.equipped,
+    totalWeight: totalWeight,
+    unitWeight: unitWeight,
+    costAmount: costAmount,
+    description: description,
+    rarity: rarity,
+    requiresAttunement: requiresAttunement,
+    isAttuned: isAttuned ?? this.isAttuned,
+    consumable: consumable,
+    notes: notes,
+    weaponProperties: weaponProperties,
+    armorProperties: armorProperties,
+    weaponSlot: changeWeaponSlot ? weaponSlot : this.weaponSlot,
+    acBonus: acBonus,
+    acBonusKind: acBonusKind,
+  );
 }
 
 /// Caractéristiques d'arme — `public.weapon_properties` pour un objet du

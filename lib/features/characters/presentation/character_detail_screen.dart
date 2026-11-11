@@ -1247,13 +1247,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             inventoryId: item.id,
             equipped: newEquipped,
           );
-      if (outcome == WriteOutcome.rejectedOffline) {
-        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
-        return;
-      }
       await _refreshCharacterDetail();
+      // T5a : hors ligne, le réglage est mis en file (état effectif relu).
       _showSnackBar(
-        newEquipped ? '${item.name} équipé.' : '${item.name} déséquipé.',
+        outcome == WriteOutcome.queued
+            ? _offlineQueuedMessage(l10n)
+            : newEquipped
+            ? '${item.name} équipé.'
+            : '${item.name} déséquipé.',
       );
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
@@ -1284,13 +1285,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             inventoryId: item.id,
             attuned: newAttuned,
           );
-      if (outcome == WriteOutcome.rejectedOffline) {
-        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
-        return;
-      }
       await _refreshCharacterDetail();
+      // T5a : hors ligne, le réglage est mis en file (état effectif relu).
       _showSnackBar(
-        newAttuned
+        outcome == WriteOutcome.queued
+            ? _offlineQueuedMessage(l10n)
+            : newAttuned
             ? '${item.name} harmonisé.'
             : '${item.name} n\'est plus harmonisé.',
       );
@@ -1575,29 +1575,28 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     setState(() => _isWritingInventory = true);
     try {
       final repository = ref.read(characterRepositoryProvider);
+      // T5a : chaque arme est un état absolu par objet — hors ligne, chaque
+      // écriture est mise en file (une ligne par objet), pas d'échange partiel.
+      var queued = false;
       for (final weapon in toUnequip) {
         final outcome = await repository.setInventoryItemEquipped(
           characterId: widget.characterId,
           inventoryId: weapon.id,
           equipped: false,
         );
-        if (outcome == WriteOutcome.rejectedOffline) {
-          await _refreshCharacterDetail();
-          _showSnackBar(l10n.characterOfflineNotPersistedMessage);
-          return;
-        }
+        queued = queued || outcome == WriteOutcome.queued;
       }
       final outcome = await repository.equipWeaponToSlot(
         characterId: widget.characterId,
         inventoryId: item.id,
         slot: slot,
       );
-      if (outcome == WriteOutcome.rejectedOffline) {
-        await _refreshCharacterDetail();
-        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
+      queued = queued || outcome == WriteOutcome.queued;
+      await _refreshCharacterDetail();
+      if (queued) {
+        _showSnackBar(_offlineQueuedMessage(l10n));
         return;
       }
-      await _refreshCharacterDetail();
       _showSnackBar(
         toUnequip.isEmpty
             ? '${item.name} équipé (${slot.label}).'
@@ -1889,14 +1888,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             inspiration: !detail.inspiration,
           );
       if (!mounted) return;
-      if (outcome == WriteOutcome.rejectedOffline) {
-        // Voir la documentation de `CharacterRepository.setInspiration` :
-        // même convention que [_toggleDead]/[_toggleArchived] (jamais mis en
-        // file).
-        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
-        return;
-      }
       ref.invalidate(characterDetailProvider(widget.characterId));
+      // T5a : hors ligne, le réglage est mis en file (état effectif relu).
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineQueuedMessage(l10n));
+      }
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
@@ -1965,11 +1961,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           .read(characterRepositoryProvider)
           .setArmorClassBonus(characterId: widget.characterId, bonus: bonus);
       if (!mounted) return;
-      if (outcome == WriteOutcome.rejectedOffline) {
-        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
-        return;
-      }
       ref.invalidate(characterDetailProvider(widget.characterId));
+      // T5a : hors ligne, le réglage est mis en file (état effectif relu).
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineQueuedMessage(l10n));
+      }
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
@@ -1996,11 +1992,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             prepared: spell.status != SpellStatus.prepared,
           );
       if (!mounted) return;
-      if (outcome == WriteOutcome.rejectedOffline) {
-        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
-        return;
-      }
       ref.invalidate(characterDetailProvider(widget.characterId));
+      // T5a : hors ligne, le réglage est mis en file (état effectif relu).
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineQueuedMessage(l10n));
+      }
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {

@@ -1699,13 +1699,11 @@ void main() {
     );
 
     testWidgets(
-      'setInspiration mis en file (mode hors-ligne) : même convention que '
-      'setDead/setArchived — jamais mis en file côté repository, message '
-      'sans promesse de synchronisation ultérieure',
+      'setInspiration mis en file (hors ligne, T5a) : succès, message '
+      '"sera synchronisé", jamais "non enregistré"',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail;
-        fakeRepository.setInspirationOutcomeToReturn =
-            WriteOutcome.rejectedOffline;
+        fakeRepository.setInspirationOutcomeToReturn = WriteOutcome.queued;
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
@@ -1715,10 +1713,13 @@ void main() {
 
         expect(
           find.text(
-            "Hors ligne : cette action n'a pas pu être enregistrée. "
-            'Réessayez une fois reconnecté.',
+            'Hors ligne : sera synchronisé dès que la connexion revient.',
           ),
           findsOneWidget,
+        );
+        expect(
+          find.textContaining("n'a pas pu être enregistrée"),
+          findsNothing,
         );
       },
     );
@@ -1785,13 +1786,11 @@ void main() {
     });
 
     testWidgets(
-      'setArmorClassBonus mis en file (mode hors-ligne) : même convention '
-      'que setInspiration — jamais mis en file côté repository, message '
-      'sans promesse de synchronisation ultérieure',
+      'setArmorClassBonus mis en file (hors ligne, T5a) : succès, message '
+      '"sera synchronisé", jamais "non enregistré"',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail;
-        fakeRepository.setArmorClassBonusOutcomeToReturn =
-            WriteOutcome.rejectedOffline;
+        fakeRepository.setArmorClassBonusOutcomeToReturn = WriteOutcome.queued;
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
@@ -1803,10 +1802,13 @@ void main() {
 
         expect(
           find.text(
-            "Hors ligne : cette action n'a pas pu être enregistrée. "
-            'Réessayez une fois reconnecté.',
+            'Hors ligne : sera synchronisé dès que la connexion revient.',
           ),
           findsOneWidget,
+        );
+        expect(
+          find.textContaining("n'a pas pu être enregistrée"),
+          findsNothing,
         );
       },
     );

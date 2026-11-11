@@ -1493,7 +1493,14 @@ void main() {
 
       test('setInventoryItemEquipped : connectivité présente + écriture '
           'réussie -> synced', () async {
-        final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: const {
+            'character_inventory': [
+              {'id': inventoryId},
+            ],
+          },
+        );
         final repository = SupabaseCharacterRepository(
           client,
           cache,
@@ -1517,6 +1524,11 @@ void main() {
           String? capturedBody;
           final client = await _buildSignedInFakeSupabaseClient(
             ownerId: ownerId,
+            tableRows: const {
+              'character_inventory': [
+                {'id': inventoryId},
+              ],
+            },
             onRequest: (request) {
               if (request.url.pathSegments.last == 'character_inventory' &&
                   request.method == 'PATCH') {
@@ -1556,6 +1568,11 @@ void main() {
         String? capturedBody;
         final client = await _buildSignedInFakeSupabaseClient(
           ownerId: ownerId,
+          tableRows: const {
+            'character_inventory': [
+              {'id': inventoryId},
+            ],
+          },
           onRequest: (request) {
             if (request.url.pathSegments.last == 'character_inventory' &&
                 request.method == 'PATCH') {
@@ -1582,32 +1599,48 @@ void main() {
         expect(payload, {'equipped': false, 'weapon_slot': null});
       });
 
-      test('equipWeaponToSlot : connectivité absente -> retourne queued sans '
-          'tenter le réseau, jamais mise en file', () async {
-        final client = await _buildSignedInFakeSupabaseClient(
-          ownerId: ownerId,
-          throwOnRequest: true,
-        );
-        final repository = SupabaseCharacterRepository(
-          client,
-          cache,
-          pendingWrites,
-          _FakeConnectivityChecker(connected: false),
-        );
+      test(
+        'equipWeaponToSlot : connectivité absente -> mise en file (T5a, P15), '
+        'queued sans tenter le réseau',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            throwOnRequest: true,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: false),
+          );
 
-        final outcome = await repository.equipWeaponToSlot(
-          characterId: characterId,
-          inventoryId: inventoryId,
-          slot: WeaponSlot.principal,
-        );
+          final outcome = await repository.equipWeaponToSlot(
+            characterId: characterId,
+            inventoryId: inventoryId,
+            slot: WeaponSlot.principal,
+          );
 
-        expect(outcome, WriteOutcome.rejectedOffline);
-        expect(await pendingWrites.allForOwner(ownerId), isEmpty);
-      });
+          expect(outcome, WriteOutcome.queued);
+          final queued = await pendingWrites.allForOwner(ownerId);
+          expect(queued.single.kind, PendingCharacterWriteKind.inventoryState);
+          expect(queued.single.targetId, inventoryId);
+          expect(queued.single.payload, {
+            'equipped': true,
+            'weaponSlot': WeaponSlot.principal.value,
+          });
+        },
+      );
 
       test('equipWeaponToSlot : connectivité présente + écriture réussie -> '
           'synced', () async {
-        final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: const {
+            'character_inventory': [
+              {'id': inventoryId},
+            ],
+          },
+        );
         final repository = SupabaseCharacterRepository(
           client,
           cache,
@@ -1629,6 +1662,11 @@ void main() {
         String? capturedBody;
         final client = await _buildSignedInFakeSupabaseClient(
           ownerId: ownerId,
+          tableRows: const {
+            'character_inventory': [
+              {'id': inventoryId},
+            ],
+          },
           onRequest: (request) {
             if (request.url.pathSegments.last == 'character_inventory' &&
                 request.method == 'PATCH') {
@@ -1660,7 +1698,14 @@ void main() {
 
       test('setInventoryItemAttuned : connectivité présente + écriture '
           'réussie -> synced', () async {
-        final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: const {
+            'character_inventory': [
+              {'id': inventoryId},
+            ],
+          },
+        );
         final repository = SupabaseCharacterRepository(
           client,
           cache,
@@ -2116,9 +2161,8 @@ void main() {
     const characterId = 'char-1';
     const ownerId = 'owner-1';
 
-    test('connectivité absente -> retourne queued sans tenter le réseau, '
-        'jamais mise en file (même règle que setDead/setArchived/'
-        'setInspiration)', () async {
+    test('connectivité absente -> mise en file (T5a, P15), queued sans tenter '
+        'le réseau', () async {
       final client = await _buildSignedInFakeSupabaseClient(
         ownerId: ownerId,
         throwOnRequest: true,
@@ -2135,8 +2179,10 @@ void main() {
         bonus: 2,
       );
 
-      expect(outcome, WriteOutcome.rejectedOffline);
-      expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+      expect(outcome, WriteOutcome.queued);
+      final queued = await pendingWrites.allForOwner(ownerId);
+      expect(queued.single.kind, PendingCharacterWriteKind.characterFlags);
+      expect(queued.single.payload, {'armorClassBonus': 2});
     });
 
     test('connectivité présente + écriture réussie -> synced, payload '
@@ -2144,6 +2190,11 @@ void main() {
       String? capturedBody;
       final client = await _buildSignedInFakeSupabaseClient(
         ownerId: ownerId,
+        tableRows: const {
+          'characters': [
+            {'id': characterId},
+          ],
+        },
         onRequest: (request) {
           if (request.url.pathSegments.last == 'characters' &&
               request.method == 'PATCH') {
@@ -2175,6 +2226,11 @@ void main() {
       String? capturedBody;
       final client = await _buildSignedInFakeSupabaseClient(
         ownerId: ownerId,
+        tableRows: const {
+          'characters': [
+            {'id': characterId},
+          ],
+        },
         onRequest: (request) {
           if (request.url.pathSegments.last == 'characters' &&
               request.method == 'PATCH') {

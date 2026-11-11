@@ -174,6 +174,48 @@ class CharacterSpellEntry {
   /// fusionnées en une seule entrée.
   final bool hasInnateRoute;
 
+  /// Copie avec l'état « préparé »/« favori » superposé depuis la file hors
+  /// ligne (T5a) — voir `SupabaseCharacterRepository._withPendingWrites`. Un
+  /// sort accordé par une sous-classe reste préparé (seul [storedStatus] suit) ;
+  /// un sort au statut inné n'est jamais modifié par une préparation (la
+  /// ligne ordinaire n'existe pas : l'écriture serveur ne touche pas les
+  /// lignes 'inné').
+  CharacterSpellEntry copyWithPendingState({bool? prepared, bool? favorite}) {
+    SpellStatus? nextStatus;
+    SpellStatus? nextStored = storedStatus;
+    var nextPersisted = isPersisted;
+    if (prepared != null && status != SpellStatus.innate) {
+      final target = prepared ? SpellStatus.prepared : SpellStatus.known;
+      if (grantSource != null) {
+        nextStored = target;
+      } else {
+        nextStatus = target;
+      }
+      if (prepared) nextPersisted = true;
+    }
+    return CharacterSpellEntry(
+      id: id,
+      name: name,
+      level: level,
+      school: school,
+      status: nextStatus ?? status,
+      storedStatus: nextStored,
+      castingTime: castingTime,
+      range: range,
+      components: components,
+      duration: duration,
+      concentration: concentration,
+      description: description,
+      isFavorite: favorite ?? isFavorite,
+      grantSource: grantSource,
+      isPersisted: nextPersisted,
+      requiresPreparation: requiresPreparation,
+      sourceClassIds: sourceClassIds,
+      innateUsesSpent: innateUsesSpent,
+      hasInnateRoute: hasInnateRoute,
+    );
+  }
+
   /// Copie avec un autre compteur d'usages innés dépensés — surcouche
   /// optimiste de `character_detail_screen.dart::_effectiveDetail`.
   CharacterSpellEntry copyWithInnateUsesSpent(int innateUsesSpent) =>

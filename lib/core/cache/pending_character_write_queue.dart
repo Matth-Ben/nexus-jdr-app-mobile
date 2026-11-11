@@ -6,7 +6,7 @@ import 'package:drift/drift.dart';
 import 'app_database.dart';
 import 'app_database.dart' as drift_rows show PendingCharacterWrite;
 
-/// Les huit types d'écriture rendus hors-ligne-capables — voir la doc de
+/// Les onze types d'écriture rendus hors-ligne-capables — voir la doc de
 /// classe de [PendingCharacterWrites]. Périmètre étendu le 09/10/2026 (D11 du
 /// registre de dette technique, catégorie A « bloque la mise en production ») :
 /// `castSpell`/`setInnateSpellUsesSpent`/`useClassFeature`/`applyRest`
@@ -59,7 +59,27 @@ enum PendingCharacterWriteKind {
   /// monnaie. Payload `{"totals": {"currency_gp": n, ...}, "bases":
   /// {"currency_gp": n, ...}}` — `bases` = valeur serveur connue au premier
   /// enfilage, pour la détection de modification concurrente (F19/D178).
-  currency('currency');
+  currency('currency'),
+
+  /// `setSpellPrepared`/`setSpellFavorite` (T5a, P15) : état **absolu** d'un
+  /// sort (`targetId` = `spellId`). Payload `{"prepared": bool?, "favorite":
+  /// bool?}` (au moins une clé) ; deux changements du même sort se fusionnent
+  /// champ par champ, dernière valeur gagnante. Pas de base serveur : un
+  /// booléen n'a pas besoin de détection de conflit (T8).
+  spellState('spell_state'),
+
+  /// `setInventoryItemEquipped`/`equipWeaponToSlot`/`setInventoryItemAttuned`
+  /// (T5a, P15) : état **absolu** d'un objet (`targetId` = identifiant de la
+  /// ligne `character_inventory`). Payload `{"equipped": bool?, "weaponSlot":
+  /// "principal"|"secondaire"|null?, "attuned": bool?}` ; fusion champ par
+  /// champ, dernière valeur gagnante. Chaque objet porte son propre état
+  /// (équiper une arme à la place d'une autre = une ligne par objet).
+  inventoryState('inventory_state'),
+
+  /// `setInspiration`/`setArmorClassBonus` (T5a, P15) : réglages absolus du
+  /// personnage. Au plus une entrée par personnage (`targetId` vide). Payload
+  /// `{"inspiration": bool?, "armorClassBonus": int?}`, fusion champ par champ.
+  characterFlags('character_flags');
 
   const PendingCharacterWriteKind(this.storageKey);
 
