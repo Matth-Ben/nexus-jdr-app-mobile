@@ -1330,8 +1330,8 @@
   "characterDetailItemEquippedMessage": "Equipped: {item}.",
   "characterDetailItemUnequippedMessage": "Unequipped: {item}.",
 
-  "diceRollSheetNatural20": "20 NATURAL",
-  "diceRollSheetNatural1": "1 NATURAL",
+  "diceRollSheetNatural20": "NATURAL 20",
+  "diceRollSheetNatural1": "NATURAL 1",
   "diceRollModeGroupLabel": "Roll mode",
   "diceRollModeNormal": "Normal",
   "diceRollModeAdvantage": "Advantage",
@@ -1350,5 +1350,7 @@
   "characterSavingThrowLabelCon": "Constitution saving throw",
   "characterSavingThrowLabelInt": "Intelligence saving throw",
   "characterSavingThrowLabelWis": "Wisdom saving throw",
-  "characterSavingThrowLabelCha": "Charisma saving throw"
+  "characterSavingThrowLabelCha": "Charisma saving throw",
+  "characterSavingThrowProficient": "proficient",
+  "characterSavingThrowNotProficient": "not proficient"
 }

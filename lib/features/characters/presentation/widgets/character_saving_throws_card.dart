@@ -92,6 +92,12 @@ class _SavingThrowItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final label = _savingThrowLabel(l10n, result.abilityKey);
+    final bonusPhrase = result.bonus < 0
+        ? l10n.diceRollSemanticsModifierMinus(-result.bonus)
+        : l10n.diceRollSemanticsModifierPlus(result.bonus);
+    final stateLabel = result.isProficient
+        ? l10n.characterSavingThrowProficient
+        : l10n.characterSavingThrowNotProficient;
 
     // Ligne tappable (comme les tuiles de caractéristique) : ouvre la feuille
     // de dés avec le bonus déjà calculé par `SavingThrowCalculator`, maîtrise
@@ -99,6 +105,9 @@ class _SavingThrowItem extends StatelessWidget {
     return Semantics(
       button: true,
       label: label,
+      // Bonus signé et état de maîtrise : sans `value`, `excludeSemantics`
+      // masquerait « For +5 » et le point doré/vide aux lecteurs d'écran.
+      value: '$bonusPhrase, $stateLabel',
       excludeSemantics: true,
       onTap: () => _roll(context, label),
       child: Material(

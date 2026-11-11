@@ -4365,4 +4365,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get characterSavingThrowLabelCha => 'Sauvegarde de Charisme';
+
+  @override
+  String get characterSavingThrowProficient => 'maîtrisé';
+
+  @override
+  String get characterSavingThrowNotProficient => 'non maîtrisé';
 }

@@ -5803,5 +5803,13 @@
   "characterSavingThrowLabelCha": "Sauvegarde de Charisme",
   "@characterSavingThrowLabelCha": {
     "description": "Libellé accessible et titre de feuille de dés d'une ligne de `CharacterSavingThrowsCard` (cha)."
+  },
+  "characterSavingThrowProficient": "maîtrisé",
+  "@characterSavingThrowProficient": {
+    "description": "État lu par les lecteurs d'écran sur une ligne de `CharacterSavingThrowsCard` dont la maîtrise est acquise."
+  },
+  "characterSavingThrowNotProficient": "non maîtrisé",
+  "@characterSavingThrowNotProficient": {
+    "description": "État lu par les lecteurs d'écran sur une ligne de `CharacterSavingThrowsCard` sans maîtrise."
   }
 }

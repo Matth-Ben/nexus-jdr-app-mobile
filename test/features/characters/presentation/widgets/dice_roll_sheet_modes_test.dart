@@ -6,9 +6,11 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/segmented_toggle.dart';
 import 'package:personnages/core/widgets/selectable_option_tile.dart';
+import 'package:personnages/core/widgets/sheet_header_bar.dart';
 import 'package:personnages/features/characters/domain/dice_roller.dart';
 import 'package:personnages/features/characters/domain/saving_throw_calculator.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_saving_throws_card.dart';
@@ -82,6 +84,19 @@ List<String> _texts(WidgetTester tester) => [
   for (final t in tester.widgetList<Text>(find.byType(Text)))
     t.data ?? t.textSpan?.toPlainText() ?? '',
 ];
+
+final _savingResults = SavingThrowCalculator.computeAll(
+  abilityScores: const {
+    'str': 16,
+    'dex': 14,
+    'con': 10,
+    'int': 8,
+    'wis': 12,
+    'cha': 10,
+  },
+  proficientAbilities: const {'str'},
+  proficiencyBonus: 2,
+);
 
 void main() {
   setUpAll(() async {
@@ -276,11 +291,9 @@ void main() {
       );
     });
 
-    testWidgets('anglais : "NATURAL 20" / "NATURAL 1" sans "critical"', (
-      tester,
-    ) async {
+    testWidgets('anglais : "NATURAL 20" sans "critical"', (tester) async {
       await _openSheet(tester, random: _Seq([20]), locale: const Locale('en'));
-      expect(find.text('20 NATURAL'), findsOneWidget);
+      expect(find.text('NATURAL 20'), findsOneWidget);
       expect(
         _texts(tester).any((t) => t.toLowerCase().contains('critical')),
         isFalse,
@@ -367,21 +380,71 @@ void main() {
       expect(die.height, greaterThanOrEqualTo(88));
     });
 
-    testWidgets('x2,0 : feuille défilable jusqu\'au bouton Relancer', (
-      tester,
-    ) async {
-      await setLarge(tester, 2);
-      await _openSheet(tester, random: _Seq([20]));
+    testWidgets(
+      'x2,0 : après défilement, "Relancer" relance vraiment et l\'en-tête '
+      'reste visible',
+      (tester) async {
+        await setLarge(tester, 2);
+        final random = _Seq([20, 3]);
+        await _openSheet(tester, random: random);
+        expect(find.text('20 NATUREL'), findsOneWidget);
 
-      expect(tester.takeException(), isNull);
-      await tester.ensureVisible(find.text('RELANCER'));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(
-        tester.getRect(find.text('RELANCER')).bottom,
-        lessThanOrEqualTo(640),
-      );
-    });
+        await tester.ensureVisible(find.text('RELANCER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('RELANCER'));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(random.drawn, 2);
+        expect(find.text('d20 (3) +3 = 6'), findsOneWidget);
+        expect(find.text('20 NATUREL'), findsNothing);
+        final header = tester.getRect(find.byType(SheetHeaderBar));
+        expect(header.top, greaterThanOrEqualTo(0));
+        expect(header.height, greaterThan(0));
+        expect(find.text('FORCE'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'x2,0 sur 320 dp : sélecteur lisible (3 tuiles complètes) et carte des '
+      'sauvegardes avec ses bonus',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 640);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+        await _openSheet(tester, random: _Seq([14]));
+        expect(tester.takeException(), isNull);
+        for (final title in ['Normal', 'Avantage', 'Désavantage']) {
+          expect(find.text(title), findsOneWidget);
+          final rect = tester.getRect(find.text(title));
+          expect(rect.left, greaterThanOrEqualTo(0));
+          expect(rect.right, lessThanOrEqualTo(320));
+        }
+        await tester.tap(find.byIcon(Icons.close));
+        await tester.pumpAndSettle();
+
+        await tester.pumpWidget(
+          _app(
+            home: SingleChildScrollView(
+              child: CharacterSavingThrowsCard(results: _savingResults),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        for (final text in ['For', 'Dex', 'Con', 'Int', 'Sag', 'Cha']) {
+          final rect = tester.getRect(find.text(text));
+          expect(rect.left, greaterThanOrEqualTo(0), reason: text);
+          expect(rect.right, lessThanOrEqualTo(320), reason: text);
+        }
+        expect(find.text('+5'), findsOneWidget);
+        expect(find.text('+2'), findsOneWidget);
+        expect(find.text('−1'), findsOneWidget);
+      },
+    );
 
     testWidgets('x1,0 sur 360 dp : bascule segmentée, aucune exception', (
       tester,
@@ -395,19 +458,6 @@ void main() {
   });
 
   group('sauvegardes touchables', () {
-    final results = SavingThrowCalculator.computeAll(
-      abilityScores: const {
-        'str': 16,
-        'dex': 14,
-        'con': 10,
-        'int': 8,
-        'wis': 12,
-        'cha': 10,
-      },
-      proficientAbilities: const {'str'},
-      proficiencyBonus: 2,
-    );
-
     Future<void> pumpCard(
       WidgetTester tester, {
       Locale locale = const Locale('fr'),
@@ -416,7 +466,7 @@ void main() {
         _app(
           locale: locale,
           home: SingleChildScrollView(
-            child: CharacterSavingThrowsCard(results: results),
+            child: CharacterSavingThrowsCard(results: _savingResults),
           ),
         ),
       );
@@ -458,6 +508,31 @@ void main() {
             .any((t) => RegExp(r'^d20 \(\d+\) −1 = -?\d+$').hasMatch(t)),
         isTrue,
       );
+    });
+
+    testWidgets('nœud sémantique : nom, bonus signé et maîtrise', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpCard(tester);
+
+      SemanticsNode node(String label) =>
+          tester.getSemantics(find.bySemanticsLabel(label));
+      expect(node('Sauvegarde de Force').value, 'plus 5, maîtrisé');
+      expect(node('Sauvegarde de Dextérité').value, 'plus 2, non maîtrisé');
+      expect(node("Sauvegarde d'Intelligence").value, 'moins 1, non maîtrisé');
+      handle.dispose();
+    });
+
+    testWidgets('nœud sémantique en anglais', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpCard(tester, locale: const Locale('en'));
+
+      SemanticsNode node(String label) =>
+          tester.getSemantics(find.bySemanticsLabel(label));
+      expect(node('Strength saving throw').value, 'plus 5, proficient');
+      expect(node('Dexterity saving throw').value, 'plus 2, not proficient');
+      handle.dispose();
     });
 
     testWidgets('anglais : libellé "Strength saving throw"', (tester) async {

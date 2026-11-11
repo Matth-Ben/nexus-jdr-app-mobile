@@ -4247,10 +4247,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get diceRollSheetNatural20 => '20 NATURAL';
+  String get diceRollSheetNatural20 => 'NATURAL 20';
 
   @override
-  String get diceRollSheetNatural1 => '1 NATURAL';
+  String get diceRollSheetNatural1 => 'NATURAL 1';
 
   @override
   String get diceRollModeGroupLabel => 'Roll mode';
@@ -4327,4 +4327,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get characterSavingThrowLabelCha => 'Charisma saving throw';
+
+  @override
+  String get characterSavingThrowProficient => 'proficient';
+
+  @override
+  String get characterSavingThrowNotProficient => 'not proficient';
 }

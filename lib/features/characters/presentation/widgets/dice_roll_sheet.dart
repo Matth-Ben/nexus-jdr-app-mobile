@@ -26,8 +26,8 @@ void _defaultAnnouncer(BuildContext context, String text) {
   );
 }
 
-/// Ouvre le "mini lancer de dé virtuel" d'un jet de compétence/caractéristique
-/// /sauvegarde/initiative — voir
+/// Ouvre le "mini lancer de dé virtuel" d'un jet de compétence, de
+/// caractéristique, de sauvegarde ou d'initiative — voir
 /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
 /// "Onglet Compétences" : "Jets de compétences/caractéristiques directement
 /// lançables depuis la fiche". Tire immédiatement un d20 **en mode normal** à

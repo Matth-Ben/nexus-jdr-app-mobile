@@ -7018,6 +7018,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Sauvegarde de Charisme'**
   String get characterSavingThrowLabelCha;
+
+  /// État lu par les lecteurs d'écran sur une ligne de `CharacterSavingThrowsCard` dont la maîtrise est acquise.
+  ///
+  /// In fr, this message translates to:
+  /// **'maîtrisé'**
+  String get characterSavingThrowProficient;
+
+  /// État lu par les lecteurs d'écran sur une ligne de `CharacterSavingThrowsCard` sans maîtrise.
+  ///
+  /// In fr, this message translates to:
+  /// **'non maîtrisé'**
+  String get characterSavingThrowNotProficient;
 }
 
 class _AppLocalizationsDelegate
