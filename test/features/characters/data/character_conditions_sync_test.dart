@@ -1,6 +1,8 @@
 // P6b : rejeu hors-ligne des conditions. Dépôt réel + file drift en mémoire +
 // synchroniseur réel + faux serveur PostgREST du harnais (`test/support/`).
 
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/cache/app_database.dart'
@@ -195,6 +197,32 @@ void main() {
     expect(alerts.single.kind, SyncAlertKind.abandon);
     expect(alerts.single.dataKind, 'conditions');
     expect(alerts.single.characterName, 'Aria');
+  });
+
+  test('D194 : erreur de certificat au rejeu : compte comme un refus non '
+      'rejouable, abandon au seuil, valeur serveur intacte', () async {
+    await setOffline([ConditionType.prone]);
+    connectivity.goOnline();
+    server.failWritesWith(
+      const HandshakeException(
+        'Handshake error',
+        OSError('CERTIFICATE_VERIFY_FAILED', 1),
+      ),
+    );
+
+    final abandoned = <String>{};
+    for (
+      var i = 0;
+      i < PendingCharacterWriteQueue.abandonAfterConsecutiveFailures;
+      i++
+    ) {
+      expect(await queue.allForOwner(_ownerA), hasLength(1));
+      abandoned.addAll((await syncer.syncWithReport()).abandonedCharacterIds);
+    }
+
+    expect(abandoned, {_characterId});
+    expect(await queue.allForOwner(_ownerA), isEmpty);
+    expect(server.characterRow['conditions'], ['poisoned']);
   });
 
   test('refus 42501 au rejeu : abandon, valeur serveur intacte', () async {

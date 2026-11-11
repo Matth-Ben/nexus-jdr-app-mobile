@@ -256,6 +256,55 @@ void main() {
     expect(await queue.allForOwner('owner-1'), isEmpty);
   });
 
+  // D194 : un certificat invalide ne se résout pas en retentant.
+  for (final error in <Object>[
+    const CertificateException('certificat expiré'),
+    const HandshakeException(
+      'Handshake error in client',
+      OSError('CERTIFICATE_VERIFY_FAILED: certificate has expired', 1),
+    ),
+  ]) {
+    test('D194 : erreur de certificat (${error.runtimeType}) : échec '
+        'explicite, rien en file', () async {
+      final repository = SupabaseCharacterConditionsRepository(
+        await _client(respond: (r) => throw error),
+        _Connectivity(true),
+        queue,
+        cache,
+      );
+
+      await expectLater(
+        repository.setConditions(
+          characterId: characterId,
+          conditions: [ConditionType.prone],
+        ),
+        throwsA(isA<CharacterFailure>()),
+      );
+      expect(await queue.allForOwner('owner-1'), isEmpty);
+    });
+  }
+
+  test('D194 (contrôle) : poignée de main TLS interrompue sans certificat '
+      'en cause : toujours mise en file', () async {
+    final repository = SupabaseCharacterConditionsRepository(
+      await _client(
+        respond: (r) => throw const HandshakeException('Connection terminated'),
+      ),
+      _Connectivity(true),
+      queue,
+      cache,
+    );
+
+    expect(
+      await repository.setConditions(
+        characterId: characterId,
+        conditions: [ConditionType.prone],
+      ),
+      WriteOutcome.queued,
+    );
+    expect(await queue.allForOwner('owner-1'), hasLength(1));
+  });
+
   test('0 ligne mise à jour : échec, rien en file', () async {
     final repository = SupabaseCharacterConditionsRepository(
       await _client(respond: (r) => _json([], 200, r)),
