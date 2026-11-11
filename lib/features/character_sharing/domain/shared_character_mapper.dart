@@ -425,7 +425,6 @@ CharacterSpellEntry _mapSpell(
     duration: row['duration'] as String? ?? '',
     concentration: row['concentration'] == true,
     description: row['description'] as String? ?? '',
-    isFavorite: row['is_favorite'] == true,
     grantSource: grantSource,
     isPersisted: isPersisted,
     requiresPreparation: requiresPreparation,

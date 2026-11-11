@@ -229,7 +229,6 @@ class _PrepareSpellsSheetContentState
       duration: spell.duration,
       concentration: spell.concentration,
       description: spell.description,
-      isFavorite: spell.isFavorite,
       grantSource: spell.grantSource,
       isPersisted: spell.isPersisted,
       storedStatus: spell.storedStatus,

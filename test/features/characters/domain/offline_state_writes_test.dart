@@ -20,10 +20,18 @@ CharacterSpellEntry _spell(SpellStatus status, {bool persisted = true}) =>
 
 void main() {
   group('analyse stricte des payloads', () {
-    test('sort : booléens uniquement, au moins une clé, clés inconnues '
-        'ignorées', () {
+    test('sort : booléen `prepared` uniquement, clés inconnues ignorées', () {
       expect(parseSpellStatePayload({'prepared': true})!.prepared, isTrue);
-      expect(parseSpellStatePayload({'favorite': false})!.favorite, isFalse);
+      // Compatibilité des anciennes lignes de file (favoris retirés) : la clé
+      // `favorite` est ignorée ; sans `prepared`, la ligne est invalide.
+      expect(
+        parseSpellStatePayload({'prepared': false, 'favorite': true})!
+            .toPayload(),
+        {'prepared': false},
+      );
+      expect(parseSpellStatePayload({'favorite': false}), isNull);
+      expect(parseSpellStatePayload({'favorite': true}), isNull);
+      expect(parseSpellStatePayload({'favorite': 1}), isNull);
       expect(
         parseSpellStatePayload({'prepared': true, 'futur': 1})!.prepared,
         isTrue,
@@ -90,11 +98,9 @@ void main() {
 
   group('fusion « dernière valeur gagnante » champ par champ', () {
     test('sort', () {
-      final merged = const SpellStatePatch(
-        prepared: true,
-        favorite: true,
-      ).merge(const SpellStatePatch(prepared: false));
-      expect(merged.toPayload(), {'prepared': false, 'favorite': true});
+      final merged = const SpellStatePatch(prepared: true)
+          .merge(const SpellStatePatch(prepared: false));
+      expect(merged.toPayload(), {'prepared': false});
     });
 
     test('objet : déséquiper efface le set d\'arme déjà en file', () {
@@ -146,18 +152,6 @@ void main() {
         innate.copyWithPendingState(prepared: true).status,
         SpellStatus.innate,
       );
-      expect(
-        innate.copyWithPendingState(favorite: true).isFavorite,
-        isTrue,
-        reason: 'le favori reste applicable',
-      );
-    });
-
-    test('favori : ne touche pas au statut', () {
-      final entry = _spell(SpellStatus.prepared)
-          .copyWithPendingState(favorite: true);
-      expect(entry.status, SpellStatus.prepared);
-      expect(entry.isFavorite, isTrue);
     });
   });
 

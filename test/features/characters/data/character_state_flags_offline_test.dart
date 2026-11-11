@@ -1,5 +1,5 @@
-// T5a (P15) : réglages d'état absolus en file hors ligne — sorts préparés/
-// favoris (`spellState`), objets équipés/harmonisés (`inventoryState`),
+// T5a (P15) : réglages d'état absolus en file hors ligne — sorts préparés
+// (`spellState`), objets équipés/harmonisés (`inventoryState`),
 // inspiration et bonus de CA (`characterFlags`). Dépôt réel + file drift en
 // mémoire + synchroniseur réel + faux serveur PostgREST du harnais
 // (`test/support/`, tables enfants simulées).
@@ -34,7 +34,6 @@ Map<String, dynamic> _spellRow(int id, String status) => {
   'character_id': _characterId,
   'spell_id': id,
   'status': status,
-  'is_favorite': false,
   'source_class_id': 3,
   'innate_uses_spent': 0,
 };
@@ -596,10 +595,10 @@ void main() {
         characterId: _characterId,
         inspiration: true,
       );
-      await repository.setSpellFavorite(
+      await repository.setSpellPrepared(
         characterId: _characterId,
         spellId: 11,
-        isFavorite: true,
+        prepared: true,
       );
       await repository.setInventoryItemAttuned(
         characterId: _characterId,
@@ -616,9 +615,9 @@ void main() {
   });
 
   // ---------------------------------------------------------------------
-  group('spellState (préparé, favori)', () {
+  group('spellState (préparé)', () {
     test(
-      'hors ligne : queued, ligne par sort, préparé et favori fusionnés',
+      'hors ligne : queued, une ligne par sort, dernière valeur gagnante',
       () async {
         await openOnline();
         goOffline();
@@ -632,10 +631,10 @@ void main() {
           WriteOutcome.queued,
         );
         expect(
-          await repository.setSpellFavorite(
+          await repository.setSpellPrepared(
             characterId: _characterId,
             spellId: 11,
-            isFavorite: true,
+            prepared: true,
           ),
           WriteOutcome.queued,
         );
@@ -644,7 +643,7 @@ void main() {
           PendingCharacterWriteKind.spellState,
           targetId: '11',
         );
-        expect(l.payload, {'prepared': true, 'favorite': true});
+        expect(l.payload, {'prepared': true});
         expect(await lines(PendingCharacterWriteKind.spellState), hasLength(1));
         expect(
           server.requests.where((r) => r.isWrite),
@@ -658,10 +657,10 @@ void main() {
       await openOnline();
       server.failBefore(1);
 
-      final outcome = await repository.setSpellFavorite(
+      final outcome = await repository.setSpellPrepared(
         characterId: _characterId,
         spellId: 11,
-        isFavorite: true,
+        prepared: true,
       );
 
       expect(outcome, WriteOutcome.queued);
@@ -670,7 +669,7 @@ void main() {
           PendingCharacterWriteKind.spellState,
           targetId: '11',
         )).payload,
-        {'favorite': true},
+        {'prepared': true},
       );
     });
 
@@ -679,34 +678,12 @@ void main() {
       server.rejectWith('42501');
 
       await expectLater(
-        repository.setSpellFavorite(
+        repository.setSpellPrepared(
           characterId: _characterId,
           spellId: 11,
-          isFavorite: true,
+          prepared: true,
         ),
         throwsA(isA<CharacterFailure>()),
-      );
-      expect(await queue.allForOwner(_ownerA), isEmpty);
-    });
-
-    test('zéro ligne affectée en ligne (favori d\'un sort sans ligne) : '
-        'accessDenied, rien en file', () async {
-      await openOnline();
-      spellRows.clear();
-
-      await expectLater(
-        repository.setSpellFavorite(
-          characterId: _characterId,
-          spellId: 11,
-          isFavorite: true,
-        ),
-        throwsA(
-          isA<CharacterFailure>().having(
-            (f) => f.code,
-            'code',
-            CharacterErrorCode.accessDenied,
-          ),
-        ),
       );
       expect(await queue.allForOwner(_ownerA), isEmpty);
     });
@@ -726,10 +703,10 @@ void main() {
         spellId: 11,
         prepared: false,
       );
-      await repository.setSpellFavorite(
+      await repository.setSpellPrepared(
         characterId: _characterId,
         spellId: 12,
-        isFavorite: true,
+        prepared: true,
       );
 
       expect(
@@ -744,7 +721,7 @@ void main() {
           PendingCharacterWriteKind.spellState,
           targetId: '12',
         )).payload,
-        {'favorite': true},
+        {'prepared': true},
       );
     });
 
@@ -801,11 +778,6 @@ void main() {
         spellId: 11,
         prepared: true,
       );
-      await repository.setSpellFavorite(
-        characterId: _characterId,
-        spellId: 12,
-        isFavorite: true,
-      );
 
       final detail = await reopen();
 
@@ -813,7 +785,6 @@ void main() {
       final s12 = detail.spells.singleWhere((s) => s.id == 12);
       expect(s11.status, SpellStatus.prepared);
       expect(s12.status, SpellStatus.known);
-      expect(s12.isFavorite, isTrue);
       expect(detail.preparedSpellCount, 1);
       expect(detail.preparedSpellsByClass.single.isAtLimit, isTrue);
     });
@@ -841,10 +812,10 @@ void main() {
         'fusionnée puis retirée', () async {
       await openOnline();
       connectivity.goOffline();
-      await repository.setSpellFavorite(
+      await repository.setSpellPrepared(
         characterId: _characterId,
         spellId: 11,
-        isFavorite: true,
+        prepared: true,
       );
       connectivity.goOnline();
 
@@ -856,15 +827,15 @@ void main() {
 
       expect(outcome, WriteOutcome.synced);
       expect(spell(11)['status'], 'préparé');
-      expect(spell(11)['is_favorite'], true, reason: 'favori fusionné');
+      expect(spell(11).containsKey('is_favorite'), isFalse);
       expect(await queue.allForOwner(_ownerA), isEmpty);
       final cachedRows = await cachedRelation('character_spells');
       final cached11 = cachedRows.singleWhere((r) => r['spell_id'] == 11);
       expect(cached11['status'], 'préparé');
-      expect(cached11['is_favorite'], true);
+      expect(cached11.containsKey('is_favorite'), isFalse);
     });
 
-    test('rejeu : écrit le statut/favori filtrés par sort ET personnage, '
+    test('rejeu : écrit le statut filtré par sort ET personnage, '
         'jamais une ligne inné, ligne retirée, cache mis à jour', () async {
       await openOnline();
       goOffline();
@@ -873,17 +844,12 @@ void main() {
         spellId: 11,
         prepared: true,
       );
-      await repository.setSpellFavorite(
-        characterId: _characterId,
-        spellId: 11,
-        isFavorite: true,
-      );
       goOnline();
 
       expect(await syncer.sync(), {_characterId});
 
       expect(spell(11)['status'], 'préparé');
-      expect(spell(11)['is_favorite'], true);
+      expect(spell(11).containsKey('is_favorite'), isFalse);
       expect(spell(12)['status'], 'connu');
       expect(spell(13)['status'], 'inné');
       final statusPatch = server.appliedWrites.firstWhere(
@@ -900,7 +866,7 @@ void main() {
       );
     });
 
-    test('rejeu favori : filtré par personnage, la ligne du même sort '
+    test('rejeu : filtré par personnage, la ligne du même sort '
         'd’un autre personnage n’est jamais touchée', () async {
       await openOnline();
       final foreign = {
@@ -910,24 +876,24 @@ void main() {
       };
       spellRows.add(foreign);
       goOffline();
-      await repository.setSpellFavorite(
+      await repository.setSpellPrepared(
         characterId: _characterId,
         spellId: 11,
-        isFavorite: true,
+        prepared: true,
       );
       goOnline();
 
       expect(await syncer.sync(), {_characterId});
 
-      expect(foreign['is_favorite'], false);
-      expect(spell(11)['is_favorite'], true);
+      expect(foreign['status'], 'connu');
+      expect(spell(11)['status'], 'préparé');
       final patch = server.appliedWrites.single;
       expect(patch.query['character_id'], 'eq.$_characterId');
       expect(patch.query['spell_id'], 'eq.11');
     });
 
     test('contraste : dé-préparer un sort sans aucune ligne est un succès '
-        'sans écriture (favori sans ligne = refus, voir plus haut)', () async {
+        'sans écriture', () async {
       await openOnline();
       spellRows.clear();
       goOffline();
@@ -972,10 +938,10 @@ void main() {
       () async {
         await openOnline();
         goOffline();
-        await repository.setSpellFavorite(
+        await repository.setSpellPrepared(
           characterId: _characterId,
           spellId: 11,
-          isFavorite: true,
+          prepared: true,
         );
         goOnline();
         server.failAfterApply(1);
@@ -984,7 +950,7 @@ void main() {
         expect(await queue.allForOwner(_ownerA), hasLength(1));
         expect(await syncer.sync(), {_characterId});
 
-        expect(spell(11)['is_favorite'], true);
+        expect(spell(11)['status'], 'préparé');
         expect(
           server.appliedWrites.where((w) => w.table == 'character_spells'),
           hasLength(2),
@@ -993,47 +959,12 @@ void main() {
       },
     );
 
-    test('zéro ligne au rejeu (sort disparu) : abandon au seuil puis alerte '
-        'persistée', () async {
-      await openOnline();
-      goOffline();
-      await repository.setSpellFavorite(
-        characterId: _characterId,
-        spellId: 11,
-        isFavorite: true,
-      );
-      goOnline();
-      spellRows.clear();
-
-      final abandoned = <String>{};
-      for (
-        var i = 0;
-        i < PendingCharacterWriteQueue.abandonAfterConsecutiveFailures;
-        i++
-      ) {
-        final report = await syncer.syncWithReport();
-        expect(report.synced, isEmpty);
-        abandoned.addAll(report.abandonedCharacterIds);
-      }
-
-      expect(abandoned, {_characterId});
-      expect(await queue.allForOwner(_ownerA), isEmpty);
-      final recorder = SyncAlertRecorder(
-        db,
-        queue,
-        SyncAlertStore(db),
-        CharacterDetailCache(cache),
-      );
-      final consumed = await recorder.recordAbandoned(_ownerA);
-      expect(consumed.single.kindKey, 'spell_state');
-      expect(consumed.single.targetId, '11');
-    });
-
     for (final bad in <({String target, Map<String, dynamic> payload})>[
       (target: '11', payload: {}),
       (target: '11', payload: {'prepared': 'oui'}),
       (target: '11', payload: {'favorite': 1}),
-      (target: '11', payload: {'prepared': true, 'favorite': null}),
+      (target: '11', payload: {'favorite': true}),
+      (target: '11', payload: {'favorite': false}),
       (target: '', payload: {'prepared': true}),
       (target: 'abc', payload: {'prepared': true}),
       (target: '0', payload: {'prepared': true}),
@@ -1072,6 +1003,79 @@ void main() {
       });
     }
 
+    group(
+      'compatibilité des anciennes lignes `favorite` (favoris retirés)',
+      () {
+        bool writesFavorite() => server.requests.any(
+          (r) => r.isWrite && r.body.toString().contains('is_favorite'),
+        );
+
+        test(
+          'ligne `{favorite}` seule : supprimée de la file, aucune écriture, '
+          'compteur à 0',
+          () async {
+            await openOnline();
+            await queue.enqueue(
+              characterId: _characterId,
+              ownerId: _ownerA,
+              kind: PendingCharacterWriteKind.spellState,
+              targetId: '11',
+              payload: {'favorite': true},
+            );
+
+            expect(await queue.watchPendingCount(_ownerA).first, 1);
+            await syncer.sync();
+
+            expect(await queue.allForOwner(_ownerA), isEmpty);
+            expect(await queue.watchPendingCount(_ownerA).first, 0);
+            expect(
+              server.writes.where((w) => w.table == 'character_spells'),
+              isEmpty,
+            );
+            expect(writesFavorite(), isFalse);
+          },
+        );
+
+        test('ligne `{prepared, favorite}` : rejouée pour `prepared` seul, '
+            'jamais `is_favorite`', () async {
+          await openOnline();
+          await queue.enqueue(
+            characterId: _characterId,
+            ownerId: _ownerA,
+            kind: PendingCharacterWriteKind.spellState,
+            targetId: '11',
+            payload: {'prepared': true, 'favorite': true},
+          );
+
+          expect(await syncer.sync(), {_characterId});
+
+          expect(spell(11)['status'], 'préparé');
+          expect(spell(11).containsKey('is_favorite'), isFalse);
+          expect(await queue.allForOwner(_ownerA), isEmpty);
+          expect(writesFavorite(), isFalse);
+        });
+
+        test('superposition : une ligne `{prepared, favorite}` en file affiche '
+            'le sort préparé', () async {
+          await queue.enqueue(
+            characterId: _characterId,
+            ownerId: _ownerA,
+            kind: PendingCharacterWriteKind.spellState,
+            targetId: '11',
+            payload: {'prepared': true, 'favorite': true},
+          );
+          await openOnline();
+
+          final detail = await reopen();
+
+          expect(
+            detail.spells.singleWhere((s) => s.id == 11).status,
+            SpellStatus.prepared,
+          );
+        });
+      },
+    );
+
     test(
       'isolation par ownerId : la ligne d\'un autre compte reste en file',
       () async {
@@ -1080,14 +1084,14 @@ void main() {
           ownerId: _ownerB,
           kind: PendingCharacterWriteKind.spellState,
           targetId: '11',
-          payload: {'favorite': true},
+          payload: {'prepared': true},
         );
         await openOnline();
         goOffline();
-        await repository.setSpellFavorite(
+        await repository.setSpellPrepared(
           characterId: _characterId,
           spellId: 11,
-          isFavorite: true,
+          prepared: true,
         );
         goOnline();
 
@@ -1110,10 +1114,10 @@ void main() {
         temporaryHp: 0,
       );
       clock = clock.add(const Duration(seconds: 5));
-      await repository.setSpellFavorite(
+      await repository.setSpellPrepared(
         characterId: _characterId,
         spellId: 11,
-        isFavorite: true,
+        prepared: true,
       );
       goOnline();
 

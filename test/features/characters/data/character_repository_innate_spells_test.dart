@@ -125,7 +125,7 @@ void main() {
         expect(
           select,
           contains(
-            'character_spells(spell_id,status,is_favorite,source_class_id,'
+            'character_spells(spell_id,status,source_class_id,'
             'innate_uses_spent)',
           ),
         );

@@ -21,7 +21,6 @@ const int postgresIntMax = 2147483647;
 /// Clés des payloads de file.
 abstract final class OfflineStateKeys {
   static const prepared = 'prepared';
-  static const favorite = 'favorite';
   static const equipped = 'equipped';
   static const weaponSlot = 'weaponSlot';
   static const attuned = 'attuned';
@@ -29,23 +28,18 @@ abstract final class OfflineStateKeys {
   static const armorClassBonus = 'armorClassBonus';
 }
 
-/// Changement d'un sort : préparé et/ou favori (au moins un des deux).
+/// Changement d'un sort : son état préparé. Les anciennes lignes de file qui
+/// portaient aussi un `favorite` (système de favoris retiré) l'ignorent.
 class SpellStatePatch {
-  const SpellStatePatch({this.prepared, this.favorite});
+  const SpellStatePatch({this.prepared});
 
   final bool? prepared;
-  final bool? favorite;
 
-  Map<String, dynamic> toPayload() => {
-    OfflineStateKeys.prepared: ?prepared,
-    OfflineStateKeys.favorite: ?favorite,
-  };
+  Map<String, dynamic> toPayload() => {OfflineStateKeys.prepared: ?prepared};
 
-  /// Fusion « dernière valeur gagnante » champ par champ.
-  SpellStatePatch merge(SpellStatePatch newer) => SpellStatePatch(
-    prepared: newer.prepared ?? prepared,
-    favorite: newer.favorite ?? favorite,
-  );
+  /// Fusion « dernière valeur gagnante ».
+  SpellStatePatch merge(SpellStatePatch newer) =>
+      SpellStatePatch(prepared: newer.prepared ?? prepared);
 }
 
 /// Changement d'un objet d'inventaire : équipé, set d'arme, harmonisé (au
@@ -127,18 +121,13 @@ bool isValidInventoryTargetId(String targetId) => targetId.trim().isNotEmpty;
 SpellStatePatch? parseSpellStatePayload(Object? raw) {
   if (raw is! Map) return null;
   final prepared = raw[OfflineStateKeys.prepared];
-  final favorite = raw[OfflineStateKeys.favorite];
   if (raw.containsKey(OfflineStateKeys.prepared) && prepared is! bool) {
     return null;
   }
-  if (raw.containsKey(OfflineStateKeys.favorite) && favorite is! bool) {
-    return null;
-  }
-  if (prepared == null && favorite == null) return null;
-  return SpellStatePatch(
-    prepared: prepared as bool?,
-    favorite: favorite as bool?,
-  );
+  // Une ligne sans aucun champ connu (ex. ancienne `{favorite: …}` seule) est
+  // invalide : le synchroniseur la supprime sans rien écrire.
+  if (prepared == null) return null;
+  return SpellStatePatch(prepared: prepared as bool?);
 }
 
 /// Analyse stricte d'un payload `inventoryState` ; `null` s'il est invalide

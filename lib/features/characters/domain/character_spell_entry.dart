@@ -21,7 +21,6 @@ class CharacterSpellEntry {
     this.duration = '',
     this.concentration = false,
     this.description = '',
-    this.isFavorite = false,
     this.grantSource,
     this.isPersisted = true,
     this.storedStatus,
@@ -66,13 +65,6 @@ class CharacterSpellEntry {
 
   /// `spells.description`, chaîne vide si non renseignée.
   final String description;
-
-  /// `character_spells.is_favorite` — épinglage pour accès rapide en combat,
-  /// voir `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
-  /// "Onglet Sorts". Bascule via l'étoile de `_SpellRow`
-  /// (`presentation/widgets/character_spells_section.dart`) — voir
-  /// `CharacterRepository.setSpellFavorite`.
-  final bool isFavorite;
 
   /// Origine du sort s'il est accordé automatiquement par une sous-classe
   /// (`subclass_spells`, voir `domain/subclass_spell_grant_resolver.dart`),
@@ -174,13 +166,13 @@ class CharacterSpellEntry {
   /// fusionnées en une seule entrée.
   final bool hasInnateRoute;
 
-  /// Copie avec l'état « préparé »/« favori » superposé depuis la file hors
+  /// Copie avec l'état « préparé » superposé depuis la file hors
   /// ligne (T5a) — voir `SupabaseCharacterRepository._withPendingWrites`. Un
   /// sort accordé par une sous-classe reste préparé (seul [storedStatus] suit) ;
   /// un sort au statut inné n'est jamais modifié par une préparation (la
   /// ligne ordinaire n'existe pas : l'écriture serveur ne touche pas les
   /// lignes 'inné').
-  CharacterSpellEntry copyWithPendingState({bool? prepared, bool? favorite}) {
+  CharacterSpellEntry copyWithPendingState({bool? prepared}) {
     SpellStatus? nextStatus;
     SpellStatus? nextStored = storedStatus;
     var nextPersisted = isPersisted;
@@ -206,7 +198,6 @@ class CharacterSpellEntry {
       duration: duration,
       concentration: concentration,
       description: description,
-      isFavorite: favorite ?? isFavorite,
       grantSource: grantSource,
       isPersisted: nextPersisted,
       requiresPreparation: requiresPreparation,
@@ -231,7 +222,6 @@ class CharacterSpellEntry {
         duration: duration,
         concentration: concentration,
         description: description,
-        isFavorite: isFavorite,
         grantSource: grantSource,
         isPersisted: isPersisted,
         storedStatus: storedStatus,

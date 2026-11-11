@@ -39,14 +39,13 @@ void main() {
     });
 
     test('doublon (choisi ET accordé) : une seule entrée, préparée, '
-        'persistée, favori conservé', () {
+        'persistée', () {
       final result = CharacterSpellRowMapper.toCharacterSpellEntries(
         spellRows,
         names: const {},
         descriptions: const {},
         statuses: const {1: SpellStatus.known, 2: SpellStatus.known},
         classes: const [],
-        favorites: const {2: true},
         grants: const {2: SpellGrantSource.domain},
       );
 
@@ -54,7 +53,6 @@ void main() {
       final granted = result.singleWhere((s) => s.id == 2);
       expect(granted.status, SpellStatus.prepared);
       expect(granted.isPersisted, isTrue);
-      expect(granted.isFavorite, isTrue);
       final ordinary = result.singleWhere((s) => s.id == 1);
       expect(ordinary.grantSource, isNull);
       expect(ordinary.status, SpellStatus.known);

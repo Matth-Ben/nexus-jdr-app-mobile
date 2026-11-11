@@ -2727,8 +2727,8 @@ void main() {
             },
           ],
           'character_spells': [
-            {'spell_id': 20, 'status': 'connu', 'is_favorite': false},
-            {'spell_id': 22, 'status': 'connu', 'is_favorite': true},
+            {'spell_id': 20, 'status': 'connu'},
+            {'spell_id': 22, 'status': 'connu'},
           ],
         },
       ],
@@ -2797,10 +2797,9 @@ void main() {
       expect(byName['Bénédiction'].grantSource, SpellGrantSource.domain);
       expect(byName['Bénédiction'].status, SpellStatus.prepared);
       expect(byName['Bénédiction'].isPersisted, isFalse);
-      // Sort choisi ET accordé : une seule entrée, favori conservé.
+      // Sort choisi ET accordé : une seule entrée.
       expect(byName['Soins'].grantSource, SpellGrantSource.domain);
       expect(byName['Soins'].isPersisted, isTrue);
-      expect(byName['Soins'].isFavorite, isTrue);
       expect(byName['Revigorer'].grantSource, SpellGrantSource.domain);
       // Sort ordinaire inchangé, jamais compté comme préparé.
       expect(byName['Bouclier'].grantSource, isNull);
@@ -3072,9 +3071,7 @@ void main() {
 
         expect(
           select!.replaceAll(RegExp(r'\s+'), ''),
-          contains(
-            'character_spells(spell_id,status,is_favorite,source_class_id,',
-          ),
+          contains('character_spells(spell_id,status,source_class_id,'),
         );
       },
     );
