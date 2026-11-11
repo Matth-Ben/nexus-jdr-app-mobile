@@ -424,8 +424,11 @@ class _SpellRow extends StatelessWidget {
     // connu/préparé — classe) : les deux badges doivent alors coexister sur
     // la ligne, voir la mise en page `twoLines` ci-dessous.
     final innateLimited = InnateSpellUsage.isLimited(spell);
+    // Sort à concentration (P3a) : pastille « C » informative, jamais déduite
+    // du texte de la durée. En grande police elle rejoint la seconde ligne.
+    final concentration = spell.concentration;
     final twoLines =
-        innateLimited &&
+        (innateLimited || concentration) &&
         MediaQuery.textScalerOf(context).scale(1) >= _innateTwoLineTextScale;
 
     final nameAndDice = Row(
@@ -495,17 +498,20 @@ class _SpellRow extends StatelessWidget {
                       children: [
                         nameAndDice,
                         const SizedBox(height: AppSpacing.xs),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
+                        Wrap(
+                          spacing: AppSpacing.xs,
+                          runSpacing: AppSpacing.xs,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            _InnateUsage(spell: spell),
-                            if (preparationLabel != null) ...[
-                              const SizedBox(width: AppSpacing.xs),
+                            if (concentration) const _ConcentrationMarker(),
+                            if (spell.grantSource != null)
+                              _GrantBadge(source: spell.grantSource!),
+                            if (innateLimited) _InnateUsage(spell: spell),
+                            if (preparationLabel != null)
                               _PreparationStatus(
                                 label: preparationLabel,
                                 prepared: !unprepared,
                               ),
-                            ],
                           ],
                         ),
                       ],
@@ -516,6 +522,10 @@ class _SpellRow extends StatelessWidget {
                         // la pastille "DOMAINE"/"SERMENT"/"INNÉ" repoussée en
                         // face, à droite — demande utilisateur du 06/10/2026.
                         Expanded(child: nameAndDice),
+                        if (concentration) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          const _ConcentrationMarker(),
+                        ],
                         if (spell.grantSource != null) ...[
                           const SizedBox(width: AppSpacing.xs),
                           _GrantBadge(source: spell.grantSource!),
@@ -597,15 +607,46 @@ class _GrantBadge extends StatelessWidget {
   }
 }
 
+/// Marqueur « C » d'un sort à concentration (P3a) : pastille [_RowBadge]
+/// (palier title, 11 px) + icône `psychology` (la forme, pas la couleur,
+/// porte le sens : une tête et sa pensée suggèrent l'effort mental maintenu).
+/// Purement informatif : aucun tap propre, la ligne ouvre toujours le panneau
+/// « Infos ». `Semantics` « Concentration » (le « C » seul n'est pas lisible
+/// par un lecteur d'écran).
+class _ConcentrationMarker extends StatelessWidget {
+  const _ConcentrationMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Semantics(
+      label: l10n.characterSpellsSectionConcentrationSemanticLabel,
+      excludeSemantics: true,
+      child: _RowBadge(
+        key: const ValueKey('spellConcentrationMarker'),
+        label: l10n.characterSpellsSectionConcentrationBadgeLabel,
+        icon: Icons.psychology,
+        iconSize: 12,
+      ),
+    );
+  }
+}
+
 /// Pastille de ligne de sort partagée par [_GrantBadge] et [_InnateUsage] :
 /// fond `parchment.card-alt`, liseré `wood.light` 1 px, `radius.sm`, texte
 /// `font.display` [_rowBadgeFontSize]. [icon] facultative, devant le
 /// libellé. Purement visuelle : la sémantique est portée par l'appelant.
 class _RowBadge extends StatelessWidget {
-  const _RowBadge({required this.label, this.icon});
+  const _RowBadge({
+    super.key,
+    required this.label,
+    this.icon,
+    this.iconSize = 10,
+  });
 
   final String label;
   final IconData? icon;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -629,7 +670,7 @@ class _RowBadge extends StatelessWidget {
           : Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 10, color: AppColors.woodMedium),
+                Icon(icon, size: iconSize, color: AppColors.woodMedium),
                 const SizedBox(width: 3),
                 text,
               ],

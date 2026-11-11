@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/display_text.dart';
+import '../../../../core/widgets/info_banner.dart';
 import '../../../../core/rules/spell_status.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -255,6 +256,14 @@ class _SpellInfoPanelContent extends StatelessWidget {
                       for (var i = 0; i < infoRows.length; i++) ...[
                         infoRows[i],
                         if (i < infoRows.length - 1) const SheetActionDivider(),
+                      ],
+                      if (spell.concentration) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        InfoBanner(
+                          key: const ValueKey('spellConcentrationHint'),
+                          icon: Icons.psychology,
+                          message: l10n.spellInfoPanelConcentrationHint,
+                        ),
                       ],
                       const SizedBox(height: AppSpacing.md),
                       DisplayText(

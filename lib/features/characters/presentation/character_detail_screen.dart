@@ -155,16 +155,25 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     required int level,
     required bool isPact,
     required bool queued,
+    required bool concentration,
   }) {
     if (!mounted) return;
     final message = isPact
         ? l10n.spellPactSlotUsedSnackBarMessage
         : l10n.spellSlotUsedSnackBarMessage(level);
+    final concentrationMessage = concentration
+        ? l10n.spellConcentrationRequiredMessage
+        : null;
     final controller = showSpellSlotUsedSnackBar(
       context,
       message: message,
       undoLabel: l10n.spellSlotUsedSnackBarUndoLabel,
-      announcement: l10n.spellSlotUsedSnackBarAnnouncement(message),
+      announcement: l10n.spellSlotUsedSnackBarAnnouncement(
+        concentrationMessage == null
+            ? message
+            : '$message. $concentrationMessage',
+      ),
+      concentrationMessage: concentrationMessage,
       offlineMessage: queued ? _offlineQueuedMessage(l10n) : null,
       onUndo: () => unawaited(_undoSlotUse(level: level, isPact: isPact)),
     );
@@ -828,6 +837,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     // Un nouveau lancer, de n'importe quel type, remplace le SnackBar
     // « Annuler » du précédent : seul le dernier lancer est annulable.
     _dismissUndoSnackBar();
+    // Et tout autre message de lancer (ex. « Concentration requise », P3a).
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     if (slot == null) {
       // Sort inné de niveau >= 1 : lancé sans emplacement, mais son usage
       // (une fois par repos long) est dépensé et persisté.
@@ -836,7 +847,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         return;
       }
       // Sort niveau 0 : rien à persister (spec de la tâche).
-      _showSnackBar(l10n.characterDetailCastSpellSuccessMessage(spell.name));
+      _showCastSnackBar(
+        l10n.characterDetailCastSpellSuccessMessage(spell.name),
+        concentration: spell.concentration,
+        l10n: l10n,
+      );
       return;
     }
 
@@ -897,6 +912,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           level: slotLevel,
           isPact: false,
           queued: true,
+          concentration: spell.concentration,
         );
         return;
       }
@@ -906,6 +922,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         level: slotLevel,
         isPact: false,
         queued: false,
+        concentration: spell.concentration,
       );
     } on CharacterFailure catch (failure) {
       if (mounted && _restGeneration == myRestGeneration) {
@@ -985,6 +1002,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           level: pact.level,
           isPact: true,
           queued: true,
+          concentration: spell.concentration,
         );
         return;
       }
@@ -994,6 +1012,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         level: pact.level,
         isPact: true,
         queued: false,
+        concentration: spell.concentration,
       );
     } on CharacterFailure catch (failure) {
       if (mounted && _restGeneration == myRestGeneration) {
@@ -1115,7 +1134,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // limite jugée acceptable (cas rare : repos et lancer hors ligne
         // quasi simultanés).
         _queuedInnateSpellIds.add(spell.id);
-        _showSnackBar(_offlineQueuedMessage(l10n));
+        _showCastSnackBar(
+          _offlineQueuedMessage(l10n),
+          concentration: spell.concentration,
+          l10n: l10n,
+        );
         return;
       }
       if (_restGeneration != myRestGeneration) {
@@ -1123,8 +1146,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar(
+      _showCastSnackBar(
         l10n.characterDetailCastInnateSpellSuccessMessage(spell.name),
+        concentration: spell.concentration,
+        l10n: l10n,
       );
     } on CharacterFailure catch (failure) {
       revertOverride();
@@ -2532,6 +2557,35 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// `offlineNotPersistedMessage` ne le faisait pas).
   String _offlineQueuedMessage(AppLocalizations l10n) =>
       l10n.characterDetailOfflineQueuedMessage;
+
+  /// SnackBar d'un lancer réussi sans emplacement (sort mineur, sort inné) :
+  /// pour un sort à concentration (P3a), la ligne « Concentration requise »
+  /// est ajoutée au MÊME SnackBar (un seul à la fois, il remplace le
+  /// précédent). Purement informatif : aucun état de concentration suivi.
+  void _showCastSnackBar(
+    String message, {
+    required bool concentration,
+    required AppLocalizations l10n,
+  }) {
+    if (!concentration) {
+      _showSnackBar(message);
+      return;
+    }
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(message),
+            Text(l10n.spellConcentrationRequiredMessage),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _showSnackBar(String message) {
     if (!mounted) return;
