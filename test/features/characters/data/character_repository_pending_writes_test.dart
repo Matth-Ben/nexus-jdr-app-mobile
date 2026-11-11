@@ -116,6 +116,30 @@ void main() {
   }
 
   group('hors ligne : fiche fermée puis rouverte', () {
+    test('hors ligne déclaré + cache présent : la relecture ne tente aucune '
+        'requête réseau (la relecture suivant une écriture ne retient pas '
+        "l'onglet Sac verrouillé)", () async {
+      await openOnlineOnce();
+      goOffline();
+      server.requests.clear();
+
+      final reopened = await repository.fetchCharacterDetail(_characterId);
+
+      expect(reopened.currentHp, 10);
+      expect(server.requests, isEmpty);
+    });
+
+    test('hors ligne déclaré sans cache : le chemin réseau est tenté (échec '
+        'habituel, pas de régression)', () async {
+      goOffline();
+
+      await expectLater(
+        repository.fetchCharacterDetail(_characterId),
+        throwsA(anything),
+      );
+      expect(server.requests, isNotEmpty);
+    });
+
     test('PV : la fiche relue depuis le cache affiche la valeur mise en '
         'file', () async {
       await openOnlineOnce();
@@ -345,10 +369,18 @@ void main() {
       final synced = await syncer.sync();
 
       expect(synced, {_characterId});
-      expect(server.patchBodies, [
-        {'current_hp': 5, 'temporary_hp': 0},
-        {'xp': 150},
-      ]);
+      // Ordre non asserté : PV et XP sont des colonnes indépendantes, et
+      // `queuedAt` (précision à la seconde dans drift) départage deux écritures
+      // faites dans la même seconde par `kind`, pas par chronologie — l'ordre
+      // dépendait donc, sans le dire, de la latence d'une relecture réseau
+      // qui séparait les deux écritures.
+      expect(
+        server.patchBodies,
+        unorderedEquals([
+          {'current_hp': 5, 'temporary_hp': 0},
+          {'xp': 150},
+        ]),
+      );
       expect(server.characterRow['current_hp'], 5);
       expect(server.characterRow['xp'], 150);
       expect(await pendingWrites.allForOwner(_ownerId), isEmpty);

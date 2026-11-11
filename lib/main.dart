@@ -58,6 +58,23 @@ typedef BootstrapResult = ({
   bool postHogReady,
 });
 
+/// Délai maximal accordé à chaque SDK **secondaire**, en bloc (PostHog ;
+/// Firebase Core+Analytics+Crashlytics), lancés en parallèle.
+const Duration secondaryInitTimeout = Duration(seconds: 5);
+
+/// Borne [step] (appel de plateforme d'un SDK secondaire) à
+/// [secondaryInitTimeout] : une `TimeoutException` est levée au-delà, que le
+/// `catch` de [_initializeSupabaseAndFirebase] traite comme un échec de ce SDK
+/// (non disponible pour la session, jamais bloquant).
+///
+/// Ces appels (canaux natifs) n'ont aucun délai propre : s'ils ne répondent
+/// jamais (Play Services absent ou en cours de mise à jour, émulateur neuf),
+/// le `FutureBuilder` d'[AppBootstrap] garderait [SplashScreen] indéfiniment
+/// pour un SDK qui n'est pas nécessaire à l'usage hors ligne.
+@visibleForTesting
+Future<T> boundSecondaryInit<T>(Future<T> step) =>
+    step.timeout(secondaryInitTimeout);
+
 /// Initialise Supabase, PostHog puis, sur Android, Firebase (Core +
 /// Analytics + Crashlytics) — logique d'initialisation par défaut
 /// d'[AppBootstrap], extraite en fonction top-level pour rester substituable
@@ -106,198 +123,210 @@ typedef BootstrapResult = ({
 /// release) — contrairement à ce qu'un ancien commentaire ici laissait
 /// entendre, laisser passer vers [NexusJdrApp] après un échec de
 /// `Supabase.initialize` plante réellement, dans tous les modes de build.
-Future<BootstrapResult> _initializeSupabaseAndFirebase() async {
+
+Future<BootstrapResult> _initializeSupabaseAndFirebase() => initializeSdks();
+
+Future<void> _defaultInitSupabase() async {
   assert(
     EnvConfig.isConfigured,
     'SUPABASE_URL / SUPABASE_ANON_KEY manquants : lancer avec '
     '--dart-define-from-file=config/<flavor>.json (voir config/README.md).',
   );
+  await Supabase.initialize(
+    url: EnvConfig.supabaseUrl,
+    // Le nom de variable d'environnement `SUPABASE_ANON_KEY` (voir
+    // config/README.md) est conservé pour rester cohérent avec l'app web
+    // (`NEXT_PUBLIC_SUPABASE_ANON_KEY`), mais supabase_flutter attend
+    // désormais ce paramètre sous le nom `publishableKey` (anonKey est
+    // dépréciée).
+    publishableKey: EnvConfig.supabaseAnonKey,
+    // Dette D12 : délai global de 15s sur toute requête HTTP sortante
+    // (Postgrest, GoTrue, Storage...) — voir la doc de classe de
+    // `TimeoutHttpClient`.
+    httpClient: TimeoutHttpClient(),
+  );
+}
 
+Future<bool> _defaultReadAnalyticsEnabled() async {
+  final preferences = await SharedPreferences.getInstance();
+  return preferences.getBool(analyticsEnabledPrefsKey) ?? true;
+}
+
+Future<void> _defaultStartPostHog(bool analyticsEnabled) => Posthog().setup(
+  PostHogConfig(EnvConfig.postHogApiKey)
+    ..host = EnvConfig.postHogHost
+    ..optOut = !analyticsEnabled,
+);
+
+/// Firebase Core + Analytics + Crashlytics, d'un seul tenant (borné **en bloc**
+/// par l'appelant). [isAbandoned] devient vrai si l'appelant a renoncé
+/// (délai écoulé) : Crashlytics n'est alors jamais branché, pour qu'un SDK
+/// déclaré indisponible ne s'active pas en cours de session.
+Future<void> _defaultStartFirebase(
+  bool analyticsEnabled,
+  bool Function() isAbandoned,
+) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(
+    analyticsEnabled,
+  );
+  if (isAbandoned()) return;
+
+  // Remontée de plantage (dette D13, `docs/dette-technique.md`) —
+  // Crashlytics ne peut s'initialiser qu'une fois `Firebase.initializeApp`
+  // réussi, donc dans ce même bloc/`try`, juste après Firebase Analytics
+  // ci-dessus. Collecte coupée en debug (`!kDebugMode`) pour ne pas
+  // polluer le dashboard avec des crashes de développement — même
+  // principe que `PostHogConfig.optOut`/`setAnalyticsCollectionEnabled`
+  // plus haut, mais piloté par le mode de build plutôt que par la
+  // préférence utilisateur "Partager mes données d'usage" (un crash est
+  // un défaut de l'app à corriger, pas une donnée d'usage).
+  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+    !kDebugMode,
+  );
+  if (isAbandoned()) return;
+
+  // Gestionnaires globaux (pattern standard documenté par le package) :
+  // `FlutterError.onError` couvre les erreurs levées pendant le cycle de
+  // build/layout/paint Flutter, `PlatformDispatcher.instance.onError`
+  // couvre tout le reste (code asynchrone hors framework, ex. un
+  // `Future` qui échoue sans jamais être attendu). Aucun des deux n'est
+  // personnalisé ailleurs dans ce dépôt (seuls des appels ponctuels à
+  // `FlutterError.reportError` existent, qui invoquent justement
+  // `FlutterError.onError` — donc on chaîne vers le handler déjà en
+  // place, `FlutterError.presentError` par défaut, pour ne jamais perdre
+  // le dump console existant en plus de l'envoi à Crashlytics).
+  //
+  // `recordError(..., fatal: true)` plutôt que `recordFlutterFatalError` :
+  // ce dernier délègue en interne à `recordFlutterError`, qui appelle
+  // lui-même `FlutterError.presentError(details)` avant d'enregistrer
+  // dans Crashlytics (voir le code source du plugin
+  // `firebase_crashlytics`) — avec `previousOnError` qui vaut par défaut
+  // `FlutterError.presentError`, l'appeler ensuite aurait dupliqué le
+  // dump console à chaque erreur fatale au lieu de le préserver une
+  // seule fois.
+  final previousOnError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    FirebaseCrashlytics.instance.recordError(
+      details.exception,
+      details.stack,
+      fatal: true,
+      information: [details.toString()],
+      // `printDetails: false` (relecture code-reviewer, dette D13) :
+      // sans ce flag, le plugin imprime lui-même un second dump
+      // (format « FIREBASE CRASHLYTICS ») en mode debug, en plus de
+      // celui de `previousOnError` (`FlutterError.presentError`) ci-
+      // dessous — pas un doublon du même dump (voir le commentaire
+      // au-dessus sur `recordFlutterFatalError`), juste une console
+      // plus propre en debug.
+      printDetails: false,
+    );
+    previousOnError?.call(details);
+  };
+  PlatformDispatcher.instance.onError = (error, stackTrace) {
+    FirebaseCrashlytics.instance.recordError(error, stackTrace, fatal: true);
+    return true;
+  };
+}
+
+/// Corps de [_initializeSupabaseAndFirebase], avec les étapes substituables
+/// (paramètres : valeurs par défaut = comportement de production) pour tester
+/// que des SDK qui ne répondent jamais ne retardent pas le premier écran.
+///
+/// PostHog et Firebase démarrent **en parallèle** après Supabase, chacun borné
+/// **en bloc** par [secondaryInitTimeout] (un seul délai pour tout Firebase) :
+/// pire cas avant le premier écran = ce délai, pas la somme des étapes. Une
+/// étape expirée ou en échec = SDK indisponible (`ready` faux), jamais de
+/// plantage.
+@visibleForTesting
+Future<BootstrapResult> initializeSdks({
+  Future<void> Function()? initSupabase,
+  Future<bool> Function()? readAnalyticsEnabled,
+  Future<void> Function(bool analyticsEnabled)? startPostHog,
+  Future<void> Function(bool analyticsEnabled, bool Function() isAbandoned)?
+  startFirebase,
+  bool? postHogConfigured,
+  bool? firebaseSupported,
+}) async {
   var supabaseReady = false;
   try {
-    await Supabase.initialize(
-      url: EnvConfig.supabaseUrl,
-      // Le nom de variable d'environnement `SUPABASE_ANON_KEY` (voir
-      // config/README.md) est conservé pour rester cohérent avec l'app web
-      // (`NEXT_PUBLIC_SUPABASE_ANON_KEY`), mais supabase_flutter attend
-      // désormais ce paramètre sous le nom `publishableKey` (anonKey est
-      // dépréciée).
-      publishableKey: EnvConfig.supabaseAnonKey,
-      // Dette D12 : délai global de 15s sur toute requête HTTP sortante
-      // (Postgrest, GoTrue, Storage...) — voir la doc de classe de
-      // `TimeoutHttpClient` pour le rationale complet (pourquoi global
-      // plutôt que `.timeout(...)` dispersé sur chaque appel `.from(...)`).
-      httpClient: TimeoutHttpClient(),
-    );
+    await (initSupabase ?? _defaultInitSupabase)();
     supabaseReady = true;
   } catch (error, stackTrace) {
-    FlutterError.reportError(
-      FlutterErrorDetails(
-        exception: error,
-        stack: stackTrace,
-        library: 'nexus_jdr main',
-        context: ErrorDescription('lors de Supabase.initialize'),
-      ),
-    );
+    _reportInitError(error, stackTrace, 'lors de Supabase.initialize');
   }
 
-  // Préférence locale "Partager mes données d'usage" — lue AVANT de démarrer
-  // le moindre SDK d'analytics, voir la doc de classe de cette fonction pour
-  // le rationale complet (fenêtre de collecte sinon ouverte avant que la
-  // préférence ne soit appliquée). Défaut `true` (activé) si rien n'est
-  // encore persisté ou si la lecture échoue — même défaut que
-  // `AnalyticsPreferencesController.build`
-  // (`core/analytics/analytics_preferences_provider.dart`).
+  // Préférence "Partager mes données d'usage" lue AVANT de démarrer le moindre
+  // SDK d'analytics (voir la doc de classe de la fonction ci-dessus) ; défaut
+  // `true` comme `AnalyticsPreferencesController.build`.
   var analyticsEnabled = true;
   try {
-    final preferences = await SharedPreferences.getInstance();
-    analyticsEnabled = preferences.getBool(analyticsEnabledPrefsKey) ?? true;
+    analyticsEnabled =
+        await (readAnalyticsEnabled ?? _defaultReadAnalyticsEnabled)();
   } catch (error, stackTrace) {
-    FlutterError.reportError(
-      FlutterErrorDetails(
-        exception: error,
-        stack: stackTrace,
-        library: 'nexus_jdr main',
-        context: ErrorDescription(
-          'lors de la lecture de la préférence analytics persistée',
-        ),
-      ),
+    _reportInitError(
+      error,
+      stackTrace,
+      'lors de la lecture de la préférence analytics persistée',
     );
   }
 
-  // Analytics produit — PostHog (`core/analytics/`) : indépendant de
-  // Supabase/Firebase, démarré sur toute plateforme cible dès que sa config
-  // (`EnvConfig.isPostHogConfigured`) est renseignée. Un échec ici (SDK
-  // d'analytics secondaire) ne doit jamais empêcher l'app de démarrer, même
-  // rationale de résilience que Supabase ci-dessus. `optOut` posé dès la
-  // config initiale (pas de `Posthog().disable()` après coup) : voir la doc
-  // de classe de cette fonction.
   var postHogReady = false;
-  if (EnvConfig.isPostHogConfigured) {
-    try {
-      await Posthog().setup(
-        PostHogConfig(EnvConfig.postHogApiKey)
-          ..host = EnvConfig.postHogHost
-          ..optOut = !analyticsEnabled,
-      );
-      postHogReady = true;
-    } catch (error, stackTrace) {
-      FlutterError.reportError(
-        FlutterErrorDetails(
-          exception: error,
-          stack: stackTrace,
-          library: 'nexus_jdr main',
-          context: ErrorDescription('lors de Posthog().setup'),
-        ),
-      );
-    }
-  }
-
-  // Notifications push (chantier "Notifications" —
-  // `docs/cahier-des-charges/15-profil-parametres.md` section 3) : Android
-  // uniquement pour cette itération, `firebase_options.dart` (généré par
-  // FlutterFire CLI) ne couvre pas encore iOS (compte Apple Developer en
-  // attente) — `DefaultFirebaseOptions.currentPlatform` lèverait
-  // `UnsupportedError` sur cette plateforme. `kIsWeb` exclu par construction
-  // (ce dépôt ne cible aucune cible web, voir `01-architecture-technique.md`).
-  // Un échec ici (Firebase, secondaire aux notifications push) ne doit pas
-  // empêcher l'app de démarrer si Supabase, lui, a bien réussi — même
-  // rationale de résilience que ci-dessus. Firebase Analytics
-  // (`core/analytics/`) démarre dans ce même bloc/`try`, juste après
-  // `Firebase.initializeApp` : `setAnalyticsCollectionEnabled` posé
-  // immédiatement après (avant tout autre appel Firebase Analytics), même
-  // rationale que `PostHogConfig.optOut` ci-dessus — la collecte automatique
-  // par défaut est en plus explicitement coupée au niveau natif
-  // (`firebase_analytics_collection_enabled=false` dans
-  // `android/app/src/main/AndroidManifest.xml`), cet appel ne fait que
-  // l'activer explicitement quand la préférence l'autorise.
   var firebaseAnalyticsReady = false;
-  if (supabaseReady &&
-      !kIsWeb &&
-      defaultTargetPlatform == TargetPlatform.android) {
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(
-        analyticsEnabled,
-      );
-      firebaseAnalyticsReady = true;
+  var firebaseAbandoned = false;
 
-      // Remontée de plantage (dette D13, `docs/dette-technique.md`) —
-      // Crashlytics ne peut s'initialiser qu'une fois `Firebase.initializeApp`
-      // réussi, donc dans ce même bloc/`try`, juste après Firebase Analytics
-      // ci-dessus. Collecte coupée en debug (`!kDebugMode`) pour ne pas
-      // polluer le dashboard avec des crashes de développement — même
-      // principe que `PostHogConfig.optOut`/`setAnalyticsCollectionEnabled`
-      // plus haut, mais piloté par le mode de build plutôt que par la
-      // préférence utilisateur "Partager mes données d'usage" (un crash est
-      // un défaut de l'app à corriger, pas une donnée d'usage).
-      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
-        !kDebugMode,
-      );
+  // Firebase : Android uniquement pour l'instant (`firebase_options.dart` ne
+  // couvre pas encore iOS), et seulement si Supabase est prêt.
+  final withFirebase =
+      firebaseSupported ??
+      (supabaseReady &&
+          !kIsWeb &&
+          defaultTargetPlatform == TargetPlatform.android);
 
-      // Gestionnaires globaux (pattern standard documenté par le package) :
-      // `FlutterError.onError` couvre les erreurs levées pendant le cycle de
-      // build/layout/paint Flutter, `PlatformDispatcher.instance.onError`
-      // couvre tout le reste (code asynchrone hors framework, ex. un
-      // `Future` qui échoue sans jamais être attendu). Aucun des deux n'est
-      // personnalisé ailleurs dans ce dépôt (seuls des appels ponctuels à
-      // `FlutterError.reportError` existent, qui invoquent justement
-      // `FlutterError.onError` — donc on chaîne vers le handler déjà en
-      // place, `FlutterError.presentError` par défaut, pour ne jamais perdre
-      // le dump console existant en plus de l'envoi à Crashlytics).
-      //
-      // `recordError(..., fatal: true)` plutôt que `recordFlutterFatalError` :
-      // ce dernier délègue en interne à `recordFlutterError`, qui appelle
-      // lui-même `FlutterError.presentError(details)` avant d'enregistrer
-      // dans Crashlytics (voir le code source du plugin
-      // `firebase_crashlytics`) — avec `previousOnError` qui vaut par défaut
-      // `FlutterError.presentError`, l'appeler ensuite aurait dupliqué le
-      // dump console à chaque erreur fatale au lieu de le préserver une
-      // seule fois.
-      final previousOnError = FlutterError.onError;
-      FlutterError.onError = (details) {
-        FirebaseCrashlytics.instance.recordError(
-          details.exception,
-          details.stack,
-          fatal: true,
-          information: [details.toString()],
-          // `printDetails: false` (relecture code-reviewer, dette D13) :
-          // sans ce flag, le plugin imprime lui-même un second dump
-          // (format « FIREBASE CRASHLYTICS ») en mode debug, en plus de
-          // celui de `previousOnError` (`FlutterError.presentError`) ci-
-          // dessous — pas un doublon du même dump (voir le commentaire
-          // au-dessus sur `recordFlutterFatalError`), juste une console
-          // plus propre en debug.
-          printDetails: false,
-        );
-        previousOnError?.call(details);
-      };
-      PlatformDispatcher.instance.onError = (error, stackTrace) {
-        FirebaseCrashlytics.instance.recordError(
-          error,
-          stackTrace,
-          fatal: true,
-        );
-        return true;
-      };
-    } catch (error, stackTrace) {
-      FlutterError.reportError(
-        FlutterErrorDetails(
-          exception: error,
-          stack: stackTrace,
-          library: 'nexus_jdr main',
-          context: ErrorDescription('lors de Firebase.initializeApp'),
-        ),
-      );
-    }
-  }
+  await Future.wait<void>([
+    if (postHogConfigured ?? EnvConfig.isPostHogConfigured)
+      () async {
+        try {
+          await boundSecondaryInit(
+            (startPostHog ?? _defaultStartPostHog)(analyticsEnabled),
+          );
+          postHogReady = true;
+        } catch (error, stackTrace) {
+          _reportInitError(error, stackTrace, 'lors de Posthog().setup');
+        }
+      }(),
+    if (withFirebase && supabaseReady)
+      () async {
+        try {
+          await boundSecondaryInit(
+            (startFirebase ?? _defaultStartFirebase)(
+              analyticsEnabled,
+              () => firebaseAbandoned,
+            ),
+          );
+          firebaseAnalyticsReady = true;
+        } catch (error, stackTrace) {
+          firebaseAbandoned = true;
+          _reportInitError(error, stackTrace, 'lors de Firebase.initializeApp');
+        }
+      }(),
+  ]);
 
   return (
     supabaseReady: supabaseReady,
     firebaseAnalyticsReady: firebaseAnalyticsReady,
     postHogReady: postHogReady,
+  );
+}
+
+void _reportInitError(Object error, StackTrace stackTrace, String context) {
+  FlutterError.reportError(
+    FlutterErrorDetails(
+      exception: error,
+      stack: stackTrace,
+      library: 'nexus_jdr main',
+      context: ErrorDescription(context),
+    ),
   );
 }
 

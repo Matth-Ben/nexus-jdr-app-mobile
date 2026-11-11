@@ -9,6 +9,7 @@
 // pompe directement `NexusJdrApp` pour la même raison).
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -317,5 +318,175 @@ void main() {
       expect(find.byType(ForceUpdateScreen), findsNothing);
       expect(find.text('App prête'), findsOneWidget);
     });
+
+    // Constat A (campagne émulateur V4) : un démarrage à froid ne doit jamais
+    // garder le splash plus longtemps qu'un délai borné quand le réseau ne
+    // répond pas.
+    testWidgets('requête de version qui ne répond jamais (réseau muet) : '
+        'splash tant que le délai n\'est pas écoulé, puis `child` '
+        '(jamais bloqué)', (tester) async {
+      await pumpBootstrap(tester, repository: _NeverRespondingRepository());
+
+      expect(find.byType(SplashScreen), findsOneWidget);
+      expect(find.text('App prête'), findsNothing);
+
+      await tester.pump(appVersionCheckTimeout - const Duration(seconds: 1));
+      expect(find.byType(SplashScreen), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 2));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+
+      expect(find.byType(SplashScreen), findsNothing);
+      expect(find.text('App prête'), findsOneWidget);
+    });
+
+    testWidgets('hors ligne immédiat (SocketException) : `child` sans attendre '
+        'le délai', (tester) async {
+      await pumpBootstrap(
+        tester,
+        repository: _ThrowingRepository(
+          const SocketException('Failed host lookup'),
+        ),
+      );
+
+      expect(find.byType(SplashScreen), findsNothing);
+      expect(find.text('App prête'), findsOneWidget);
+    });
   });
+
+  group('boundSecondaryInit (SDK secondaires : PostHog, Firebase)', () {
+    testWidgets('un appel natif qui ne répond jamais lève TimeoutException '
+        'après le délai (le bootstrap ne reste pas sur le splash)', (
+      tester,
+    ) async {
+      Object? error;
+      unawaited(
+        boundSecondaryInit(Completer<void>().future)
+            .then<void>((_) {}, onError: (Object e) => error = e),
+      );
+
+      await tester.pump(secondaryInitTimeout - const Duration(seconds: 1));
+      expect(error, isNull);
+
+      await tester.pump(const Duration(seconds: 2));
+      expect(error, isA<TimeoutException>());
+    });
+
+    testWidgets('un appel qui répond à temps garde son résultat', (
+      tester,
+    ) async {
+      expect(await boundSecondaryInit(Future.value(42)), 42);
+    });
+  });
+
+  // Usage réel de `boundSecondaryInit` dans le bootstrap (pas seulement la
+  // fonction isolée) : des SDK qui ne répondent jamais ne retardent pas la
+  // sortie du splash au-delà d'UN seul délai (parallèle, Firebase en bloc).
+  group('initializeSdks : SDK secondaires qui ne répondent jamais', () {
+    Future<void> neverVoid() => Completer<void>().future;
+
+    testWidgets('PostHog et Firebase muets : résultat après un seul délai '
+        '(pas la somme), SDK indisponibles, Supabase prêt', (tester) async {
+      final previous = FlutterError.onError;
+      FlutterError.onError = (_) {};
+      BootstrapResult? result;
+      unawaited(
+        initializeSdks(
+          initSupabase: () async {},
+          readAnalyticsEnabled: () async => true,
+          startPostHog: (_) => neverVoid(),
+          startFirebase: (_, _) => neverVoid(),
+          postHogConfigured: true,
+          firebaseSupported: true,
+        ).then((value) => result = value),
+      );
+
+      await tester.pump(secondaryInitTimeout - const Duration(seconds: 1));
+      expect(result, isNull);
+
+      await tester.pump(const Duration(seconds: 2));
+      FlutterError.onError = previous;
+
+      expect(result, isNotNull);
+      expect(result!.supabaseReady, isTrue);
+      expect(result!.postHogReady, isFalse);
+      expect(result!.firebaseAnalyticsReady, isFalse);
+    });
+
+    testWidgets('Firebase expiré : isAbandoned vrai pour que Crashlytics ne '
+        's\'active pas tardivement', (tester) async {
+      final previous = FlutterError.onError;
+      FlutterError.onError = (_) {};
+      late bool Function() isAbandoned;
+      unawaited(
+        initializeSdks(
+          initSupabase: () async {},
+          readAnalyticsEnabled: () async => true,
+          startPostHog: (_) async {},
+          startFirebase: (_, abandoned) {
+            isAbandoned = abandoned;
+            return neverVoid();
+          },
+          postHogConfigured: true,
+          firebaseSupported: true,
+        ),
+      );
+      await tester.pump();
+      expect(isAbandoned(), isFalse);
+
+      await tester.pump(secondaryInitTimeout + const Duration(seconds: 1));
+      FlutterError.onError = previous;
+
+      expect(isAbandoned(), isTrue);
+    });
+
+    testWidgets('SDK qui répondent : prêts', (tester) async {
+      final result = await initializeSdks(
+        initSupabase: () async {},
+        readAnalyticsEnabled: () async => true,
+        startPostHog: (_) async {},
+        startFirebase: (_, _) async {},
+        postHogConfigured: true,
+        firebaseSupported: true,
+      );
+
+      expect(result.postHogReady, isTrue);
+      expect(result.firebaseAnalyticsReady, isTrue);
+    });
+
+    testWidgets('Supabase en échec : Firebase non démarré', (tester) async {
+      final previous = FlutterError.onError;
+      FlutterError.onError = (_) {};
+      var firebaseStarted = false;
+      final result = await initializeSdks(
+        initSupabase: () async => throw StateError('boom'),
+        readAnalyticsEnabled: () async => true,
+        startPostHog: (_) async {},
+        startFirebase: (_, _) async => firebaseStarted = true,
+        postHogConfigured: false,
+        firebaseSupported: true,
+      );
+      FlutterError.onError = previous;
+
+      expect(result.supabaseReady, isFalse);
+      expect(firebaseStarted, isFalse);
+    });
+  });
+}
+
+class _NeverRespondingRepository implements AppVersionRepository {
+  @override
+  Future<AppVersionRow> fetchCurrentPlatformVersion() =>
+      Completer<AppVersionRow>().future;
+}
+
+class _ThrowingRepository implements AppVersionRepository {
+  _ThrowingRepository(this._error);
+
+  final Object _error;
+
+  @override
+  Future<AppVersionRow> fetchCurrentPlatformVersion() async => throw _error;
 }
