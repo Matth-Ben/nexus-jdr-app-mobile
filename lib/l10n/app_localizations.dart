@@ -7042,6 +7042,36 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Écarté'**
   String get diceRollDiscardedLabel;
+
+  /// Confirmation (SnackBar) d'un repos long synchronisé, quand aucun dé de vie n'a été récupéré (`character_detail_screen.dart::_applyRest`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Repos long effectué. PV restaurés au maximum.'**
+  String get characterDetailRestLongDoneMessage;
+
+  /// Confirmation (SnackBar) d'un repos long synchronisé avec {count} dé(s) de vie récupéré(s) (somme de `hitDiceRecoveredByClassId`) ; jamais utilisée quand count vaut 0.
+  ///
+  /// In fr, this message translates to:
+  /// **'Repos long effectué. PV restaurés au maximum. {count, plural, =1{+1 dé de vie récupéré} other{+{count} dés de vie récupérés}}.'**
+  String characterDetailRestLongDoneWithHitDiceMessage(int count);
+
+  /// Confirmation (SnackBar) d'un repos court sans dé de vie dépensé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Repos court effectué.'**
+  String get characterDetailRestShortDoneMessage;
+
+  /// Confirmation (SnackBar) d'un repos court avec {count} dé(s) de vie dépensé(s) pour {gain} PV regagnés.
+  ///
+  /// In fr, this message translates to:
+  /// **'Repos court effectué. +{gain} PV ({count, plural, =1{1 dé de vie dépensé} other{{count} dés de vie dépensés}}).'**
+  String characterDetailRestShortDoneWithHitDiceMessage(int gain, int count);
+
+  /// Erreur générique (SnackBar) d'un repos qui a échoué sans message métier (`_applyRest`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'effectuer le repos. Réessayez.'**
+  String get characterDetailRestFailedMessage;
 }
 
 class _AppLocalizationsDelegate

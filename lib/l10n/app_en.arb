@@ -1354,5 +1354,10 @@
   "characterSavingThrowProficient": "proficient",
   "characterSavingThrowNotProficient": "not proficient",
   "diceRollKeptLabel": "Kept",
-  "diceRollDiscardedLabel": "Discarded"
+  "diceRollDiscardedLabel": "Discarded",
+  "characterDetailRestLongDoneMessage": "Long rest complete. HP restored to maximum.",
+  "characterDetailRestLongDoneWithHitDiceMessage": "Long rest complete. HP restored to maximum. {count, plural, =1{+1 hit die recovered} other{+{count} hit dice recovered}}.",
+  "characterDetailRestShortDoneMessage": "Short rest complete.",
+  "characterDetailRestShortDoneWithHitDiceMessage": "Short rest complete. +{gain} HP ({count, plural, =1{1 hit die spent} other{{count} hit dice spent}}).",
+  "characterDetailRestFailedMessage": "Unable to complete the rest. Please try again."
 }
