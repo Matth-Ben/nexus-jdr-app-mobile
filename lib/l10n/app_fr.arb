@@ -5852,5 +5852,89 @@
   "characterDetailRestFailedMessage": "Impossible d'effectuer le repos. Réessayez.",
   "@characterDetailRestFailedMessage": {
     "description": "Erreur générique (SnackBar) d'un repos qui a échoué sans message métier (`_applyRest`)."
+  },
+  "characterShareScreenTitle": "PARTAGER LE PERSONNAGE",
+  "@characterShareScreenTitle": {
+    "description": "Titre du bandeau bois de `character_share_screen.dart`."
+  },
+  "characterShareIntro": "Génère un lien pour montrer cette fiche en lecture seule à un ami ou à ton MJ, sans qu'il ait besoin d'un compte Nexus JDR.",
+  "@characterShareIntro": {
+    "description": "Texte d'introduction de `character_share_screen.dart`."
+  },
+  "characterShareActiveBanner": "Partage actif",
+  "@characterShareActiveBanner": {
+    "description": "Bandeau de succès affiché quand un lien de partage est actif."
+  },
+  "characterShareLinkLabel": "LIEN DE PARTAGE",
+  "@characterShareLinkLabel": {
+    "description": "Étiquette (DisplayText) au-dessus du lien de partage."
+  },
+  "characterShareCopyTooltip": "Copier le lien",
+  "@characterShareCopyTooltip": {
+    "description": "Infobulle/sémantique du bouton carré de copie du lien."
+  },
+  "characterShareLinkNotice": "Quiconque possède ce lien peut consulter la fiche tant que le partage reste actif.",
+  "@characterShareLinkNotice": {
+    "description": "Mise en garde sous le lien de partage."
+  },
+  "characterShareRegenerateLabel": "Régénérer le lien",
+  "@characterShareRegenerateLabel": {
+    "description": "Libellé de la ligne de menu qui régénère le lien."
+  },
+  "characterShareDangerZone": "ZONE DANGEREUSE",
+  "@characterShareDangerZone": {
+    "description": "Étiquette de la zone dangereuse (désactivation du partage)."
+  },
+  "characterShareDisableButton": "Désactiver le partage",
+  "@characterShareDisableButton": {
+    "description": "Bouton destructif de désactivation ; le widget le met en majuscules."
+  },
+  "characterShareDisableWarning": "Le lien actuel cessera immédiatement de fonctionner. Tu pourras en générer un nouveau plus tard.",
+  "@characterShareDisableWarning": {
+    "description": "Avertissement sous le bouton de désactivation et contenu du dialogue de confirmation."
+  },
+  "characterShareEnableButton": "Activer le partage",
+  "@characterShareEnableButton": {
+    "description": "Bouton primaire d'activation ; le widget le met en majuscules."
+  },
+  "characterShareDisableDialogTitle": "Désactiver le partage ?",
+  "@characterShareDisableDialogTitle": {
+    "description": "Titre du dialogue de confirmation de désactivation."
+  },
+  "characterShareDisableDialogCancel": "Annuler",
+  "@characterShareDisableDialogCancel": {
+    "description": "Bouton d'annulation du dialogue de désactivation."
+  },
+  "characterShareDisableDialogConfirm": "Désactiver",
+  "@characterShareDisableDialogConfirm": {
+    "description": "Bouton de confirmation du dialogue de désactivation."
+  },
+  "characterShareEnabledMessage": "Partage activé.",
+  "@characterShareEnabledMessage": {
+    "description": "SnackBar après la première activation du partage."
+  },
+  "characterShareRegeneratedMessage": "Lien de partage régénéré.",
+  "@characterShareRegeneratedMessage": {
+    "description": "SnackBar après régénération d'un lien déjà actif."
+  },
+  "characterShareDisabledMessage": "Partage désactivé.",
+  "@characterShareDisabledMessage": {
+    "description": "SnackBar après désactivation du partage."
+  },
+  "characterShareLinkCopiedMessage": "Lien copié.",
+  "@characterShareLinkCopiedMessage": {
+    "description": "SnackBar après copie du lien dans le presse-papiers."
+  },
+  "characterShareGenericError": "Une erreur est survenue. Réessayez.",
+  "@characterShareGenericError": {
+    "description": "SnackBar d'erreur inattendue (activation/régénération/désactivation)."
+  },
+  "characterShareLoadError": "Impossible de charger ce personnage. Réessayez.",
+  "@characterShareLoadError": {
+    "description": "Message de l'état d'erreur de chargement de `character_share_screen.dart`."
+  },
+  "characterShareRetryButton": "Réessayer",
+  "@characterShareRetryButton": {
+    "description": "Bouton de relance de l'état d'erreur de `character_share_screen.dart`."
   }
 }

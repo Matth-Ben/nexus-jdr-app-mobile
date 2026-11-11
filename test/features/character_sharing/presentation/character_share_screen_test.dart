@@ -44,6 +44,7 @@ import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 import '../../../core/widgets/display_scale_helpers.dart';
 
@@ -442,7 +443,10 @@ void main() {
     fakeSharingRepository = _FakeCharacterSharingRepository();
   });
 
-  Widget buildTestWidget({ThemeData? theme}) {
+  Widget buildTestWidget({
+    ThemeData? theme,
+    Locale locale = const Locale('fr'),
+  }) {
     return ProviderScope(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeCharacterRepository),
@@ -452,6 +456,9 @@ void main() {
       ],
       child: MaterialApp.router(
         theme: theme,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         routerConfig: GoRouter(
           initialLocation: '/characters/char-1/share',
           routes: [
@@ -585,6 +592,52 @@ void main() {
     expect(find.text('Régénérer le lien'), findsOneWidget);
     expect(find.text('ZONE DANGEREUSE'), findsOneWidget);
     expect(find.text('Désactiver le partage'), findsOneWidget);
+  });
+
+  // Garde V2-8 : plus aucune chaîne française en dur dans l'écran. En
+  // anglais, aucun des mots-clés français ne doit rester à l'écran, ni sur
+  // l'état actif ni dans le dialogue de confirmation.
+  testWidgets('locale anglaise : aucun libellé français résiduel (actif + '
+      'dialogue)', (tester) async {
+    fakeCharacterRepository.detailToReturn = _baseDetail.copyWith(
+      shareToken: 'existing-token',
+    );
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+    await tester.pumpAndSettle();
+
+    const frenchFragments = [
+      'PARTAGER',
+      'Partage',
+      'partage',
+      'Génère',
+      'Régénérer',
+      'DANGEREUSE',
+      'Désactiver',
+      'Quiconque',
+      'Copier',
+      'lien',
+      'LIEN',
+    ];
+    void expectNoFrench() {
+      for (final fragment in frenchFragments) {
+        expect(
+          find.textContaining(fragment),
+          findsNothing,
+          reason: 'fragment français "$fragment" encore affiché',
+        );
+      }
+    }
+
+    expect(find.text('SHARE CHARACTER'), findsOneWidget);
+    expect(find.text('Turn off sharing'), findsOneWidget);
+    expectNoFrench();
+
+    await tester.tap(find.text('Turn off sharing'));
+    await tester.pumpAndSettle();
+    expect(find.text('Turn off sharing?'), findsOneWidget);
+    expectNoFrench();
   });
 
   testWidgets(

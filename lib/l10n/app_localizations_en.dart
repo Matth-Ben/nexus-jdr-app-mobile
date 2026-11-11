@@ -4372,4 +4372,72 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get characterDetailRestFailedMessage =>
       'Unable to complete the rest. Please try again.';
+
+  @override
+  String get characterShareScreenTitle => 'SHARE CHARACTER';
+
+  @override
+  String get characterShareIntro =>
+      'Generate a link to show this sheet read-only to a friend or your GM, without them needing a Nexus JDR account.';
+
+  @override
+  String get characterShareActiveBanner => 'Sharing is on';
+
+  @override
+  String get characterShareLinkLabel => 'SHARE LINK';
+
+  @override
+  String get characterShareCopyTooltip => 'Copy link';
+
+  @override
+  String get characterShareLinkNotice =>
+      'Anyone with this link can view the sheet as long as sharing stays on.';
+
+  @override
+  String get characterShareRegenerateLabel => 'Regenerate link';
+
+  @override
+  String get characterShareDangerZone => 'DANGER ZONE';
+
+  @override
+  String get characterShareDisableButton => 'Turn off sharing';
+
+  @override
+  String get characterShareDisableWarning =>
+      'The current link will stop working immediately. You can generate a new one later.';
+
+  @override
+  String get characterShareEnableButton => 'Turn on sharing';
+
+  @override
+  String get characterShareDisableDialogTitle => 'Turn off sharing?';
+
+  @override
+  String get characterShareDisableDialogCancel => 'Cancel';
+
+  @override
+  String get characterShareDisableDialogConfirm => 'Turn off';
+
+  @override
+  String get characterShareEnabledMessage => 'Sharing turned on.';
+
+  @override
+  String get characterShareRegeneratedMessage => 'Share link regenerated.';
+
+  @override
+  String get characterShareDisabledMessage => 'Sharing turned off.';
+
+  @override
+  String get characterShareLinkCopiedMessage => 'Link copied.';
+
+  @override
+  String get characterShareGenericError =>
+      'Something went wrong. Please try again.';
+
+  @override
+  String get characterShareLoadError =>
+      'Unable to load this character. Please try again.';
+
+  @override
+  String get characterShareRetryButton => 'Try again';
 }
