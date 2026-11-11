@@ -68,9 +68,13 @@ abstract final class MulticlassProficiencies {
       'Maîtrise des armes courantes',
     ],
     'Magicien': [],
+    // RAW (Tasha's Cauldron of Everything) : armures légères et
+    // intermédiaires, boucliers, outils de voleur et outils de bricoleur.
     'Artificier': [
-      'Maîtrise des armures légères',
-      "Maîtrise d'un type d'outils d'artisan au choix",
+      'Maîtrise des armures légères et intermédiaires',
+      'Maîtrise des boucliers',
+      'Maîtrise des outils de voleur',
+      'Maîtrise des outils de bricoleur',
     ],
   };
 
@@ -124,7 +128,7 @@ abstract final class MulticlassProficiencies {
     'Ensorceleur': [],
     'Occultiste': ['légère'],
     'Magicien': [],
-    'Artificier': ['légère'],
+    'Artificier': ['légère', 'intermédiaire', 'boucliers'],
   };
 
   /// Même principe que [_multiclassArmorTokensByClassName], pour

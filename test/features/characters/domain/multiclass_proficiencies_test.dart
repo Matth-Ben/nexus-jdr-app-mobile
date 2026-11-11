@@ -39,10 +39,13 @@ void main() {
       );
     });
 
-    test("Artificier : armures légères + outils d'artisan au choix", () {
+    test('Artificier (Tasha) : armures légères et intermédiaires, boucliers, '
+        'outils de voleur et de bricoleur', () {
       expect(MulticlassProficiencies.multiclassProficienciesFor('Artificier'), [
-        'Maîtrise des armures légères',
-        "Maîtrise d'un type d'outils d'artisan au choix",
+        'Maîtrise des armures légères et intermédiaires',
+        'Maîtrise des boucliers',
+        'Maîtrise des outils de voleur',
+        'Maîtrise des outils de bricoleur',
       ]);
     });
 
@@ -72,7 +75,7 @@ void main() {
       'Ensorceleur': <String>[],
       'Occultiste': ['légère'],
       'Magicien': <String>[],
-      'Artificier': ['légère'],
+      'Artificier': ['légère', 'intermédiaire', 'boucliers'],
     };
 
     for (final entry in expectedByClassName.entries) {
