@@ -969,5 +969,70 @@ void main() {
         reason: 'la ligne a été relancée : plus rien à signaler',
       );
     });
+
+    group('enqueueAll (T5b-2, butin avec objets)', () {
+      PendingWriteRequest request(String targetId, Object payloadValue) =>
+          PendingWriteRequest(
+            characterId: 'char-1',
+            ownerId: 'owner-1',
+            kind: PendingCharacterWriteKind.inventoryItem,
+            targetId: targetId,
+            payload: {'v': payloadValue},
+          );
+
+      test('met toutes les écritures en file en une fois', () async {
+        await queue.enqueueAll([
+          PendingWriteRequest(
+            characterId: 'char-1',
+            ownerId: 'owner-1',
+            kind: PendingCharacterWriteKind.currency,
+            targetId: '',
+            payload: {
+              'totals': {'currency_gp': 3},
+            },
+          ),
+          request('a', 1),
+          request('b', 2),
+        ]);
+
+        final lines = await queue.allForOwner('owner-1');
+        expect(lines, hasLength(3));
+        expect(await queue.watchPendingCount('owner-1').first, 3);
+      });
+
+      test('tout ou rien : un enfilage qui échoue au milieu annule les '
+          'précédents (transaction)', () async {
+        await expectLater(
+          queue.enqueueAll([
+            request('a', 1),
+            request('b', 2),
+            // Non encodable en JSON : l'enfilage échoue à la 3e écriture.
+            request('c', Object()),
+            request('d', 4),
+          ]),
+          throwsA(anything),
+        );
+
+        expect(await queue.allForOwner('owner-1'), isEmpty);
+        expect(await queue.watchPendingCount('owner-1').first, 0);
+      });
+
+      test('liste vide : sans effet', () async {
+        await queue.enqueueAll(const []);
+
+        expect(await queue.allForOwner('owner-1'), isEmpty);
+      });
+
+      test(
+        'mêmes règles qu\'enqueue : remplace l\'entrée de même clé',
+        () async {
+          await queue.enqueueAll([request('a', 1)]);
+          await queue.enqueueAll([request('a', 2)]);
+
+          final line = (await queue.allForOwner('owner-1')).single;
+          expect(line.payload, {'v': 2});
+        },
+      );
+    });
   });
 }

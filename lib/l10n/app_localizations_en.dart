@@ -2707,6 +2707,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Unable to load the item catalog. Please try again.';
 
   @override
+  String get addItemFlowCatalogOfflineMessage =>
+      'The item catalog is not available yet: it has never been loaded on this device and there is no connection. You can add a custom item right now, or try again once you are back online.';
+
+  @override
+  String get addItemFlowCatalogOfflineCustomButton => 'Add a custom item';
+
+  @override
+  String get addItemFlowCatalogOfflineRetryButton => 'Try again';
+
+  @override
   String get addItemFlowAddButtonLabel => 'Add';
 
   @override

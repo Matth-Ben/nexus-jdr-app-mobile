@@ -71,6 +71,7 @@ import 'character_row_mapper.dart';
 import 'character_skill_row_mapper.dart';
 import 'character_spell_row_mapper.dart';
 import 'class_feature_row_mapper.dart';
+import 'inventory_catalog_cache.dart';
 import 'inventory_catalog_row_mapper.dart';
 import 'level_up_arcane_shot_row_mapper.dart';
 import 'level_up_choice_row_mapper.dart';
@@ -584,7 +585,13 @@ abstract class CharacterRepository {
   /// [itemId] (pas demandé par la spec de la tâche, et deux lots distincts
   /// du même objet — ex. équipé vs non équipé — doivent pouvoir coexister).
   ///
-  /// Mode hors ligne : mêmes règles que [useInventoryItem].
+  /// Mode hors ligne (T5b-2, P15) : mis en file (`inventoryItem`, UUID de la
+  /// ligne généré côté client, `INSERT` idempotent) hors ligne ou sur erreur
+  /// de transport — [WriteOutcome.queued] ; la ligne est visible dans la fiche
+  /// (données complètes issues du cache du catalogue) et accepte
+  /// équipé/harmonisé/set d'arme avant sa synchronisation. Un refus est un
+  /// échec, jamais mis en file. `itemId` invalide ou quantité < 1 :
+  /// [CharacterFailure].
   Future<WriteOutcome> addInventoryItem({
     required String characterId,
     required int itemId,
@@ -626,7 +633,10 @@ abstract class CharacterRepository {
   /// un `INSERT` batché (tous les [items] en un seul appel, jamais un par
   /// ligne — spec de la tâche : "un seul appel réseau à la validation").
   ///
-  /// Mode hors ligne : mêmes règles que [useInventoryItem].
+  /// Mode hors ligne : monnaie seule (T3) ou butin avec objets (T5b-2, P15) —
+  /// mis en file ([WriteOutcome.queued]) ; avec des objets, la monnaie et les
+  /// N lignes d'inventaire (UUID clients distincts) le sont en **une seule
+  /// transaction** (tout ou rien).
   Future<WriteOutcome> addReward({
     required String characterId,
     required Map<CurrencyKind, int> newCurrencyTotals,
@@ -639,6 +649,12 @@ abstract class CharacterRepository {
   /// voir `presentation/widgets/add_item_flow.dart`). Aucun filtre par
   /// catégorie côté requête : le regroupement/tri par catégorie est fait
   /// côté écran, même principe que `equipment_step_screen.dart::_shopSection`.
+  ///
+  /// Mis en cache (`ReferenceDataCache`, clé `inventory_catalog`, T5b-2/F20) :
+  /// cache frais (48 h) d'abord, réseau ensuite, repli sur le cache périmé
+  /// hors ligne. Chargé au premier usage de la sheet d'ajout, jamais au
+  /// démarrage. Jamais chargé et hors ligne : [CharacterFailure] de code
+  /// `network`.
   Future<List<InventoryCatalogItem>> fetchInventoryCatalog();
 
   /// Aptitudes/choix `class_features` de la classe [classId] au niveau
@@ -1859,6 +1875,17 @@ class SupabaseCharacterRepository implements CharacterRepository {
         characterId: characterId,
       );
       var result = detail;
+      // T5b-2 : un ajout d'objet du catalogue en file est superposé avec ses
+      // données complètes, lues dans le cache du catalogue (local, une seule
+      // lecture, seulement si au moins un tel ajout est en file).
+      final needsCatalog = pending.any(
+        (write) =>
+            write.kind == PendingCharacterWriteKind.inventoryItem &&
+            write.payload[InventoryItemPayloadKeys.itemId] != null,
+      );
+      final catalog = needsCatalog
+          ? await InventoryCatalogCache.read(_cache)
+          : null;
       for (final write in pending) {
         switch (write.kind) {
           case PendingCharacterWriteKind.hp:
@@ -2038,6 +2065,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
                 characterId,
                 write.targetId,
                 itemWrite,
+                catalog,
               ),
             );
           case PendingCharacterWriteKind.rest:
@@ -2056,23 +2084,47 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// insère la ligne complète (remplace la ligne du même id si le serveur
   /// l'a déjà, réponse d'un envoi précédent perdue). La ligne est construite
   /// par le même mapper qu'une ligne du serveur.
+  ///
+  /// Objet du catalogue (T5b-2) : la ligne `items` (poids, CA, rareté,
+  /// propriétés...), le nom et la description viennent du cache du catalogue
+  /// ([catalog]) ; objet absent du cache : ligne minimale, nom d'une ligne
+  /// d'inventaire du même objet si connue, sinon « Objet #id » (jamais de
+  /// crash).
   List<CharacterInventoryItem> _superposeInventoryItemWrite(
     List<CharacterInventoryItem> items,
     String characterId,
     String inventoryId,
     InventoryItemWrite write,
+    InventoryCatalogSnapshot? catalog,
   ) {
     final others = [
       for (final item in items)
         if (item.id != inventoryId) item,
     ];
     if (write.op == InventoryItemOp.delete) return others;
+    final itemId = write.itemId;
+    final key = '$itemId';
+    var name = catalog?.names[key];
+    if (itemId != null && name == null) {
+      for (final item in items) {
+        if (item.itemId == itemId) {
+          name = item.name;
+          break;
+        }
+      }
+    }
     return [
       ...others,
       ...CharacterInventoryRowMapper.toCharacterInventoryItems(
-        [write.toRow(inventoryId: inventoryId, characterId: characterId)],
-        names: const {},
-        descriptions: const {},
+        [
+          write.toRow(
+            inventoryId: inventoryId,
+            characterId: characterId,
+            itemRow: catalog?.itemRows[itemId],
+          ),
+        ],
+        names: {key: ?name},
+        descriptions: {key: ?catalog?.descriptions[key]},
       ),
     ];
   }
@@ -2288,9 +2340,15 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// [totals] ne touche pas sont écrites avec, sans quoi son retrait les
   /// perdrait), puis retirée par `removeIfUnchanged`. Un refus Postgrest ou
   /// zéro ligne affectée (RLS silencieuse) est un échec, jamais mis en file.
+  ///
+  /// [companionAdds] (T5b-2, butin avec objets) : ajouts d'objets mis en file
+  /// **dans la même transaction** que la monnaie quand celle-ci est mise en
+  /// file (hors ligne ou transport) — tout ou rien. Jamais écrits ici en ligne
+  /// (l'appelant les insère quand la monnaie est [WriteOutcome.synced]).
   Future<WriteOutcome> _writeCurrencyTotals({
     required String characterId,
     required Map<CurrencyKind, int> totals,
+    List<PendingInventoryAdd> companionAdds = const [],
   }) async {
     final ownerId = _requireOwnerId();
     final columns = <String, int>{
@@ -2301,6 +2359,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         characterId: characterId,
         ownerId: ownerId,
         columns: columns,
+        companionAdds: companionAdds,
       );
       return WriteOutcome.queued;
     }
@@ -2353,6 +2412,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
           characterId: characterId,
           ownerId: ownerId,
           columns: columns,
+          companionAdds: companionAdds,
         );
         return WriteOutcome.queued;
       }
@@ -2376,10 +2436,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// détection de modification concurrente (F19/D178), jamais réécrite par
   /// un enfilage suivant. Sans base connue (fiche jamais mise en cache), pas
   /// de détection pour cette monnaie.
+  ///
+  /// [companionAdds] : ajouts d'objets d'un butin, mis en file avec la monnaie
+  /// par un seul [PendingCharacterWriteQueue.enqueueAll] (tout ou rien).
   Future<void> _enqueueCurrency({
     required String characterId,
     required String ownerId,
     required Map<String, int> columns,
+    List<PendingInventoryAdd> companionAdds = const [],
   }) async {
     final existing = await _pendingWriteBeforeOnlineWrite(
       characterId: characterId,
@@ -2408,13 +2472,17 @@ class SupabaseCharacterRepository implements CharacterRepository {
         if (value is num) bases[column] = value.toInt();
       }
     }
-    await _pendingWrites.enqueue(
-      characterId: characterId,
-      ownerId: ownerId,
-      kind: PendingCharacterWriteKind.currency,
-      targetId: '',
-      payload: {'totals': totals, 'bases': bases},
-    );
+    await _pendingWrites.enqueueAll([
+      PendingWriteRequest(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.currency,
+        targetId: '',
+        payload: {'totals': totals, 'bases': bases},
+      ),
+      for (final add in companionAdds)
+        _inventoryAddRequest(characterId, ownerId, add),
+    ]);
   }
 
   /// Moteur commun des réglages d'état **absolus** mis en file (T5a, P15) :
@@ -4479,23 +4547,22 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required int itemId,
     required int quantity,
   }) async {
-    _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
+    // Mêmes bornes à l'enfilage et au rejeu : jamais accepté puis supprimé en
+    // silence de la file.
+    if (!isValidInventoryItemId(itemId)) {
+      throw const CharacterFailure('Objet introuvable.');
     }
-
-    try {
-      await _client.from('character_inventory').insert({
-        'character_id': characterId,
-        'item_id': itemId,
-        'quantity': quantity,
-      });
-      return WriteOutcome.synced;
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
-    } catch (_) {
-      throw mapUnknownCharacterError();
+    if (!isValidInventoryQuantity(quantity)) {
+      throw const CharacterFailure('La quantité doit être au moins 1.');
     }
+    // T5b-2 : UUID de ligne généré côté client (même rôle que pour un objet
+    // personnalisé) : `INSERT` idempotent, en ligne comme au rejeu. Une ligne
+    // par ajout, jamais de fusion de quantité avec une ligne existante.
+    return _writeInventoryItem(
+      characterId: characterId,
+      inventoryId: generateUuidV4(),
+      requested: InventoryItemWrite.add(itemId: itemId, quantity: quantity),
+    );
   }
 
   @override
@@ -4544,9 +4611,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required List<RewardItemDraft> items,
   }) async {
     // T3 : une récompense en monnaie seule (gain/dépense, conversion de
-    // pièces) est hors-ligne-capable. Avec des objets, elle dépend de
-    // l'inventaire (tranche T5) : comportement inchangé ci-dessous
-    // (`rejectedOffline` hors ligne).
+    // pièces) est hors-ligne-capable.
     if (items.isEmpty && newCurrencyTotals.isNotEmpty) {
       return _writeCurrencyTotals(
         characterId: characterId,
@@ -4554,69 +4619,223 @@ class SupabaseCharacterRepository implements CharacterRepository {
       );
     }
     final ownerId = _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
+    if (items.isEmpty) return WriteOutcome.synced;
+    return _addRewardWithItems(
+      characterId: characterId,
+      ownerId: ownerId,
+      newCurrencyTotals: newCurrencyTotals,
+      items: items,
+    );
+  }
+
+  /// Butin avec objets (T5b-2) : monnaie (si non vide) puis objets, chaque objet
+  /// avec un **UUID client** (`INSERT` idempotent, rejouable sans doublon).
+  ///
+  /// - hors ligne, ou erreur de transport : tout le butin est mis en file en
+  ///   **une seule transaction** ([PendingCharacterWriteQueue.enqueueAll] :
+  ///   `currency` + N `inventoryItem`, tout ou rien) — [WriteOutcome.queued] ;
+  /// - en ligne : `UPDATE` monnaie ([_writeCurrencyTotals]), puis `INSERT`
+  ///   batché des objets. Un échec de transport à l'`INSERT` met **tous** les
+  ///   objets en file (si la réponse s'est perdue après un `INSERT` appliqué,
+  ///   le rejeu rencontre `23505` = succès : jamais deux fois le même objet) ;
+  ///   un refus Postgrest est un échec (rien d'autre n'est mis en file), la
+  ///   monnaie déjà écrite le restant. Non atomique côté serveur (monnaie puis
+  ///   objets), accepté : chaque ligne est rejouable et idempotente.
+  ///
+  /// Un objet invalide (ni catalogue ni nom, nom/quantité hors bornes) refuse
+  /// tout le butin avant la moindre écriture.
+  Future<WriteOutcome> _addRewardWithItems({
+    required String characterId,
+    required String ownerId,
+    required Map<CurrencyKind, int> newCurrencyTotals,
+    required List<RewardItemDraft> items,
+  }) async {
+    String? nonEmpty(String? value) =>
+        value == null || value.isEmpty ? null : value;
+    final adds = <PendingInventoryAdd>[];
+    for (final item in items) {
+      final itemId = item.itemId;
+      if (itemId != null && !isValidInventoryItemId(itemId)) {
+        throw const CharacterFailure('Objet introuvable.');
+      }
+      if (itemId == null && !isValidInventoryCustomName(item.customName)) {
+        throw const CharacterFailure(
+          "Le nom de l'objet ne peut pas être vide (200 caractères au plus).",
+        );
+      }
+      if (!isValidInventoryQuantity(item.quantity)) {
+        throw const CharacterFailure('La quantité doit être au moins 1.');
+      }
+      adds.add(
+        PendingInventoryAdd(
+          inventoryId: generateUuidV4(),
+          write: itemId != null
+              ? InventoryItemWrite.add(itemId: itemId, quantity: item.quantity)
+              : InventoryItemWrite.add(
+                  customName: item.customName,
+                  quantity: item.quantity,
+                  customDescription: nonEmpty(item.customDescription),
+                  customDamageDice: nonEmpty(item.customDamageDice),
+                  customDamageType: nonEmpty(item.customDamageType),
+                  customProperties: item.customProperties,
+                ),
+        ),
+      );
+    }
+
+    if (newCurrencyTotals.isNotEmpty) {
+      // Hors ligne ou transport : la monnaie ET les objets sont mis en file
+      // dans la même transaction (`companionAdds`).
+      final outcome = await _writeCurrencyTotals(
+        characterId: characterId,
+        totals: newCurrencyTotals,
+        companionAdds: adds,
+      );
+      if (outcome == WriteOutcome.queued) return outcome;
+    } else if (!await _connectivityChecker.hasConnection()) {
+      await _enqueueInventoryAdds(characterId, ownerId, adds);
+      return WriteOutcome.queued;
     }
 
     try {
-      if (newCurrencyTotals.isNotEmpty) {
-        await _client
-            .from('characters')
-            .update({
-              for (final entry in newCurrencyTotals.entries)
-                entry.key.columnName: entry.value,
-            })
-            .eq('id', characterId)
-            .eq('owner_id', ownerId);
-      }
-
-      if (items.isNotEmpty) {
-        await _client.from('character_inventory').insert([
-          for (final item in items)
-            {
-              'character_id': characterId,
-              if (item.itemId != null) 'item_id': item.itemId,
-              if (item.customName != null) 'custom_name': item.customName,
-              'quantity': item.quantity,
-              if (item.customDescription != null)
-                'custom_description': item.customDescription,
-              if (item.customDamageDice != null)
-                'custom_damage_dice': item.customDamageDice,
-              if (item.customDamageType != null)
-                'custom_damage_type': item.customDamageType,
-              if (item.customProperties.isNotEmpty)
-                'custom_properties': item.customProperties,
-            },
-        ]);
-      }
-      return WriteOutcome.synced;
+      await _client.from('character_inventory').insert([
+        for (final add in adds)
+          add.write.toInsertColumns(
+            inventoryId: add.inventoryId,
+            characterId: characterId,
+          ),
+      ]);
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
+    } catch (error, stackTrace) {
+      if (isTransportFailure(error)) {
+        await _enqueueInventoryAdds(characterId, ownerId, adds);
+        return WriteOutcome.queued;
+      }
+      reportNonFatal(error, stackTrace);
+      throw mapUnknownCharacterError();
+    }
+    for (final add in adds) {
+      await _detailCache.applyConfirmedInventoryItem(
+        ownerId: ownerId,
+        characterId: characterId,
+        inventoryId: add.inventoryId,
+        write: add.write,
+      );
+    }
+    return WriteOutcome.synced;
+  }
+
+  /// Met en file les ajouts d'objets [adds] en une seule transaction.
+  Future<void> _enqueueInventoryAdds(
+    String characterId,
+    String ownerId,
+    List<PendingInventoryAdd> adds,
+  ) => _pendingWrites.enqueueAll([
+    for (final add in adds) _inventoryAddRequest(characterId, ownerId, add),
+  ]);
+
+  PendingWriteRequest _inventoryAddRequest(
+    String characterId,
+    String ownerId,
+    PendingInventoryAdd add,
+  ) => PendingWriteRequest(
+    characterId: characterId,
+    ownerId: ownerId,
+    kind: PendingCharacterWriteKind.inventoryItem,
+    targetId: add.inventoryId,
+    payload: add.write.toPayload(),
+  );
+
+  @override
+  Future<List<InventoryCatalogItem>> fetchInventoryCatalog() async {
+    // Frais d'abord (aucun appel réseau), puis réseau, puis repli sur le cache
+    // périmé (T5b-2, F20) : même stratégie que
+    // `SupabaseCharacterCreationRepository.fetchItemCatalog`. Un cache d'une
+    // version antérieure du payload n'est jamais « frais » (refetch en ligne).
+    final fresh = await _inventoryCatalogFromCache(maxAge: _catalogCacheTtl);
+    if (fresh != null) return fresh;
+    // Hors ligne : pas d'appel réseau voué à l'échec (délai), repli direct.
+    if (!await _connectivityChecker.hasConnection()) {
+      final stale = await _inventoryCatalogFromCache();
+      if (stale != null) return stale;
+      throw mapUnknownCharacterError();
+    }
+    try {
+      final rows = await _client
+          .from('items')
+          .select(_inventoryCatalogSelect)
+          .order('id', ascending: true);
+      final ids = InventoryCatalogRowMapper.collectIds(rows);
+      final nameRows = await _fetchTranslationRows(
+        entityType: 'item',
+        fieldName: 'name',
+        entityIds: ids,
+      );
+      final descriptionRows = await _fetchTranslationRows(
+        entityType: 'item',
+        fieldName: 'description',
+        entityIds: ids,
+      );
+      final payload = InventoryCatalogCache.buildPayload(
+        itemRows: rows,
+        nameRows: nameRows,
+        descriptionRows: descriptionRows,
+      );
+      await _writeCacheBestEffort(InventoryCatalogCache.key, payload);
+      return _mapInventoryCatalogPayload(payload);
+    } on PostgrestException catch (error) {
+      final stale = await _inventoryCatalogFromCache();
+      if (stale != null) return stale;
+      throw mapCharacterError(error);
     } catch (_) {
+      final stale = await _inventoryCatalogFromCache();
+      if (stale != null) return stale;
       throw mapUnknownCharacterError();
     }
   }
 
-  @override
-  Future<List<InventoryCatalogItem>> fetchInventoryCatalog() async {
+  /// Colonnes du catalogue d'inventaire : tout ce qu'il faut pour construire une
+  /// ligne d'inventaire complète hors ligne (mêmes colonnes `items` que le
+  /// détail de fiche, voir [fetchCharacterDetail]).
+  static const String _inventoryCatalogSelect = '''
+    id, category, weight, cost, rarity, requires_attunement, consumable,
+    ac_bonus, ac_bonus_kind,
+    weapon_properties(damage_dice, damage_type, properties, range),
+    armor_properties(ac_base, ac_dex_bonus, strength_requirement, stealth_disadvantage, slot)
+  ''';
+
+  /// Durée de fraîcheur du cache du catalogue (comme `item_catalog`).
+  static const Duration _catalogCacheTtl = Duration(hours: 48);
+
+  /// Catalogue relu du cache : [maxAge] `null` = quel que soit l'âge (repli),
+  /// sinon seulement s'il est frais ET au format courant. `null` si absent,
+  /// périmé, d'une ancienne version (en mode frais) ou illisible.
+  Future<List<InventoryCatalogItem>?> _inventoryCatalogFromCache({
+    Duration? maxAge,
+  }) async {
     try {
-      final rows = await _client
-          .from('items')
-          .select('id, category, weight, cost, weapon_properties(properties)')
-          .order('id', ascending: true);
-      final names = await _fetchTranslatedNames(
-        entityType: 'item',
-        entityIds: InventoryCatalogRowMapper.collectIds(rows),
-      );
-      return InventoryCatalogRowMapper.toInventoryCatalogItems(
-        rows,
-        names: names,
-      );
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
+      final cached = maxAge == null
+          ? await _cache.get(InventoryCatalogCache.key)
+          : await _cache.getFresh(InventoryCatalogCache.key, maxAge: maxAge);
+      if (cached is! Map<String, dynamic>) return null;
+      if (maxAge != null && !InventoryCatalogCache.isCurrent(cached)) {
+        return null;
+      }
+      return _mapInventoryCatalogPayload(cached);
     } catch (_) {
-      throw mapUnknownCharacterError();
+      // Traité comme « pas de cache » (cache corrompu).
+      return null;
     }
+  }
+
+  List<InventoryCatalogItem> _mapInventoryCatalogPayload(
+    Map<String, dynamic> payload,
+  ) {
+    final snapshot = InventoryCatalogSnapshot.fromPayload(payload)!;
+    return InventoryCatalogRowMapper.toInventoryCatalogItems([
+      ...snapshot.itemRows.values,
+    ], names: snapshot.names);
   }
 
   @override

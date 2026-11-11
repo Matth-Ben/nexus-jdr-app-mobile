@@ -314,4 +314,144 @@ void main() {
       );
     });
   });
+
+  group('objet du catalogue (T5b-2)', () {
+    test('ajout du catalogue : itemId et quantité, sans nom', () {
+      final write = parseInventoryItemPayload({
+        'op': 'add',
+        'itemId': 11,
+        'quantity': 2,
+      });
+
+      expect(write!.itemId, 11);
+      expect(write.customName, isNull);
+      expect(write.quantity, 2);
+    });
+
+    test('aller-retour payload -> parse -> payload, état initial compris', () {
+      final payload = {
+        'op': 'add',
+        'itemId': 11,
+        'quantity': 3,
+        'equipped': true,
+        'weaponSlot': 'principal',
+        'attuned': true,
+      };
+
+      expect(parseInventoryItemPayload(payload)!.toPayload(), payload);
+    });
+
+    test(
+      'itemId ET customName acceptés ensemble (CHECK : l\'un OU l\'autre)',
+      () {
+        final write = parseInventoryItemPayload({
+          'op': 'add',
+          'itemId': 11,
+          'customName': 'Dague',
+          'quantity': 1,
+        });
+
+        expect(write!.itemId, 11);
+        expect(write.customName, 'Dague');
+      },
+    );
+
+    for (final bad in <Map<String, dynamic>>[
+      {'op': 'add', 'quantity': 1},
+      {'op': 'add', 'itemId': null, 'quantity': 1},
+      {'op': 'add', 'itemId': 0, 'quantity': 1},
+      {'op': 'add', 'itemId': -1, 'quantity': 1},
+      {'op': 'add', 'itemId': 1.5, 'quantity': 1},
+      {'op': 'add', 'itemId': 3.0, 'quantity': 1},
+      {'op': 'add', 'itemId': '3', 'quantity': 1},
+      {'op': 'add', 'itemId': true, 'quantity': 1},
+      {'op': 'add', 'itemId': 2147483648, 'quantity': 1},
+      {'op': 'add', 'itemId': 11},
+      {'op': 'add', 'itemId': 11, 'quantity': 0},
+      {'op': 'add', 'itemId': 11, 'quantity': 2.5},
+      {'op': 'add', 'itemId': 11, 'quantity': 1, 'customName': ''},
+      {'op': 'add', 'itemId': 11, 'quantity': 1, 'customName': 3},
+    ]) {
+      test('payload invalide $bad', () {
+        expect(parseInventoryItemPayload(bad), isNull);
+      });
+    }
+
+    test('isValidInventoryItemId : bornes', () {
+      expect(isValidInventoryItemId(1), isTrue);
+      expect(isValidInventoryItemId(postgresIntMax), isTrue);
+      expect(isValidInventoryItemId(postgresIntMax + 1), isFalse);
+      expect(isValidInventoryItemId(0), isFalse);
+      expect(isValidInventoryItemId(2.0), isFalse);
+      expect(isValidInventoryItemId(null), isFalse);
+    });
+
+    test('mergeStateIntoPendingAdd conserve l\'itemId', () {
+      final merged = mergeStateIntoPendingAdd(
+        const InventoryItemWrite.add(itemId: 11, quantity: 2),
+        const InventoryStatePatch(equipped: true),
+      );
+
+      expect(merged.itemId, 11);
+      expect(merged.customName, isNull);
+      expect(merged.state!.equipped, isTrue);
+      expect(merged.toPayload(), {
+        'op': 'add',
+        'itemId': 11,
+        'quantity': 2,
+        'equipped': true,
+      });
+    });
+
+    test('colonnes d\'INSERT : item_id sans custom_name', () {
+      final columns = const InventoryItemWrite.add(
+        itemId: 11,
+        quantity: 2,
+      ).toInsertColumns(inventoryId: _uuid, characterId: 'c1');
+
+      expect(columns, {
+        'id': _uuid,
+        'character_id': 'c1',
+        'item_id': 11,
+        'quantity': 2,
+      });
+    });
+
+    test('réalignement : jamais un corps vide pour un objet du catalogue', () {
+      expect(
+        const InventoryItemWrite.add(
+          itemId: 11,
+          quantity: 1,
+        ).toRealignColumns(),
+        {'item_id': 11},
+      );
+      expect(
+        const InventoryItemWrite.add(
+          itemId: 11,
+          quantity: 1,
+          state: InventoryStatePatch(attuned: true),
+        ).toRealignColumns(),
+        {'item_id': 11, 'is_attuned': true},
+      );
+    });
+
+    test('toRow : item_id, ligne items embarquée si fournie', () {
+      final row = const InventoryItemWrite.add(itemId: 11, quantity: 1).toRow(
+        inventoryId: _uuid,
+        characterId: 'c1',
+        itemRow: {'category': 'arme', 'weight': 0.5},
+      );
+
+      expect(row['item_id'], 11);
+      expect(row['custom_name'], isNull);
+      expect(row['items'], {'category': 'arme', 'weight': 0.5});
+      expect(
+        const InventoryItemWrite.add(
+          itemId: 11,
+          quantity: 1,
+        ).toRow(inventoryId: _uuid, characterId: 'c1').containsKey('items'),
+        isFalse,
+      );
+    });
+  });
 }

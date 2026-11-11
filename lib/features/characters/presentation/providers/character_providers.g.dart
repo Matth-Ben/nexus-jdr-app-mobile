@@ -355,6 +355,12 @@ String _$charactersHash() => r'3a8e32a7a9df2817331ea519b8e72b7ca49ec5ad';
 ///
 /// `autoDispose` par défaut : ce catalogue n'a pas besoin de survivre à la
 /// fermeture de la sheet qui l'affiche, même rationale que [characters].
+///
+/// F20 : rechargé automatiquement au retour du réseau
+/// (`ConnectivityChecker.onConnectivityRestored`) quand le dernier chargement a
+/// échoué ou n'a pu se faire que depuis un cache périmé hors ligne — la sheet
+/// d'ajout ne reste pas bloquée sur une erreur de catalogue. Chargé seulement
+/// quand la sheet l'écoute (jamais au démarrage).
 
 @ProviderFor(inventoryCatalog)
 final inventoryCatalogProvider = InventoryCatalogProvider._();
@@ -365,6 +371,12 @@ final inventoryCatalogProvider = InventoryCatalogProvider._();
 ///
 /// `autoDispose` par défaut : ce catalogue n'a pas besoin de survivre à la
 /// fermeture de la sheet qui l'affiche, même rationale que [characters].
+///
+/// F20 : rechargé automatiquement au retour du réseau
+/// (`ConnectivityChecker.onConnectivityRestored`) quand le dernier chargement a
+/// échoué ou n'a pu se faire que depuis un cache périmé hors ligne — la sheet
+/// d'ajout ne reste pas bloquée sur une erreur de catalogue. Chargé seulement
+/// quand la sheet l'écoute (jamais au démarrage).
 
 final class InventoryCatalogProvider
     extends
@@ -382,6 +394,12 @@ final class InventoryCatalogProvider
   ///
   /// `autoDispose` par défaut : ce catalogue n'a pas besoin de survivre à la
   /// fermeture de la sheet qui l'affiche, même rationale que [characters].
+  ///
+  /// F20 : rechargé automatiquement au retour du réseau
+  /// (`ConnectivityChecker.onConnectivityRestored`) quand le dernier chargement a
+  /// échoué ou n'a pu se faire que depuis un cache périmé hors ligne — la sheet
+  /// d'ajout ne reste pas bloquée sur une erreur de catalogue. Chargé seulement
+  /// quand la sheet l'écoute (jamais au démarrage).
   InventoryCatalogProvider._()
     : super(
         from: null,
@@ -408,7 +426,7 @@ final class InventoryCatalogProvider
   }
 }
 
-String _$inventoryCatalogHash() => r'cf03e8663cfa931f2fa404a89e9ee49862f5f24c';
+String _$inventoryCatalogHash() => r'25db2545cf6c120403b6705c857e32d786e9933f';
 
 /// Enregistre les abandons/conflits de synchro comme alertes persistées —
 /// voir `SyncAlertRecorder`. Seul consommateur : le coordinateur de synchro.
