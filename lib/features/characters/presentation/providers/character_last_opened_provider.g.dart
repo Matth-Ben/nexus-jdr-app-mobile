@@ -63,7 +63,7 @@ final class CharacterLastOpenedProvider
 }
 
 String _$characterLastOpenedHash() =>
-    r'5260fdaf2940cb478804205e7b16f80b18265828';
+    r'2e75253b223e945eae1cbe45aadf34d01c60e533';
 
 /// Horodatage **local** (par appareil, jamais synchronisé) de la dernière
 /// ouverture de la fiche de chaque personnage, `{characterId: epochMs}` —
