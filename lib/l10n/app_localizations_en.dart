@@ -4498,4 +4498,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get characterListSortLastOpenedSubtitle =>
       'Most recent first, within each group';
+
+  @override
+  String get characterSpellsTabBodyUnsupportedCasterMessage =>
+      'This character\'s spells aren\'t supported in the app.';
 }

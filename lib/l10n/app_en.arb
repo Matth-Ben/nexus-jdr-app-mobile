@@ -1394,5 +1394,6 @@
   "characterListSortNameTitle": "Name (A → Z)",
   "characterListSortNameSubtitle": "Within each group",
   "characterListSortLastOpenedTitle": "Last opened",
-  "characterListSortLastOpenedSubtitle": "Most recent first, within each group"
+  "characterListSortLastOpenedSubtitle": "Most recent first, within each group",
+  "characterSpellsTabBodyUnsupportedCasterMessage": "This character's spells aren't supported in the app."
 }
