@@ -3060,10 +3060,7 @@ void main() {
         expect(fakeRepository.lastCastSlotLevel, 1);
         // 1 déjà consommé + 1 = 2.
         expect(fakeRepository.lastCastSlotsUsed, 2);
-        expect(
-          find.text('Bouclier lancé (emplacement niveau 1).'),
-          findsOneWidget,
-        );
+        expect(find.text('Emplacement de niveau 1 utilisé'), findsOneWidget);
       },
     );
 
@@ -3610,7 +3607,7 @@ void main() {
       await tester.tap(find.widgetWithText(PrimaryButton, 'CAST'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Bouclier cast (level 1 slot).'), findsOneWidget);
+      expect(find.text('Level 1 slot used'), findsOneWidget);
     });
   });
 }

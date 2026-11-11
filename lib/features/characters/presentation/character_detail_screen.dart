@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show setEquals;
@@ -67,6 +68,8 @@ import 'widgets/pact_weapon_picker_sheet.dart';
 import 'widgets/portrait_upload_sheet.dart';
 import 'widgets/prepare_spells_sheet.dart';
 import 'widgets/rest_sheet.dart';
+import 'widgets/spell_slot_correction_sheet.dart';
+import 'widgets/spell_slot_used_snack_bar.dart';
 
 /// Actions du menu "…" du bandeau bois de l'onglet "Personnage" (recettage
 /// direction-artistique du 13/09) — regroupe "Exporter en XML" (déjà
@@ -121,9 +124,175 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
 
   @override
   void dispose() {
+    // Le SnackBar « Annuler » vit au niveau du `ScaffoldMessenger` (au-dessus
+    // de cet écran) : il ne doit pas survivre à la fiche dont il annule un
+    // lancer.
+    _dismissUndoSnackBar();
     _skillsSearchFocusNode.dispose();
     _spellsSearchFocusNode.dispose();
     super.dispose();
+  }
+
+  /// SnackBar « Emplacement utilisé / Annuler » (P9) actuellement affiché,
+  /// `null` sinon. Un seul à la fois, et seul le dernier lancer est annulable.
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _undoSnackBar;
+
+  /// Ferme le SnackBar d'annulation, s'il y en a un : nouveau lancer (de
+  /// n'importe quel type), repos (qui réinitialise les emplacements) ou
+  /// fermeture de l'écran.
+  void _dismissUndoSnackBar() {
+    final controller = _undoSnackBar;
+    _undoSnackBar = null;
+    controller?.close();
+  }
+
+  /// Affiche le SnackBar unique d'un lancer qui a consommé un emplacement
+  /// ([isPact] : magie de pacte), avec l'action « Annuler » (P9). [queued] :
+  /// lancer mis en file hors ligne, le message « sera synchronisé » est
+  /// fusionné dans ce même SnackBar.
+  void _showSlotUsedSnackBar(
+    AppLocalizations l10n, {
+    required int level,
+    required bool isPact,
+    required bool queued,
+  }) {
+    if (!mounted) return;
+    final message = isPact
+        ? l10n.spellPactSlotUsedSnackBarMessage
+        : l10n.spellSlotUsedSnackBarMessage(level);
+    final controller = showSpellSlotUsedSnackBar(
+      context,
+      message: message,
+      undoLabel: l10n.spellSlotUsedSnackBarUndoLabel,
+      announcement: l10n.spellSlotUsedSnackBarAnnouncement(message),
+      offlineMessage: queued ? _offlineQueuedMessage(l10n) : null,
+      onUndo: () => unawaited(_undoSlotUse(level: level, isPact: isPact)),
+    );
+    _undoSnackBar = controller;
+    unawaited(
+      controller.closed.then((_) {
+        if (identical(_undoSnackBar, controller)) _undoSnackBar = null;
+      }),
+    );
+  }
+
+  /// « Annuler » après un lancer (P9) : rend UN emplacement du niveau
+  /// consommé, en **+1 relatif sur la valeur effective actuelle** (jamais un
+  /// retour à une valeur figée : un repos ou une correction survenus entre-
+  /// temps ne sont pas écrasés), borné à 0 utilisé. Même écriture absolue
+  /// `spell_slot` que le lancer, en ligne ou en file hors ligne.
+  Future<void> _undoSlotUse({required int level, required bool isPact}) async {
+    if (!mounted) return;
+    final latest = ref.read(characterDetailProvider(widget.characterId)).value;
+    if (latest == null) return;
+    final effective = _effectiveDetail(latest);
+    CharacterSpellSlot? slot;
+    if (isPact) {
+      slot = effective.pactSpellSlot;
+    } else {
+      for (final candidate in effective.spellSlots) {
+        if (!candidate.isPact && candidate.level == level) slot = candidate;
+      }
+    }
+    if (slot == null) return;
+    final newUsed = math.max(0, slot.used - 1);
+    if (newUsed == slot.used) return;
+    await _setSlotUsed(level: slot.level, isPact: isPact, newUsed: newUsed);
+  }
+
+  /// Écrit la valeur absolue [newUsed] de `slots_used` pour un niveau
+  /// d'emplacement ([isPact] : pool de pacte) — annulation d'un lancer et
+  /// correction manuelle (P9). Même patron optimiste et même file `spell_slot`
+  /// que [_castSpell] (aucun nouveau kind) : surcouche locale immédiate,
+  /// écriture (en file hors ligne), revert si elle échoue, réaffirmation si un
+  /// repos a été appliqué entre-temps ([_restGeneration]).
+  Future<void> _setSlotUsed({
+    required int level,
+    required bool isPact,
+    required int newUsed,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    final previousOverride = isPact
+        ? _localPactSlotUsed
+        : _localSpellSlotsUsed[level];
+    final myRestGeneration = _restGeneration;
+    setState(() {
+      if (isPact) {
+        _localPactSlotUsed = newUsed;
+        _pactSlotQueued = false;
+      } else {
+        _localSpellSlotsUsed = {..._localSpellSlotsUsed, level: newUsed};
+        _queuedSlotLevels.remove(level);
+      }
+    });
+
+    void revert() {
+      if (!mounted || _restGeneration != myRestGeneration) return;
+      setState(() {
+        if (isPact) {
+          _localPactSlotUsed = previousOverride;
+        } else {
+          _localSpellSlotsUsed = _withRevertedOverride(
+            _localSpellSlotsUsed,
+            level,
+            previousOverride,
+          );
+        }
+      });
+    }
+
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .castSpell(
+            characterId: widget.characterId,
+            slotLevel: level,
+            slotsUsed: newUsed,
+            isPactSlot: isPact,
+          );
+      if (_restGeneration != myRestGeneration) {
+        if (isPact) {
+          await _reassertPactSlotState();
+        } else {
+          await _reassertSpellSlotState(level);
+        }
+        return;
+      }
+      if (outcome == WriteOutcome.queued) {
+        if (isPact) {
+          _pactSlotQueued = true;
+        } else {
+          _queuedSlotLevels.add(level);
+        }
+        return;
+      }
+      ref.invalidate(characterDetailProvider(widget.characterId));
+    } on CharacterFailure catch (failure) {
+      revert();
+      _showSnackBar(failure.message);
+    } catch (_) {
+      revert();
+      _showSnackBar(l10n.spellSlotCorrectionErrorMessage);
+    }
+  }
+
+  /// Ouvre la feuille « Corriger les emplacements » (P9).
+  void _openSlotCorrection() {
+    unawaited(
+      showSpellSlotCorrectionSheet(
+        context,
+        characterId: widget.characterId,
+        effectiveOf: _effectiveDetail,
+        isBusy: () => _isApplyingRest,
+        onSetUsed: (slot, newUsed) => unawaited(
+          _setSlotUsed(
+            level: slot.level,
+            isPact: slot.isPact,
+            newUsed: newUsed,
+          ),
+        ),
+      ),
+    );
   }
 
   /// État PV optimiste local, en avance sur la dernière valeur confirmée par
@@ -656,6 +825,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     // Capturé avant le premier `await` — voir la doc de
     // [_offlineQueuedMessage].
     final l10n = AppLocalizations.of(context)!;
+    // Un nouveau lancer, de n'importe quel type, remplace le SnackBar
+    // « Annuler » du précédent : seul le dernier lancer est annulable.
+    _dismissUndoSnackBar();
     if (slot == null) {
       // Sort inné de niveau >= 1 : lancé sans emplacement, mais son usage
       // (une fois par repos long) est dépensé et persisté.
@@ -720,15 +892,20 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // la prochaine fiche livrée (D186, voir [_queuedSlotLevels]) : c'est
         // la file, superposée par le dépôt, qui fait ensuite foi.
         _queuedSlotLevels.add(slotLevel);
-        _showSnackBar(_offlineQueuedMessage(l10n));
+        _showSlotUsedSnackBar(
+          l10n,
+          level: slotLevel,
+          isPact: false,
+          queued: true,
+        );
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar(
-        l10n.characterDetailCastSpellWithSlotSuccessMessage(
-          spell.name,
-          slotLevel,
-        ),
+      _showSlotUsedSnackBar(
+        l10n,
+        level: slotLevel,
+        isPact: false,
+        queued: false,
       );
     } on CharacterFailure catch (failure) {
       if (mounted && _restGeneration == myRestGeneration) {
@@ -803,12 +980,20 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // conservé tel quel — jusqu'à la prochaine fiche livrée (D186, voir
         // [_pactSlotQueued]).
         _pactSlotQueued = true;
-        _showSnackBar(_offlineQueuedMessage(l10n));
+        _showSlotUsedSnackBar(
+          l10n,
+          level: pact.level,
+          isPact: true,
+          queued: true,
+        );
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar(
-        l10n.characterDetailCastPactSpellSuccessMessage(spell.name, pact.level),
+      _showSlotUsedSnackBar(
+        l10n,
+        level: pact.level,
+        isPact: true,
+        queued: false,
       );
     } on CharacterFailure catch (failure) {
       if (mounted && _restGeneration == myRestGeneration) {
@@ -2122,6 +2307,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     // vers ces valeurs pré-repos si l'appel échoue (voir le `catch`
     // ci-dessous), même principe que [previousLocal].
     final previousSpellSlotsOverride = _localSpellSlotsUsed;
+    // P9 : un repos réinitialise les emplacements, le SnackBar « Annuler » du
+    // dernier lancer n'a plus d'objet.
+    _dismissUndoSnackBar();
     final previousFeatureUsesOverride = _localFeatureUsesRemaining;
     // Magie de pacte : recharge au repos COURT ET long (RAW 5e unique à
     // l'Occultiste, contrairement aux emplacements classiques ci-dessus) —
@@ -2700,6 +2888,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         onTogglePrepared: _toggleSpellPrepared,
         onUseFeature: (feature) =>
             _useClassFeature(_effectiveDetail(detail), feature),
+        onCorrectSlots: _openSlotCorrection,
         actionsDisabled: _isApplyingRest || _isCastingSpell || _isUsingFeature,
         searchFocusNode: _spellsSearchFocusNode,
       ),

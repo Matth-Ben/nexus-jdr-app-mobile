@@ -15,6 +15,7 @@ import '../../domain/spell_status_formatter.dart';
 import '../../domain/spells_by_level_grouper.dart';
 import 'spell_action_sheet.dart';
 import 'spell_info_panel.dart';
+import 'spell_slot_correction_button.dart';
 
 /// Section "SORTS" de l'onglet "Sorts" : les sorts connus/préparés du
 /// personnage, groupés par niveau (0 = "Sorts mineurs"). Les
@@ -45,6 +46,7 @@ class CharacterSpellsSection extends StatelessWidget {
     required this.onCastSpell,
     required this.onTogglePrepared,
     this.pactSlot,
+    this.onCorrectSlots,
     this.actionsDisabled = false,
     super.key,
   });
@@ -61,6 +63,12 @@ class CharacterSpellsSection extends StatelessWidget {
   /// [_PactSlotBanner]), et transmis à [showSpellInfoPanel] comme source
   /// d'emplacements supplémentaire pour le calcul d'éligibilité.
   final CharacterSpellSlot? pactSlot;
+
+  /// Bouton « Corriger » (P9) de la carte « Magie de pacte » — fourni
+  /// uniquement quand le personnage n'a aucun emplacement classique (pas de
+  /// carte Emplacements pour le porter). `null` : pas de bouton ;
+  /// [actionsDisabled] le désactive.
+  final VoidCallback? onCorrectSlots;
 
   final CastSpellCallback onCastSpell;
 
@@ -111,12 +119,22 @@ class CharacterSpellsSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                DisplayText(
-                  l10n.characterSpellsSectionTitle,
-                  style: AppTypography.display(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    DisplayText(
+                      l10n.characterSpellsSectionTitle,
+                      style: AppTypography.display(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    if (onCorrectSlots != null)
+                      SpellSlotCorrectionButton(
+                        onPressed: actionsDisabled ? null : onCorrectSlots,
+                      ),
+                  ],
                 ),
                 // Bloc de section (pas un groupe de sorts) affiché une seule
                 // fois, uniquement pour un Occultiste (ou un Occultiste

@@ -3405,24 +3405,8 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String characterDetailCastSpellWithSlotSuccessMessage(
-    String spellName,
-    int slotLevel,
-  ) {
-    return '$spellName lancé (emplacement niveau $slotLevel).';
-  }
-
-  @override
   String get characterDetailCastSpellErrorMessage =>
       'Impossible de lancer ce sort. Réessayez.';
-
-  @override
-  String characterDetailCastPactSpellSuccessMessage(
-    String spellName,
-    int pactLevel,
-  ) {
-    return '$spellName lancé (emplacement de pacte niveau $pactLevel).';
-  }
 
   @override
   String characterDetailCastInnateSpellSuccessMessage(String spellName) {
@@ -4095,4 +4079,70 @@ class AppLocalizationsFr extends AppLocalizations {
   String profileLastSyncPendingSuffix(int count) {
     return ' · $count en attente';
   }
+
+  @override
+  String spellSlotUsedSnackBarMessage(int level) {
+    return 'Emplacement de niveau $level utilisé';
+  }
+
+  @override
+  String get spellPactSlotUsedSnackBarMessage => 'Emplacement de pacte utilisé';
+
+  @override
+  String get spellSlotUsedSnackBarUndoLabel => 'Annuler';
+
+  @override
+  String spellSlotUsedSnackBarAnnouncement(String message) {
+    return '$message. Bouton Annuler.';
+  }
+
+  @override
+  String get spellSlotCorrectionOpenButton => 'Corriger';
+
+  @override
+  String get spellSlotCorrectionSheetTitle => 'Corriger les emplacements';
+
+  @override
+  String get spellSlotCorrectionHintRecover =>
+      'Pour une Récupération arcanique, une Perle de pouvoir ou la magie de pacte.';
+
+  @override
+  String get spellSlotCorrectionHintNoUndo =>
+      'Les règles n\'ont pas d\'annulation : ceci corrige le suivi de vos emplacements.';
+
+  @override
+  String get spellSlotCorrectionDoneButton => 'Terminer';
+
+  @override
+  String spellSlotCorrectionPactRowLabel(int level) {
+    return 'Pacte (niveau $level)';
+  }
+
+  @override
+  String spellSlotCorrectionRowSemanticLabel(
+    int level,
+    int remaining,
+    int total,
+  ) {
+    return 'Niveau $level : $remaining restants sur $total';
+  }
+
+  @override
+  String spellSlotCorrectionPactRowSemanticLabel(
+    int level,
+    int remaining,
+    int total,
+  ) {
+    return 'Pacte, niveau $level : $remaining restants sur $total';
+  }
+
+  @override
+  String get spellSlotCorrectionAddLabel => 'Ajouter un emplacement';
+
+  @override
+  String get spellSlotCorrectionRemoveLabel => 'Retirer un emplacement';
+
+  @override
+  String get spellSlotCorrectionErrorMessage =>
+      'Impossible de corriger les emplacements. Réessayez.';
 }

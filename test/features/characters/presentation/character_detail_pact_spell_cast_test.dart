@@ -1,12 +1,12 @@
 // Tests de widget du lancer d'un sort via la magie de pacte de l'Occultiste
-// depuis la fiche (`character_detail_screen.dart::_castPactSpell`) — gap
-// comblé par `qa-testeur` : `characterDetailCastPactSpellSuccessMessage`
-// n'avait jusqu'ici aucun test, ni en français ni en anglais (confirmé par
-// `git log -S`). Ce fichier couvre seulement ce message de succès ; la
-// course avec un repos sur ce même flux est déjà couverte par
-// `character_detail_rest_stale_pact_slot_test.dart`, et la sélection de
-// l'emplacement de pacte dans la sheet de choix par `spell_info_panel_test
-// .dart` — aucun des deux n'exerce ce message.
+// depuis la fiche (`character_detail_screen.dart::_castPactSpell`) : ce
+// fichier couvre le SnackBar « Emplacement de pacte utilisé » / « Pact slot
+// used » (P9, `spellPactSlotUsedSnackBarMessage`, en français et en anglais) ;
+// l'annulation de ce lancer est couverte par
+// `character_detail_slot_undo_test.dart`, la course avec un repos sur ce même
+// flux par `character_detail_rest_stale_pact_slot_test.dart`, et la sélection
+// de l'emplacement de pacte dans la sheet de choix par
+// `spell_info_panel_test.dart`.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -153,37 +153,29 @@ Future<void> _castPactSpell(
 
 void main() {
   testWidgets('lancer avec le seul emplacement de pacte disponible : message '
-      '« lancé (emplacement de pacte niveau N) » affiché', (tester) async {
+      '« Emplacement de pacte utilisé » affiché (SnackBar « Annuler »)', (
+    tester,
+  ) async {
     final repository = await _pumpDetail(tester);
 
     await _castPactSpell(tester);
 
     expect(repository.castSpellCallCount, 1);
     expect(repository.lastIsPactSlot, isTrue);
-    expect(
-      find.text('Rayon de givre lancé (emplacement de pacte niveau 2).'),
-      findsOneWidget,
-    );
+    expect(find.text('Emplacement de pacte utilisé'), findsOneWidget);
   });
 
   group('locale anglaise', () {
-    testWidgets(
-      'lancer : message "cast (level N pact slot)" affiché en anglais',
-      (tester) async {
-        final repository = await _pumpDetail(
-          tester,
-          locale: const Locale('en'),
-        );
+    testWidgets('lancer : message "Pact slot used" affiché en anglais', (
+      tester,
+    ) async {
+      final repository = await _pumpDetail(tester, locale: const Locale('en'));
 
-        await _castPactSpell(tester, tabLabel: 'SPELLS', castLabel: 'CAST');
+      await _castPactSpell(tester, tabLabel: 'SPELLS', castLabel: 'CAST');
 
-        expect(repository.castSpellCallCount, 1);
-        expect(repository.lastIsPactSlot, isTrue);
-        expect(
-          find.text('Rayon de givre cast (level 2 pact slot).'),
-          findsOneWidget,
-        );
-      },
-    );
+      expect(repository.castSpellCallCount, 1);
+      expect(repository.lastIsPactSlot, isTrue);
+      expect(find.text('Pact slot used'), findsOneWidget);
+    });
   });
 }

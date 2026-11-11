@@ -3374,24 +3374,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String characterDetailCastSpellWithSlotSuccessMessage(
-    String spellName,
-    int slotLevel,
-  ) {
-    return '$spellName cast (level $slotLevel slot).';
-  }
-
-  @override
   String get characterDetailCastSpellErrorMessage =>
       'Couldn\'t cast this spell. Try again.';
-
-  @override
-  String characterDetailCastPactSpellSuccessMessage(
-    String spellName,
-    int pactLevel,
-  ) {
-    return '$spellName cast (level $pactLevel pact slot).';
-  }
 
   @override
   String characterDetailCastInnateSpellSuccessMessage(String spellName) {
@@ -4058,4 +4042,70 @@ class AppLocalizationsEn extends AppLocalizations {
   String profileLastSyncPendingSuffix(int count) {
     return ' · $count pending';
   }
+
+  @override
+  String spellSlotUsedSnackBarMessage(int level) {
+    return 'Level $level slot used';
+  }
+
+  @override
+  String get spellPactSlotUsedSnackBarMessage => 'Pact slot used';
+
+  @override
+  String get spellSlotUsedSnackBarUndoLabel => 'Undo';
+
+  @override
+  String spellSlotUsedSnackBarAnnouncement(String message) {
+    return '$message. Undo button.';
+  }
+
+  @override
+  String get spellSlotCorrectionOpenButton => 'Correct';
+
+  @override
+  String get spellSlotCorrectionSheetTitle => 'Correct spell slots';
+
+  @override
+  String get spellSlotCorrectionHintRecover =>
+      'For an Arcane Recovery, a Power Surge or Pact Magic.';
+
+  @override
+  String get spellSlotCorrectionHintNoUndo =>
+      'The rules have no undo: this corrects how your slots are tracked.';
+
+  @override
+  String get spellSlotCorrectionDoneButton => 'Done';
+
+  @override
+  String spellSlotCorrectionPactRowLabel(int level) {
+    return 'Pact (level $level)';
+  }
+
+  @override
+  String spellSlotCorrectionRowSemanticLabel(
+    int level,
+    int remaining,
+    int total,
+  ) {
+    return 'Level $level: $remaining remaining of $total';
+  }
+
+  @override
+  String spellSlotCorrectionPactRowSemanticLabel(
+    int level,
+    int remaining,
+    int total,
+  ) {
+    return 'Pact, level $level: $remaining remaining of $total';
+  }
+
+  @override
+  String get spellSlotCorrectionAddLabel => 'Add a slot';
+
+  @override
+  String get spellSlotCorrectionRemoveLabel => 'Remove a slot';
+
+  @override
+  String get spellSlotCorrectionErrorMessage =>
+      'Could not correct the slots. Try again.';
 }

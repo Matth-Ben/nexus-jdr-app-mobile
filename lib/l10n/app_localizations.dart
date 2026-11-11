@@ -5526,29 +5526,11 @@ abstract class AppLocalizations {
   /// **'{spellName} lancé.'**
   String characterDetailCastSpellSuccessMessage(String spellName);
 
-  /// SnackBar de succès de `_castSpell` pour un emplacement classique.
-  ///
-  /// In fr, this message translates to:
-  /// **'{spellName} lancé (emplacement niveau {slotLevel}).'**
-  String characterDetailCastSpellWithSlotSuccessMessage(
-    String spellName,
-    int slotLevel,
-  );
-
   /// SnackBar d'échec générique de `_castSpell`/`_castPactSpell`/`_castInnateSpell`.
   ///
   /// In fr, this message translates to:
   /// **'Impossible de lancer ce sort. Réessayez.'**
   String get characterDetailCastSpellErrorMessage;
-
-  /// SnackBar de succès de `_castPactSpell`.
-  ///
-  /// In fr, this message translates to:
-  /// **'{spellName} lancé (emplacement de pacte niveau {pactLevel}).'**
-  String characterDetailCastPactSpellSuccessMessage(
-    String spellName,
-    int pactLevel,
-  );
 
   /// SnackBar de succès de `_castInnateSpell`.
   ///
@@ -6597,6 +6579,104 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **' · {count} en attente'**
   String profileLastSyncPendingSuffix(int count);
+
+  /// Message du SnackBar affiché après un lancer qui consomme un emplacement classique (remplace l'ancien message « sort lancé (emplacement niveau N) »).
+  ///
+  /// In fr, this message translates to:
+  /// **'Emplacement de niveau {level} utilisé'**
+  String spellSlotUsedSnackBarMessage(int level);
+
+  /// Message du SnackBar affiché après un lancer qui consomme un emplacement de magie de pacte.
+  ///
+  /// In fr, this message translates to:
+  /// **'Emplacement de pacte utilisé'**
+  String get spellPactSlotUsedSnackBarMessage;
+
+  /// Action du SnackBar de lancer : rend l'emplacement consommé (correction, pas une règle D&D).
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get spellSlotUsedSnackBarUndoLabel;
+
+  /// Annonce lecteur d'écran (liveRegion) du SnackBar de lancer ; {message} est le texte du SnackBar.
+  ///
+  /// In fr, this message translates to:
+  /// **'{message}. Bouton Annuler.'**
+  String spellSlotUsedSnackBarAnnouncement(String message);
+
+  /// Bouton de l'en-tête de la carte Emplacements qui ouvre la feuille de correction manuelle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Corriger'**
+  String get spellSlotCorrectionOpenButton;
+
+  /// Titre de la feuille de correction des emplacements.
+  ///
+  /// In fr, this message translates to:
+  /// **'Corriger les emplacements'**
+  String get spellSlotCorrectionSheetTitle;
+
+  /// Texte d'aide de la feuille de correction : cas légitimes d'ajustement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour une Récupération arcanique, une Perle de pouvoir ou la magie de pacte.'**
+  String get spellSlotCorrectionHintRecover;
+
+  /// Texte d'aide de la feuille de correction : précise qu'il s'agit d'une correction de suivi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les règles n\'ont pas d\'annulation : ceci corrige le suivi de vos emplacements.'**
+  String get spellSlotCorrectionHintNoUndo;
+
+  /// Bouton primaire qui ferme la feuille de correction (chaque appui est déjà écrit).
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer'**
+  String get spellSlotCorrectionDoneButton;
+
+  /// Libellé de la ligne de magie de pacte dans la feuille de correction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pacte (niveau {level})'**
+  String spellSlotCorrectionPactRowLabel(int level);
+
+  /// Sémantique d'une ligne de niveau de la feuille de correction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {level} : {remaining} restants sur {total}'**
+  String spellSlotCorrectionRowSemanticLabel(
+    int level,
+    int remaining,
+    int total,
+  );
+
+  /// Sémantique de la ligne de pacte de la feuille de correction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pacte, niveau {level} : {remaining} restants sur {total}'**
+  String spellSlotCorrectionPactRowSemanticLabel(
+    int level,
+    int remaining,
+    int total,
+  );
+
+  /// Libellé du bouton + (rend un emplacement) de la feuille de correction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un emplacement'**
+  String get spellSlotCorrectionAddLabel;
+
+  /// Libellé du bouton − (consomme un emplacement) de la feuille de correction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer un emplacement'**
+  String get spellSlotCorrectionRemoveLabel;
+
+  /// SnackBar d'échec d'une annulation de lancer ou d'une correction d'emplacement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de corriger les emplacements. Réessayez.'**
+  String get spellSlotCorrectionErrorMessage;
 }
 
 class _AppLocalizationsDelegate

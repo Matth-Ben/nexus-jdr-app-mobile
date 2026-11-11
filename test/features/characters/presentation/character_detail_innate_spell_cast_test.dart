@@ -290,6 +290,8 @@ void main() {
     expect(repository.innateCalls, [(spellId: _innateSpellId, usesSpent: 1)]);
     expect(repository.castSpellCallCount, 0);
     expect(find.text('Ténèbres lancé (sort inné).'), findsOneWidget);
+    // P9 : aucun emplacement consommé, donc rien à annuler.
+    expect(find.text('ANNULER'), findsNothing);
     expect(find.text('Épuisé'), findsOneWidget);
     // Les pastilles d'emplacements du titre de groupe n'ont pas bougé.
     expect(find.bySemanticsLabel(_slotsLabel), findsNWidgets(2));
