@@ -486,10 +486,16 @@ abstract class CharacterRepository {
   /// l'inventaire. [newQuantity] est déjà calculé par l'appelant (quantité
   /// actuelle - 1), même principe que [castSpell]/[useClassFeature].
   ///
-  /// Mode hors ligne : mêmes règles exactement que [castSpell]/
-  /// [useClassFeature] (jamais mise en file, voir leur documentation) —
-  /// décision chef de projet explicite pour toutes les écritures de
-  /// l'onglet "Inventaire" introduites avec cette méthode.
+  /// Mode hors ligne (T5b-3, P15) : mis en file (`inventoryItem`, op
+  /// `quantity` absolue + `base` = quantité serveur connue au premier
+  /// enfilage, conservée aux suivants) hors ligne ou sur erreur de transport,
+  /// et [WriteOutcome.queued]. Une quantité tombée à 0 met en file un
+  /// tombstone. Fusion avec la file de la ligne : ajout en file -> sa
+  /// `quantity` est modifiée (un seul `INSERT`, y compris réseau revenu) ;
+  /// retrait en file -> [CharacterFailure] (la ligne est déjà retirée) ;
+  /// usage en file -> quantité enchaînée. En ligne : `UPDATE`/`DELETE` filtré
+  /// (zéro ligne = échec, rien en file). Conflit entre appareils : dernière
+  /// écriture gagne, détecté et signalé au rejeu (sans interface : T8).
   Future<WriteOutcome> useInventoryItem({
     required String characterId,
     required String inventoryId,
@@ -2102,6 +2108,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
         if (item.id != inventoryId) item,
     ];
     if (write.op == InventoryItemOp.delete) return others;
+    if (write.op == InventoryItemOp.quantity) {
+      // Usage (T5b-3) : quantité effective ; une ligne à 0 est masquée comme
+      // un tombstone. Poids total et dérivés suivent (recalculés).
+      final quantity = write.quantity!;
+      if (quantity <= 0) return others;
+      return [
+        for (final item in items)
+          if (item.id == inventoryId) item.copyWithQuantity(quantity) else item,
+      ];
+    }
     final itemId = write.itemId;
     final key = '$itemId';
     var name = catalog?.names[key];
@@ -2869,7 +2885,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
           final pendingItem = pending == null
               ? null
               : parseInventoryItemPayload(pending.payload);
-          if (pendingItem == null) {
+          // Un usage en file (`quantity`, T5b-3) touche une autre colonne :
+          // indépendant du réglage d'état.
+          if (pendingItem == null ||
+              pendingItem.op == InventoryItemOp.quantity) {
             return _writeInventoryStateAbsolute(
               characterId: characterId,
               inventoryId: inventoryId,
@@ -4246,48 +4265,136 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // cross-utilisateur") : `character_inventory` n'a pas de colonne
     // `owner_id` propre, la RLS (`owns_character(character_id)`) est la
     // garantie d'isolation, même principe que [leaveStory]. Le filtre
-    // `.eq('character_id', characterId)` ci-dessous reste une redondance
-    // défensive côté client, pas un filet de sécurité indispensable.
+    // `.eq('character_id', characterId)` reste une redondance défensive.
     final ownerId = _requireOwnerId();
-
-    // Voir la documentation de [CharacterRepository.useInventoryItem] :
-    // jamais mis en file.
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
-    }
-
-    // T5b-1 : une ligne dont l'ajout ou le retrait est encore en file n'existe
-    // pas (ou plus) côté serveur : l'écriture toucherait zéro ligne sans
-    // erreur et serait confirmée à tort. Refus sans rien écrire (l'usage hors
-    // ligne propre relève de T5b-3).
-    final pendingLine = await _pendingWriteBeforeOnlineWrite(
-      characterId: characterId,
-      ownerId: ownerId,
-      kind: PendingCharacterWriteKind.inventoryItem,
-      targetId: inventoryId,
-    );
-    if (pendingLine != null) return WriteOutcome.rejectedOffline;
-
     try {
-      if (newQuantity <= 0) {
-        await _client
-            .from('character_inventory')
-            .delete()
-            .eq('id', inventoryId)
-            .eq('character_id', characterId);
-      } else {
-        await _client
-            .from('character_inventory')
-            .update({'quantity': newQuantity})
-            .eq('id', inventoryId)
-            .eq('character_id', characterId);
-      }
-      return WriteOutcome.synced;
+      return await _pendingWrites.runExclusive(
+        characterId: characterId,
+        kind: PendingCharacterWriteKind.inventoryItem,
+        targetId: inventoryId,
+        action: () async {
+          final pending = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.inventoryItem,
+            targetId: inventoryId,
+          );
+          final plan = planInventoryUse(
+            pending: pending == null
+                ? null
+                : parseInventoryItemPayload(pending.payload),
+            newQuantity: newQuantity,
+            serverQuantity: await _cachedInventoryQuantity(
+              ownerId: ownerId,
+              characterId: characterId,
+              inventoryId: inventoryId,
+            ),
+          );
+          // Un retrait est déjà en file : la ligne est retirée, rien à
+          // utiliser (échec explicite plutôt que `rejectedOffline`, qui
+          // afficherait « non enregistré hors ligne » à tort).
+          if (plan.isRejected) {
+            throw const CharacterFailure(
+              'Cet objet a déjà été retiré de l\'inventaire.',
+            );
+          }
+          final write = plan.write!;
+          final isRemoval = write.op == InventoryItemOp.delete;
+
+          Future<WriteOutcome> queue() async {
+            if (!isValidInventoryItemTargetId(inventoryId)) {
+              throw const CharacterFailure('Objet introuvable.');
+            }
+            await _pendingWrites.enqueue(
+              characterId: characterId,
+              ownerId: ownerId,
+              kind: PendingCharacterWriteKind.inventoryItem,
+              targetId: inventoryId,
+              payload: write.toPayload(),
+            );
+            if (isRemoval) {
+              await _purgePendingInventoryState(
+                characterId: characterId,
+                ownerId: ownerId,
+                inventoryId: inventoryId,
+              );
+            }
+            return WriteOutcome.queued;
+          }
+
+          // L'ajout de la ligne est en file : elle n'existe pas côté serveur,
+          // l'usage est fusionné dans l'ajout (jamais d'`UPDATE` sur zéro
+          // ligne), y compris réseau revenu.
+          if (plan.mergedIntoPendingAdd) return queue();
+          if (!await _connectivityChecker.hasConnection()) return queue();
+          try {
+            await applyInventoryItemWriteOnline(
+              characterId: characterId,
+              inventoryId: inventoryId,
+              write: write,
+            );
+          } on CharacterFailure {
+            rethrow;
+          } on PostgrestException {
+            rethrow;
+          } catch (error) {
+            if (isTransportFailure(error)) return queue();
+            rethrow;
+          }
+          await _recordConfirmedWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            columns: null,
+            supersededWrite: pending,
+          );
+          if (isRemoval) {
+            await _purgePendingInventoryState(
+              characterId: characterId,
+              ownerId: ownerId,
+              inventoryId: inventoryId,
+            );
+          }
+          await _detailCache.applyConfirmedInventoryItem(
+            ownerId: ownerId,
+            characterId: characterId,
+            inventoryId: inventoryId,
+            write: write,
+          );
+          return WriteOutcome.synced;
+        },
+      );
+    } on CharacterFailure {
+      rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
     }
+  }
+
+  /// Quantité de la ligne [inventoryId] dans la fiche en cache : dernière
+  /// valeur **confirmée par le serveur** connue (le cache ne reçoit jamais une
+  /// valeur seulement mise en file), base de la détection de conflit d'un
+  /// usage. `null` si la fiche ou la ligne n'est pas en cache.
+  Future<int?> _cachedInventoryQuantity({
+    required String ownerId,
+    required String characterId,
+    required String inventoryId,
+  }) async {
+    final row = await _detailCache.readRow(
+      ownerId: ownerId,
+      characterId: characterId,
+    );
+    final lines = row?['character_inventory'];
+    if (lines is! List) return null;
+    for (final line in lines) {
+      if (line is Map && line['id'] == inventoryId) {
+        final quantity = line['quantity'];
+        return isValidInventoryUseQuantity(quantity) ? quantity as int : null;
+      }
+    }
+    return null;
   }
 
   @override
@@ -4528,6 +4635,26 @@ class SupabaseCharacterRepository implements CharacterRepository {
             .delete()
             .eq('id', inventoryId)
             .eq('character_id', characterId);
+      case InventoryItemOp.quantity:
+        // Usage (T5b-3) : quantité absolue (rejeu idempotent) ; 0 = retrait
+        // (zéro ligne = succès, comme un tombstone). Sinon `UPDATE` filtré
+        // id + personnage : zéro ligne = ligne supprimée ailleurs ou refus
+        // RLS silencieux, non rejouable (42501).
+        if (write.quantity! <= 0) {
+          await _client
+              .from('character_inventory')
+              .delete()
+              .eq('id', inventoryId)
+              .eq('character_id', characterId);
+          return;
+        }
+        final updated = await _client
+            .from('character_inventory')
+            .update({'quantity': write.quantity})
+            .eq('id', inventoryId)
+            .eq('character_id', characterId)
+            .select('id');
+        if (updated.isEmpty) throw _noRowAffected('character_inventory');
     }
   }
 

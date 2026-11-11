@@ -362,6 +362,9 @@ class PendingCharacterWriteSyncer {
     if (write.kind == PendingCharacterWriteKind.currency) {
       return _detectCurrencyChange(write, ownerId: ownerId);
     }
+    if (write.kind == PendingCharacterWriteKind.inventoryItem) {
+      return _detectInventoryQuantityChange(write);
+    }
     if (write.kind != PendingCharacterWriteKind.hp) return null;
     final baseCurrent = write.payload['baseCurrentHp'];
     final baseTemporary = write.payload['baseTemporaryHp'];
@@ -440,6 +443,38 @@ class PendingCharacterWriteSyncer {
       kind: write.kind,
       serverValue: serverValue,
       queuedValue: queuedValue,
+    );
+  }
+
+  /// Détection F19/D178 pour l'usage d'un objet (`inventoryItem`, op
+  /// `quantity`, T5b-3) : en conflit si la quantité serveur n'est ni la valeur
+  /// en file (déjà appliquée, réponse perdue : pas un conflit) ni la `base`
+  /// mémorisée au premier enfilage (inchangée). Pas de détection (`null`) pour
+  /// un ajout ou un tombstone, sans `base` (fiche jamais mise en cache, base
+  /// invalide) ou si la ligne n'existe plus côté serveur (l'écriture échouera
+  /// alors en 42501, non rejouable). L'écriture part dans tous les cas.
+  Future<ServerValueConflict?> _detectInventoryQuantityChange(
+    PendingCharacterWrite write,
+  ) async {
+    final item = parseInventoryItemPayload(write.payload);
+    if (item == null || item.op != InventoryItemOp.quantity) return null;
+    final base = item.base;
+    if (base == null) return null;
+    final row = await _client
+        .from('character_inventory')
+        .select('quantity')
+        .eq('id', write.targetId)
+        .eq('character_id', write.characterId)
+        .maybeSingle();
+    final server = row?['quantity'];
+    if (server is! num) return null;
+    final serverQuantity = server.toInt();
+    if (serverQuantity == item.quantity || serverQuantity == base) return null;
+    return ServerValueConflict(
+      characterId: write.characterId,
+      kind: write.kind,
+      serverValue: {'quantity': serverQuantity},
+      queuedValue: {'quantity': item.quantity},
     );
   }
 
@@ -564,7 +599,10 @@ class PendingCharacterWriteSyncer {
       case PendingCharacterWriteKind.inventoryItem:
         // T5b-1 : ajout (`INSERT` avec l'id client, idempotent : `23505` =
         // déjà là, suivi d'un réalignement filtré id + personnage) ou retrait
-        // (`DELETE` filtré id + personnage, zéro ligne = succès).
+        // (`DELETE` filtré id + personnage, zéro ligne = succès) ou usage
+        // (T5b-3 : `UPDATE quantity` absolu filtré id + personnage, zéro ligne =
+        // 42501 non rejouable ; 0 = `DELETE`). Conflit : voir
+        // [_detectInventoryQuantityChange].
         await _restWriter.applyInventoryItemWriteOnline(
           characterId: write.characterId,
           inventoryId: write.targetId,

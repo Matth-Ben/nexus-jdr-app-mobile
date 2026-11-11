@@ -179,7 +179,8 @@ class CharacterDetailCache {
 
   /// Reporte dans le cache l'écriture [write] confirmée par le serveur pour la
   /// ligne d'inventaire [inventoryId] (T5b-1) : ajout (ligne créée, ou
-  /// remplacée si déjà là) ou retrait de la ligne.
+  /// remplacée si déjà là), retrait de la ligne, ou nouvelle quantité absolue
+  /// (usage, T5b-3 ; 0 retire la ligne).
   ///
   /// Un objet du catalogue (T5b-2) est reporté avec ses **données complètes** :
   /// la ligne `items` embarquée, puis son nom et sa description dans les lignes
@@ -209,6 +210,17 @@ class CharacterDetailCache {
         switch (write.op) {
           case InventoryItemOp.delete:
             return others;
+          case InventoryItemOp.quantity:
+            // Usage (T5b-3) : quantité absolue ; 0 = ligne retirée.
+            final quantity = write.quantity!;
+            if (quantity <= 0) return others;
+            return [
+              for (final row in rows)
+                if (row['id'] == inventoryId)
+                  {...row, 'quantity': quantity}
+                else
+                  row,
+            ];
           case InventoryItemOp.add:
             return [
               ...others,

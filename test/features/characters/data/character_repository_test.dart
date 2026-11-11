@@ -1446,11 +1446,10 @@ void main() {
 
       const characterId = 'char-1';
       const ownerId = 'owner-1';
-      const inventoryId = 'inv-1';
+      const inventoryId = '11111111-1111-4111-8111-111111111111';
 
-      test('useInventoryItem : connectivité absente -> retourne queued sans '
-          'tenter le réseau, jamais mise en file (même règle que castSpell/'
-          'useClassFeature)', () async {
+      test('useInventoryItem : connectivité absente -> mis en file (T5b-3), '
+          'queued sans tenter le réseau', () async {
         final client = await _buildSignedInFakeSupabaseClient(
           ownerId: ownerId,
           throwOnRequest: true,
@@ -1468,8 +1467,8 @@ void main() {
           newQuantity: 1,
         );
 
-        expect(outcome, WriteOutcome.rejectedOffline);
-        expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+        expect(outcome, WriteOutcome.queued);
+        expect(await pendingWrites.allForOwner(ownerId), hasLength(1));
       });
 
       test('useInventoryItem : connectivité présente + écriture réussie -> '

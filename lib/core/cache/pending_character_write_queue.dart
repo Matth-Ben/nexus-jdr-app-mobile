@@ -96,6 +96,8 @@ enum PendingCharacterWriteKind {
   /// l'état équipé/set/harmonisé fusionné depuis) ou `{"op": "delete"}`
   /// (retrait) ; fusion dans `domain/offline_inventory_writes.dart`. Rejoué
   /// avant `inventoryState` d'une même cible (ordre `queuedAt` puis `kind`).
+  /// T5b-3 : porte aussi l'usage d'un objet (op `quantity` absolue + `base`
+  /// pour la détection de conflit), fusionné dans l'ajout en file s'il y en a un.
   inventoryItem('inventory_item');
 
   const PendingCharacterWriteKind(this.storageKey);

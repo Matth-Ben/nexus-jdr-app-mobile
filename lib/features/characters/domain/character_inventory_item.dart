@@ -189,6 +189,35 @@ class CharacterInventoryItem {
   /// `presentation/widgets/character_inventory_item_card.dart`.
   bool get isCustom => itemId == null;
 
+  /// Copie avec une autre [quantity] superposée depuis la file hors ligne
+  /// (usage d'un objet, T5b-3) : le poids total est recalculé comme le mapper
+  /// ([unitWeight] x quantité, `null` si le poids unitaire est inconnu).
+  CharacterInventoryItem copyWithQuantity(int quantity) =>
+      CharacterInventoryItem(
+        id: id,
+        itemId: itemId,
+        name: name,
+        category: category,
+        quantity: quantity,
+        equipped: equipped,
+        totalWeight: unitWeight != null && quantity > 0
+            ? unitWeight! * quantity
+            : null,
+        unitWeight: unitWeight,
+        costAmount: costAmount,
+        description: description,
+        rarity: rarity,
+        requiresAttunement: requiresAttunement,
+        isAttuned: isAttuned,
+        consumable: consumable,
+        notes: notes,
+        weaponProperties: weaponProperties,
+        armorProperties: armorProperties,
+        weaponSlot: weaponSlot,
+        acBonus: acBonus,
+        acBonusKind: acBonusKind,
+      );
+
   /// Copie avec l'état équipé/set d'arme/harmonisé superposé depuis la file
   /// hors ligne (T5a). [weaponSlot] n'est pris en compte que si
   /// [changeWeaponSlot] (distingue « ne pas toucher » de « effacer »).

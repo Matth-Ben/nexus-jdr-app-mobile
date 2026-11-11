@@ -14,7 +14,15 @@ import 'weapon_slot.dart';
 ///   optionnel equipped / weaponSlot / attuned}` — c'est un `INSERT` complet :
 ///   équiper, placer en set ou harmoniser une ligne encore en file se
 ///   **fusionne** ici au lieu de créer une ligne `inventoryState` ;
-/// - retrait : `{"op": "delete"}` (tombstone).
+/// - retrait : `{"op": "delete"}` (tombstone) ;
+/// - usage d'un objet d'une ligne **serveur** (T5b-3) : `{"op": "quantity",
+///   "quantity": n, "base": b}` — quantité **absolue** voulue (`n` >= 0 ; 0 est
+///   rejoué comme un retrait) et `base` optionnelle : quantité serveur connue
+///   au **premier** enfilage, pour la détection de modification concurrente au
+///   rejeu. `base` absente ou invalide : écriture sans détection (jamais un
+///   payload invalide). Usage d'une ligne dont l'**ajout** est en file : la
+///   `quantity` du payload d'ajout est modifiée (un seul `INSERT`) ; à 0 c'est
+///   un tombstone ([planInventoryUse]) ;
 ///
 /// Ce fichier porte le format, sa **validation stricte** et la **fusion** des
 /// écritures successives : un payload qui ne passe pas
@@ -26,6 +34,7 @@ abstract final class InventoryItemPayloadKeys {
   static const itemId = 'itemId';
   static const customName = 'customName';
   static const quantity = 'quantity';
+  static const base = 'base';
   static const customDescription = 'customDescription';
   static const customDamageDice = 'customDamageDice';
   static const customDamageType = 'customDamageType';
@@ -37,10 +46,10 @@ abstract final class InventoryItemPayloadKeys {
 /// (le nom est affiché sur une carte) appliqué à l'enfilage ET au rejeu.
 const int inventoryCustomNameMaxLength = 200;
 
-enum InventoryItemOp { add, delete }
+enum InventoryItemOp { add, delete, quantity }
 
-/// Une écriture de ligne d'inventaire : ajout d'un objet personnalisé
-/// complet, ou retrait.
+/// Une écriture de ligne d'inventaire : ajout d'un objet complet, retrait, ou
+/// nouvelle quantité absolue (usage d'un objet).
 class InventoryItemWrite {
   const InventoryItemWrite.add({
     this.itemId,
@@ -55,10 +64,12 @@ class InventoryItemWrite {
          itemId != null || customName != null,
          'Un ajout porte un itemId ou un customName.',
        ),
-       op = InventoryItemOp.add;
+       op = InventoryItemOp.add,
+       base = null;
 
   const InventoryItemWrite.delete()
     : op = InventoryItemOp.delete,
+      base = null,
       itemId = null,
       customName = null,
       quantity = null,
@@ -68,7 +79,23 @@ class InventoryItemWrite {
       customProperties = const [],
       state = null;
 
+  /// Usage d'un objet : quantité absolue [quantity] (>= 0), [base] = quantité
+  /// serveur connue au premier enfilage (`null` : pas de détection).
+  const InventoryItemWrite.quantity({required int this.quantity, this.base})
+    : op = InventoryItemOp.quantity,
+      itemId = null,
+      customName = null,
+      customDescription = null,
+      customDamageDice = null,
+      customDamageType = null,
+      customProperties = const [],
+      state = null;
+
   final InventoryItemOp op;
+
+  /// Base de la détection de conflit d'une écriture `quantity` (voir le
+  /// constructeur) ; `null` pour les autres opérations.
+  final int? base;
 
   /// `items.id` d'un objet du catalogue (`character_inventory.item_id`), `null`
   /// pour un objet personnalisé.
@@ -87,6 +114,13 @@ class InventoryItemWrite {
   Map<String, dynamic> toPayload() {
     if (op == InventoryItemOp.delete) {
       return {InventoryItemPayloadKeys.op: 'delete'};
+    }
+    if (op == InventoryItemOp.quantity) {
+      return {
+        InventoryItemPayloadKeys.op: 'quantity',
+        InventoryItemPayloadKeys.quantity: quantity,
+        InventoryItemPayloadKeys.base: ?base,
+      };
     }
     return {
       InventoryItemPayloadKeys.op: 'add',
@@ -145,14 +179,18 @@ class InventoryItemWrite {
   };
 
   /// Colonnes de l'`UPDATE` de réalignement après un `23505` (la ligne existe
-  /// déjà, réponse d'un envoi précédent perdue) : nom et état initial, pas la
-  /// quantité (elle a pu être consommée depuis le premier envoi).
+  /// déjà, réponse d'un envoi précédent perdue) : nom, quantité et état
+  /// initial. Depuis T5b-3 la quantité du payload d'ajout est la quantité
+  /// **effective** (un usage hors ligne la modifie dans l'ajout en file) : elle
+  /// doit être réalignée, sinon un usage fait entre un `INSERT` à réponse perdue
+  /// et son rejeu serait perdu.
   ///
   /// Un objet du catalogue sans nom ni état à réaligner réécrit `item_id` à la
   /// même valeur : un `UPDATE` au corps vide serait un no-op dont la réponse
   /// vide serait prise pour « zéro ligne affectée ».
   Map<String, dynamic> toRealignColumns() => {
     'custom_name': ?customName,
+    'quantity': quantity,
     if (customName == null) 'item_id': itemId,
     ..._stateColumns(),
   };
@@ -204,12 +242,18 @@ bool isValidInventoryItemId(Object? itemId) =>
 bool isValidInventoryQuantity(Object? quantity) =>
     quantity is int && quantity >= 1 && quantity <= postgresIntMax;
 
+/// Quantité d'une écriture `quantity` (usage) : entier dans `0..int4` (0 =
+/// la ligne est retirée au rejeu, jamais une quantité 0 conservée).
+bool isValidInventoryUseQuantity(Object? quantity) =>
+    quantity is int && quantity >= 0 && quantity <= postgresIntMax;
+
 /// Un `targetId` de file `inventoryItem` doit être un UUID (la ligne est créée
 /// avec un `id` généré côté client).
 bool isValidInventoryItemTargetId(String targetId) => isUuid(targetId);
 
 /// Analyse stricte d'un payload `inventoryItem` ; `null` s'il est invalide
-/// (pas un objet, `op` absente ou inconnue, ni `itemId` ni `customName`,
+/// (pas un objet, `op` absente ou inconnue, `quantity` d'un usage non entière
+/// ou hors `0..int4`, ni `itemId` ni `customName`,
 /// `itemId` non entier ou ≤ 0, nom vide/trop long/non texte,
 /// quantité non entière ou hors plage, champs personnalisés d'un mauvais type,
 /// `customProperties` autre qu'une liste de textes, état d'un mauvais type,
@@ -219,6 +263,15 @@ InventoryItemWrite? parseInventoryItemPayload(Object? raw) {
   if (raw is! Map) return null;
   final op = raw[InventoryItemPayloadKeys.op];
   if (op == 'delete') return const InventoryItemWrite.delete();
+  if (op == 'quantity') {
+    final quantity = raw[InventoryItemPayloadKeys.quantity];
+    if (!isValidInventoryUseQuantity(quantity)) return null;
+    final base = raw[InventoryItemPayloadKeys.base];
+    return InventoryItemWrite.quantity(
+      quantity: quantity as int,
+      base: isValidInventoryUseQuantity(base) ? base as int : null,
+    );
+  }
   if (op != 'add') return null;
 
   // Au moins un `itemId` (catalogue) ou un `customName` (personnalisé), comme
@@ -357,4 +410,75 @@ class PendingInventoryAdd {
 
   final String inventoryId;
   final InventoryItemWrite write;
+}
+
+/// Résultat de la fusion d'un usage d'objet avec l'écriture déjà en file pour
+/// la même ligne ([planInventoryUse]).
+class InventoryUsePlan {
+  const InventoryUsePlan._({this.write, this.mergedIntoPendingAdd = false});
+
+  /// Usage impossible : un tombstone est en file, la ligne est déjà retirée.
+  static const rejected = InventoryUsePlan._();
+
+  /// Écriture à mettre en file (ou à écrire en ligne) pour la ligne ; `null`
+  /// uniquement pour [rejected].
+  final InventoryItemWrite? write;
+
+  /// `true` : l'ajout de la ligne est encore en file, [write] est cet ajout
+  /// à la quantité mise à jour (ou un tombstone si elle tombe à 0). Jamais
+  /// écrit en ligne par un `UPDATE` (la ligne n'existe pas côté serveur) : mis
+  /// en file, il part avec le rejeu de l'`INSERT`.
+  final bool mergedIntoPendingAdd;
+
+  bool get isRejected => write == null;
+}
+
+/// Plan d'un usage d'objet de nouvelle quantité absolue [newQuantity] ([pending]
+/// : écriture déjà en file pour cette ligne, `null` si aucune ou illisible ;
+/// [serverQuantity] : quantité serveur connue, base de la détection de
+/// conflit).
+///
+/// - tombstone en file : [InventoryUsePlan.rejected] ;
+/// - [newQuantity] <= 0 : tombstone (la ligne est retirée), qui remplace tout
+///   ajout ou usage en file (comme [planInventoryRemoval]) ;
+/// - ajout en file : l'ajout à la nouvelle quantité (un seul `INSERT`) ;
+/// - usage déjà en file : nouvelle quantité absolue, **base du premier
+///   enfilage conservée** ;
+/// - sinon : usage avec [serverQuantity] pour base.
+InventoryUsePlan planInventoryUse({
+  required InventoryItemWrite? pending,
+  required int newQuantity,
+  int? serverQuantity,
+}) {
+  if (pending?.op == InventoryItemOp.delete) return InventoryUsePlan.rejected;
+  final isAddPending = pending?.op == InventoryItemOp.add;
+  if (newQuantity <= 0) {
+    return InventoryUsePlan._(
+      write: const InventoryItemWrite.delete(),
+      mergedIntoPendingAdd: isAddPending,
+    );
+  }
+  if (isAddPending) {
+    return InventoryUsePlan._(
+      write: InventoryItemWrite.add(
+        itemId: pending!.itemId,
+        customName: pending.customName,
+        quantity: newQuantity,
+        customDescription: pending.customDescription,
+        customDamageDice: pending.customDamageDice,
+        customDamageType: pending.customDamageType,
+        customProperties: pending.customProperties,
+        state: pending.state,
+      ),
+      mergedIntoPendingAdd: true,
+    );
+  }
+  return InventoryUsePlan._(
+    write: InventoryItemWrite.quantity(
+      quantity: newQuantity,
+      base: pending?.op == InventoryItemOp.quantity
+          ? pending!.base
+          : serverQuantity,
+    ),
+  );
 }
