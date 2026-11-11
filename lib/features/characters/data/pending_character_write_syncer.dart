@@ -5,6 +5,7 @@ import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../../core/rules/spell_status.dart';
 import '../domain/currency_kind.dart';
+import '../domain/offline_journal_writes.dart';
 import '../domain/offline_state_writes.dart';
 import '../domain/rest_type.dart';
 import 'character_detail_cache.dart';
@@ -550,6 +551,15 @@ class PendingCharacterWriteSyncer {
             code: '42501',
           );
         }
+      case PendingCharacterWriteKind.journalEntry:
+        // T4 : ajout (`INSERT` avec l'id client, idempotent : `23505` = déjà
+        // là), modification (zéro ligne = 42501, non rejouable) ou suppression
+        // (zéro ligne = déjà supprimée = succès), filtrées par `character_id`.
+        await _restWriter.applyJournalWriteOnline(
+          characterId: write.characterId,
+          entryId: write.targetId,
+          write: parseJournalPayload(write.payload)!,
+        );
       case PendingCharacterWriteKind.rest:
         final type = RestType.values.byName(write.payload['type'] as String);
         final className = write.payload['className'] as String? ?? '';
@@ -628,6 +638,7 @@ class PendingCharacterWriteSyncer {
       PendingCharacterWriteKind.spellState => 'vos réglages de sorts',
       PendingCharacterWriteKind.inventoryState => "vos réglages d'inventaire",
       PendingCharacterWriteKind.characterFlags => 'vos réglages de personnage',
+      PendingCharacterWriteKind.journalEntry => 'votre journal',
     };
     return 'Un ajustement de $label resté en attente a été refusé par le '
         'serveur et a été abandonné (personnage supprimé, accès retiré, ou '
@@ -684,6 +695,7 @@ class PendingCharacterWriteSyncer {
         return parseCharacterFlagsPayload(write.payload)?.toColumns();
       case PendingCharacterWriteKind.spellState:
       case PendingCharacterWriteKind.inventoryState:
+      case PendingCharacterWriteKind.journalEntry:
       case PendingCharacterWriteKind.spellSlot:
       case PendingCharacterWriteKind.innateSpell:
       case PendingCharacterWriteKind.classFeature:
@@ -692,8 +704,8 @@ class PendingCharacterWriteSyncer {
     }
   }
 
-  /// `false` si [write] est un réglage d'état (T5a) au payload ou à la cible
-  /// invalide : il ne doit jamais être rejoué. Toujours `true` pour les
+  /// `false` si [write] est un réglage d'état (T5a) ou une écriture de journal
+  /// (T4) au payload ou à la cible invalide : il ne doit jamais être rejoué. Toujours `true` pour les
   /// autres kinds (validés ailleurs).
   bool _isReplayableState(PendingCharacterWrite write) {
     switch (write.kind) {
@@ -705,6 +717,9 @@ class PendingCharacterWriteSyncer {
             parseInventoryStatePayload(write.payload) != null;
       case PendingCharacterWriteKind.characterFlags:
         return parseCharacterFlagsPayload(write.payload) != null;
+      case PendingCharacterWriteKind.journalEntry:
+        return isValidJournalTargetId(write.targetId) &&
+            parseJournalPayload(write.payload) != null;
       case PendingCharacterWriteKind.hp:
       case PendingCharacterWriteKind.xp:
       case PendingCharacterWriteKind.spellSlot:
@@ -738,6 +753,13 @@ class PendingCharacterWriteSyncer {
           characterId: write.characterId,
           inventoryId: write.targetId,
           patch: parseInventoryStatePayload(write.payload)!,
+        );
+      case PendingCharacterWriteKind.journalEntry:
+        await _detailCache.applyConfirmedJournalEntry(
+          ownerId: ownerId,
+          characterId: write.characterId,
+          entryId: write.targetId,
+          write: parseJournalPayload(write.payload)!,
         );
       case PendingCharacterWriteKind.hp:
       case PendingCharacterWriteKind.xp:

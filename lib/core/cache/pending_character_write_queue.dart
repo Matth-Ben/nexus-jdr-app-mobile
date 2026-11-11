@@ -6,7 +6,7 @@ import 'package:drift/drift.dart';
 import 'app_database.dart';
 import 'app_database.dart' as drift_rows show PendingCharacterWrite;
 
-/// Les onze types d'écriture rendus hors-ligne-capables — voir la doc de
+/// Les douze types d'écriture rendus hors-ligne-capables — voir la doc de
 /// classe de [PendingCharacterWrites]. Périmètre étendu le 09/10/2026 (D11 du
 /// registre de dette technique, catégorie A « bloque la mise en production ») :
 /// `castSpell`/`setInnateSpellUsesSpent`/`useClassFeature`/`applyRest`
@@ -79,7 +79,15 @@ enum PendingCharacterWriteKind {
   /// `setInspiration`/`setArmorClassBonus` (T5a, P15) : réglages absolus du
   /// personnage. Au plus une entrée par personnage (`targetId` vide). Payload
   /// `{"inspiration": bool?, "armorClassBonus": int?}`, fusion champ par champ.
-  characterFlags('character_flags');
+  characterFlags('character_flags'),
+
+  /// `addJournalEntry`/`updateJournalEntry`/`removeJournalEntry` (T4, P15) :
+  /// état voulu d'une entrée du journal de campagne (`targetId` = UUID de
+  /// l'entrée, généré côté client à l'ajout). Payload `{"body", "createdAt"}`
+  /// (ajout pas encore synchronisé), `{"body"}` (modification) ou
+  /// `{"deleted": true}` (suppression) ; dernière valeur gagnante, fusion dans
+  /// `domain/offline_journal_writes.dart`.
+  journalEntry('journal_entry');
 
   const PendingCharacterWriteKind(this.storageKey);
 

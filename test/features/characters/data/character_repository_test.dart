@@ -2431,8 +2431,11 @@ void main() {
         expect(await pendingWrites.allForOwner(ownerId), isEmpty);
       });
 
+      // T4 (P15) : le journal est désormais mis en file hors ligne (avant :
+      // `rejectedOffline`, rien en file). Couverture détaillée dans
+      // `character_journal_offline_test.dart`.
       test('addJournalEntry : connectivité absente -> retourne queued sans '
-          'tenter le réseau, jamais mise en file', () async {
+          'tenter le réseau, une ligne journalEntry en file', () async {
         final client = await _buildSignedInFakeSupabaseClient(
           ownerId: ownerId,
           throwOnRequest: true,
@@ -2449,8 +2452,10 @@ void main() {
           body: 'Note de séance.',
         );
 
-        expect(outcome, WriteOutcome.rejectedOffline);
-        expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+        expect(outcome, WriteOutcome.queued);
+        final queued = await pendingWrites.allForOwner(ownerId);
+        expect(queued.single.kind, PendingCharacterWriteKind.journalEntry);
+        expect(queued.single.payload['body'], 'Note de séance.');
       });
 
       test('addJournalEntry : connectivité présente + écriture réussie -> '
@@ -2473,7 +2478,18 @@ void main() {
 
       test('updateJournalEntry : connectivité présente + écriture réussie '
           '-> synced', () async {
-        final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+        // `.select('id')` : une ligne affectée (T4, zéro ligne = échec).
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          responseOverride: (request) => request.method == 'PATCH'
+              ? http.Response(
+                  '[{"id":"entry-1"}]',
+                  200,
+                  request: request,
+                  headers: {'content-type': 'application/json'},
+                )
+              : null,
+        );
         final repository = SupabaseCharacterRepository(
           client,
           cache,
