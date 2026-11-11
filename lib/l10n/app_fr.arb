@@ -5261,13 +5261,77 @@
       "name": {"type": "String"}
     }
   },
-  "syncAlertConflictHp": "{name} a été modifié sur un autre appareil : les PV étaient à {value}/{max} sur le serveur. Ta modification hors ligne a été appliquée par-dessus.",
+  "syncAlertConflictHp": "{name} : les PV ont été modifiés sur un autre appareil (serveur : {server}). Ta modification hors ligne ({queued}) les a remplacés.",
   "@syncAlertConflictHp": {
-    "description": "Alerte de conflit F19 (même compte, deux appareils) sur les PV.",
+    "description": "Alerte de conflit F19 (même compte, deux appareils) sur les PV. `server`/`queued` sont déjà formatés (ex. « 12/30 + 3 temp. », ou « 12 » si le maximum est inconnu). `server` = valeur AVANT l'envoi, `queued` = valeur appliquée.",
     "placeholders": {
       "name": {"type": "String"},
-      "value": {"type": "int"},
-      "max": {"type": "int"}
+      "server": {"type": "String"},
+      "queued": {"type": "String"}
+    }
+  },
+  "syncAlertConflictTempHp": "{name} : les PV temporaires ont été modifiés sur un autre appareil (serveur : {server}). Ta modification hors ligne ({queued}) les a remplacés.",
+  "@syncAlertConflictTempHp": {
+    "description": "Alerte de conflit F19 quand seuls les PV temporaires diffèrent.",
+    "placeholders": {
+      "name": {"type": "String"},
+      "server": {"type": "int"},
+      "queued": {"type": "int"}
+    }
+  },
+  "syncAlertTempHpSuffix": " + {temp} temp.",
+  "@syncAlertTempHpSuffix": {
+    "description": "Suffixe d'une valeur de PV citée dans une alerte quand les PV temporaires sont > 0.",
+    "placeholders": {
+      "temp": {"type": "int"}
+    }
+  },
+  "syncAlertConflictCurrency": "{name} : tes pièces ont été modifiées sur un autre appareil (serveur : {server}). Ta modification hors ligne ({queued}) les a remplacées.",
+  "@syncAlertConflictCurrency": {
+    "description": "Alerte de conflit F19 sur les monnaies. `server`/`queued` sont des listes déjà formatées (« 120 PO, 4 PA »), mêmes monnaies, même ordre.",
+    "placeholders": {
+      "name": {"type": "String"},
+      "server": {"type": "String"},
+      "queued": {"type": "String"}
+    }
+  },
+  "syncAlertCurrencyUnitCp": "PC",
+  "@syncAlertCurrencyUnitCp": {"description": "Unité courte cuivre dans une alerte de synchro."},
+  "syncAlertCurrencyUnitSp": "PA",
+  "@syncAlertCurrencyUnitSp": {"description": "Unité courte argent dans une alerte de synchro."},
+  "syncAlertCurrencyUnitEp": "PE",
+  "@syncAlertCurrencyUnitEp": {"description": "Unité courte électrum dans une alerte de synchro."},
+  "syncAlertCurrencyUnitGp": "PO",
+  "@syncAlertCurrencyUnitGp": {"description": "Unité courte or dans une alerte de synchro."},
+  "syncAlertCurrencyUnitPp": "PP",
+  "@syncAlertCurrencyUnitPp": {"description": "Unité courte platine dans une alerte de synchro."},
+  "syncAlertConflictItem": "{name} : la quantité de « {item} » a été modifiée sur un autre appareil (serveur : {server}). Ta modification hors ligne ({queued}) l'a remplacée.",
+  "@syncAlertConflictItem": {
+    "description": "Alerte de conflit F19 sur la quantité d'un objet (un seul objet).",
+    "placeholders": {
+      "name": {"type": "String"},
+      "item": {"type": "String"},
+      "server": {"type": "int"},
+      "queued": {"type": "int"}
+    }
+  },
+  "syncAlertConflictItems": "{name} : les quantités de « {first} » et « {second} » ont été modifiées sur un autre appareil{more, plural, =0{} =1{ (+1 autre)} other{ (+{more} autres)}}. Tes modifications hors ligne les ont remplacées.",
+  "@syncAlertConflictItems": {
+    "description": "Alerte de conflit F19 agrégée : plusieurs objets d'un même personnage dans une passe de rejeu. Au plus deux noms cités, `more` = nombre d'objets restants.",
+    "placeholders": {
+      "name": {"type": "String"},
+      "first": {"type": "String"},
+      "second": {"type": "String"},
+      "more": {"type": "int"}
+    }
+  },
+  "syncAlertConflictXp": "{name} : l'XP a été modifiée sur un autre appareil (serveur : {server} XP). Ta modification hors ligne ({queued} XP) l'a remplacée.",
+  "@syncAlertConflictXp": {
+    "description": "Alerte de conflit F19 sur l'XP.",
+    "placeholders": {
+      "name": {"type": "String"},
+      "server": {"type": "int"},
+      "queued": {"type": "int"}
     }
   },
   "syncAlertConflictFallback": "{name} a été modifié sur un autre appareil. Ta modification hors ligne a été appliquée par-dessus.",

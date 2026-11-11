@@ -6438,11 +6438,87 @@ abstract class AppLocalizations {
   /// **'Une modification de {name} n\'a pas pu être enregistrée. La fiche affiche la valeur du serveur.'**
   String syncAlertAbandonFallback(String name);
 
-  /// Alerte de conflit F19 (même compte, deux appareils) sur les PV.
+  /// Alerte de conflit F19 (même compte, deux appareils) sur les PV. `server`/`queued` sont déjà formatés (ex. « 12/30 + 3 temp. », ou « 12 » si le maximum est inconnu). `server` = valeur AVANT l'envoi, `queued` = valeur appliquée.
   ///
   /// In fr, this message translates to:
-  /// **'{name} a été modifié sur un autre appareil : les PV étaient à {value}/{max} sur le serveur. Ta modification hors ligne a été appliquée par-dessus.'**
-  String syncAlertConflictHp(String name, int value, int max);
+  /// **'{name} : les PV ont été modifiés sur un autre appareil (serveur : {server}). Ta modification hors ligne ({queued}) les a remplacés.'**
+  String syncAlertConflictHp(String name, String server, String queued);
+
+  /// Alerte de conflit F19 quand seuls les PV temporaires diffèrent.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} : les PV temporaires ont été modifiés sur un autre appareil (serveur : {server}). Ta modification hors ligne ({queued}) les a remplacés.'**
+  String syncAlertConflictTempHp(String name, int server, int queued);
+
+  /// Suffixe d'une valeur de PV citée dans une alerte quand les PV temporaires sont > 0.
+  ///
+  /// In fr, this message translates to:
+  /// **' + {temp} temp.'**
+  String syncAlertTempHpSuffix(int temp);
+
+  /// Alerte de conflit F19 sur les monnaies. `server`/`queued` sont des listes déjà formatées (« 120 PO, 4 PA »), mêmes monnaies, même ordre.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} : tes pièces ont été modifiées sur un autre appareil (serveur : {server}). Ta modification hors ligne ({queued}) les a remplacées.'**
+  String syncAlertConflictCurrency(String name, String server, String queued);
+
+  /// Unité courte cuivre dans une alerte de synchro.
+  ///
+  /// In fr, this message translates to:
+  /// **'PC'**
+  String get syncAlertCurrencyUnitCp;
+
+  /// Unité courte argent dans une alerte de synchro.
+  ///
+  /// In fr, this message translates to:
+  /// **'PA'**
+  String get syncAlertCurrencyUnitSp;
+
+  /// Unité courte électrum dans une alerte de synchro.
+  ///
+  /// In fr, this message translates to:
+  /// **'PE'**
+  String get syncAlertCurrencyUnitEp;
+
+  /// Unité courte or dans une alerte de synchro.
+  ///
+  /// In fr, this message translates to:
+  /// **'PO'**
+  String get syncAlertCurrencyUnitGp;
+
+  /// Unité courte platine dans une alerte de synchro.
+  ///
+  /// In fr, this message translates to:
+  /// **'PP'**
+  String get syncAlertCurrencyUnitPp;
+
+  /// Alerte de conflit F19 sur la quantité d'un objet (un seul objet).
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} : la quantité de « {item} » a été modifiée sur un autre appareil (serveur : {server}). Ta modification hors ligne ({queued}) l\'a remplacée.'**
+  String syncAlertConflictItem(
+    String name,
+    String item,
+    int server,
+    int queued,
+  );
+
+  /// Alerte de conflit F19 agrégée : plusieurs objets d'un même personnage dans une passe de rejeu. Au plus deux noms cités, `more` = nombre d'objets restants.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} : les quantités de « {first} » et « {second} » ont été modifiées sur un autre appareil{more, plural, =0{} =1{ (+1 autre)} other{ (+{more} autres)}}. Tes modifications hors ligne les ont remplacées.'**
+  String syncAlertConflictItems(
+    String name,
+    String first,
+    String second,
+    int more,
+  );
+
+  /// Alerte de conflit F19 sur l'XP.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} : l\'XP a été modifiée sur un autre appareil (serveur : {server} XP). Ta modification hors ligne ({queued} XP) l\'a remplacée.'**
+  String syncAlertConflictXp(String name, int server, int queued);
 
   /// Alerte de conflit de repli (valeur serveur inconnue).
   ///

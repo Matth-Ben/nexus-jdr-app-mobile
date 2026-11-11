@@ -3925,8 +3925,70 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String syncAlertConflictHp(String name, int value, int max) {
-    return '$name was changed on another device: HP were $value/$max on the server. Your offline change was applied on top.';
+  String syncAlertConflictHp(String name, String server, String queued) {
+    return '$name: HP were changed on another device (server: $server). Your offline change ($queued) replaced them.';
+  }
+
+  @override
+  String syncAlertConflictTempHp(String name, int server, int queued) {
+    return '$name: temporary HP were changed on another device (server: $server). Your offline change ($queued) replaced them.';
+  }
+
+  @override
+  String syncAlertTempHpSuffix(int temp) {
+    return ' + $temp temp.';
+  }
+
+  @override
+  String syncAlertConflictCurrency(String name, String server, String queued) {
+    return '$name: your coins were changed on another device (server: $server). Your offline change ($queued) replaced them.';
+  }
+
+  @override
+  String get syncAlertCurrencyUnitCp => 'CP';
+
+  @override
+  String get syncAlertCurrencyUnitSp => 'SP';
+
+  @override
+  String get syncAlertCurrencyUnitEp => 'EP';
+
+  @override
+  String get syncAlertCurrencyUnitGp => 'GP';
+
+  @override
+  String get syncAlertCurrencyUnitPp => 'PP';
+
+  @override
+  String syncAlertConflictItem(
+    String name,
+    String item,
+    int server,
+    int queued,
+  ) {
+    return '$name: the quantity of “$item” was changed on another device (server: $server). Your offline change ($queued) replaced it.';
+  }
+
+  @override
+  String syncAlertConflictItems(
+    String name,
+    String first,
+    String second,
+    int more,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      more,
+      locale: localeName,
+      other: ' (+$more more)',
+      one: ' (+1 more)',
+      zero: '',
+    );
+    return '$name: the quantities of “$first” and “$second” were changed on another device$_temp0. Your offline changes replaced them.';
+  }
+
+  @override
+  String syncAlertConflictXp(String name, int server, int queued) {
+    return '$name: XP was changed on another device (server: $server XP). Your offline change ($queued XP) replaced it.';
   }
 
   @override

@@ -2277,6 +2277,42 @@ class SupabaseCharacterRepository implements CharacterRepository {
     );
   }
 
+  /// Met en file une écriture d'XP avec la **base serveur** (`baseXp`) : même
+  /// principe que [_enqueueHp] (T8) — la base d'une entrée déjà en file est
+  /// conservée, sans base connue (fiche jamais mise en cache) aucune
+  /// détection de conflit n'a lieu au rejeu.
+  Future<void> _enqueueXp({
+    required String characterId,
+    required String ownerId,
+    required int newXp,
+  }) async {
+    final payload = <String, dynamic>{'newXp': newXp};
+    final existing = await _pendingWriteBeforeOnlineWrite(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: PendingCharacterWriteKind.xp,
+      targetId: '',
+    );
+    final existingBase = existing?.payload['baseXp'];
+    if (existingBase is num) {
+      payload['baseXp'] = existingBase.toInt();
+    } else {
+      final row = await _detailCache.readRow(
+        ownerId: ownerId,
+        characterId: characterId,
+      );
+      final cachedXp = row?['xp'];
+      if (cachedXp is num) payload['baseXp'] = cachedXp.toInt();
+    }
+    await _pendingWrites.enqueue(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: PendingCharacterWriteKind.xp,
+      targetId: '',
+      payload: payload,
+    );
+  }
+
   /// `targetId` (voir [PendingCharacterWrite.targetId]) d'un emplacement de
   /// sort mis en file par [castSpell] : distingue [slotLevel] ET la table
   /// visée ([isPactSlot]) — un même niveau d'emplacement classique
@@ -3514,12 +3550,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final ownerId = _requireOwnerId();
 
     if (!await _connectivityChecker.hasConnection()) {
-      await _pendingWrites.enqueue(
+      await _enqueueXp(
         characterId: characterId,
         ownerId: ownerId,
-        kind: PendingCharacterWriteKind.xp,
-        targetId: '',
-        payload: {'newXp': newXp},
+        newXp: newXp,
       );
       return WriteOutcome.queued;
     }
@@ -3561,12 +3595,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
         // requête réseau n'a jamais abouti dans le délai global
         // (`TimeoutHttpClient`). Traité comme une absence de connectivité,
         // jamais comme une [CharacterFailure] dure.
-        await _pendingWrites.enqueue(
+        await _enqueueXp(
           characterId: characterId,
           ownerId: ownerId,
-          kind: PendingCharacterWriteKind.xp,
-          targetId: '',
-          payload: {'newXp': newXp},
+          newXp: newXp,
         );
         return WriteOutcome.queued;
       }

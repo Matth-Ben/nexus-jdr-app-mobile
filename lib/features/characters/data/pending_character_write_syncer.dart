@@ -23,10 +23,16 @@ class ServerValueConflict {
     required this.kind,
     required this.serverValue,
     required this.queuedValue,
+    this.targetId = '',
   });
 
   final String characterId;
   final PendingCharacterWriteKind kind;
+
+  /// Cible de l'écriture (`PendingCharacterWrite.targetId`) : UUID de la ligne
+  /// d'inventaire pour `inventoryItem`, vide sinon. Sert à retrouver le nom de
+  /// l'objet pour l'alerte (T8).
+  final String targetId;
 
   /// Valeur trouvée sur le serveur au moment du rejeu (avant écrasement).
   final Map<String, dynamic> serverValue;
@@ -365,6 +371,9 @@ class PendingCharacterWriteSyncer {
     if (write.kind == PendingCharacterWriteKind.inventoryItem) {
       return _detectInventoryQuantityChange(write);
     }
+    if (write.kind == PendingCharacterWriteKind.xp) {
+      return _detectXpChange(write, ownerId: ownerId);
+    }
     if (write.kind != PendingCharacterWriteKind.hp) return null;
     final baseCurrent = write.payload['baseCurrentHp'];
     final baseTemporary = write.payload['baseTemporaryHp'];
@@ -473,8 +482,38 @@ class PendingCharacterWriteSyncer {
     return ServerValueConflict(
       characterId: write.characterId,
       kind: write.kind,
+      targetId: write.targetId,
       serverValue: {'quantity': serverQuantity},
       queuedValue: {'quantity': item.quantity},
+    );
+  }
+
+  /// Détection F19/D178 pour une écriture d'XP en file (T8) : base mémorisée au
+  /// premier enfilage (`baseXp`), comparée à l'XP serveur actuelle. Mêmes
+  /// règles que les PV : pas de base (fiche jamais mise en cache, ancienne
+  /// ligne) ou serveur inchangé / déjà égal à la valeur en file : aucun signal.
+  Future<ServerValueConflict?> _detectXpChange(
+    PendingCharacterWrite write, {
+    required String ownerId,
+  }) async {
+    final base = write.payload['baseXp'];
+    final queued = write.payload['newXp'];
+    if (base is! num || queued is! num) return null;
+    final row = await _client
+        .from('characters')
+        .select('xp')
+        .eq('id', write.characterId)
+        .eq('owner_id', ownerId)
+        .maybeSingle();
+    final server = row?['xp'];
+    if (server is! num) return null;
+    final serverXp = server.toInt();
+    if (serverXp == queued.toInt() || serverXp == base.toInt()) return null;
+    return ServerValueConflict(
+      characterId: write.characterId,
+      kind: write.kind,
+      serverValue: {'xp': serverXp},
+      queuedValue: {'xp': queued.toInt()},
     );
   }
 

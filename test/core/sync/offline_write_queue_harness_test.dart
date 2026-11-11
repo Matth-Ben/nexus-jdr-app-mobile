@@ -634,7 +634,12 @@ void main() {
       final stored = (await alerts()).single;
       expect(stored.kind, SyncAlertKind.conflict);
       expect(stored.characterName, 'Aria');
-      expect(stored.serverValue, {'currentHp': 3, 'maxHp': 12});
+      expect(stored.serverValue, {
+        'currentHp': 3,
+        'temporaryHp': 0,
+        'maxHp': 12,
+        'queued': {'currentHp': 6, 'temporaryHp': 0},
+      });
     });
   });
 

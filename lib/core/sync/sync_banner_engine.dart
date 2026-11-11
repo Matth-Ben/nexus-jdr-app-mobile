@@ -50,10 +50,19 @@ class SyncBannerState {
       other.kind == kind &&
       other.pendingCount == pendingCount &&
       other.alert?.id == alert?.id &&
+      other._alertContent == _alertContent &&
       other.moreAlerts == moreAlerts;
 
   @override
-  int get hashCode => Object.hash(kind, pendingCount, alert?.id, moreAlerts);
+  int get hashCode =>
+      Object.hash(kind, pendingCount, alert?.id, _alertContent, moreAlerts);
+
+  /// Contenu affichable de l'alerte : une alerte de conflit **mise à jour sur
+  /// place** (T8, dédoublonnage : même `id`, valeur différente) doit être
+  /// ré-émise, sinon le bandeau garderait l'ancien texte. L'`id` seul ne
+  /// suffit donc plus à l'égalité.
+  String? get _alertContent =>
+      alert == null ? null : '${alert!.characterName}|${alert!.serverValue}';
 
   @override
   String toString() =>
