@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/analytics/analytics_preferences_provider.dart';
+import '../../../../core/cache/character_last_opened_key.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 
 part 'character_last_opened_provider.g.dart';
@@ -16,14 +17,12 @@ part 'character_last_opened_provider.g.dart';
 /// relit jamais ces horodatages. Aucun champ serveur, aucune migration.
 @Riverpod(keepAlive: true)
 class CharacterLastOpened extends _$CharacterLastOpened {
-  static const _keyPrefix = 'character_last_opened:';
-
   @override
   Map<String, int> build() {
     final ownerId = ref.watch(currentUserProvider)?.id;
     final prefs = ref.watch(sharedPreferencesProvider).value;
     if (ownerId == null || prefs == null) return const {};
-    return _decode(prefs.getString('$_keyPrefix$ownerId'));
+    return _decode(prefs.getString(characterLastOpenedKey(ownerId)));
   }
 
   /// Écrit l'horodatage d'ouverture de [characterId] (à l'ouverture de la
@@ -32,7 +31,7 @@ class CharacterLastOpened extends _$CharacterLastOpened {
     final ownerId = ref.read(currentUserProvider)?.id;
     if (ownerId == null) return;
     final prefs = await ref.read(sharedPreferencesProvider.future);
-    final key = '$_keyPrefix$ownerId';
+    final key = characterLastOpenedKey(ownerId);
     final next = {
       ..._decode(prefs.getString(key)),
       characterId: (now ?? DateTime.now()).millisecondsSinceEpoch,
@@ -47,7 +46,7 @@ class CharacterLastOpened extends _$CharacterLastOpened {
     final ownerId = ref.read(currentUserProvider)?.id;
     if (ownerId == null) return;
     final prefs = await ref.read(sharedPreferencesProvider.future);
-    final key = '$_keyPrefix$ownerId';
+    final key = characterLastOpenedKey(ownerId);
     final current = _decode(prefs.getString(key));
     final kept = {
       for (final entry in current.entries)
