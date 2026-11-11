@@ -4,9 +4,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/destructive_button.dart';
+import '../../../../core/widgets/info_banner.dart';
+import '../../../../core/widgets/not_proficient_badge.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/armor_proficiency_rules.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/inventory_category_rules.dart';
@@ -108,13 +111,17 @@ Future<void> showItemActionSheet(
   required EquipWeaponToSlotCallback onEquipWeaponToSlot,
   int? weaponAttackBonus,
   int? weaponDamageModifier,
+  bool notProficient = false,
 }) async {
   final action = await showModalBottomSheet<_ItemSheetAction>(
     context: context,
     backgroundColor: AppColors.parchmentCard,
     isScrollControlled: true,
-    builder: (sheetContext) =>
-        _ItemActionSheetContent(item: item, attunedCount: attunedCount),
+    builder: (sheetContext) => _ItemActionSheetContent(
+      item: item,
+      attunedCount: attunedCount,
+      notProficient: notProficient,
+    ),
   );
   if (action == null || !context.mounted) return;
 
@@ -129,6 +136,7 @@ Future<void> showItemActionSheet(
         attunedCount: attunedCount,
         weaponAttackBonus: weaponAttackBonus,
         weaponDamageModifier: weaponDamageModifier,
+        notProficient: notProficient,
       );
     case _ItemSheetAction.use:
       onUseItem(item);
@@ -180,10 +188,15 @@ class _ItemActionSheetContent extends StatelessWidget {
   const _ItemActionSheetContent({
     required this.item,
     required this.attunedCount,
+    this.notProficient = false,
   });
 
   final CharacterInventoryItem item;
   final int attunedCount;
+
+  /// Armure/bouclier non maîtrisé (P10/F16) : pastille dans l'en-tête et
+  /// bannière informative au-dessus de « Équiper »/« Déséquiper ».
+  final bool notProficient;
 
   @override
   Widget build(BuildContext context) {
@@ -194,6 +207,10 @@ class _ItemActionSheetContent extends StatelessWidget {
     final attunable = !item.isCustom && item.requiresAttunement;
     final atAttunementCap =
         !item.isAttuned && attunedCount >= CharacterDetail.attunementCap;
+    final subtitle = l10n.itemActionSheetSubtitle(
+      InventoryCategoryRules.labelFor(item.category),
+      item.quantity,
+    );
 
     return SafeArea(
       child: Padding(
@@ -207,19 +224,30 @@ class _ItemActionSheetContent extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              item.name,
-              style: AppTypography.body(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
+            // `Wrap` : la pastille descend sous le nom plutôt que de l'écraser
+            // (police très agrandie).
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: 2,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  item.name,
+                  style: AppTypography.body(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (notProficient) const NotProficientBadge(),
+              ],
             ),
             const SizedBox(height: 2),
             Text(
-              l10n.itemActionSheetSubtitle(
-                InventoryCategoryRules.labelFor(item.category),
-                item.quantity,
-              ),
+              subtitle,
+              semanticsLabel: notProficient
+                  ? '$subtitle, '
+                        '${l10n.characterInventoryItemCardNotProficientSemantics}'
+                  : null,
               style: AppTypography.body(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -238,6 +266,16 @@ class _ItemActionSheetContent extends StatelessWidget {
                 label: l10n.itemActionSheetUseLabel,
                 onTap: () => Navigator.of(context).pop(_ItemSheetAction.use),
               ),
+            if (notProficient) ...[
+              const SizedBox(height: AppSpacing.sm),
+              InfoBanner(
+                icon: Icons.warning_amber_rounded,
+                message: ArmorProficiencyRules.isShield(item)
+                    ? l10n.inventoryNotProficientShieldBanner
+                    : l10n.inventoryNotProficientArmorBanner,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+            ],
             if (isWeapon) ...[
               SheetActionRow(
                 icon: Icons.checkroom_outlined,

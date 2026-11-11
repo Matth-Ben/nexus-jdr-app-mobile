@@ -7,6 +7,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/compact_action_button.dart';
 import '../../../../core/widgets/dashed_add_tile.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/armor_proficiency_rules.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/currency_kind.dart';
@@ -68,6 +69,7 @@ class CharacterInventoryTabBody extends StatefulWidget {
     this.onConvertCurrency,
     this.actionsDisabled = false,
     this.filterAnchorKey,
+    this.showArmorProficiencyWarning = false,
     super.key,
   });
 
@@ -141,6 +143,13 @@ class CharacterInventoryTabBody extends StatefulWidget {
   /// (ex. `shared_character_view_screen.dart`, qui n'a pas cette icône).
   final GlobalKey? filterAnchorKey;
 
+  /// `true` (fiche du propriétaire seulement, jamais la vue partagée/MJ)
+  /// pour afficher l'avertissement informatif « armure ou bouclier non
+  /// maîtrisé » (pastille + bannière, P10/F16) — calcul 100 % local, voir
+  /// `domain/armor_proficiency_rules.dart`. Aucun effet sur la CA ni les
+  /// jets.
+  final bool showArmorProficiencyWarning;
+
   @override
   State<CharacterInventoryTabBody> createState() =>
       _CharacterInventoryTabBodyState();
@@ -148,6 +157,15 @@ class CharacterInventoryTabBody extends StatefulWidget {
 
 class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
   InventoryCategoryFilter _filter = InventoryCategoryFilter.all;
+
+  /// `true` si [item] est une armure/un bouclier non maîtrisé (jamais pour un
+  /// verdict indécidable) — toujours `false` hors fiche du propriétaire.
+  bool _isNotProficient(CharacterInventoryItem item) =>
+      widget.showArmorProficiencyWarning &&
+      ArmorProficiencyRules.isNotProficient(
+        item,
+        ArmorProficiencyProfile.fromDetail(widget.detail),
+      );
 
   /// Bonus d'attaque/modificateur de dégâts d'une arme (voir
   /// `domain/weapon_attack_calculator.dart::WeaponAttackCalculator`) —
@@ -195,6 +213,7 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
       onEquipWeaponToSlot: widget.onEquipWeaponToSlot,
       weaponAttackBonus: attackBonus,
       weaponDamageModifier: damageModifier,
+      notProficient: _isNotProficient(item),
     );
   }
 
@@ -220,6 +239,7 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
       readOnly: true,
       weaponAttackBonus: attackBonus,
       weaponDamageModifier: damageModifier,
+      notProficient: _isNotProficient(item),
     );
   }
 
@@ -335,6 +355,7 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
           for (final item in sortedItems) ...[
             CharacterInventoryItemCard(
               item: item,
+              notProficient: _isNotProficient(item),
               // Lecture seule : le tap ouvre toujours le panneau "Infos" en
               // lecture seule plutôt que de bloquer le tap entièrement — voir
               // [_openItemInfo].

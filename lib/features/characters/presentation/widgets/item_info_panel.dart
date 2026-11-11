@@ -4,11 +4,14 @@ import '../../../../core/widgets/display_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/info_banner.dart';
+import '../../../../core/widgets/not_proficient_badge.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../character_creation/domain/gold_amount_formatter.dart';
+import '../../domain/armor_proficiency_rules.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/inventory_armor_dex_bonus_formatter.dart';
@@ -65,6 +68,7 @@ Future<void> showItemInfoPanel(
   bool readOnly = false,
   int? weaponAttackBonus,
   int? weaponDamageModifier,
+  bool notProficient = false,
 }) async {
   final action = await showModalBottomSheet<_ItemInfoPanelAction>(
     context: context,
@@ -76,6 +80,7 @@ Future<void> showItemInfoPanel(
       readOnly: readOnly,
       weaponAttackBonus: weaponAttackBonus,
       weaponDamageModifier: weaponDamageModifier,
+      notProficient: notProficient,
       onToggleAttuned: () {
         onToggleAttuned(item);
         Navigator.of(sheetContext).pop();
@@ -102,7 +107,12 @@ class _ItemInfoPanelContent extends StatelessWidget {
     this.readOnly = false,
     this.weaponAttackBonus,
     this.weaponDamageModifier,
+    this.notProficient = false,
   });
+
+  /// Armure/bouclier non maîtrisé (P10/F16) : pastille en tête du contenu et
+  /// bannière informative en pied, au-dessus du bouton « Équiper ».
+  final bool notProficient;
 
   final CharacterInventoryItem item;
   final int attunedCount;
@@ -227,6 +237,19 @@ class _ItemInfoPanelContent extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (notProficient) ...[
+                        Semantics(
+                          label: l10n
+                              .characterInventoryItemCardNotProficientSemantics,
+                          container: true,
+                          excludeSemantics: true,
+                          child: const Align(
+                            alignment: Alignment.centerLeft,
+                            child: NotProficientBadge(),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
                       if (attunable) ...[
                         _ToggleAttunedLink(
                           attuned: item.isAttuned,
@@ -261,6 +284,21 @@ class _ItemInfoPanelContent extends StatelessWidget {
                   ),
                 ),
               ),
+              if (notProficient)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    0,
+                  ),
+                  child: InfoBanner(
+                    icon: Icons.warning_amber_rounded,
+                    message: ArmorProficiencyRules.isShield(item)
+                        ? l10n.inventoryNotProficientShieldBanner
+                        : l10n.inventoryNotProficientArmorBanner,
+                  ),
+                ),
               if (usable)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(

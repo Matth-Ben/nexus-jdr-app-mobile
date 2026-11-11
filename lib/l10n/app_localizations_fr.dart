@@ -4264,4 +4264,29 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get spellFilterNoMatchResetButton => 'Réinitialiser les filtres';
+
+  @override
+  String get characterInventoryItemCardNotProficientBadge => 'Non maîtrisé';
+
+  @override
+  String get characterInventoryItemCardNotProficientSemantics =>
+      'non maîtrisé : désavantage aux tests, sauvegardes et attaques de Force ou Dextérité, sorts impossibles';
+
+  @override
+  String get inventoryNotProficientArmorBanner =>
+      'Armure non maîtrisée : désavantage aux tests, sauvegardes et attaques de Force/Dextérité ; sorts impossibles.';
+
+  @override
+  String get inventoryNotProficientShieldBanner =>
+      'Bouclier non maîtrisé : désavantage aux tests, sauvegardes et attaques de Force/Dextérité ; sorts impossibles.';
+
+  @override
+  String characterDetailItemEquippedMessage(String item) {
+    return 'Équipé : $item.';
+  }
+
+  @override
+  String characterDetailItemUnequippedMessage(String item) {
+    return 'Déséquipé : $item.';
+  }
 }

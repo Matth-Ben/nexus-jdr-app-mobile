@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
 import '../../../../core/widgets/dashed_border_painter.dart';
 import '../../../../core/widgets/dice_type_badge.dart';
+import '../../../../core/widgets/not_proficient_badge.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/dice_notation_parser.dart';
@@ -24,9 +25,19 @@ import '../../domain/weight_formatter.dart';
 /// l'onglet, `character_inventory_tab_body.dart`) sans changer le rendu au
 /// repos, même convention que `_SpellRow`/`_FeatureRow` côté sorts/aptitudes.
 class CharacterInventoryItemCard extends StatelessWidget {
-  const CharacterInventoryItemCard({required this.item, this.onTap, super.key});
+  const CharacterInventoryItemCard({
+    required this.item,
+    this.onTap,
+    this.notProficient = false,
+    super.key,
+  });
 
   final CharacterInventoryItem item;
+
+  /// `true` pour une armure ou un bouclier que le personnage ne maîtrise pas
+  /// (`domain/armor_proficiency_rules.dart`, P10/F16) : pastille
+  /// [NotProficientBadge] à côté du nom, équipé ou non. Purement informatif.
+  final bool notProficient;
 
   final VoidCallback? onTap;
 
@@ -39,6 +50,10 @@ class CharacterInventoryItemCard extends StatelessWidget {
     // Police très agrandie : poids / badge « ÉQUIPÉ » sous le nom plutôt qu'à
     // sa droite, où ils écraseraient la colonne du nom (V3-1).
     final stacked = MediaQuery.textScalerOf(context).scale(14) / 14 >= 1.5;
+    final subtitle = l10n.characterInventoryItemCardSubtitle(
+      InventoryCategoryRules.labelFor(item.category),
+      item.quantity,
+    );
 
     return Material(
       color: Colors.transparent,
@@ -98,13 +113,17 @@ class CharacterInventoryItemCard extends StatelessWidget {
                             sides: dice.sides,
                             label: '${dice.count}d${dice.sides}',
                           ),
+                        if (notProficient) const NotProficientBadge(),
                       ],
                     ),
                     Text(
-                      l10n.characterInventoryItemCardSubtitle(
-                        InventoryCategoryRules.labelFor(item.category),
-                        item.quantity,
-                      ),
+                      subtitle,
+                      // La pastille est exclue de la sémantique : son sens
+                      // complet est lu avec la ligne.
+                      semanticsLabel: notProficient
+                          ? '$subtitle, '
+                                '${l10n.characterInventoryItemCardNotProficientSemantics}'
+                          : null,
                       style: AppTypography.body(
                         fontSize: 12,
                         color: AppColors.textMuted,
