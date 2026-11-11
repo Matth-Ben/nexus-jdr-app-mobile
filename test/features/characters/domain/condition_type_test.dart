@@ -49,6 +49,10 @@ void main() {
       const raw = ['blinded', 'futur_a', 'futur_a', 'futur_b', 3];
       expect(ConditionType.unknownKeys(raw), ['futur_a', 'futur_b']);
       expect(ConditionType.unknownKeys(null), isEmpty);
+      // D195 (c) : non-liste ou éléments non textuels : jamais d'exception.
+      expect(ConditionType.unknownKeys('futur'), isEmpty);
+      expect(ConditionType.unknownKeys({'futur': true}), isEmpty);
+      expect(ConditionType.unknownKeys([1, null, true]), isEmpty);
       expect(
         ConditionType.toStorage(const [
           ConditionType.prone,
