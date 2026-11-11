@@ -1719,12 +1719,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get diceRollSheetCriticalSuccess => 'RÉUSSITE CRITIQUE';
-
-  @override
-  String get diceRollSheetCriticalFailure => 'ÉCHEC CRITIQUE';
-
-  @override
   String get diceRollSheetRerollButton => 'Relancer';
 
   @override
@@ -4289,4 +4283,86 @@ class AppLocalizationsFr extends AppLocalizations {
   String characterDetailItemUnequippedMessage(String item) {
     return 'Déséquipé : $item.';
   }
+
+  @override
+  String get diceRollSheetNatural20 => '20 NATUREL';
+
+  @override
+  String get diceRollSheetNatural1 => '1 NATUREL';
+
+  @override
+  String get diceRollModeGroupLabel => 'Mode du jet';
+
+  @override
+  String get diceRollModeNormal => 'Normal';
+
+  @override
+  String get diceRollModeAdvantage => 'Avantage';
+
+  @override
+  String get diceRollModeDisadvantage => 'Désavantage';
+
+  @override
+  String diceRollResultMode(String mode) {
+    return 'Jet en mode $mode';
+  }
+
+  @override
+  String diceRollDetailLead(String mode) {
+    return '$mode :';
+  }
+
+  @override
+  String get diceRollDetailAnd => 'et';
+
+  @override
+  String get diceRollDiscarded => 'écarté';
+
+  @override
+  String diceRollDetailTail(int kept, String modifier, int total) {
+    return '→ $kept $modifier = $total';
+  }
+
+  @override
+  String diceRollSemanticsResult(int kept, String modifier, int total) {
+    return 'Résultat : d20 $kept, $modifier, total $total';
+  }
+
+  @override
+  String diceRollSemanticsModifierPlus(int value) {
+    return 'plus $value';
+  }
+
+  @override
+  String diceRollSemanticsModifierMinus(int value) {
+    return 'moins $value';
+  }
+
+  @override
+  String diceRollSemanticsDice(
+    String mode,
+    int first,
+    int second,
+    int discarded,
+  ) {
+    return '$mode, dés $first et $second, $discarded écarté';
+  }
+
+  @override
+  String get characterSavingThrowLabelStr => 'Sauvegarde de Force';
+
+  @override
+  String get characterSavingThrowLabelDex => 'Sauvegarde de Dextérité';
+
+  @override
+  String get characterSavingThrowLabelCon => 'Sauvegarde de Constitution';
+
+  @override
+  String get characterSavingThrowLabelInt => 'Sauvegarde d\'Intelligence';
+
+  @override
+  String get characterSavingThrowLabelWis => 'Sauvegarde de Sagesse';
+
+  @override
+  String get characterSavingThrowLabelCha => 'Sauvegarde de Charisme';
 }

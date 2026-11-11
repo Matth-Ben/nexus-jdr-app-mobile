@@ -1702,12 +1702,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get diceRollSheetCriticalSuccess => 'CRITICAL SUCCESS';
-
-  @override
-  String get diceRollSheetCriticalFailure => 'CRITICAL FAILURE';
-
-  @override
   String get diceRollSheetRerollButton => 'Reroll';
 
   @override
@@ -4251,4 +4245,86 @@ class AppLocalizationsEn extends AppLocalizations {
   String characterDetailItemUnequippedMessage(String item) {
     return 'Unequipped: $item.';
   }
+
+  @override
+  String get diceRollSheetNatural20 => '20 NATURAL';
+
+  @override
+  String get diceRollSheetNatural1 => '1 NATURAL';
+
+  @override
+  String get diceRollModeGroupLabel => 'Roll mode';
+
+  @override
+  String get diceRollModeNormal => 'Normal';
+
+  @override
+  String get diceRollModeAdvantage => 'Advantage';
+
+  @override
+  String get diceRollModeDisadvantage => 'Disadvantage';
+
+  @override
+  String diceRollResultMode(String mode) {
+    return 'Roll mode: $mode';
+  }
+
+  @override
+  String diceRollDetailLead(String mode) {
+    return '$mode:';
+  }
+
+  @override
+  String get diceRollDetailAnd => 'and';
+
+  @override
+  String get diceRollDiscarded => 'discarded';
+
+  @override
+  String diceRollDetailTail(int kept, String modifier, int total) {
+    return '→ $kept $modifier = $total';
+  }
+
+  @override
+  String diceRollSemanticsResult(int kept, String modifier, int total) {
+    return 'Result: d20 $kept, $modifier, total $total';
+  }
+
+  @override
+  String diceRollSemanticsModifierPlus(int value) {
+    return 'plus $value';
+  }
+
+  @override
+  String diceRollSemanticsModifierMinus(int value) {
+    return 'minus $value';
+  }
+
+  @override
+  String diceRollSemanticsDice(
+    String mode,
+    int first,
+    int second,
+    int discarded,
+  ) {
+    return '$mode, dice $first and $second, $discarded discarded';
+  }
+
+  @override
+  String get characterSavingThrowLabelStr => 'Strength saving throw';
+
+  @override
+  String get characterSavingThrowLabelDex => 'Dexterity saving throw';
+
+  @override
+  String get characterSavingThrowLabelCon => 'Constitution saving throw';
+
+  @override
+  String get characterSavingThrowLabelInt => 'Intelligence saving throw';
+
+  @override
+  String get characterSavingThrowLabelWis => 'Wisdom saving throw';
+
+  @override
+  String get characterSavingThrowLabelCha => 'Charisma saving throw';
 }

@@ -525,8 +525,6 @@
   "restSheetRemainingToAllocateLabel": "Remaining to distribute: {remaining}",
 
   "diceRollSheetFormula": "d20 ({roll}) {modifier} = {total}",
-  "diceRollSheetCriticalSuccess": "CRITICAL SUCCESS",
-  "diceRollSheetCriticalFailure": "CRITICAL FAILURE",
   "diceRollSheetRerollButton": "Reroll",
 
   "armorClassBonusSheetTitle": "AC Adjustment",
@@ -1330,5 +1328,27 @@
   "inventoryNotProficientArmorBanner": "Not proficient with this armor: disadvantage on Strength/Dexterity checks, saves and attacks; can't cast spells.",
   "inventoryNotProficientShieldBanner": "Not proficient with this shield: disadvantage on Strength/Dexterity checks, saves and attacks; can't cast spells.",
   "characterDetailItemEquippedMessage": "Equipped: {item}.",
-  "characterDetailItemUnequippedMessage": "Unequipped: {item}."
+  "characterDetailItemUnequippedMessage": "Unequipped: {item}.",
+
+  "diceRollSheetNatural20": "20 NATURAL",
+  "diceRollSheetNatural1": "1 NATURAL",
+  "diceRollModeGroupLabel": "Roll mode",
+  "diceRollModeNormal": "Normal",
+  "diceRollModeAdvantage": "Advantage",
+  "diceRollModeDisadvantage": "Disadvantage",
+  "diceRollResultMode": "Roll mode: {mode}",
+  "diceRollDetailLead": "{mode}:",
+  "diceRollDetailAnd": "and",
+  "diceRollDiscarded": "discarded",
+  "diceRollDetailTail": "→ {kept} {modifier} = {total}",
+  "diceRollSemanticsResult": "Result: d20 {kept}, {modifier}, total {total}",
+  "diceRollSemanticsModifierPlus": "plus {value}",
+  "diceRollSemanticsModifierMinus": "minus {value}",
+  "diceRollSemanticsDice": "{mode}, dice {first} and {second}, {discarded} discarded",
+  "characterSavingThrowLabelStr": "Strength saving throw",
+  "characterSavingThrowLabelDex": "Dexterity saving throw",
+  "characterSavingThrowLabelCon": "Constitution saving throw",
+  "characterSavingThrowLabelInt": "Intelligence saving throw",
+  "characterSavingThrowLabelWis": "Wisdom saving throw",
+  "characterSavingThrowLabelCha": "Charisma saving throw"
 }
