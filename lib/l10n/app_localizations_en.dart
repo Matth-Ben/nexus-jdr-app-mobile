@@ -363,7 +363,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileFaqAnswer2 =>
-      'Your GM sends you an invitation link from the Histoires app. On Android, open that link on your phone: Nexus JDR opens on the invitation and you choose the character to attach. There is no manual code entry in the app yet, and opening the link in the app is not yet available on iPhone/iPad.';
+      'Your GM sends you an invitation link from the Histoires app. On Android, open that link on your phone: Nexus JDR opens on the invitation (sign in first if needed, you then land back on it). The app shows you the story\'s name and the GM\'s name; by joining, your character becomes visible to the GM in read-only mode, and you can leave the story at any time from its sheet. You then pick the character to attach, or create a new one. The app does not send an invitation notification and does not offer manual code entry for now; opening the link in the app is not yet available on iPhone/iPad.';
 
   @override
   String get profileFaqQuestion3 => 'Are my characters saved offline?';
