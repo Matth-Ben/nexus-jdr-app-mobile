@@ -53,6 +53,13 @@ class SyncStatusBanner extends ConsumerWidget {
               (state.moreAlerts > 0
                   ? l10n.syncAlertMoreSuffix(state.moreAlerts)
                   : ''),
+          // Le nom est tronqué à l'écran (V3-8), jamais pour un lecteur
+          // d'écran : la sémantique garde le nom complet.
+          semanticsMessage:
+              syncAlertMessage(l10n, state.alert!, truncateName: false) +
+              (state.moreAlerts > 0
+                  ? l10n.syncAlertMoreSuffix(state.moreAlerts)
+                  : ''),
           dismissTooltip: l10n.syncBannerDismissTooltip,
           onDismiss: () => _dismiss(ref, state.alert!),
         ),
@@ -118,18 +125,27 @@ class SyncStatusBanner extends ConsumerWidget {
 /// valeur appliquée celle de la file ; le nom du personnage est tronqué à
 /// l'affichage ([syncAlertNameMaxLength] graphèmes). Valeur absente, ancienne
 /// (persistée avant T8) ou mal formée : texte de repli, jamais d'exception.
-String syncAlertMessage(AppLocalizations l10n, SyncAlert alert) {
-  final name = alert.characterName.isEmpty
+///
+/// V3-8 : la troncature du nom s'applique à tous les types d'alerte (abandon
+/// compris) ; [truncateName] `false` rend le nom complet (sémantique).
+String syncAlertMessage(
+  AppLocalizations l10n,
+  SyncAlert alert, {
+  bool truncateName = true,
+}) {
+  final fullName = alert.characterName.isEmpty
       ? l10n.syncAlertUnknownCharacter
       : alert.characterName;
+  final name = truncateName
+      ? truncateForAlert(fullName, syncAlertNameMaxLength)
+      : fullName;
   final value = alert.serverValue;
   int? intOf(String key) => (value?[key] as num?)?.toInt();
 
   switch (alert.kind) {
     case SyncAlertKind.conflict:
-      final shortName = truncateForAlert(name, syncAlertNameMaxLength);
       try {
-        final text = _conflictMessage(l10n, alert, shortName);
+        final text = _conflictMessage(l10n, alert, name);
         if (text != null) return text;
       } catch (_) {
         // Valeur persistée inattendue : repli ci-dessous.

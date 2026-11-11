@@ -64,19 +64,30 @@ class ConditionsZone extends StatelessWidget {
       label: l10n.conditionsZoneSemanticsLabel(
         sorted.map((c) => c.label(l10n)).join(', '),
       ),
-      child: Wrap(
-        spacing: AppSpacing.xs,
-        runSpacing: AppSpacing.xs,
-        crossAxisAlignment: WrapCrossAlignment.center,
+      // Le bouton d'édition vit hors de la `Wrap` (V3-4) : dedans, il tombait
+      // seul sur une 2e ligne quand les pastilles remplissaient la 1re
+      // (3 pastilles à 411 dp). En `Row`, il reste en fin de 1re ligne et les
+      // pastilles passent à la ligne dans la largeur restante.
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final condition in visible)
-            ConditionChip(
-              condition: condition,
-              compact: compact,
-              onTap: onEdit,
+          Expanded(
+            child: Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                for (final condition in visible)
+                  ConditionChip(
+                    condition: condition,
+                    compact: compact,
+                    onTap: onEdit,
+                  ),
+                if (hidden.isNotEmpty)
+                  _MoreChip(hidden: hidden, compact: compact, onTap: onEdit),
+              ],
             ),
-          if (hidden.isNotEmpty)
-            _MoreChip(hidden: hidden, compact: compact, onTap: onEdit),
+          ),
           if (editable) _EditConditionsButton(onPressed: onEdit!),
         ],
       ),

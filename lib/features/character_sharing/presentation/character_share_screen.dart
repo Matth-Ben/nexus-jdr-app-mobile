@@ -13,6 +13,7 @@ import '../../../core/widgets/menu_tile.dart';
 import '../../../core/widgets/portrait_frame.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../characters/domain/character_detail.dart';
 import '../../characters/domain/character_failure.dart';
 import '../../characters/domain/character_identity_formatter.dart';
@@ -93,13 +94,17 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
           .regenerateShareToken(widget.characterId);
       await _refreshDetail();
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       _showSnackBar(
-        wasActive ? 'Lien de partage régénéré.' : 'Partage activé.',
+        wasActive
+            ? l10n.characterShareRegeneratedMessage
+            : l10n.characterShareEnabledMessage,
       );
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
-      _showSnackBar('Une erreur est survenue. Réessayez.');
+      if (!mounted) return;
+      _showSnackBar(AppLocalizations.of(context)!.characterShareGenericError);
     } finally {
       if (mounted) setState(() => _isBusy = false);
     }
@@ -108,37 +113,37 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
   Future<void> _confirmDisable() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        // Titre et contenu en police corps qui grandit librement (D192 PR 3) :
-        // le dialogue défile plutôt que de déborder à x3,0.
-        scrollable: true,
-        backgroundColor: AppColors.parchmentCard,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          side: const BorderSide(
-            color: AppColors.woodLight,
-            width: AppBorders.card,
-          ),
-        ),
-        title: const Text('Désactiver le partage ?'),
-        content: const Text(
-          'Le lien actuel cessera immédiatement de fonctionner. Tu pourras '
-          'en générer un nouveau plus tard.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(
-              'Désactiver',
-              style: TextStyle(color: AppColors.accentBrick),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return AlertDialog(
+          // Titre et contenu en police corps qui grandit librement (D192 PR 3) :
+          // le dialogue défile plutôt que de déborder à x3,0.
+          scrollable: true,
+          backgroundColor: AppColors.parchmentCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            side: const BorderSide(
+              color: AppColors.woodLight,
+              width: AppBorders.card,
             ),
           ),
-        ],
-      ),
+          title: Text(l10n.characterShareDisableDialogTitle),
+          content: Text(l10n.characterShareDisableWarning),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.characterShareDisableDialogCancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(
+                l10n.characterShareDisableDialogConfirm,
+                style: const TextStyle(color: AppColors.accentBrick),
+              ),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed != true) return;
     await _disable();
@@ -152,11 +157,14 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
           .disableShareToken(widget.characterId);
       await _refreshDetail();
       if (!mounted) return;
-      _showSnackBar('Partage désactivé.');
+      _showSnackBar(
+        AppLocalizations.of(context)!.characterShareDisabledMessage,
+      );
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
-      _showSnackBar('Une erreur est survenue. Réessayez.');
+      if (!mounted) return;
+      _showSnackBar(AppLocalizations.of(context)!.characterShareGenericError);
     } finally {
       if (mounted) setState(() => _isBusy = false);
     }
@@ -164,20 +172,27 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
 
   Future<void> _copyLink(String token) async {
     await Clipboard.setData(ClipboardData(text: _linkFor(token)));
-    _showSnackBar('Lien copié.');
+    if (!mounted) return;
+    _showSnackBar(
+      AppLocalizations.of(context)!.characterShareLinkCopiedMessage,
+    );
   }
 
   static String _linkFor(String token) => 'https://$_shareLinkDomain/p/$token';
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final detailAsync = ref.watch(characterDetailProvider(widget.characterId));
 
     return Scaffold(
       backgroundColor: AppColors.parchmentBg,
       body: Column(
         children: [
-          WoodBackHeader(title: 'PARTAGER LE PERSONNAGE', onBack: _goBack),
+          WoodBackHeader(
+            title: l10n.characterShareScreenTitle,
+            onBack: _goBack,
+          ),
           Expanded(
             child: detailAsync.when(
               data: _buildContent,
@@ -187,7 +202,7 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
               error: (error, stackTrace) => _ErrorState(
                 message: error is CharacterFailure
                     ? error.message
-                    : 'Impossible de charger ce personnage. Réessayez.',
+                    : l10n.characterShareLoadError,
                 onRetry: () =>
                     ref.invalidate(characterDetailProvider(widget.characterId)),
               ),
@@ -199,6 +214,7 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
   }
 
   Widget _buildContent(CharacterDetail detail) {
+    final l10n = AppLocalizations.of(context)!;
     final token = detail.shareToken;
     final isActive = token != null && token.isNotEmpty;
 
@@ -210,8 +226,7 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
           _IdentityCard(detail: detail),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Génère un lien pour montrer cette fiche en lecture seule à un '
-            "ami ou à ton MJ, sans qu'il ait besoin d'un compte Nexus JDR.",
+            l10n.characterShareIntro,
             style: AppTypography.body(
               fontSize: 13,
               color: AppColors.textSecondary,
@@ -219,10 +234,10 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           if (isActive) ...[
-            const InfoBanner.success(message: 'Partage actif'),
+            InfoBanner.success(message: l10n.characterShareActiveBanner),
             const SizedBox(height: AppSpacing.md),
             DisplayText(
-              'LIEN DE PARTAGE',
+              l10n.characterShareLinkLabel,
               style: AppTypography.display(
                 fontSize: 11,
                 color: AppColors.textSecondary,
@@ -235,13 +250,13 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
                 const SizedBox(width: AppSpacing.sm),
                 _CopyLinkButton(
                   onCopy: _isBusy ? null : () => _copyLink(token),
+                  tooltip: l10n.characterShareCopyTooltip,
                 ),
               ],
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Quiconque possède ce lien peut consulter la fiche tant que le '
-              'partage reste actif.',
+              l10n.characterShareLinkNotice,
               style: AppTypography.body(
                 fontSize: 12,
                 color: AppColors.textMuted,
@@ -250,14 +265,14 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
             const SizedBox(height: AppSpacing.md),
             MenuTile(
               icon: Icons.refresh,
-              label: 'Régénérer le lien',
+              label: l10n.characterShareRegenerateLabel,
               onTap: _isBusy ? () {} : _regenerate,
             ),
             const SizedBox(height: AppSpacing.lg),
             Container(height: 1, color: AppColors.gaugeTrack),
             const SizedBox(height: AppSpacing.lg),
             DisplayText(
-              'ZONE DANGEREUSE',
+              l10n.characterShareDangerZone,
               style: AppTypography.display(
                 fontSize: 11,
                 color: AppColors.accentBrick,
@@ -265,14 +280,13 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
             ),
             const SizedBox(height: AppSpacing.sm),
             DestructiveButton(
-              label: 'Désactiver le partage',
+              label: l10n.characterShareDisableButton,
               icon: Icons.block,
               onPressed: _isBusy ? null : _confirmDisable,
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Le lien actuel cessera immédiatement de fonctionner. Tu '
-              'pourras en générer un nouveau plus tard.',
+              l10n.characterShareDisableWarning,
               style: AppTypography.body(
                 fontSize: 12,
                 color: AppColors.textMuted,
@@ -280,7 +294,7 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
             ),
           ] else ...[
             PrimaryButton(
-              label: 'Activer le partage',
+              label: l10n.characterShareEnableButton,
               isLoading: _isBusy,
               onPressed: _isBusy ? null : _regenerate,
             ),
@@ -377,9 +391,10 @@ class _ShareLinkField extends StatelessWidget {
 /// `AppColors.primaryButtonGradient`, icône `Icons.copy_outlined` blanche —
 /// auparavant un `IconButton` transparent intégré à `_ShareLinkField`.
 class _CopyLinkButton extends StatelessWidget {
-  const _CopyLinkButton({required this.onCopy});
+  const _CopyLinkButton({required this.onCopy, required this.tooltip});
 
   final VoidCallback? onCopy;
+  final String tooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -398,13 +413,13 @@ class _CopyLinkButton extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.md),
             onTap: onCopy,
-            child: const SizedBox(
+            child: SizedBox(
               width: 48,
               height: 48,
               child: Center(
                 child: Tooltip(
-                  message: 'Copier le lien',
-                  child: Icon(Icons.copy_outlined, color: Colors.white),
+                  message: tooltip,
+                  child: const Icon(Icons.copy_outlined, color: Colors.white),
                 ),
               ),
             ),
@@ -423,6 +438,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -441,7 +457,10 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            TextButton(onPressed: onRetry, child: const Text('Réessayer')),
+            TextButton(
+              onPressed: onRetry,
+              child: Text(l10n.characterShareRetryButton),
+            ),
           ],
         ),
       ),

@@ -208,6 +208,51 @@ void main() {
     });
   });
 
+  // V3-4 : le crayon d'édition ne doit jamais tomber seul sur une 2e ligne
+  // (3 pastilles à 411 dp) ; il reste aligné en fin de 1re ligne, cible 44.
+  group('V3-4 : bouton d’édition en fin de 1re ligne', () {
+    for (final entry in {
+      'x1,0 sur 411 dp': (1.0, 411.0),
+      'x1,3 sur 411 dp': (1.3, 411.0),
+      'x2,0 sur 320 dp': (2.0, 320.0),
+    }.entries) {
+      testWidgets('3 pastilles, ${entry.key}', (tester) async {
+        final (scale, width) = entry.value;
+        await _pump(
+          tester,
+          ConditionsZone(
+            conditions: const [
+              ConditionType.blinded,
+              ConditionType.poisoned,
+              ConditionType.prone,
+            ],
+            onEdit: () {},
+          ),
+          scale: scale,
+          surface: Size(width, 800),
+        );
+        expect(tester.takeException(), isNull);
+        final zone = tester.getRect(find.byType(ConditionsZone));
+        final edit = tester.getRect(find.byType(IconButton));
+        expect(edit.width, greaterThanOrEqualTo(44));
+        expect(edit.height, greaterThanOrEqualTo(44));
+        // 1re ligne : le bouton est en haut de la zone, collé à droite.
+        expect(edit.top, zone.top);
+        expect(edit.right, zone.right);
+        // Aucune pastille ne passe sous le bord gauche du bouton sur sa ligne.
+        for (final r
+            in find
+                .byType(ConditionChip)
+                .evaluate()
+                .map((e) => tester.getRect(find.byWidget(e.widget)))) {
+          if (r.top < edit.bottom) {
+            expect(r.right, lessThanOrEqualTo(edit.left));
+          }
+        }
+      });
+    }
+  });
+
   group('T8 : police x2,0 sur 360 dp', () {
     testWidgets('les 14 pastilles ne débordent pas, aucun texte sous 11 px', (
       tester,

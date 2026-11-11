@@ -725,7 +725,7 @@ abstract class AppLocalizations {
   /// Réponse 2 de `profile_faq_screen.dart`.
   ///
   /// In fr, this message translates to:
-  /// **'Ton MJ t\'envoie un lien d\'invitation depuis l\'app « Histoires ». Sur Android, ouvre ce lien sur ton téléphone : Nexus JDR s\'ouvre sur l\'invitation et tu choisis le personnage à rattacher. Il n\'y a pas encore de saisie manuelle du code dans l\'app, et l\'ouverture du lien dans l\'app n\'est pas encore disponible sur iPhone/iPad.'**
+  /// **'Ton MJ t\'envoie un lien d\'invitation depuis l\'app « Histoires ». Sur Android, ouvre ce lien sur ton téléphone : Nexus JDR s\'ouvre sur l\'invitation (connecte-toi d\'abord si besoin, tu y reviens ensuite). L\'app te montre le nom de l\'histoire et celui du MJ ; en rejoignant, ton personnage devient visible par le MJ en lecture seule, et tu pourras quitter l\'histoire à tout moment depuis sa fiche. Tu choisis ensuite le personnage à rattacher, ou tu en crées un nouveau. L\'app n\'envoie pas de notification d\'invitation et ne propose pas, pour l\'instant, de saisir le code à la main ; l\'ouverture du lien dans l\'app n\'est pas encore disponible sur iPhone/iPad.'**
   String get profileFaqAnswer2;
 
   /// Question 3 de `profile_faq_screen.dart` (`_faqItems`, id 3).
@@ -7072,6 +7072,132 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Impossible d\'effectuer le repos. Réessayez.'**
   String get characterDetailRestFailedMessage;
+
+  /// Titre du bandeau bois de `character_share_screen.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'PARTAGER LE PERSONNAGE'**
+  String get characterShareScreenTitle;
+
+  /// Texte d'introduction de `character_share_screen.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Génère un lien pour montrer cette fiche en lecture seule à un ami ou à ton MJ, sans qu\'il ait besoin d\'un compte Nexus JDR.'**
+  String get characterShareIntro;
+
+  /// Bandeau de succès affiché quand un lien de partage est actif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partage actif'**
+  String get characterShareActiveBanner;
+
+  /// Étiquette (DisplayText) au-dessus du lien de partage.
+  ///
+  /// In fr, this message translates to:
+  /// **'LIEN DE PARTAGE'**
+  String get characterShareLinkLabel;
+
+  /// Infobulle/sémantique du bouton carré de copie du lien.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copier le lien'**
+  String get characterShareCopyTooltip;
+
+  /// Mise en garde sous le lien de partage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quiconque possède ce lien peut consulter la fiche tant que le partage reste actif.'**
+  String get characterShareLinkNotice;
+
+  /// Libellé de la ligne de menu qui régénère le lien.
+  ///
+  /// In fr, this message translates to:
+  /// **'Régénérer le lien'**
+  String get characterShareRegenerateLabel;
+
+  /// Étiquette de la zone dangereuse (désactivation du partage).
+  ///
+  /// In fr, this message translates to:
+  /// **'ZONE DANGEREUSE'**
+  String get characterShareDangerZone;
+
+  /// Bouton destructif de désactivation ; le widget le met en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactiver le partage'**
+  String get characterShareDisableButton;
+
+  /// Avertissement sous le bouton de désactivation et contenu du dialogue de confirmation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le lien actuel cessera immédiatement de fonctionner. Tu pourras en générer un nouveau plus tard.'**
+  String get characterShareDisableWarning;
+
+  /// Bouton primaire d'activation ; le widget le met en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'Activer le partage'**
+  String get characterShareEnableButton;
+
+  /// Titre du dialogue de confirmation de désactivation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactiver le partage ?'**
+  String get characterShareDisableDialogTitle;
+
+  /// Bouton d'annulation du dialogue de désactivation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get characterShareDisableDialogCancel;
+
+  /// Bouton de confirmation du dialogue de désactivation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactiver'**
+  String get characterShareDisableDialogConfirm;
+
+  /// SnackBar après la première activation du partage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partage activé.'**
+  String get characterShareEnabledMessage;
+
+  /// SnackBar après régénération d'un lien déjà actif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lien de partage régénéré.'**
+  String get characterShareRegeneratedMessage;
+
+  /// SnackBar après désactivation du partage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partage désactivé.'**
+  String get characterShareDisabledMessage;
+
+  /// SnackBar après copie du lien dans le presse-papiers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lien copié.'**
+  String get characterShareLinkCopiedMessage;
+
+  /// SnackBar d'erreur inattendue (activation/régénération/désactivation).
+  ///
+  /// In fr, this message translates to:
+  /// **'Une erreur est survenue. Réessayez.'**
+  String get characterShareGenericError;
+
+  /// Message de l'état d'erreur de chargement de `character_share_screen.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger ce personnage. Réessayez.'**
+  String get characterShareLoadError;
+
+  /// Bouton de relance de l'état d'erreur de `character_share_screen.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get characterShareRetryButton;
 }
 
 class _AppLocalizationsDelegate

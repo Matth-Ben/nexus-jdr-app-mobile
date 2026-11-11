@@ -364,7 +364,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileFaqAnswer2 =>
-      'Ton MJ t\'envoie un lien d\'invitation depuis l\'app « Histoires ». Sur Android, ouvre ce lien sur ton téléphone : Nexus JDR s\'ouvre sur l\'invitation et tu choisis le personnage à rattacher. Il n\'y a pas encore de saisie manuelle du code dans l\'app, et l\'ouverture du lien dans l\'app n\'est pas encore disponible sur iPhone/iPad.';
+      'Ton MJ t\'envoie un lien d\'invitation depuis l\'app « Histoires ». Sur Android, ouvre ce lien sur ton téléphone : Nexus JDR s\'ouvre sur l\'invitation (connecte-toi d\'abord si besoin, tu y reviens ensuite). L\'app te montre le nom de l\'histoire et celui du MJ ; en rejoignant, ton personnage devient visible par le MJ en lecture seule, et tu pourras quitter l\'histoire à tout moment depuis sa fiche. Tu choisis ensuite le personnage à rattacher, ou tu en crées un nouveau. L\'app n\'envoie pas de notification d\'invitation et ne propose pas, pour l\'instant, de saisir le code à la main ; l\'ouverture du lien dans l\'app n\'est pas encore disponible sur iPhone/iPad.';
 
   @override
   String get profileFaqQuestion3 =>
@@ -4410,4 +4410,72 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get characterDetailRestFailedMessage =>
       'Impossible d\'effectuer le repos. Réessayez.';
+
+  @override
+  String get characterShareScreenTitle => 'PARTAGER LE PERSONNAGE';
+
+  @override
+  String get characterShareIntro =>
+      'Génère un lien pour montrer cette fiche en lecture seule à un ami ou à ton MJ, sans qu\'il ait besoin d\'un compte Nexus JDR.';
+
+  @override
+  String get characterShareActiveBanner => 'Partage actif';
+
+  @override
+  String get characterShareLinkLabel => 'LIEN DE PARTAGE';
+
+  @override
+  String get characterShareCopyTooltip => 'Copier le lien';
+
+  @override
+  String get characterShareLinkNotice =>
+      'Quiconque possède ce lien peut consulter la fiche tant que le partage reste actif.';
+
+  @override
+  String get characterShareRegenerateLabel => 'Régénérer le lien';
+
+  @override
+  String get characterShareDangerZone => 'ZONE DANGEREUSE';
+
+  @override
+  String get characterShareDisableButton => 'Désactiver le partage';
+
+  @override
+  String get characterShareDisableWarning =>
+      'Le lien actuel cessera immédiatement de fonctionner. Tu pourras en générer un nouveau plus tard.';
+
+  @override
+  String get characterShareEnableButton => 'Activer le partage';
+
+  @override
+  String get characterShareDisableDialogTitle => 'Désactiver le partage ?';
+
+  @override
+  String get characterShareDisableDialogCancel => 'Annuler';
+
+  @override
+  String get characterShareDisableDialogConfirm => 'Désactiver';
+
+  @override
+  String get characterShareEnabledMessage => 'Partage activé.';
+
+  @override
+  String get characterShareRegeneratedMessage => 'Lien de partage régénéré.';
+
+  @override
+  String get characterShareDisabledMessage => 'Partage désactivé.';
+
+  @override
+  String get characterShareLinkCopiedMessage => 'Lien copié.';
+
+  @override
+  String get characterShareGenericError =>
+      'Une erreur est survenue. Réessayez.';
+
+  @override
+  String get characterShareLoadError =>
+      'Impossible de charger ce personnage. Réessayez.';
+
+  @override
+  String get characterShareRetryButton => 'Réessayer';
 }

@@ -363,7 +363,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileFaqAnswer2 =>
-      'Your GM sends you an invitation link from the Histoires app. On Android, open that link on your phone: Nexus JDR opens on the invitation and you choose the character to attach. There is no manual code entry in the app yet, and opening the link in the app is not yet available on iPhone/iPad.';
+      'Your GM sends you an invitation link from the Histoires app. On Android, open that link on your phone: Nexus JDR opens on the invitation (sign in first if needed, you then land back on it). The app shows you the story\'s name and the GM\'s name; by joining, your character becomes visible to the GM in read-only mode, and you can leave the story at any time from its sheet. You then pick the character to attach, or create a new one. The app does not send an invitation notification and does not offer manual code entry for now; opening the link in the app is not yet available on iPhone/iPad.';
 
   @override
   String get profileFaqQuestion3 => 'Are my characters saved offline?';
@@ -4372,4 +4372,72 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get characterDetailRestFailedMessage =>
       'Unable to complete the rest. Please try again.';
+
+  @override
+  String get characterShareScreenTitle => 'SHARE CHARACTER';
+
+  @override
+  String get characterShareIntro =>
+      'Generate a link to show this sheet read-only to a friend or your GM, without them needing a Nexus JDR account.';
+
+  @override
+  String get characterShareActiveBanner => 'Sharing is on';
+
+  @override
+  String get characterShareLinkLabel => 'SHARE LINK';
+
+  @override
+  String get characterShareCopyTooltip => 'Copy link';
+
+  @override
+  String get characterShareLinkNotice =>
+      'Anyone with this link can view the sheet as long as sharing stays on.';
+
+  @override
+  String get characterShareRegenerateLabel => 'Regenerate link';
+
+  @override
+  String get characterShareDangerZone => 'DANGER ZONE';
+
+  @override
+  String get characterShareDisableButton => 'Turn off sharing';
+
+  @override
+  String get characterShareDisableWarning =>
+      'The current link will stop working immediately. You can generate a new one later.';
+
+  @override
+  String get characterShareEnableButton => 'Turn on sharing';
+
+  @override
+  String get characterShareDisableDialogTitle => 'Turn off sharing?';
+
+  @override
+  String get characterShareDisableDialogCancel => 'Cancel';
+
+  @override
+  String get characterShareDisableDialogConfirm => 'Turn off';
+
+  @override
+  String get characterShareEnabledMessage => 'Sharing turned on.';
+
+  @override
+  String get characterShareRegeneratedMessage => 'Share link regenerated.';
+
+  @override
+  String get characterShareDisabledMessage => 'Sharing turned off.';
+
+  @override
+  String get characterShareLinkCopiedMessage => 'Link copied.';
+
+  @override
+  String get characterShareGenericError =>
+      'Something went wrong. Please try again.';
+
+  @override
+  String get characterShareLoadError =>
+      'Unable to load this character. Please try again.';
+
+  @override
+  String get characterShareRetryButton => 'Try again';
 }
