@@ -76,7 +76,9 @@ String _$appVersionRepositoryHash() =>
 /// et retombe sur `AppVersionStatus.upToDate` avec la version installée
 /// recopiée dans les 3 champs — un statut "neutre" indiscernable d'un
 /// "vraiment à jour" pour les deux consommateurs, qui n'affichent jamais
-/// rien pour ce statut.
+/// rien pour ce statut. Une requête sans réponse après
+/// [appVersionCheckTimeout] est traitée de la même façon : cette vérification
+/// ne retarde jamais le premier écran au-delà de ce délai.
 
 @ProviderFor(appVersionCheck)
 final appVersionCheckProvider = AppVersionCheckProvider._();
@@ -100,7 +102,9 @@ final appVersionCheckProvider = AppVersionCheckProvider._();
 /// et retombe sur `AppVersionStatus.upToDate` avec la version installée
 /// recopiée dans les 3 champs — un statut "neutre" indiscernable d'un
 /// "vraiment à jour" pour les deux consommateurs, qui n'affichent jamais
-/// rien pour ce statut.
+/// rien pour ce statut. Une requête sans réponse après
+/// [appVersionCheckTimeout] est traitée de la même façon : cette vérification
+/// ne retarde jamais le premier écran au-delà de ce délai.
 
 final class AppVersionCheckProvider
     extends
@@ -131,7 +135,9 @@ final class AppVersionCheckProvider
   /// et retombe sur `AppVersionStatus.upToDate` avec la version installée
   /// recopiée dans les 3 champs — un statut "neutre" indiscernable d'un
   /// "vraiment à jour" pour les deux consommateurs, qui n'affichent jamais
-  /// rien pour ce statut.
+  /// rien pour ce statut. Une requête sans réponse après
+  /// [appVersionCheckTimeout] est traitée de la même façon : cette vérification
+  /// ne retarde jamais le premier écran au-delà de ce délai.
   AppVersionCheckProvider._()
     : super(
         from: null,
@@ -158,4 +164,4 @@ final class AppVersionCheckProvider
   }
 }
 
-String _$appVersionCheckHash() => r'4add93be68520738b1d85736f0e47796c5098e33';
+String _$appVersionCheckHash() => r'4b9ed60bf05ec7216f5b308e3f3c2edb8fe74131';

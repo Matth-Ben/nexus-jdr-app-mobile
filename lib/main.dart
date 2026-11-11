@@ -58,6 +58,23 @@ typedef BootstrapResult = ({
   bool postHogReady,
 });
 
+/// Délai maximal accordé à chaque étape d'un SDK **secondaire** (PostHog,
+/// Firebase Core/Analytics/Crashlytics) avant le premier écran.
+const Duration secondaryInitTimeout = Duration(seconds: 5);
+
+/// Borne [step] (appel de plateforme d'un SDK secondaire) à
+/// [secondaryInitTimeout] : une `TimeoutException` est levée au-delà, que le
+/// `catch` de [_initializeSupabaseAndFirebase] traite comme un échec de ce SDK
+/// (non disponible pour la session, jamais bloquant).
+///
+/// Ces appels (canaux natifs) n'ont aucun délai propre : s'ils ne répondent
+/// jamais (Play Services absent ou en cours de mise à jour, émulateur neuf),
+/// le `FutureBuilder` d'[AppBootstrap] garderait [SplashScreen] indéfiniment
+/// pour un SDK qui n'est pas nécessaire à l'usage hors ligne.
+@visibleForTesting
+Future<T> boundSecondaryInit<T>(Future<T> step) =>
+    step.timeout(secondaryInitTimeout);
+
 /// Initialise Supabase, PostHog puis, sur Android, Firebase (Core +
 /// Analytics + Crashlytics) — logique d'initialisation par défaut
 /// d'[AppBootstrap], extraite en fonction top-level pour rester substituable
@@ -175,10 +192,12 @@ Future<BootstrapResult> _initializeSupabaseAndFirebase() async {
   var postHogReady = false;
   if (EnvConfig.isPostHogConfigured) {
     try {
-      await Posthog().setup(
-        PostHogConfig(EnvConfig.postHogApiKey)
-          ..host = EnvConfig.postHogHost
-          ..optOut = !analyticsEnabled,
+      await boundSecondaryInit(
+        Posthog().setup(
+          PostHogConfig(EnvConfig.postHogApiKey)
+            ..host = EnvConfig.postHogHost
+            ..optOut = !analyticsEnabled,
+        ),
       );
       postHogReady = true;
     } catch (error, stackTrace) {
@@ -216,11 +235,13 @@ Future<BootstrapResult> _initializeSupabaseAndFirebase() async {
       !kIsWeb &&
       defaultTargetPlatform == TargetPlatform.android) {
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
+      await boundSecondaryInit(
+        Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
       );
-      await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(
-        analyticsEnabled,
+      await boundSecondaryInit(
+        FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(
+          analyticsEnabled,
+        ),
       );
       firebaseAnalyticsReady = true;
 
@@ -233,8 +254,10 @@ Future<BootstrapResult> _initializeSupabaseAndFirebase() async {
       // plus haut, mais piloté par le mode de build plutôt que par la
       // préférence utilisateur "Partager mes données d'usage" (un crash est
       // un défaut de l'app à corriger, pas une donnée d'usage).
-      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
-        !kDebugMode,
+      await boundSecondaryInit(
+        FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+          !kDebugMode,
+        ),
       );
 
       // Gestionnaires globaux (pattern standard documenté par le package) :

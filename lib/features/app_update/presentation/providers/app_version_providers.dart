@@ -9,6 +9,17 @@ import '../../domain/app_version_status.dart';
 
 part 'app_version_providers.g.dart';
 
+/// Délai maximal de la vérification de version au démarrage : au-delà, on
+/// laisse passer comme « à jour » plutôt que de garder le splash affiché.
+///
+/// Sans cette borne, le premier écran attend la fin de la requête
+/// `app_versions`, précédée d'un éventuel refresh du jeton expiré
+/// (`SupabaseClient._getAccessToken` -> `GoTrueClient.getSession`) : avec un
+/// réseau « connecté mais muet » (DNS en panne, portail captif), chacun est
+/// borné seulement par le délai global de 15 s de `TimeoutHttpClient` (D12),
+/// soit une trentaine de secondes de splash au démarrage à froid.
+const Duration appVersionCheckTimeout = Duration(seconds: 6);
+
 @Riverpod(keepAlive: true)
 AppVersionRepository appVersionRepository(Ref ref) {
   return SupabaseAppVersionRepository(ref.watch(supabaseClientProvider));
@@ -33,7 +44,9 @@ AppVersionRepository appVersionRepository(Ref ref) {
 /// et retombe sur `AppVersionStatus.upToDate` avec la version installée
 /// recopiée dans les 3 champs — un statut "neutre" indiscernable d'un
 /// "vraiment à jour" pour les deux consommateurs, qui n'affichent jamais
-/// rien pour ce statut.
+/// rien pour ce statut. Une requête sans réponse après
+/// [appVersionCheckTimeout] est traitée de la même façon : cette vérification
+/// ne retarde jamais le premier écran au-delà de ce délai.
 @Riverpod(keepAlive: true)
 Future<AppVersionCheckResult> appVersionCheck(Ref ref) async {
   final packageInfo = await ref.watch(packageInfoProvider.future);
@@ -42,7 +55,8 @@ Future<AppVersionCheckResult> appVersionCheck(Ref ref) async {
   try {
     final row = await ref
         .watch(appVersionRepositoryProvider)
-        .fetchCurrentPlatformVersion();
+        .fetchCurrentPlatformVersion()
+        .timeout(appVersionCheckTimeout);
 
     return AppVersionCheckResult(
       status: _resolveStatus(

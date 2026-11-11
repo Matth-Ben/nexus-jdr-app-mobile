@@ -9,6 +9,7 @@
 // pompe directement `NexusJdrApp` pour la même raison).
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -317,5 +318,81 @@ void main() {
       expect(find.byType(ForceUpdateScreen), findsNothing);
       expect(find.text('App prête'), findsOneWidget);
     });
+
+    // Constat A (campagne émulateur V4) : un démarrage à froid ne doit jamais
+    // garder le splash plus longtemps qu'un délai borné quand le réseau ne
+    // répond pas.
+    testWidgets('requête de version qui ne répond jamais (réseau muet) : '
+        'splash tant que le délai n\'est pas écoulé, puis `child` '
+        '(jamais bloqué)', (tester) async {
+      await pumpBootstrap(tester, repository: _NeverRespondingRepository());
+
+      expect(find.byType(SplashScreen), findsOneWidget);
+      expect(find.text('App prête'), findsNothing);
+
+      await tester.pump(appVersionCheckTimeout - const Duration(seconds: 1));
+      expect(find.byType(SplashScreen), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 2));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+
+      expect(find.byType(SplashScreen), findsNothing);
+      expect(find.text('App prête'), findsOneWidget);
+    });
+
+    testWidgets('hors ligne immédiat (SocketException) : `child` sans attendre '
+        'le délai', (tester) async {
+      await pumpBootstrap(
+        tester,
+        repository: _ThrowingRepository(
+          const SocketException('Failed host lookup'),
+        ),
+      );
+
+      expect(find.byType(SplashScreen), findsNothing);
+      expect(find.text('App prête'), findsOneWidget);
+    });
   });
+
+  group('boundSecondaryInit (SDK secondaires : PostHog, Firebase)', () {
+    testWidgets('un appel natif qui ne répond jamais lève TimeoutException '
+        'après le délai (le bootstrap ne reste pas sur le splash)', (
+      tester,
+    ) async {
+      Object? error;
+      unawaited(
+        boundSecondaryInit(Completer<void>().future)
+            .then<void>((_) {}, onError: (Object e) => error = e),
+      );
+
+      await tester.pump(secondaryInitTimeout - const Duration(seconds: 1));
+      expect(error, isNull);
+
+      await tester.pump(const Duration(seconds: 2));
+      expect(error, isA<TimeoutException>());
+    });
+
+    testWidgets('un appel qui répond à temps garde son résultat', (
+      tester,
+    ) async {
+      expect(await boundSecondaryInit(Future.value(42)), 42);
+    });
+  });
+}
+
+class _NeverRespondingRepository implements AppVersionRepository {
+  @override
+  Future<AppVersionRow> fetchCurrentPlatformVersion() =>
+      Completer<AppVersionRow>().future;
+}
+
+class _ThrowingRepository implements AppVersionRepository {
+  _ThrowingRepository(this._error);
+
+  final Object _error;
+
+  @override
+  Future<AppVersionRow> fetchCurrentPlatformVersion() async => throw _error;
 }
