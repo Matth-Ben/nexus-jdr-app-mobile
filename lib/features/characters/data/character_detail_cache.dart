@@ -1,5 +1,6 @@
 import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/rules/spell_status.dart';
+import '../domain/offline_inventory_writes.dart';
 import '../domain/offline_journal_writes.dart';
 import '../domain/offline_state_writes.dart';
 
@@ -173,6 +174,35 @@ class CharacterDetailCache {
       for (final row in rows)
         if (row['id'] == inventoryId) {...row, ...patch.toColumns()} else row,
     ],
+  );
+
+  /// Reporte dans le cache l'écriture [write] confirmée par le serveur pour la
+  /// ligne d'inventaire [inventoryId] (T5b-1) : ajout (ligne créée, ou
+  /// remplacée si déjà là) ou retrait de la ligne.
+  Future<void> applyConfirmedInventoryItem({
+    required String ownerId,
+    required String characterId,
+    required String inventoryId,
+    required InventoryItemWrite write,
+  }) => applyConfirmedRelation(
+    ownerId: ownerId,
+    characterId: characterId,
+    relation: 'character_inventory',
+    transform: (rows) {
+      final others = [
+        for (final row in rows)
+          if (row['id'] != inventoryId) row,
+      ];
+      switch (write.op) {
+        case InventoryItemOp.delete:
+          return others;
+        case InventoryItemOp.add:
+          return [
+            ...others,
+            write.toRow(inventoryId: inventoryId, characterId: characterId),
+          ];
+      }
+    },
   );
 
   /// Reporte dans le cache l'écriture de journal [write] confirmée par le

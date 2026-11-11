@@ -87,7 +87,16 @@ enum PendingCharacterWriteKind {
   /// (ajout pas encore synchronisé), `{"body"}` (modification) ou
   /// `{"deleted": true}` (suppression) ; dernière valeur gagnante, fusion dans
   /// `domain/offline_journal_writes.dart`.
-  journalEntry('journal_entry');
+  journalEntry('journal_entry'),
+
+  /// `addCustomInventoryItem`/`removeInventoryItem` (T5b-1, P15) : état voulu
+  /// d'une ligne `character_inventory` (`targetId` = UUID de la ligne, généré
+  /// côté client à l'ajout). Payload `{"op": "add", "customName", "quantity",
+  /// ...}` (ajout d'un objet personnalisé pas encore synchronisé, qui absorbe
+  /// l'état équipé/set/harmonisé fusionné depuis) ou `{"op": "delete"}`
+  /// (retrait) ; fusion dans `domain/offline_inventory_writes.dart`. Rejoué
+  /// avant `inventoryState` d'une même cible (ordre `queuedAt` puis `kind`).
+  inventoryItem('inventory_item');
 
   const PendingCharacterWriteKind(this.storageKey);
 
