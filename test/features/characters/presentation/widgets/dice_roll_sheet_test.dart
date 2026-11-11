@@ -97,36 +97,40 @@ void main() {
     expect(find.text('d20 ($rolled) −2 = $total'), findsOneWidget);
   });
 
-  testWidgets('20 naturel : bandeau "RÉUSSITE CRITIQUE" affiché', (
-    tester,
-  ) async {
-    // Recherche d'une seed dont le premier tirage est 20 (Random.nextInt(20)
-    // renvoie 19, formule DiceRoller +1) — évite de dépendre d'un tirage
-    // non déterministe pour ce cas précis.
-    var seed = 0;
-    while (Random(seed).nextInt(20) + 1 != 20) {
-      seed++;
-    }
+  testWidgets(
+    '20 naturel : bandeau "20 NATUREL" affiché (sans le mot critique)',
+    (tester) async {
+      // Recherche d'une seed dont le premier tirage est 20 (Random.nextInt(20)
+      // renvoie 19, formule DiceRoller +1) — évite de dépendre d'un tirage
+      // non déterministe pour ce cas précis.
+      var seed = 0;
+      while (Random(seed).nextInt(20) + 1 != 20) {
+        seed++;
+      }
 
-    await _open(tester, label: 'Force', modifier: 0, random: Random(seed));
+      await _open(tester, label: 'Force', modifier: 0, random: Random(seed));
 
-    expect(_currentDieValue(tester), 20);
-    expect(find.text('RÉUSSITE CRITIQUE'), findsOneWidget);
-    expect(find.text('ÉCHEC CRITIQUE'), findsNothing);
-  });
+      expect(_currentDieValue(tester), 20);
+      expect(find.text('20 NATUREL'), findsOneWidget);
+      expect(find.text('1 NATUREL'), findsNothing);
+    },
+  );
 
-  testWidgets('1 naturel : bandeau "ÉCHEC CRITIQUE" affiché', (tester) async {
-    var seed = 0;
-    while (Random(seed).nextInt(20) + 1 != 1) {
-      seed++;
-    }
+  testWidgets(
+    '1 naturel : bandeau "1 NATUREL" affiché (sans le mot critique)',
+    (tester) async {
+      var seed = 0;
+      while (Random(seed).nextInt(20) + 1 != 1) {
+        seed++;
+      }
 
-    await _open(tester, label: 'Force', modifier: 0, random: Random(seed));
+      await _open(tester, label: 'Force', modifier: 0, random: Random(seed));
 
-    expect(_currentDieValue(tester), 1);
-    expect(find.text('ÉCHEC CRITIQUE'), findsOneWidget);
-    expect(find.text('RÉUSSITE CRITIQUE'), findsNothing);
-  });
+      expect(_currentDieValue(tester), 1);
+      expect(find.text('1 NATUREL'), findsOneWidget);
+      expect(find.text('20 NATUREL'), findsNothing);
+    },
+  );
 
   testWidgets(
     'résultat intermédiaire (ni 1 ni 20) : aucun bandeau critique affiché',
@@ -140,8 +144,8 @@ void main() {
 
       await _open(tester, label: 'Force', modifier: 0, random: Random(seed));
 
-      expect(find.text('RÉUSSITE CRITIQUE'), findsNothing);
-      expect(find.text('ÉCHEC CRITIQUE'), findsNothing);
+      expect(find.text('20 NATUREL'), findsNothing);
+      expect(find.text('1 NATUREL'), findsNothing);
     },
   );
 
@@ -195,7 +199,7 @@ void main() {
     addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-    // 20 naturel : la ligne "RÉUSSITE CRITIQUE" s'ajoute, cas le plus haut
+    // 20 naturel : la ligne "20 NATUREL" s'ajoute, cas le plus haut
     // de la sheet. Tout débordement lèverait une exception, qui ferait
     // échouer ce test.
     await _open(
@@ -205,7 +209,7 @@ void main() {
       random: _AlwaysTwenty(),
     );
 
-    expect(find.text('RÉUSSITE CRITIQUE'), findsOneWidget);
+    expect(find.text('20 NATUREL'), findsOneWidget);
     final header = tester.getRect(find.byType(SheetHeaderBar));
     // Titre en police display : plafonné à x1,3 (et non x2,0 comme le corps,
     // que ce test exerce par le texte de la sheet) ; la barre mesure donc
@@ -220,10 +224,16 @@ void main() {
     expect(title.top, greaterThanOrEqualTo(header.top));
     expect(title.bottom, lessThanOrEqualTo(header.bottom));
     expect(header.top, greaterThanOrEqualTo(0));
+    // Le sélecteur de mode (P2) allonge la feuille au-delà de l'écran à x2,0 :
+    // le contenu est désormais défilable ; le bouton doit rester atteignable
+    // (visible après défilement) et la feuille ne pas déborder de l'écran.
+    await tester.ensureVisible(find.text('RELANCER'));
+    await tester.pumpAndSettle();
     expect(
       tester.getRect(find.text('RELANCER')).bottom,
       lessThanOrEqualTo(568),
     );
+    expect(tester.takeException(), isNull);
   });
 
   group('locale anglaise', () {
@@ -249,7 +259,7 @@ void main() {
 }
 
 /// Tire toujours 20 au d20 (`nextInt(20)` + 1) : force l'affichage de la
-/// ligne "RÉUSSITE CRITIQUE".
+/// ligne "20 NATUREL".
 class _AlwaysTwenty implements Random {
   @override
   int nextInt(int max) => max - 1;

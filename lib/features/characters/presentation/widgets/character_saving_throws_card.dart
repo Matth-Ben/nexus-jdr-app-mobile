@@ -7,6 +7,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/saving_throw_calculator.dart';
 import '../../domain/signed_modifier_formatter.dart';
+import 'dice_roll_sheet.dart';
 
 /// "For"/"Dex"/"Con"/"Int"/"Sag"/"Cha" — dupliqué depuis
 /// `character_creation/domain/race_summary_formatter.dart`
@@ -25,6 +26,19 @@ Map<String, String> _abilityAbbreviations(AppLocalizations l10n) => {
   'wis': l10n.characterAbilityAbbreviationWis,
   'cha': l10n.characterAbilityAbbreviationCha,
 };
+
+/// "Sauvegarde de Force" / "Strength saving throw" : libellé accessible d'une
+/// ligne et titre de la feuille de dés qu'elle ouvre.
+String _savingThrowLabel(AppLocalizations l10n, String abilityKey) =>
+    switch (abilityKey) {
+      'str' => l10n.characterSavingThrowLabelStr,
+      'dex' => l10n.characterSavingThrowLabelDex,
+      'con' => l10n.characterSavingThrowLabelCon,
+      'int' => l10n.characterSavingThrowLabelInt,
+      'wis' => l10n.characterSavingThrowLabelWis,
+      'cha' => l10n.characterSavingThrowLabelCha,
+      _ => l10n.characterSavingThrowsCardTitle,
+    };
 
 /// Carte "Jets de sauvegarde" de l'onglet "Personnage" : les 6
 /// caractéristiques (pas 4, voir la spec de la tâche qui a produit ce
@@ -76,35 +90,74 @@ class _SavingThrowItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _ProficiencyDot(isProficient: result.isProficient),
-        const SizedBox(width: AppSpacing.xs),
-        Text(
-          _abilityAbbreviations(
-                AppLocalizations.of(context)!,
-              )[result.abilityKey] ??
-              result.abilityKey,
-          style: AppTypography.body(fontSize: 13, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(width: AppSpacing.xs / 2),
-        Text(
-          SignedModifierFormatter.format(result.bonus),
-          style: AppTypography.body(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            // `textPrimary` (pas `textSecondary`) : aligné sur
-            // `character_skills_card.dart::_SkillRow`, même rôle visuel
-            // (bonus final en gras) — incohérence entre les deux cartes
-            // signalée en revue direction-artistique.
-            color: result.bonus < 0
-                ? AppColors.accentBrick
-                : AppColors.textPrimary,
+    final l10n = AppLocalizations.of(context)!;
+    final label = _savingThrowLabel(l10n, result.abilityKey);
+    final bonusPhrase = result.bonus < 0
+        ? l10n.diceRollSemanticsModifierMinus(-result.bonus)
+        : l10n.diceRollSemanticsModifierPlus(result.bonus);
+    final stateLabel = result.isProficient
+        ? l10n.characterSavingThrowProficient
+        : l10n.characterSavingThrowNotProficient;
+
+    // Ligne tappable (comme les tuiles de caractéristique) : ouvre la feuille
+    // de dés avec le bonus déjà calculé par `SavingThrowCalculator`, maîtrise
+    // comprise. Zone de tap >= 44.
+    return Semantics(
+      button: true,
+      label: label,
+      // Bonus signé et état de maîtrise : sans `value`, `excludeSemantics`
+      // masquerait « For +5 » et le point doré/vide aux lecteurs d'écran.
+      value: '$bonusPhrase, $stateLabel',
+      excludeSemantics: true,
+      onTap: () => _roll(context, label),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          onTap: () => _roll(context, label),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ProficiencyDot(isProficient: result.isProficient),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    _abilityAbbreviations(l10n)[result.abilityKey] ??
+                        result.abilityKey,
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs / 2),
+                  Text(
+                    SignedModifierFormatter.format(result.bonus),
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      // `textPrimary` (pas `textSecondary`) : aligné sur
+                      // `character_skills_card.dart::_SkillRow`, même rôle
+                      // visuel (bonus final en gras) — incohérence entre les
+                      // deux cartes signalée en revue direction-artistique.
+                      color: result.bonus < 0
+                          ? AppColors.accentBrick
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-      ],
+      ),
     );
+  }
+
+  void _roll(BuildContext context, String label) {
+    showDiceRollSheet(context, label: label, modifier: result.bonus);
   }
 }
 

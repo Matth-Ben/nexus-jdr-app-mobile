@@ -2983,18 +2983,6 @@ abstract class AppLocalizations {
   /// **'d20 ({roll}) {modifier} = {total}'**
   String diceRollSheetFormula(int roll, String modifier, int total);
 
-  /// Mention affichée sur un 20 naturel dans `dice_roll_sheet.dart`, déjà en majuscules.
-  ///
-  /// In fr, this message translates to:
-  /// **'RÉUSSITE CRITIQUE'**
-  String get diceRollSheetCriticalSuccess;
-
-  /// Mention affichée sur un 1 naturel dans `dice_roll_sheet.dart`, déjà en majuscules.
-  ///
-  /// In fr, this message translates to:
-  /// **'ÉCHEC CRITIQUE'**
-  String get diceRollSheetCriticalFailure;
-
   /// Bouton "Relancer" de `dice_roll_sheet.dart`.
   ///
   /// In fr, this message translates to:
@@ -6899,6 +6887,149 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Déséquipé : {item}.'**
   String characterDetailItemUnequippedMessage(String item);
+
+  /// Mention affichée sur un 20 naturel d'un jet qui n'est pas une attaque (caractéristique, compétence, sauvegarde, initiative) dans `dice_roll_sheet.dart`, déjà en majuscules. Pas le mot « critique » : RAW, le critique n'existe que pour les attaques.
+  ///
+  /// In fr, this message translates to:
+  /// **'20 NATUREL'**
+  String get diceRollSheetNatural20;
+
+  /// Mention affichée sur un 1 naturel d'un jet qui n'est pas une attaque dans `dice_roll_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'1 NATUREL'**
+  String get diceRollSheetNatural1;
+
+  /// Libellé d'accessibilité du sélecteur Normal/Avantage/Désavantage de `dice_roll_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mode du jet'**
+  String get diceRollModeGroupLabel;
+
+  /// Mode de jet normal (un seul d20).
+  ///
+  /// In fr, this message translates to:
+  /// **'Normal'**
+  String get diceRollModeNormal;
+
+  /// Mode de jet avec avantage (on garde le plus haut de deux d20).
+  ///
+  /// In fr, this message translates to:
+  /// **'Avantage'**
+  String get diceRollModeAdvantage;
+
+  /// Mode de jet avec désavantage (on garde le plus bas de deux d20).
+  ///
+  /// In fr, this message translates to:
+  /// **'Désavantage'**
+  String get diceRollModeDisadvantage;
+
+  /// Mode utilisé pour le jet affiché dans `dice_roll_sheet.dart` (`mode` : Normal/Avantage/Désavantage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Jet en mode {mode}'**
+  String diceRollResultMode(String mode);
+
+  /// Début de la ligne de détail d'un jet avec avantage/désavantage, ex. « Avantage : 17 et 4 → 17 + 3 = 20 ».
+  ///
+  /// In fr, this message translates to:
+  /// **'{mode} :'**
+  String diceRollDetailLead(String mode);
+
+  /// Conjonction entre les deux d20 de la ligne de détail d'un jet avec avantage/désavantage.
+  ///
+  /// In fr, this message translates to:
+  /// **'et'**
+  String get diceRollDetailAnd;
+
+  /// Mot accolé au d20 écarté (barré) d'un jet avec avantage/désavantage ; jamais la couleur seule.
+  ///
+  /// In fr, this message translates to:
+  /// **'écarté'**
+  String get diceRollDiscarded;
+
+  /// Fin de la ligne de détail d'un jet avec avantage/désavantage ; `modifier` est signé et espacé (« + 3 », « − 2 »).
+  ///
+  /// In fr, this message translates to:
+  /// **'→ {kept} {modifier} = {total}'**
+  String diceRollDetailTail(int kept, String modifier, int total);
+
+  /// Libellé d'accessibilité du résultat de `dice_roll_sheet.dart` ; `modifier` vient de `diceRollSemanticsModifierPlus`/`diceRollSemanticsModifierMinus`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Résultat : d20 {kept}, {modifier}, total {total}'**
+  String diceRollSemanticsResult(int kept, String modifier, int total);
+
+  /// Modificateur positif ou nul dans le libellé d'accessibilité du résultat.
+  ///
+  /// In fr, this message translates to:
+  /// **'plus {value}'**
+  String diceRollSemanticsModifierPlus(int value);
+
+  /// Modificateur négatif dans le libellé d'accessibilité du résultat.
+  ///
+  /// In fr, this message translates to:
+  /// **'moins {value}'**
+  String diceRollSemanticsModifierMinus(int value);
+
+  /// Précision d'accessibilité d'un jet avec avantage/désavantage.
+  ///
+  /// In fr, this message translates to:
+  /// **'{mode}, dés {first} et {second}, {discarded} écarté'**
+  String diceRollSemanticsDice(
+    String mode,
+    int first,
+    int second,
+    int discarded,
+  );
+
+  /// Libellé accessible et titre de feuille de dés d'une ligne de `CharacterSavingThrowsCard` (str).
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde de Force'**
+  String get characterSavingThrowLabelStr;
+
+  /// Libellé accessible et titre de feuille de dés d'une ligne de `CharacterSavingThrowsCard` (dex).
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde de Dextérité'**
+  String get characterSavingThrowLabelDex;
+
+  /// Libellé accessible et titre de feuille de dés d'une ligne de `CharacterSavingThrowsCard` (con).
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde de Constitution'**
+  String get characterSavingThrowLabelCon;
+
+  /// Libellé accessible et titre de feuille de dés d'une ligne de `CharacterSavingThrowsCard` (int).
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde d\'Intelligence'**
+  String get characterSavingThrowLabelInt;
+
+  /// Libellé accessible et titre de feuille de dés d'une ligne de `CharacterSavingThrowsCard` (wis).
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde de Sagesse'**
+  String get characterSavingThrowLabelWis;
+
+  /// Libellé accessible et titre de feuille de dés d'une ligne de `CharacterSavingThrowsCard` (cha).
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde de Charisme'**
+  String get characterSavingThrowLabelCha;
+
+  /// État lu par les lecteurs d'écran sur une ligne de `CharacterSavingThrowsCard` dont la maîtrise est acquise.
+  ///
+  /// In fr, this message translates to:
+  /// **'maîtrisé'**
+  String get characterSavingThrowProficient;
+
+  /// État lu par les lecteurs d'écran sur une ligne de `CharacterSavingThrowsCard` sans maîtrise.
+  ///
+  /// In fr, this message translates to:
+  /// **'non maîtrisé'**
+  String get characterSavingThrowNotProficient;
 }
 
 class _AppLocalizationsDelegate

@@ -2176,14 +2176,6 @@
       }
     }
   },
-  "diceRollSheetCriticalSuccess": "RÉUSSITE CRITIQUE",
-  "@diceRollSheetCriticalSuccess": {
-    "description": "Mention affichée sur un 20 naturel dans `dice_roll_sheet.dart`, déjà en majuscules."
-  },
-  "diceRollSheetCriticalFailure": "ÉCHEC CRITIQUE",
-  "@diceRollSheetCriticalFailure": {
-    "description": "Mention affichée sur un 1 naturel dans `dice_roll_sheet.dart`, déjà en majuscules."
-  },
   "diceRollSheetRerollButton": "Relancer",
   "@diceRollSheetRerollButton": {
     "description": "Bouton \"Relancer\" de `dice_roll_sheet.dart`."
@@ -5670,5 +5662,154 @@
         "type": "String"
       }
     }
+  },
+
+  "diceRollSheetNatural20": "20 NATUREL",
+  "@diceRollSheetNatural20": {
+    "description": "Mention affichée sur un 20 naturel d'un jet qui n'est pas une attaque (caractéristique, compétence, sauvegarde, initiative) dans `dice_roll_sheet.dart`, déjà en majuscules. Pas le mot « critique » : RAW, le critique n'existe que pour les attaques."
+  },
+  "diceRollSheetNatural1": "1 NATUREL",
+  "@diceRollSheetNatural1": {
+    "description": "Mention affichée sur un 1 naturel d'un jet qui n'est pas une attaque dans `dice_roll_sheet.dart`, déjà en majuscules."
+  },
+  "diceRollModeGroupLabel": "Mode du jet",
+  "@diceRollModeGroupLabel": {
+    "description": "Libellé d'accessibilité du sélecteur Normal/Avantage/Désavantage de `dice_roll_sheet.dart`."
+  },
+  "diceRollModeNormal": "Normal",
+  "@diceRollModeNormal": {
+    "description": "Mode de jet normal (un seul d20)."
+  },
+  "diceRollModeAdvantage": "Avantage",
+  "@diceRollModeAdvantage": {
+    "description": "Mode de jet avec avantage (on garde le plus haut de deux d20)."
+  },
+  "diceRollModeDisadvantage": "Désavantage",
+  "@diceRollModeDisadvantage": {
+    "description": "Mode de jet avec désavantage (on garde le plus bas de deux d20)."
+  },
+  "diceRollResultMode": "Jet en mode {mode}",
+  "@diceRollResultMode": {
+    "description": "Mode utilisé pour le jet affiché dans `dice_roll_sheet.dart` (`mode` : Normal/Avantage/Désavantage).",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "diceRollDetailLead": "{mode} :",
+  "@diceRollDetailLead": {
+    "description": "Début de la ligne de détail d'un jet avec avantage/désavantage, ex. « Avantage : 17 et 4 → 17 + 3 = 20 ».",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "diceRollDetailAnd": "et",
+  "@diceRollDetailAnd": {
+    "description": "Conjonction entre les deux d20 de la ligne de détail d'un jet avec avantage/désavantage."
+  },
+  "diceRollDiscarded": "écarté",
+  "@diceRollDiscarded": {
+    "description": "Mot accolé au d20 écarté (barré) d'un jet avec avantage/désavantage ; jamais la couleur seule."
+  },
+  "diceRollDetailTail": "→ {kept} {modifier} = {total}",
+  "@diceRollDetailTail": {
+    "description": "Fin de la ligne de détail d'un jet avec avantage/désavantage ; `modifier` est signé et espacé (« + 3 », « − 2 »).",
+    "placeholders": {
+      "kept": {
+        "type": "int"
+      },
+      "modifier": {
+        "type": "String"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "diceRollSemanticsResult": "Résultat : d20 {kept}, {modifier}, total {total}",
+  "@diceRollSemanticsResult": {
+    "description": "Libellé d'accessibilité du résultat de `dice_roll_sheet.dart` ; `modifier` vient de `diceRollSemanticsModifierPlus`/`diceRollSemanticsModifierMinus`.",
+    "placeholders": {
+      "kept": {
+        "type": "int"
+      },
+      "modifier": {
+        "type": "String"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "diceRollSemanticsModifierPlus": "plus {value}",
+  "@diceRollSemanticsModifierPlus": {
+    "description": "Modificateur positif ou nul dans le libellé d'accessibilité du résultat.",
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "diceRollSemanticsModifierMinus": "moins {value}",
+  "@diceRollSemanticsModifierMinus": {
+    "description": "Modificateur négatif dans le libellé d'accessibilité du résultat.",
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "diceRollSemanticsDice": "{mode}, dés {first} et {second}, {discarded} écarté",
+  "@diceRollSemanticsDice": {
+    "description": "Précision d'accessibilité d'un jet avec avantage/désavantage.",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      },
+      "first": {
+        "type": "int"
+      },
+      "second": {
+        "type": "int"
+      },
+      "discarded": {
+        "type": "int"
+      }
+    }
+  },
+  "characterSavingThrowLabelStr": "Sauvegarde de Force",
+  "@characterSavingThrowLabelStr": {
+    "description": "Libellé accessible et titre de feuille de dés d'une ligne de `CharacterSavingThrowsCard` (str)."
+  },
+  "characterSavingThrowLabelDex": "Sauvegarde de Dextérité",
+  "@characterSavingThrowLabelDex": {
+    "description": "Libellé accessible et titre de feuille de dés d'une ligne de `CharacterSavingThrowsCard` (dex)."
+  },
+  "characterSavingThrowLabelCon": "Sauvegarde de Constitution",
+  "@characterSavingThrowLabelCon": {
+    "description": "Libellé accessible et titre de feuille de dés d'une ligne de `CharacterSavingThrowsCard` (con)."
+  },
+  "characterSavingThrowLabelInt": "Sauvegarde d'Intelligence",
+  "@characterSavingThrowLabelInt": {
+    "description": "Libellé accessible et titre de feuille de dés d'une ligne de `CharacterSavingThrowsCard` (int)."
+  },
+  "characterSavingThrowLabelWis": "Sauvegarde de Sagesse",
+  "@characterSavingThrowLabelWis": {
+    "description": "Libellé accessible et titre de feuille de dés d'une ligne de `CharacterSavingThrowsCard` (wis)."
+  },
+  "characterSavingThrowLabelCha": "Sauvegarde de Charisme",
+  "@characterSavingThrowLabelCha": {
+    "description": "Libellé accessible et titre de feuille de dés d'une ligne de `CharacterSavingThrowsCard` (cha)."
+  },
+  "characterSavingThrowProficient": "maîtrisé",
+  "@characterSavingThrowProficient": {
+    "description": "État lu par les lecteurs d'écran sur une ligne de `CharacterSavingThrowsCard` dont la maîtrise est acquise."
+  },
+  "characterSavingThrowNotProficient": "non maîtrisé",
+  "@characterSavingThrowNotProficient": {
+    "description": "État lu par les lecteurs d'écran sur une ligne de `CharacterSavingThrowsCard` sans maîtrise."
   }
 }
