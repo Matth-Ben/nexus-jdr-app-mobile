@@ -90,6 +90,50 @@ class SyncAlertStore {
         );
   }
 
+  /// Alerte de conflit **non fermée** (une alerte fermée est supprimée) la plus
+  /// récente de [ownerId] pour ([characterId], [dataKind]), `null` si aucune.
+  /// Sert au dédoublonnage de T8 : un nouveau conflit met cette alerte à jour
+  /// au lieu d'en ajouter une.
+  Future<SyncAlert?> findOpenConflict({
+    required String ownerId,
+    required String characterId,
+    required String dataKind,
+  }) async {
+    final query = _db.select(_db.syncAlerts)
+      ..where(
+        (row) =>
+            row.ownerId.equals(ownerId) &
+            row.kind.equals(SyncAlertKind.conflict.storageKey) &
+            row.characterId.equals(characterId) &
+            row.dataKind.equals(dataKind),
+      )
+      ..orderBy([(row) => OrderingTerm.desc(row.id)])
+      ..limit(1);
+    final alerts = _decode(await query.get());
+    return alerts.isEmpty ? null : alerts.single;
+  }
+
+  /// Remplace le nom et la valeur de l'alerte [id] de [ownerId] (jamais celle
+  /// d'un autre compte). L'`id` et la date sont conservés : l'alerte reste à
+  /// sa place et n'est pas ré-annoncée.
+  Future<void> updateValue({
+    required String ownerId,
+    required int id,
+    required String characterName,
+    required Map<String, dynamic>? serverValue,
+  }) async {
+    await (_db.update(
+      _db.syncAlerts,
+    )..where((row) => row.ownerId.equals(ownerId) & row.id.equals(id))).write(
+      SyncAlertsCompanion(
+        characterName: Value(characterName),
+        serverValue: Value(
+          serverValue == null ? null : jsonEncode(serverValue),
+        ),
+      ),
+    );
+  }
+
   /// Alertes de [ownerId], de la plus ancienne à la plus récente (l'`id`
   /// auto-incrémenté départage deux alertes de même seconde).
   Stream<List<SyncAlert>> watchForOwner(String ownerId) {

@@ -256,8 +256,8 @@ void main() {
       await addAlert(tester, kind: SyncAlertKind.conflict);
       expect(
         find.text(
-          'Aria a été modifié sur un autre appareil : les PV étaient à 7/12 sur le '
-          'serveur. Ta modification hors ligne a été appliquée par-dessus.',
+          'Aria a été modifié sur un autre appareil. Ta modification hors ligne '
+          'a été appliquée par-dessus.',
         ),
         findsOneWidget,
       );
@@ -362,6 +362,88 @@ void main() {
 
       expect(find.byType(AlertBanner), findsOneWidget);
       expect(tester.takeException(), isNull);
+      await finish(tester);
+    });
+
+    testWidgets('conflit T8 (objet) à 360 dp, police x2,0, EN : texte complet '
+        'sans troncature, une seule région live, bouton >= 44 dp', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearAllTestValues);
+
+      await tester.pumpWidget(app(locale: const Locale('en')));
+      await addAlert(
+        tester,
+        kind: SyncAlertKind.conflict,
+        dataKind: 'inventory_item',
+        value: const {
+          'items': [
+            {'id': 'l1', 'name': 'Potion of healing', 'server': 5, 'queued': 4},
+          ],
+        },
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final message = find.text(
+        'Aria: the quantity of “Potion of healing” was changed on another '
+        'device (server: 5). Your offline change (4) replaced it.',
+      );
+      expect(message, findsOneWidget);
+      expect(tester.widget<Text>(message).maxLines, isNull);
+      expect(
+        tester.widget<Text>(message).overflow,
+        isNot(TextOverflow.ellipsis),
+      );
+      expect(liveRegions(), findsOneWidget);
+      final size = tester.getSize(find.byTooltip('Dismiss'));
+      expect(size.width, greaterThanOrEqualTo(44));
+      expect(size.height, greaterThanOrEqualTo(44));
+      expect(tester.takeException(), isNull);
+      await finish(tester);
+    });
+
+    testWidgets('mise à jour de l\'alerte (même id) : le texte change sans '
+        'ré-annonce, fermer la supprime', (tester) async {
+      await tester.pumpWidget(app());
+      await addAlert(
+        tester,
+        kind: SyncAlertKind.conflict,
+        value: const {
+          'currentHp': 12,
+          'temporaryHp': 0,
+          'maxHp': 30,
+          'queued': {'currentHp': 5, 'temporaryHp': 0},
+        },
+      );
+      expect(find.textContaining('(serveur : 12/30)'), findsOneWidget);
+      final id = (await tester.runAsync(() => alerts.allForOwner(_owner)))!
+          .single
+          .id;
+      await tester.runAsync(
+        () => alerts.updateValue(
+          ownerId: _owner,
+          id: id,
+          characterName: 'Aria',
+          serverValue: const {
+            'currentHp': 12,
+            'temporaryHp': 0,
+            'maxHp': 30,
+            'queued': {'currentHp': 8, 'temporaryHp': 0},
+          },
+        ),
+      );
+      await flushDb(tester);
+
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.textContaining('hors ligne (8/30)'), findsOneWidget);
+      expect(find.byType(AlertBanner), findsOneWidget);
+      expect(liveRegions(), findsOneWidget);
+      await dismissTop(tester);
+      expect(find.byType(AlertBanner), findsNothing);
       await finish(tester);
     });
   });

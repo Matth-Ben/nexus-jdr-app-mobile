@@ -392,7 +392,10 @@ void main() {
         final alert = (await SyncAlertStore(db).allForOwner(_ownerA)).single;
         expect(alert.kind, SyncAlertKind.conflict);
         expect(alert.dataKind, 'currency');
-        expect(alert.serverValue, {'currency_gp': 50});
+        expect(alert.serverValue, {
+          'currency_gp': 50,
+          'queued': {'currency_gp': 15},
+        });
       },
     );
 

@@ -3962,8 +3962,70 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String syncAlertConflictHp(String name, int value, int max) {
-    return '$name a été modifié sur un autre appareil : les PV étaient à $value/$max sur le serveur. Ta modification hors ligne a été appliquée par-dessus.';
+  String syncAlertConflictHp(String name, String server, String queued) {
+    return '$name : les PV ont été modifiés sur un autre appareil (serveur : $server). Ta modification hors ligne ($queued) les a remplacés.';
+  }
+
+  @override
+  String syncAlertConflictTempHp(String name, int server, int queued) {
+    return '$name : les PV temporaires ont été modifiés sur un autre appareil (serveur : $server). Ta modification hors ligne ($queued) les a remplacés.';
+  }
+
+  @override
+  String syncAlertTempHpSuffix(int temp) {
+    return ' + $temp temp.';
+  }
+
+  @override
+  String syncAlertConflictCurrency(String name, String server, String queued) {
+    return '$name : tes pièces ont été modifiées sur un autre appareil (serveur : $server). Ta modification hors ligne ($queued) les a remplacées.';
+  }
+
+  @override
+  String get syncAlertCurrencyUnitCp => 'PC';
+
+  @override
+  String get syncAlertCurrencyUnitSp => 'PA';
+
+  @override
+  String get syncAlertCurrencyUnitEp => 'PE';
+
+  @override
+  String get syncAlertCurrencyUnitGp => 'PO';
+
+  @override
+  String get syncAlertCurrencyUnitPp => 'PP';
+
+  @override
+  String syncAlertConflictItem(
+    String name,
+    String item,
+    int server,
+    int queued,
+  ) {
+    return '$name : la quantité de « $item » a été modifiée sur un autre appareil (serveur : $server). Ta modification hors ligne ($queued) l\'a remplacée.';
+  }
+
+  @override
+  String syncAlertConflictItems(
+    String name,
+    String first,
+    String second,
+    int more,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      more,
+      locale: localeName,
+      other: ' (+$more autres)',
+      one: ' (+1 autre)',
+      zero: '',
+    );
+    return '$name : les quantités de « $first » et « $second » ont été modifiées sur un autre appareil$_temp0. Tes modifications hors ligne les ont remplacées.';
+  }
+
+  @override
+  String syncAlertConflictXp(String name, int server, int queued) {
+    return '$name : l\'XP a été modifiée sur un autre appareil (serveur : $server XP). Ta modification hors ligne ($queued XP) l\'a remplacée.';
   }
 
   @override

@@ -1,6 +1,7 @@
 import '../../../core/cache/app_database.dart';
 import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/sync_alert_store.dart';
+import '../../../core/sync/sync_alert_payload.dart';
 import 'character_detail_cache.dart';
 import 'pending_character_write_syncer.dart';
 
@@ -54,6 +55,12 @@ class SyncAlertRecorder {
     });
   }
 
+  /// Enregistre un conflit F19 (T8) : alerte **non bloquante** (l'écriture est
+  /// déjà partie). Si une alerte de conflit non fermée existe pour le même
+  /// (compte, personnage, `dataKind`), elle est **mise à jour** (plus ancienne
+  /// valeur serveur, plus récente valeur appliquée — voir
+  /// [mergeConflictValue]) au lieu d'être doublée : c'est aussi ce qui regroupe
+  /// plusieurs objets du même personnage d'une passe de rejeu en une alerte.
   Future<void> recordConflict({
     required String ownerId,
     required ServerValueConflict conflict,
@@ -62,21 +69,88 @@ class SyncAlertRecorder {
       ownerId: ownerId,
       characterId: conflict.characterId,
     );
-    await _alerts.add(
-      ownerId: ownerId,
-      kind: SyncAlertKind.conflict,
-      characterId: conflict.characterId,
-      characterName: (row?['name'] as String?) ?? '',
-      dataKind: conflict.kind.storageKey,
-      // Monnaies : totaux serveur trouvés au rejeu (pas d'UI avant T8, le
-      // bandeau retombe sur son texte de repli).
-      serverValue: conflict.kind == PendingCharacterWriteKind.currency
-          ? Map<String, dynamic>.from(conflict.serverValue)
-          : {
-              'currentHp': conflict.serverValue['currentHp'],
-              'maxHp': (row?['max_hp'] as num?)?.toInt(),
+    final itemName = conflict.kind == PendingCharacterWriteKind.inventoryItem
+        ? await _detailCache.readInventoryItemName(
+            ownerId: ownerId,
+            characterId: conflict.characterId,
+            inventoryId: conflict.targetId,
+          )
+        : null;
+    final incoming = _conflictValue(conflict, row: row, itemName: itemName);
+    final dataKind = conflict.kind.storageKey;
+    final name = (row?['name'] as String?) ?? '';
+    await _db.transaction(() async {
+      final existing = await _alerts.findOpenConflict(
+        ownerId: ownerId,
+        characterId: conflict.characterId,
+        dataKind: dataKind,
+      );
+      if (existing == null) {
+        await _alerts.add(
+          ownerId: ownerId,
+          kind: SyncAlertKind.conflict,
+          characterId: conflict.characterId,
+          characterName: name,
+          dataKind: dataKind,
+          serverValue: incoming,
+        );
+        return;
+      }
+      await _alerts.updateValue(
+        ownerId: ownerId,
+        id: existing.id,
+        characterName: name.isEmpty ? existing.characterName : name,
+        serverValue: mergeConflictValue(
+          dataKind,
+          existing.serverValue,
+          incoming,
+        ),
+      );
+    });
+  }
+
+  static Map<String, dynamic> _conflictValue(
+    ServerValueConflict conflict, {
+    required Map<String, dynamic>? row,
+    required String? itemName,
+  }) {
+    final server = conflict.serverValue;
+    final queued = conflict.queuedValue;
+    switch (conflict.kind) {
+      case PendingCharacterWriteKind.hp:
+        return {
+          SyncAlertKeys.currentHp: server['currentHp'],
+          SyncAlertKeys.temporaryHp: server['temporaryHp'],
+          SyncAlertKeys.maxHp: (row?['max_hp'] as num?)?.toInt(),
+          SyncAlertKeys.queued: {
+            SyncAlertKeys.currentHp: queued['currentHp'],
+            SyncAlertKeys.temporaryHp: queued['temporaryHp'],
+          },
+        };
+      case PendingCharacterWriteKind.currency:
+        return {
+          ...server,
+          SyncAlertKeys.queued: Map<String, dynamic>.from(queued),
+        };
+      case PendingCharacterWriteKind.inventoryItem:
+        return {
+          SyncAlertKeys.items: [
+            {
+              SyncAlertKeys.itemId: conflict.targetId,
+              SyncAlertKeys.itemName: itemName,
+              SyncAlertKeys.itemServer: server['quantity'],
+              SyncAlertKeys.itemQueued: queued['quantity'],
             },
-    );
+          ],
+        };
+      case PendingCharacterWriteKind.xp:
+        return {
+          SyncAlertKeys.xp: server['xp'],
+          SyncAlertKeys.queued: queued['xp'],
+        };
+      default:
+        return Map<String, dynamic>.from(server);
+    }
   }
 
   static Map<String, dynamic>? _serverValueOf(

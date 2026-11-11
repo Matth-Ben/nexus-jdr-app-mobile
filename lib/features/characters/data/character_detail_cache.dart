@@ -341,6 +341,48 @@ class CharacterDetailCache {
     }
   }
 
+  /// Nom affichable de la ligne d'inventaire [inventoryId] d'après la fiche en
+  /// cache (T8, alerte de conflit) : `custom_name` d'un objet personnalisé,
+  /// sinon nom traduit du catalogue (`itemNameRows`). `null` si la fiche, la
+  /// ligne ou le nom sont absents (l'alerte retombe alors sur son repli).
+  Future<String?> readInventoryItemName({
+    required String ownerId,
+    required String characterId,
+    required String inventoryId,
+  }) async {
+    try {
+      final payload = await _cache.get(
+        keyFor(ownerId: ownerId, characterId: characterId),
+      );
+      if (payload is! Map) return null;
+      final row = payload[rowKey];
+      if (row is! Map) return null;
+      final lines = row['character_inventory'];
+      if (lines is! List) return null;
+      for (final line in lines) {
+        if (line is! Map || line['id'] != inventoryId) continue;
+        final custom = line['custom_name'];
+        if (line['item_id'] == null) {
+          return custom is String && custom.trim().isNotEmpty ? custom : null;
+        }
+        final names = payload['itemNameRows'];
+        if (names is! List) return null;
+        for (final name in names) {
+          if (name is Map &&
+              name['entity_id']?.toString() == line['item_id'].toString() &&
+              name['value'] is String &&
+              (name['value'] as String).trim().isNotEmpty) {
+            return name['value'] as String;
+          }
+        }
+        return null;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// PV (courants, temporaires) de la ligne `characters` en cache, c'est-à-
   /// dire la dernière valeur **confirmée par le serveur** connue de l'app
   /// (le cache ne reçoit jamais une valeur seulement mise en file) — base de
