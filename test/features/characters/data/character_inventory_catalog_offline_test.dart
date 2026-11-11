@@ -315,16 +315,6 @@ void main() {
         ),
       );
 
-  Future<void> syncUntilAbandoned() async {
-    for (
-      var i = 0;
-      i < PendingCharacterWriteQueue.abandonAfterConsecutiveFailures;
-      i++
-    ) {
-      await syncer.syncWithReport();
-    }
-  }
-
   // ---------------------------------------------------------------------
   group('cache du catalogue (fetchInventoryCatalog)', () {
     test('premier chargement en ligne : select élargi, cache complet écrit '
