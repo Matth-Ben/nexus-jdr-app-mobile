@@ -107,21 +107,6 @@ abstract final class CharacterSpellRowMapper {
     return ids;
   }
 
-  /// `{spell_id: is_favorite}` — même principe que [parseStatuses]. Une
-  /// ligne sans `spell_id`/`is_favorite` exploitable est ignorée (repli sur
-  /// `false` dans [toCharacterSpellEntries]).
-  static Map<int, bool> parseFavorites(List<Map<String, dynamic>> rows) {
-    final favorites = <int, bool>{};
-    for (final row in rows) {
-      final spellId = row['spell_id'];
-      final isFavorite = row['is_favorite'];
-      if (spellId is num && isFavorite is bool) {
-        favorites[spellId.toInt()] = isFavorite;
-      }
-    }
-    return favorites;
-  }
-
   /// `{spell_id: {source_class_id, ...}}` — classes d'origine connues de
   /// chaque sort (`character_spells.source_class_id`). Un ensemble, pas une
   /// valeur : un même sort peut avoir plusieurs lignes (aucune contrainte
@@ -248,7 +233,6 @@ abstract final class CharacterSpellRowMapper {
     required Map<int, SpellStatus> statuses,
     required List<CharacterDetailClassRow> classes,
     Map<int, Set<int>> sourceClassIds = const {},
-    Map<int, bool> favorites = const {},
     Map<int, SpellGrantSource> grants = const {},
     Map<int, int> innateUsesSpent = const {},
     Set<int> innateSpellIds = const {},
@@ -260,7 +244,7 @@ abstract final class CharacterSpellRowMapper {
       // Sort accordé par une sous-classe (`grants`, voir
       // `SubclassSpellGrantResolver`) : toujours 'préparé', une seule entrée
       // même s'il a aussi une ligne `character_spells` (`statuses`), qui
-      // n'existe alors plus que pour porter son éventuel favori.
+      // n'existe alors plus que comme trace de son statut stocké.
       final grant = grants[id];
       result.add(
         CharacterSpellEntry(
@@ -280,7 +264,6 @@ abstract final class CharacterSpellRowMapper {
           duration: row['duration'] as String? ?? '',
           concentration: row['concentration'] == true,
           description: descriptions[id.toString()] ?? '',
-          isFavorite: favorites[id] ?? false,
           grantSource: grant,
           isPersisted: statuses.containsKey(id),
           requiresPreparation: PreparedSpellsLimit.spellRequiresPreparation(

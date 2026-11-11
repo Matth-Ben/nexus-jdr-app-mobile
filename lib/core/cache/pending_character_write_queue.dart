@@ -61,10 +61,11 @@ enum PendingCharacterWriteKind {
   /// enfilage, pour la détection de modification concurrente (F19/D178).
   currency('currency'),
 
-  /// `setSpellPrepared`/`setSpellFavorite` (T5a, P15) : état **absolu** d'un
-  /// sort (`targetId` = `spellId`). Payload `{"prepared": bool?, "favorite":
-  /// bool?}` (au moins une clé) ; deux changements du même sort se fusionnent
-  /// champ par champ, dernière valeur gagnante. Pas de base serveur : un
+  /// `setSpellPrepared` (T5a, P15) : état **absolu** d'un sort (`targetId` =
+  /// `spellId`). Payload `{"prepared": bool}` ; deux changements du même sort
+  /// se fusionnent, dernière valeur gagnante. Une ancienne clé `favorite`
+  /// (système de favoris retiré) est ignorée ; une ligne sans `prepared` est
+  /// invalide et supprimée de la file sans écriture. Pas de base serveur : un
   /// booléen n'a pas besoin de détection de conflit (T8).
   spellState('spell_state'),
 

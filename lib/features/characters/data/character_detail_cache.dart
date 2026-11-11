@@ -119,8 +119,8 @@ class CharacterDetailCache {
   }
 
   /// Reporte dans le cache l'état d'un sort confirmé par le serveur (T5a) :
-  /// statut sur les lignes ordinaires (jamais une ligne 'inné'), favori sur
-  /// toutes les lignes du sort ; une préparation sans aucune ligne en crée une.
+  /// statut sur les lignes ordinaires (jamais une ligne 'inné') ; une
+  /// préparation sans aucune ligne en crée une.
   Future<void> applyConfirmedSpellState({
     required String ownerId,
     required String characterId,
@@ -144,14 +144,12 @@ class CharacterDetailCache {
                 'status':
                     (patch.prepared! ? SpellStatus.prepared : SpellStatus.known)
                         .value,
-              if (patch.favorite != null) 'is_favorite': patch.favorite,
             },
       ];
       if (!hasRow && patch.prepared == true) {
         result.add({
           'spell_id': spellId,
           'status': SpellStatus.prepared.value,
-          'is_favorite': false,
           'source_class_id': null,
           'innate_uses_spent': 0,
         });

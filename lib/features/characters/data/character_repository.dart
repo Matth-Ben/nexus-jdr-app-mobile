@@ -368,27 +368,6 @@ abstract class CharacterRepository {
     bool isPactSlot = false,
   });
 
-  /// Écrit directement `character_spells.is_favorite` — étoile de
-  /// `_SpellRow` (`presentation/widgets/character_spells_section.dart`),
-  /// épinglage pour accès rapide en combat
-  /// (`docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
-  /// "Onglet Sorts"). Simple flag, réservé aux sorts persistés (ayant une
-  /// ligne `character_spells`) : sur un sort sans ligne, zéro ligne affectée
-  /// est un refus (`accessDenied` en ligne ; hors ligne, mis en file puis
-  /// abandonné au rejeu avec alerte) — contrairement à dé-préparer un sort
-  /// sans ligne, qui est un succès sans écriture.
-  ///
-  /// Mode hors ligne (T5a, P15) : mis en file ([PendingCharacterWriteKind
-  /// .spellState], `targetId` = [spellId], fusion champ par champ avec une
-  /// éventuelle préparation en attente) hors ligne ou sur erreur de
-  /// transport — [WriteOutcome.queued] ; un refus Postgrest ou zéro ligne
-  /// affectée est un échec, jamais mis en file.
-  Future<WriteOutcome> setSpellFavorite({
-    required String characterId,
-    required int spellId,
-    required bool isFavorite,
-  });
-
   /// Écrit directement `character_spells.status` ('connu' ↔ 'préparé') —
   /// bascule "Préparer ce sort"/"Ne plus préparer" du panneau "Infos"
   /// (`presentation/widgets/spell_info_panel.dart`) et de la sheet "Préparer
@@ -1749,7 +1728,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_skill_proficiencies(skill_id, proficiency),
             character_tool_proficiencies(tool_id, custom_text),
             character_languages(language_id),
-            character_spells(spell_id, status, is_favorite, source_class_id, innate_uses_spent),
+            character_spells(spell_id, status, source_class_id, innate_uses_spent),
             character_spell_slots(slot_level, slots_total, slots_used),
             character_pact_slots(slot_level, slots_total, slots_used),
             character_feature_uses(class_feature_id, uses_remaining),
@@ -1994,7 +1973,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
               unknownConditionKeys: ConditionType.unknownKeys(raw),
             );
           case PendingCharacterWriteKind.spellState:
-            // T5a : préparé/favori du sort `targetId`. Les dérivés (nombre de
+            // T5a : préparé du sort `targetId`. Les dérivés (nombre de
             // sorts préparés, quota par classe) sont des getters de
             // [CharacterDetail] : ils suivent cet état effectif.
             final spellId = parseSpellTargetId(write.targetId);
@@ -2004,10 +1983,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
               spells: [
                 for (final spell in result.spells)
                   if (spell.id == spellId)
-                    spell.copyWithPendingState(
-                      prepared: patch.prepared,
-                      favorite: patch.favorite,
-                    )
+                    spell.copyWithPendingState(prepared: patch.prepared)
                   else
                     spell,
               ],
@@ -2538,7 +2514,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }
 
   /// Moteur commun des réglages d'état **absolus** mis en file (T5a, P15) :
-  /// `setSpellPrepared`/`setSpellFavorite` (`spellState`),
+  /// `setSpellPrepared` (`spellState`),
   /// `setInventoryItemEquipped`/`equipWeaponToSlot`/`setInventoryItemAttuned`
   /// (`inventoryState`), `setInspiration`/`setArmorClassBonus`
   /// (`characterFlags`) — même schéma que `setConditions`/[_writeCurrencyTotals].
@@ -2744,19 +2720,12 @@ class SupabaseCharacterRepository implements CharacterRepository {
     }
   }
 
-  /// Écrit l'état d'un sort ([patch] : préparé et/ou favori). La limite de
+  /// Écrit l'état d'un sort ([patch] : préparé). La limite de
   /// préparation n'est vérifiée que si [enforceLimit] : le rejeu de la file
   /// ne la revérifie jamais (elle l'a été à la mise en file, et une
   /// [CharacterFailure] ne serait de toute façon jamais classée non
   /// rejouable). Public comme [applyRestOnline] : appelé par
   /// `PendingCharacterWriteSyncer`. Ne vérifie pas la connectivité.
-  ///
-  /// Lève une [PostgrestException] `42501` (zéro ligne) pour un favori sans
-  /// ligne `character_spells` (décision : on ne favorise pas un sort non
-  /// persisté ; en ligne `accessDenied`, hors ligne mis en file puis abandonné
-  /// au rejeu avec alerte) — contraste voulu avec dé-préparer un sort sans
-  /// aucune ligne, qui est un succès sans écriture (l'état voulu est déjà
-  /// atteint).
   Future<void> applySpellStateOnline({
     required String characterId,
     required int spellId,
@@ -2778,16 +2747,6 @@ class SupabaseCharacterRepository implements CharacterRepository {
         prepared: prepared,
         resolvedSourceClassId: resolvedSourceClassId,
       );
-    }
-    final favorite = patch.favorite;
-    if (favorite != null) {
-      final updated = await _client
-          .from('character_spells')
-          .update({'is_favorite': favorite})
-          .eq('character_id', characterId)
-          .eq('spell_id', spellId)
-          .select('id');
-      if (updated.isEmpty) throw _noRowAffected('character_spells');
     }
   }
 
@@ -3722,20 +3681,6 @@ class SupabaseCharacterRepository implements CharacterRepository {
       throw mapUnknownCharacterError();
     }
   }
-
-  @override
-  Future<WriteOutcome> setSpellFavorite({
-    required String characterId,
-    required int spellId,
-    required bool isFavorite,
-  }) =>
-      // `character_spells` n'a pas de colonne `owner_id` propre, la RLS
-      // (`owns_character(character_id)`) est la garantie d'isolation.
-      _writeSpellState(
-        characterId: characterId,
-        spellId: spellId,
-        change: SpellStatePatch(favorite: isFavorite),
-      );
 
   @override
   Future<WriteOutcome> setSpellPrepared({
@@ -8720,9 +8665,6 @@ class SupabaseCharacterRepository implements CharacterRepository {
       names: spellNames,
       descriptions: spellDescriptions,
       statuses: CharacterSpellRowMapper.parseStatuses(
-        CharacterDetailRowMapper.characterSpellRowsOf(row),
-      ),
-      favorites: CharacterSpellRowMapper.parseFavorites(
         CharacterDetailRowMapper.characterSpellRowsOf(row),
       ),
       // `source_class_id` est absent d'un payload mis en cache avant sa

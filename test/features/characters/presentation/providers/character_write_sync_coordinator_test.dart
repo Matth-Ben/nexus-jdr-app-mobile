@@ -521,13 +521,6 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) async => WriteOutcome.synced;
 
   @override
-  Future<WriteOutcome> setSpellFavorite({
-    required String characterId,
-    required int spellId,
-    required bool isFavorite,
-  }) async => WriteOutcome.synced;
-
-  @override
   Future<WriteOutcome> setSpellPrepared({
     required String characterId,
     required int spellId,

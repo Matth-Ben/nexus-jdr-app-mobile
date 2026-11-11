@@ -199,7 +199,6 @@ void main() {
       duration: '10 minutes',
       concentration: true,
       description: 'd',
-      isFavorite: true,
       isPersisted: false,
       storedStatus: SpellStatus.innate,
       requiresPreparation: false,
@@ -217,7 +216,6 @@ void main() {
     expect(copy.duration, '10 minutes');
     expect(copy.concentration, isTrue);
     expect(copy.description, 'd');
-    expect(copy.isFavorite, isTrue);
     expect(copy.grantSource, isNull);
     expect(copy.isPersisted, isFalse);
     expect(copy.storedStatus, SpellStatus.innate);

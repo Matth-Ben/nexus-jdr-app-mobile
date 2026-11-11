@@ -239,8 +239,7 @@ void main() {
   );
 
   group('ligne de sort : nom + dé, sans sous-titre de statut ni favori', () {
-    testWidgets('ni section "FAVORIS" ni étoile, même pour un sort marqué '
-        'isFavorite en base (donnée héritée)', (tester) async {
+    testWidgets('ni section "FAVORIS" ni étoile', (tester) async {
       await _pump(
         tester,
         _detail(
@@ -251,7 +250,6 @@ void main() {
               level: 1,
               school: 'Abjuration',
               status: SpellStatus.prepared,
-              isFavorite: true,
             ),
           ],
         ),
