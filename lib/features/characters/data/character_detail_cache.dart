@@ -1,5 +1,6 @@
 import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/rules/spell_status.dart';
+import '../domain/offline_journal_writes.dart';
 import '../domain/offline_state_writes.dart';
 
 /// Point unique de connaissance de l'entrée de cache de la fiche personnage
@@ -172,6 +173,44 @@ class CharacterDetailCache {
       for (final row in rows)
         if (row['id'] == inventoryId) {...row, ...patch.toColumns()} else row,
     ],
+  );
+
+  /// Reporte dans le cache l'écriture de journal [write] confirmée par le
+  /// serveur pour l'entrée [entryId] (T4) : ajout (ligne créée, ou remplacée si
+  /// déjà là), modification du texte, ou suppression de la ligne.
+  Future<void> applyConfirmedJournalEntry({
+    required String ownerId,
+    required String characterId,
+    required String entryId,
+    required JournalWrite write,
+  }) => applyConfirmedRelation(
+    ownerId: ownerId,
+    characterId: characterId,
+    relation: 'character_journal_entries',
+    transform: (rows) {
+      final others = [
+        for (final row in rows)
+          if (row['id'] != entryId) row,
+      ];
+      switch (write.op) {
+        case JournalWriteOp.delete:
+          return others;
+        case JournalWriteOp.update:
+          return [
+            for (final row in rows)
+              if (row['id'] == entryId) {...row, 'body': write.body} else row,
+          ];
+        case JournalWriteOp.add:
+          return [
+            ...others,
+            {
+              'id': entryId,
+              'body': write.body,
+              'created_at': write.createdAt!.toUtc().toIso8601String(),
+            },
+          ];
+      }
+    },
   );
 
   /// Ligne `characters` brute en cache (dernier état serveur connu), `null`

@@ -44,6 +44,9 @@ class RecordedRequest {
 /// sont seulement journalisées. Les lectures de `characters` renvoient la
 /// ligne (objet si `Accept: ...object+json`, liste sinon).
 ///
+/// Table à état ([tables]) : un `POST` avec un `id` déjà présent répond `23505`
+/// (hors `upsert`), un `DELETE` retire les lignes qui passent les filtres.
+///
 /// Pannes programmables, comptées en **requêtes d'écriture** (tout sauf
 /// `GET`), consommées dans l'ordre failBefore, failAfterApply, rejectWith :
 /// - [failBefore] : la requête n'arrive pas (`SocketException`, rien
@@ -203,12 +206,35 @@ class FakeCharacterWriteServer {
     if (statefulRows != null) {
       if (request.method == 'POST') {
         final inserted = body is List ? body : [body];
+        // Clé primaire explicite déjà présente (hors `upsert`, qui fusionne) :
+        // `23505`, comme PostgreSQL (T4 : UUID client du journal).
+        final merges = (request.headers['Prefer'] ?? '').contains(
+          'resolution=merge-duplicates',
+        );
+        if (!merges) {
+          for (final entry in inserted) {
+            final id = entry is Map ? entry['id'] : null;
+            if (id != null && statefulRows.any((row) => row['id'] == id)) {
+              record(applied: false);
+              return _json(request, {
+                'message':
+                    'duplicate key value violates unique constraint '
+                    '"${table}_pkey" (faux serveur).',
+                'code': '23505',
+              }, statusCode: 409);
+            }
+          }
+        }
         for (final entry in inserted) {
           statefulRows.add({
             'id': 'row-${statefulRows.length + 1}',
             ...Map<String, dynamic>.from(entry as Map),
           });
         }
+      } else if (request.method == 'DELETE') {
+        // Zéro ligne correspondante : rien à supprimer, pas une erreur.
+        final matching = _matching(statefulRows, request.url.queryParameters);
+        statefulRows.removeWhere(matching.contains);
       } else if (request.method == 'PATCH') {
         final matching = _matching(statefulRows, request.url.queryParameters);
         if (matching.isEmpty) {

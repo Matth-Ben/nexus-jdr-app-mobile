@@ -11,6 +11,7 @@ import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../../core/rules/character_class.dart';
 import '../../../core/rules/spell_status.dart';
 import '../../../core/utils/french_text_normalizer.dart';
+import '../../../core/utils/uuid_v4.dart';
 import '../../../core/network/connectivity_checker.dart';
 import '../../../core/network/transport_failure.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
@@ -20,6 +21,7 @@ import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
 import '../domain/character_inventory_item.dart';
+import '../domain/character_journal_entry.dart';
 import '../domain/character_list_sorter.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_spell_slot.dart';
@@ -47,6 +49,7 @@ import '../domain/level_up_metamagic_swap.dart';
 import '../domain/level_up_rune_option.dart';
 import '../domain/level_up_subclass_option.dart';
 import '../domain/multiclass_prerequisites.dart';
+import '../domain/offline_journal_writes.dart';
 import '../domain/offline_state_writes.dart';
 import '../domain/portrait_storage_path_resolver.dart';
 import '../domain/prepared_caster_spell_list.dart';
@@ -278,11 +281,11 @@ abstract class CharacterRepository {
   /// Insère une nouvelle entrée `character_journal_entries` — voir
   /// `presentation/widgets/character_journal_entry_edit_sheet.dart`.
   ///
-  /// Mode hors ligne : mêmes règles que [useInventoryItem] (retourne
-  /// [WriteOutcome.rejectedOffline] sans persister nulle part, jamais synchronisé
-  /// automatiquement — décision chef de projet, même périmètre volontairement
-  /// restreint de [PendingCharacterWriteQueue] que le reste de la fiche en
-  /// dehors de PV/XP).
+  /// Mode hors ligne (T4, P15) : l'identifiant de l'entrée est généré côté
+  /// client (UUID) et l'ajout est mis en file ([WriteOutcome.queued],
+  /// `PendingCharacterWriteKind.journalEntry`), rejoué au retour du réseau ;
+  /// l'entrée apparaît tout de suite dans la fiche. Un texte vide est refusé
+  /// ([CharacterFailure]).
   Future<WriteOutcome> addJournalEntry({
     required String characterId,
     required String body,
@@ -291,7 +294,8 @@ abstract class CharacterRepository {
   /// Remplace le texte de l'entrée [entryId] par [body] — même sheet que
   /// [addJournalEntry] (mode édition plutôt qu'ajout).
   ///
-  /// Mode hors ligne : mêmes règles que [addJournalEntry].
+  /// Mode hors ligne : mise en file (fusionnée avec l'ajout en attente de la
+  /// même entrée, qui reste un ajout), [WriteOutcome.queued].
   Future<WriteOutcome> updateJournalEntry({
     required String characterId,
     required String entryId,
@@ -301,7 +305,9 @@ abstract class CharacterRepository {
   /// Supprime l'entrée [entryId] (avec confirmation côté sheet d'actions,
   /// même principe que [removeInventoryItem]).
   ///
-  /// Mode hors ligne : mêmes règles que [addJournalEntry].
+  /// Mode hors ligne : mise en file d'une suppression ; supprimer une entrée
+  /// ajoutée hors ligne et jamais synchronisée retire simplement sa ligne de
+  /// file. [WriteOutcome.queued] dans les deux cas.
   Future<WriteOutcome> removeJournalEntry({
     required String characterId,
     required String entryId,
@@ -1991,6 +1997,22 @@ class SupabaseCharacterRepository implements CharacterRepository {
               inspiration: patch.inspiration ?? result.inspiration,
               armorClassBonus: patch.armorClassBonus ?? result.armorClassBonus,
             );
+          case PendingCharacterWriteKind.journalEntry:
+            // T4 : ajouts, modifications et suppressions du journal. Les
+            // entrées restent triées de la plus récente à la plus ancienne
+            // (comme `CharacterDetailRowMapper.parseJournalEntries`).
+            final journalWrite = parseJournalPayload(write.payload);
+            if (journalWrite == null ||
+                !isValidJournalTargetId(write.targetId)) {
+              break;
+            }
+            result = result.copyWith(
+              journalEntries: _superposeJournalWrite(
+                result.journalEntries,
+                write.targetId,
+                journalWrite,
+              ),
+            );
           case PendingCharacterWriteKind.rest:
           // Jamais superposée — voir la documentation de cette méthode.
         }
@@ -1999,6 +2021,48 @@ class SupabaseCharacterRepository implements CharacterRepository {
     } catch (_) {
       // Best-effort : voir la documentation de cette méthode.
       return detail;
+    }
+  }
+
+  /// Applique [write] à la liste [entries] du journal (superposition d'une
+  /// ligne de file `journalEntry`, T4).
+  List<CharacterJournalEntry> _superposeJournalWrite(
+    List<CharacterJournalEntry> entries,
+    String entryId,
+    JournalWrite write,
+  ) {
+    switch (write.op) {
+      case JournalWriteOp.delete:
+        return [
+          for (final entry in entries)
+            if (entry.id != entryId) entry,
+        ];
+      case JournalWriteOp.update:
+        return [
+          for (final entry in entries)
+            if (entry.id == entryId)
+              CharacterJournalEntry(
+                id: entry.id,
+                body: write.body!,
+                createdAt: entry.createdAt,
+              )
+            else
+              entry,
+        ];
+      case JournalWriteOp.add:
+        DateTime? existingCreatedAt;
+        for (final entry in entries) {
+          if (entry.id == entryId) existingCreatedAt = entry.createdAt;
+        }
+        return [
+          for (final entry in entries)
+            if (entry.id != entryId) entry,
+          CharacterJournalEntry(
+            id: entryId,
+            body: write.body!,
+            createdAt: existingCreatedAt ?? write.createdAt!,
+          ),
+        ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     }
   }
 
@@ -3029,22 +3093,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String characterId,
     required String body,
   }) async {
-    _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
-    }
-
-    try {
-      await _client.from('character_journal_entries').insert({
-        'character_id': characterId,
-        'body': body,
-      });
-      return WriteOutcome.synced;
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
-    } catch (_) {
-      throw mapUnknownCharacterError();
-    }
+    _requireJournalBody(body);
+    // L'UUID de l'entrée est généré ici (colonne `uuid` acceptant un `id`
+    // explicite) : même identifiant en ligne, en file et au rejeu.
+    return _writeJournalEntry(
+      characterId: characterId,
+      entryId: generateUuidV4(),
+      requested: JournalWrite.add(body: body, createdAt: DateTime.now()),
+    );
   }
 
   @override
@@ -3053,18 +3109,122 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String entryId,
     required String body,
   }) async {
-    _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
-    }
+    _requireJournalBody(body);
+    return _writeJournalEntry(
+      characterId: characterId,
+      entryId: entryId,
+      requested: JournalWrite.update(body: body),
+    );
+  }
 
+  @override
+  Future<WriteOutcome> removeJournalEntry({
+    required String characterId,
+    required String entryId,
+  }) => _writeJournalEntry(
+    characterId: characterId,
+    entryId: entryId,
+    requested: const JournalWrite.delete(),
+  );
+
+  void _requireJournalBody(String body) {
+    if (!isValidJournalBody(body)) {
+      throw const CharacterFailure(
+        'Le texte de la note ne peut pas être vide.',
+      );
+    }
+  }
+
+  /// Moteur commun du journal hors-ligne-capable (T4, P15), verrouillé par
+  /// `runExclusive(characterId, journalEntry, entryId)` (même verrou que le
+  /// rejeu) :
+  ///
+  /// - la demande est fusionnée avec la ligne de file déjà présente pour cette
+  ///   entrée ([planJournalWrite]) ;
+  /// - hors ligne, ou erreur de transport : mise en file (ou, pour la
+  ///   suppression d'un ajout jamais synchronisé, simple retrait de la ligne :
+  ///   rien à écrire) et [WriteOutcome.queued] ;
+  /// - en ligne : écriture immédiate ([applyJournalWriteOnline]), retrait de la
+  ///   ligne devenue périmée (`removeIfUnchanged`) puis report dans le cache ;
+  /// - refus Postgrest (RLS, contrainte) ou zéro ligne : échec, rien en file.
+  Future<WriteOutcome> _writeJournalEntry({
+    required String characterId,
+    required String entryId,
+    required JournalWrite requested,
+  }) async {
+    final ownerId = _requireOwnerId();
     try {
-      await _client
-          .from('character_journal_entries')
-          .update({'body': body})
-          .eq('id', entryId)
-          .eq('character_id', characterId);
-      return WriteOutcome.synced;
+      return await _pendingWrites.runExclusive(
+        characterId: characterId,
+        kind: PendingCharacterWriteKind.journalEntry,
+        targetId: entryId,
+        action: () async {
+          final pendingWrite = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.journalEntry,
+            targetId: entryId,
+          );
+          final plan = planJournalWrite(
+            pending: pendingWrite == null
+                ? null
+                : parseJournalPayload(pendingWrite.payload),
+            requested: requested,
+          );
+          final effective = plan.write;
+          if (effective == null) {
+            throw const CharacterFailure('Cette note a déjà été supprimée.');
+          }
+
+          Future<WriteOutcome> queue() async {
+            if (plan.cancelsPendingAdd) {
+              if (pendingWrite != null) {
+                await _pendingWrites.removeIfUnchanged(pendingWrite);
+              }
+              return WriteOutcome.queued;
+            }
+            await _pendingWrites.enqueue(
+              characterId: characterId,
+              ownerId: ownerId,
+              kind: PendingCharacterWriteKind.journalEntry,
+              targetId: entryId,
+              payload: effective.toPayload(),
+            );
+            return WriteOutcome.queued;
+          }
+
+          if (!await _connectivityChecker.hasConnection()) return queue();
+          try {
+            await applyJournalWriteOnline(
+              characterId: characterId,
+              entryId: entryId,
+              write: effective,
+            );
+          } on CharacterFailure {
+            rethrow;
+          } on PostgrestException {
+            rethrow;
+          } catch (error) {
+            if (isTransportFailure(error)) return queue();
+            rethrow;
+          }
+          await _recordConfirmedWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            columns: null,
+            supersededWrite: pendingWrite,
+          );
+          await _detailCache.applyConfirmedJournalEntry(
+            ownerId: ownerId,
+            characterId: characterId,
+            entryId: entryId,
+            write: effective,
+          );
+          return WriteOutcome.synced;
+        },
+      );
+    } on CharacterFailure {
+      rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (_) {
@@ -3072,28 +3232,68 @@ class SupabaseCharacterRepository implements CharacterRepository {
     }
   }
 
-  @override
-  Future<WriteOutcome> removeJournalEntry({
+  /// Écrit [write] sur `character_journal_entries` pour l'entrée [entryId] —
+  /// partagé par l'écriture en ligne et par le rejeu de la file
+  /// (`PendingCharacterWriteSyncer`), donc public comme
+  /// [applySpellStateOnline]. Toujours filtré par `character_id` (la RLS reste
+  /// la garantie d'isolation).
+  ///
+  /// - ajout : `INSERT` avec l'`id` client. **Idempotent** : un `23505`
+  ///   (clé primaire déjà présente, réponse d'un envoi précédent perdue) n'est
+  ///   pas une erreur, jamais de doublon — le texte est alors réaligné par un
+  ///   `UPDATE` (il a pu être modifié depuis le premier envoi) ;
+  /// - modification : `UPDATE` ; zéro ligne affectée = [PostgrestException]
+  ///   `42501` (entrée supprimée ailleurs, ou refus RLS silencieux) ;
+  /// - suppression : `DELETE` ; zéro ligne = déjà supprimée = succès.
+  Future<void> applyJournalWriteOnline({
     required String characterId,
     required String entryId,
+    required JournalWrite write,
   }) async {
-    _requireOwnerId();
-    if (!await _connectivityChecker.hasConnection()) {
-      return WriteOutcome.rejectedOffline;
+    switch (write.op) {
+      case JournalWriteOp.add:
+        try {
+          await _client.from('character_journal_entries').insert({
+            'id': entryId,
+            'character_id': characterId,
+            'body': write.body,
+            'created_at': write.createdAt!.toUtc().toIso8601String(),
+          });
+        } on PostgrestException catch (error) {
+          if (error.code != '23505') rethrow;
+          await _updateJournalBody(
+            characterId: characterId,
+            entryId: entryId,
+            body: write.body!,
+          );
+        }
+      case JournalWriteOp.update:
+        await _updateJournalBody(
+          characterId: characterId,
+          entryId: entryId,
+          body: write.body!,
+        );
+      case JournalWriteOp.delete:
+        await _client
+            .from('character_journal_entries')
+            .delete()
+            .eq('id', entryId)
+            .eq('character_id', characterId);
     }
+  }
 
-    try {
-      await _client
-          .from('character_journal_entries')
-          .delete()
-          .eq('id', entryId)
-          .eq('character_id', characterId);
-      return WriteOutcome.synced;
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
-    } catch (_) {
-      throw mapUnknownCharacterError();
-    }
+  Future<void> _updateJournalBody({
+    required String characterId,
+    required String entryId,
+    required String body,
+  }) async {
+    final updated = await _client
+        .from('character_journal_entries')
+        .update({'body': body})
+        .eq('id', entryId)
+        .eq('character_id', characterId)
+        .select('id');
+    if (updated.isEmpty) throw _noRowAffected('character_journal_entries');
   }
 
   @override
