@@ -158,6 +158,25 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// (réouverture, ou synchronisation au retour du réseau).
   int? _localXp;
 
+  /// D193 : `true` quand le dernier ajout d'XP a été **réellement mis en
+  /// file** ([WriteOutcome.queued]). Tant que c'est le cas, la file fait foi
+  /// (superposition `_withPendingWrites` du dépôt) : [_localXp] est relâchée
+  /// dès que `characterDetailProvider` livre une nouvelle fiche, qu'elle
+  /// porte la valeur de la file ou la valeur serveur (écriture abandonnée).
+  bool _xpQueued = false;
+
+  /// D193 : même principe que [_xpQueued] pour [_localHpState] (dernière
+  /// écriture PV mise en file). N'est prise en compte que si aucune écriture
+  /// PV n'est en vol ([_hpWritesInFlight]), pour ne jamais relâcher une
+  /// valeur plus récente que celle de la file.
+  bool _hpQueued = false;
+  int _hpWritesInFlight = 0;
+
+  /// D193 : identifiants de [_localInnateUsesSpent] / [_localFeatureUsesRemaining]
+  /// dont la dernière écriture a été mise en file (voir [_queuedSlotLevels]).
+  final Set<int> _queuedInnateSpellIds = {};
+  final Set<int> _queuedFeatureIds = {};
+
   /// Conditions optimistes locales (P6), affichées dès l'enregistrement du
   /// sélecteur d'états puis relâchées par le `ref.listen` de [build] dès que
   /// la fiche relue les porte ; remise à sa valeur précédente si l'écriture
@@ -474,10 +493,13 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     // permet à un second tap rapide de repartir de cette valeur plutôt que
     // du `detail` désormais obsolète capturé au premier tap.
     final previousLocal = _localHpState;
+    final previousHpQueued = _hpQueued;
     // Capturé avant l'appel réseau : voir la documentation de
     // [_restGeneration] pour ce que compare ce jeton une fois l'appel
     // résolu.
     final myRestGeneration = _restGeneration;
+    _hpWritesInFlight++;
+    _hpQueued = false;
     setState(() => _localHpState = newState);
 
     try {
@@ -500,6 +522,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         return;
       }
       if (outcome == WriteOutcome.queued) {
+        _hpQueued = true;
         // Aucune écriture serveur à attendre (mode hors-ligne, voir
         // `CharacterRepository.updateHp`) : le joueur ne doit jamais croire
         // à tort que son changement est déjà confirmé — l'état optimiste
@@ -510,6 +533,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _showSnackBar(_offlineQueuedMessage(l10n));
         return;
       }
+      _hpQueued = false;
       ref.invalidate(characterDetailProvider(widget.characterId));
       // L'état local optimiste n'est pas relâché ici : il reste affiché tel
       // quel jusqu'à ce que le rafraîchissement déclenché ci-dessus livre
@@ -524,15 +548,19 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       // un repos (court ou long) a entre-temps déjà établi un nouvel état
       // local plus récent : le revert écraserait alors son résultat avec la
       // valeur pré-repos (même garde-fou que le chemin de succès ci-dessus).
+      _hpQueued = previousHpQueued;
       if (mounted && _restGeneration == myRestGeneration) {
         setState(() => _localHpState = previousLocal);
       }
       _showSnackBar(failure.message);
     } catch (_) {
+      _hpQueued = previousHpQueued;
       if (mounted && _restGeneration == myRestGeneration) {
         setState(() => _localHpState = previousLocal);
       }
       _showSnackBar(l10n.characterDetailHpUpdateErrorMessage);
+    } finally {
+      _hpWritesInFlight--;
     }
   }
 
@@ -831,6 +859,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     final newSpent = current.innateUsesSpent + 1;
     final previousOverride = _localInnateUsesSpent[spell.id];
     final myRestGeneration = _restGeneration;
+    _queuedInnateSpellIds.remove(spell.id);
     setState(() {
       _localInnateUsesSpent = {..._localInnateUsesSpent, spell.id: newSpent};
       _isCastingSpell = true;
@@ -900,6 +929,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // valeur légèrement périmée vis-à-vis d'un repos entre-temps réussi,
         // limite jugée acceptable (cas rare : repos et lancer hors ligne
         // quasi simultanés).
+        _queuedInnateSpellIds.add(spell.id);
         _showSnackBar(_offlineQueuedMessage(l10n));
         return;
       }
@@ -1089,6 +1119,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     final newRemaining = remaining - 1;
     final previousOverride = _localFeatureUsesRemaining[feature.id];
     final myRestGeneration = _restGeneration;
+    _queuedFeatureIds.remove(feature.id);
     setState(() {
       _localFeatureUsesRemaining = {
         ..._localFeatureUsesRemaining,
@@ -1112,6 +1143,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       if (outcome == WriteOutcome.queued) {
         // D11 : voir le commentaire équivalent de [_castSpell] — mise en
         // file réelle désormais, état optimiste conservé tel quel.
+        _queuedFeatureIds.add(feature.id);
         _showSnackBar(_offlineQueuedMessage(l10n));
         return;
       }
@@ -1765,6 +1797,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // Aucun rafraîchissement de la fiche pour une écriture mise en
         // file : le nouveau total est gardé localement, pour que le bandeau
         // XP l'affiche et qu'un ajout suivant en reparte (voir [_localXp]).
+        _xpQueued = true;
         setState(() => _localXp = newXp);
         _showSnackBar(_offlineQueuedMessage(l10n));
         return;
@@ -1773,6 +1806,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       // Écriture confirmée par le serveur : la fiche rafraîchie ci-dessous
       // fait de nouveau autorité, une éventuelle XP locale plus ancienne
       // (ajout précédent mis en file) n'a plus lieu d'être.
+      _xpQueued = false;
       if (_localXp != null) setState(() => _localXp = null);
       // Voir la documentation de cette méthode (F05) : attend la résolution
       // du refetch avant de pousser `LevelUpScreen`, pour ne jamais laisser
@@ -2115,6 +2149,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     // deux cas, [_localSpellSlotsUsed] doit être reverti avec [_localHpState]
     // en cas d'échec puisque le repos long touche les deux ensemble.
     final touchesHp = type == RestType.long || appliedGain > 0;
+    // D193 : la superposition de la file ne rejoue pas un repos ; les PV
+    // locaux posés ci-dessous ne doivent donc pas être relâchés par le
+    // drapeau « mis en file » d'un ajustement PV antérieur.
+    if (touchesHp) _hpQueued = false;
     if (type == RestType.long) {
       setState(() {
         _localHpState = HpState(
@@ -2330,14 +2368,22 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     // sur une valeur serveur potentiellement encore en retard d'un aller-
     // retour réseau (voir la documentation de [_localHpState]).
     ref.listen(characterDetailProvider(widget.characterId), (previous, next) {
+      // D193 : pendant une relecture (`invalidate`), `whenData` rejoue la
+      // fiche PRÉCÉDENTE (rafraîchissement sans perte de valeur) : relâcher
+      // un remplacement local sur cette donnée périmée ferait revenir
+      // brièvement l'ancienne valeur avant la fiche relue. Seule une fiche
+      // réellement livrée compte.
+      if (next.isLoading) return;
       next.whenData((detail) {
         var shouldSetState = false;
 
         final local = _localHpState;
         if (local != null &&
-            detail.currentHp == local.currentHp &&
-            detail.temporaryHp == local.temporaryHp) {
+            ((_hpQueued && _hpWritesInFlight == 0) ||
+                (detail.currentHp == local.currentHp &&
+                    detail.temporaryHp == local.temporaryHp))) {
           _localHpState = null;
+          _hpQueued = false;
           shouldSetState = true;
         }
 
@@ -2351,8 +2397,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
 
         // Même principe pour [_localXp] (ajout d'XP mis en file hors
         // ligne) : relâchée dès que la fiche relue porte la même valeur.
-        if (_localXp != null && detail.xp == _localXp) {
+        if (_localXp != null && (_xpQueued || detail.xp == _localXp)) {
           _localXp = null;
+          _xpQueued = false;
           shouldSetState = true;
         }
 
@@ -2379,11 +2426,13 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         if (_localFeatureUsesRemaining.isNotEmpty) {
           final remaining = _confirmedEntriesRemoved(
             _localFeatureUsesRemaining,
-            (featureId, usesRemaining) => detail.classFeatures.any(
-              (feature) =>
-                  feature.id == featureId &&
-                  feature.usesRemaining == usesRemaining,
-            ),
+            (featureId, usesRemaining) =>
+                _queuedFeatureIds.remove(featureId) ||
+                detail.classFeatures.any(
+                  (feature) =>
+                      feature.id == featureId &&
+                      feature.usesRemaining == usesRemaining,
+                ),
           );
           if (remaining.length != _localFeatureUsesRemaining.length) {
             _localFeatureUsesRemaining = remaining;
@@ -2395,9 +2444,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         if (_localInnateUsesSpent.isNotEmpty) {
           final remaining = _confirmedEntriesRemoved(
             _localInnateUsesSpent,
-            (spellId, spent) => detail.spells.any(
-              (spell) => spell.id == spellId && spell.innateUsesSpent == spent,
-            ),
+            (spellId, spent) =>
+                _queuedInnateSpellIds.remove(spellId) ||
+                detail.spells.any(
+                  (spell) =>
+                      spell.id == spellId && spell.innateUsesSpent == spent,
+                ),
           );
           if (remaining.length != _localInnateUsesSpent.length) {
             _localInnateUsesSpent = remaining;
