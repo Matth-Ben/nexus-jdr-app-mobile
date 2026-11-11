@@ -1677,6 +1677,26 @@ class SupabaseCharacterRepository implements CharacterRepository {
       characterId: characterId,
     );
 
+    // Hors ligne déclaré (aucune interface réseau) : cache + écritures en
+    // attente directement, sans tenter le réseau. Sans ce court-circuit, la
+    // relecture qui suit chaque écriture mise en file attendait l'échec de la
+    // requête (jusqu'à 15 s, `TimeoutHttpClient`, quand le DNS ne répond pas)
+    // et l'onglet « Sac » restait verrouillé (`_isWritingInventory`) pendant
+    // ce temps. Sans cache, on retombe sur le chemin réseau habituel.
+    if (!await _connectivityChecker.hasConnection()) {
+      final cached = await _mappedFromCache(
+        cacheKey,
+        _mapCharacterDetailPayload,
+      );
+      if (cached != null) {
+        return _withPendingWrites(
+          cached,
+          ownerId: ownerId,
+          characterId: characterId,
+        );
+      }
+    }
+
     try {
       final row = await _client
           .from('characters')
