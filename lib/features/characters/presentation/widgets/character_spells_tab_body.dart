@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/widgets/display_text.dart';
+import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/rules/class_spellcasting_rule.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -11,6 +13,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_spell_slot.dart';
+import '../../domain/spell_list_filter.dart';
 import '../../domain/spell_name_filter.dart';
 import '../../domain/spell_preparation_filter.dart';
 import '../../domain/spell_status_formatter.dart';
@@ -20,8 +23,22 @@ import 'character_class_features_card.dart';
 import 'character_spells_section.dart';
 import 'class_feature_action_sheet.dart';
 import 'spell_action_sheet.dart';
+import 'spell_filter_bar.dart';
+import 'spell_filter_sheet.dart';
 import 'spell_preparation_card.dart';
 import 'spell_slot_correction_button.dart';
+
+/// Annonce d'accessibilité du nombre de sorts affichés (remplaçable dans les
+/// tests).
+typedef SpellCountAnnouncer = void Function(BuildContext context, String text);
+
+void _defaultAnnouncer(BuildContext context, String text) {
+  SemanticsService.sendAnnouncement(
+    View.of(context),
+    text,
+    Directionality.of(context),
+  );
+}
 
 /// Contenu de l'onglet "Sorts" de la fiche personnage — scindé de l'onglet
 /// "Compétences" (voir `character_skills_tab_body.dart`) pour donner aux
@@ -68,6 +85,14 @@ import 'spell_slot_correction_button.dart';
 /// `update_banner_dismissal_provider.dart`, jugé préférable à un
 /// `ref.listen` qui aurait dû dupliquer cette même logique de
 /// resynchronisation dans un champ local, pour le même résultat visuel.
+///
+/// **Filtres de sorts (P4)** : niveau, école et concentration
+/// (`domain/spell_list_filter.dart`), mémorisés uniquement dans l'état local
+/// de cet onglet, comme la recherche — par session et par onglet, jamais
+/// écrits sur disque ni en base, réinitialisés quand la fiche affichée change
+/// de personnage (`detail.id`). Ils se cumulent (ET) avec la recherche et avec
+/// le filtre de préparation ci-dessus, qui reste une préférence séparée. La
+/// carte Emplacements n'est jamais filtrée.
 class CharacterSpellsTabBody extends ConsumerStatefulWidget {
   const CharacterSpellsTabBody({
     required this.detail,
@@ -77,6 +102,7 @@ class CharacterSpellsTabBody extends ConsumerStatefulWidget {
     this.onCorrectSlots,
     this.actionsDisabled = false,
     this.searchFocusNode,
+    @visibleForTesting this.announcer,
     super.key,
   });
 
@@ -105,6 +131,10 @@ class CharacterSpellsTabBody extends ConsumerStatefulWidget {
   /// qui n'en ont pas besoin.
   final FocusNode? searchFocusNode;
 
+  /// Annonce du nombre de sorts affichés après un changement de filtre
+  /// (`null` : `SemanticsService`).
+  final SpellCountAnnouncer? announcer;
+
   @override
   ConsumerState<CharacterSpellsTabBody> createState() =>
       _CharacterSpellsTabBodyState();
@@ -114,6 +144,8 @@ class _CharacterSpellsTabBodyState
     extends ConsumerState<CharacterSpellsTabBody> {
   final TextEditingController _searchController = TextEditingController();
   FocusNode? _ownedFocusNode;
+  SpellListFilter _filter = SpellListFilter.none;
+  int _visibleSpellCount = 0;
 
   FocusNode get _focusNode => widget.searchFocusNode ?? _ownedFocusNode!;
 
@@ -136,6 +168,43 @@ class _CharacterSpellsTabBodyState
           .read(spellPreparationFilterPreferenceControllerProvider.notifier)
           .setFilter(filter),
     );
+  }
+
+  @override
+  void didUpdateWidget(CharacterSpellsTabBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Un autre personnage sous la même instance d'onglet : les filtres de
+    // l'ancien ne doivent pas suivre.
+    if (oldWidget.detail.id != widget.detail.id) {
+      _filter = SpellListFilter.none;
+    }
+  }
+
+  /// Applique [filter] puis annonce le nombre de sorts affichés une fois
+  /// l'arbre reconstruit.
+  void _setFilter(SpellListFilter filter) {
+    if (filter == _filter) return;
+    setState(() => _filter = filter);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final announce = widget.announcer ?? _defaultAnnouncer;
+      announce(
+        context,
+        AppLocalizations.of(context)!
+            .spellFilterResultCountAnnouncement(_visibleSpellCount),
+      );
+    });
+  }
+
+  Future<void> _openFilterSheet() async {
+    final spells = widget.detail.spells;
+    final result = await showSpellFilterSheet(
+      context,
+      current: _filter,
+      levels: SpellListFilter.presentLevels(spells),
+      schools: SpellListFilter.presentSchools(spells),
+    );
+    if (result != null && mounted) _setFilter(result);
   }
 
   void _handleSearchChanged() {
@@ -256,12 +325,15 @@ class _CharacterSpellsTabBodyState
     final preparationFilter = hasPreparation
         ? preferredFilter
         : SpellPreparationFilter.all;
-    final visibleSpells = preparationFilter.apply(
-      SpellNameFilter.apply(
-        spells: detail.spells,
-        query: _searchController.text,
+    final visibleSpells = _filter.apply(
+      preparationFilter.apply(
+        SpellNameFilter.apply(
+          spells: detail.spells,
+          query: _searchController.text,
+        ),
       ),
     );
+    _visibleSpellCount = visibleSpells.length;
     final spellGroups = SpellsByLevelGrouper.group(
       visibleSpells,
       preparedFirst: true,
@@ -271,7 +343,15 @@ class _CharacterSpellsTabBodyState
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
-        _SpellSearchField(controller: _searchController, focusNode: _focusNode),
+        SpellSearchRow(
+          search: _SpellSearchField(
+            controller: _searchController,
+            focusNode: _focusNode,
+          ),
+          filter: _filter,
+          onOpenFilters: _openFilterSheet,
+        ),
+        SpellActiveFiltersRow(filter: _filter, onChanged: _setFilter),
         const SizedBox(height: AppSpacing.md),
         if (slotsCard != null) ...[
           slotsCard,
@@ -286,7 +366,12 @@ class _CharacterSpellsTabBodyState
           const SizedBox(height: AppSpacing.md),
         ],
         if (spellGroups.isEmpty)
-          _NoMatchState(query: query, filter: preparationFilter)
+          _NoMatchState(
+            query: query,
+            filter: preparationFilter,
+            spellFilterActive: _filter.isActive,
+            onResetSpellFilter: () => _setFilter(SpellListFilter.none),
+          )
         else
           CharacterSpellsSection(
             groups: spellGroups,
@@ -355,14 +440,52 @@ class _SpellSearchField extends StatelessWidget {
 /// et la bascule de filtre restent visibles juste au-dessus, sans navigation
 /// ni second geste nécessaire.
 class _NoMatchState extends StatelessWidget {
-  const _NoMatchState({required this.query, required this.filter});
+  const _NoMatchState({
+    required this.query,
+    required this.filter,
+    required this.spellFilterActive,
+    required this.onResetSpellFilter,
+  });
 
   final String query;
   final SpellPreparationFilter filter;
 
+  /// Des filtres de sorts (niveau/école/concentration) sont actifs : message
+  /// dédié et bouton « Réinitialiser les filtres ». Sinon, comportement
+  /// historique (recherche seule et/ou filtre de préparation).
+  final bool spellFilterActive;
+  final VoidCallback onResetSpellFilter;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    if (spellFilterActive) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Icon(Icons.search_off, size: 40, color: AppColors.textMuted),
+            const SizedBox(height: AppSpacing.sm),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                l10n.spellFilterNoMatchMessage,
+                textAlign: TextAlign.center,
+                style: AppTypography.body(color: AppColors.textMuted),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SecondaryButton(
+              label: l10n.spellFilterNoMatchResetButton,
+              surface: SecondaryButtonSurface.parchment,
+              onPressed: onResetSpellFilter,
+            ),
+          ],
+        ),
+      );
+    }
     final kind = switch (filter) {
       SpellPreparationFilter.all => l10n.characterSpellsTabBodyNoMatchAllLabel,
       SpellPreparationFilter.prepared =>
