@@ -1,5 +1,4 @@
-import '../../characters/data/character_inventory_row_mapper.dart';
-import '../../characters/domain/armor_class_calculator.dart';
+import '../../characters/data/armor_class_row_resolver.dart';
 import '../../characters/domain/condition_type.dart';
 import '../domain/group_member.dart';
 import '../domain/group_role.dart';
@@ -20,8 +19,8 @@ import '../domain/group_role.dart';
 /// (autorisés en lecture pour un coéquipier par les 3 policies RLS dédiées,
 /// même fonction `group_member_can_read_character` que
 /// `characters`/`character_classes`) — ce mapper les consomme pour calculer
-/// la CA via [ArmorClassCalculator.compute] (source de vérité unique,
-/// réutilisée telle quelle), mais ne les expose JAMAIS en tant que champs
+/// la CA via [ArmorClassRowResolver] (source de vérité unique, partagée avec
+/// la liste des personnages), mais ne les expose JAMAIS en tant que champs
 /// bruts sur [GroupMember] : seul l'entier déjà calculé est exposé, même
 /// discipline "sous-ensemble restreint" que le reste de ce fichier.
 abstract final class GroupMemberRowMapper {
@@ -35,24 +34,10 @@ abstract final class GroupMemberRowMapper {
     return raw?.cast<Map<String, dynamic>>() ?? const [];
   }
 
-  static List<Map<String, dynamic>> _abilityScoreRowsOf(
-    Map<String, dynamic> character,
-  ) {
-    final raw = character['character_ability_scores'] as List<dynamic>?;
-    return raw?.cast<Map<String, dynamic>>() ?? const [];
-  }
-
   static List<Map<String, dynamic>> _classOptionRowsOf(
     Map<String, dynamic> character,
   ) {
     final raw = character['character_class_options'] as List<dynamic>?;
-    return raw?.cast<Map<String, dynamic>>() ?? const [];
-  }
-
-  static List<Map<String, dynamic>> _inventoryRowsOf(
-    Map<String, dynamic> character,
-  ) {
-    final raw = character['character_inventory'] as List<dynamic>?;
     return raw?.cast<Map<String, dynamic>>() ?? const [];
   }
 
@@ -78,7 +63,7 @@ abstract final class GroupMemberRowMapper {
 
   /// Identifiants de sous-classe (`character_classes.subclass_id`) de tous
   /// les membres, pour résoudre les noms de sous-classe nécessaires à
-  /// [ArmorClassCalculator.compute] (Résilience draconique, Lignage
+  /// [ArmorClassRowResolver] (Résilience draconique, Lignage
   /// draconique) — même principe que [collectClassIds].
   static Set<String> collectSubclassIds(List<Map<String, dynamic>> rows) {
     final ids = <String>{};
@@ -144,24 +129,12 @@ abstract final class GroupMemberRowMapper {
     final primaryClassRow = _primaryClassRow(classRows);
     final classId = primaryClassRow?['class_id'];
 
-    final armorClassBonus =
-        (character['armor_class_bonus'] as num?)?.toInt() ?? 0;
-    final baseArmorClass = ArmorClassCalculator.compute(
-      abilityScores: _parseAbilityScores(character),
-      inventory: CharacterInventoryRowMapper.toCharacterInventoryItems(
-        _inventoryRowsOf(character),
-        names: const {},
-        descriptions: const {},
-      ),
-      classNames: {
-        for (final classRow in classRows)
-          ?classNames[classRow['class_id']?.toString()],
-      },
-      subclassNames: {
-        for (final classRow in classRows)
-          ?subclassNames[classRow['subclass_id']?.toString()],
-      },
-      fightingStyles: _fightingStyles(character, classFeatureNames),
+    final armorClassBonus = ArmorClassRowResolver.bonusOf(character);
+    final armorClass = ArmorClassRowResolver.fromCharacterRow(
+      character,
+      classNames: classNames,
+      subclassNames: subclassNames,
+      classFeatureNames: classFeatureNames,
     );
 
     return GroupMember(
@@ -179,46 +152,10 @@ abstract final class GroupMemberRowMapper {
       maxHp: (character['max_hp'] as num?)?.toInt() ?? 0,
       temporaryHp: (character['temporary_hp'] as num?)?.toInt() ?? 0,
       isDead: (character['is_dead'] as bool?) ?? false,
-      armorClass: baseArmorClass + armorClassBonus,
+      armorClass: armorClass,
       armorClassBonus: armorClassBonus,
       conditions: ConditionType.parse(character['conditions']),
     );
-  }
-
-  /// Parse `character_ability_scores` (`ability_id`/`score`) en
-  /// `{ability_id: score}` — même règle que
-  /// `CharacterDetailRowMapper.parseAbilityScores`, dupliquée ici (voir le
-  /// rationale de duplication de la doc de classe de ce fichier).
-  static Map<String, int> _parseAbilityScores(Map<String, dynamic> character) {
-    final scores = <String, int>{};
-    for (final scoreRow in _abilityScoreRowsOf(character)) {
-      final abilityId = scoreRow['ability_id'] as String?;
-      final score = (scoreRow['score'] as num?)?.toInt();
-      if (abilityId != null && score != null) {
-        scores[abilityId] = score;
-      }
-    }
-    return scores;
-  }
-
-  /// `chosen_value` de tous les `character_class_options` dont
-  /// [classFeatureNames] résout `class_feature_id` en "Style de combat" —
-  /// voir la doc de [collectClassFeatureIds] pour le rationale de ce filtre
-  /// (régression connue de `CharacterDetail.armorClass`).
-  static Set<String> _fightingStyles(
-    Map<String, dynamic> character,
-    Map<String, String> classFeatureNames,
-  ) {
-    final styles = <String>{};
-    for (final optionRow in _classOptionRowsOf(character)) {
-      final classFeatureId = optionRow['class_feature_id'];
-      final chosenValue = optionRow['chosen_value'] as String?;
-      if (classFeatureId == null || chosenValue == null) continue;
-      if (classFeatureNames[classFeatureId.toString()] == 'Style de combat') {
-        styles.add(chosenValue);
-      }
-    }
-    return styles;
   }
 
   /// `null`/vide une fois `trim()` -> `null` — jamais une chaîne blanche

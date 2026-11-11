@@ -38,7 +38,13 @@ mixin _$CharacterSummary {
 /// personnage", variante "archivé"). Bascule via le lien "Archiver ce
 /// personnage"/"Désarchiver" de l'onglet "Personnage"
 /// (`CharacterVitalsCard`) — voir `CharacterRepository.setArchived`.
- bool get isArchived;
+ bool get isArchived;/// `characters.current_hp` (P18, carte de la liste). `null` = inconnu
+/// (ancien cache écrit avant P18) : la ligne PV n'est jamais affichée,
+/// jamais de « 0/0 ».
+ int? get currentHp;/// `characters.max_hp` (P18) — même règle que [currentHp].
+ int? get maxHp;/// Classe d'armure finale (calcul RAW + `armor_class_bonus`, voir
+/// `ArmorClassResolver`), `null` si inconnue (ancien cache).
+ int? get armorClass;
 /// Create a copy of CharacterSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -49,16 +55,16 @@ $CharacterSummaryCopyWith<CharacterSummary> get copyWith => _$CharacterSummaryCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.className, className) || other.className == className)&&(identical(other.level, level) || other.level == level)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.isDead, isDead) || other.isDead == isDead)&&(identical(other.isArchived, isArchived) || other.isArchived == isArchived));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.className, className) || other.className == className)&&(identical(other.level, level) || other.level == level)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.isDead, isDead) || other.isDead == isDead)&&(identical(other.isArchived, isArchived) || other.isArchived == isArchived)&&(identical(other.currentHp, currentHp) || other.currentHp == currentHp)&&(identical(other.maxHp, maxHp) || other.maxHp == maxHp)&&(identical(other.armorClass, armorClass) || other.armorClass == armorClass));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,portraitUrl,raceName,className,level,xp,isDead,isArchived);
+int get hashCode => Object.hash(runtimeType,id,name,portraitUrl,raceName,className,level,xp,isDead,isArchived,currentHp,maxHp,armorClass);
 
 @override
 String toString() {
-  return 'CharacterSummary(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, className: $className, level: $level, xp: $xp, isDead: $isDead, isArchived: $isArchived)';
+  return 'CharacterSummary(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, className: $className, level: $level, xp: $xp, isDead: $isDead, isArchived: $isArchived, currentHp: $currentHp, maxHp: $maxHp, armorClass: $armorClass)';
 }
 
 
@@ -69,7 +75,7 @@ abstract mixin class $CharacterSummaryCopyWith<$Res>  {
   factory $CharacterSummaryCopyWith(CharacterSummary value, $Res Function(CharacterSummary) _then) = _$CharacterSummaryCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String? portraitUrl, String? raceName, String? className, int level, int xp, bool isDead, bool isArchived
+ String id, String name, String? portraitUrl, String? raceName, String? className, int level, int xp, bool isDead, bool isArchived, int? currentHp, int? maxHp, int? armorClass
 });
 
 
@@ -86,7 +92,7 @@ class _$CharacterSummaryCopyWithImpl<$Res>
 
 /// Create a copy of CharacterSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = null,Object? xp = null,Object? isDead = null,Object? isArchived = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = null,Object? xp = null,Object? isDead = null,Object? isArchived = null,Object? currentHp = freezed,Object? maxHp = freezed,Object? armorClass = freezed,}) {
   return _then(CharacterSummary(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -97,7 +103,10 @@ as String?,level: null == level ? _self.level : level // ignore: cast_nullable_t
 as int,xp: null == xp ? _self.xp : xp // ignore: cast_nullable_to_non_nullable
 as int,isDead: null == isDead ? _self.isDead : isDead // ignore: cast_nullable_to_non_nullable
 as bool,isArchived: null == isArchived ? _self.isArchived : isArchived // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,currentHp: freezed == currentHp ? _self.currentHp : currentHp // ignore: cast_nullable_to_non_nullable
+as int?,maxHp: freezed == maxHp ? _self.maxHp : maxHp // ignore: cast_nullable_to_non_nullable
+as int?,armorClass: freezed == armorClass ? _self.armorClass : armorClass // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -182,10 +191,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int xp,  bool isDead,  bool isArchived)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int xp,  bool isDead,  bool isArchived,  int? currentHp,  int? maxHp,  int? armorClass)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CharacterSummary() when $default != null:
-return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.xp,_that.isDead,_that.isArchived);case _:
+return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.xp,_that.isDead,_that.isArchived,_that.currentHp,_that.maxHp,_that.armorClass);case _:
   return orElse();
 
 }
@@ -203,10 +212,10 @@ return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.class
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int xp,  bool isDead,  bool isArchived)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int xp,  bool isDead,  bool isArchived,  int? currentHp,  int? maxHp,  int? armorClass)  $default,) {final _that = this;
 switch (_that) {
 case _CharacterSummary():
-return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.xp,_that.isDead,_that.isArchived);case _:
+return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.xp,_that.isDead,_that.isArchived,_that.currentHp,_that.maxHp,_that.armorClass);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -223,10 +232,10 @@ return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.class
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int xp,  bool isDead,  bool isArchived)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int xp,  bool isDead,  bool isArchived,  int? currentHp,  int? maxHp,  int? armorClass)?  $default,) {final _that = this;
 switch (_that) {
 case _CharacterSummary() when $default != null:
-return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.xp,_that.isDead,_that.isArchived);case _:
+return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.xp,_that.isDead,_that.isArchived,_that.currentHp,_that.maxHp,_that.armorClass);case _:
   return null;
 
 }
@@ -238,7 +247,7 @@ return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.class
 
 
 class _CharacterSummary extends CharacterSummary {
-  const _CharacterSummary({required this.id, required this.name, this.portraitUrl, this.raceName, this.className, required this.level, required this.xp, this.isDead = false, this.isArchived = false}): super._();
+  const _CharacterSummary({required this.id, required this.name, this.portraitUrl, this.raceName, this.className, required this.level, required this.xp, this.isDead = false, this.isArchived = false, this.currentHp, this.maxHp, this.armorClass}): super._();
   
 
 @override final  String id;
@@ -273,6 +282,15 @@ class _CharacterSummary extends CharacterSummary {
 /// personnage"/"Désarchiver" de l'onglet "Personnage"
 /// (`CharacterVitalsCard`) — voir `CharacterRepository.setArchived`.
 @override@JsonKey() final  bool isArchived;
+/// `characters.current_hp` (P18, carte de la liste). `null` = inconnu
+/// (ancien cache écrit avant P18) : la ligne PV n'est jamais affichée,
+/// jamais de « 0/0 ».
+@override final  int? currentHp;
+/// `characters.max_hp` (P18) — même règle que [currentHp].
+@override final  int? maxHp;
+/// Classe d'armure finale (calcul RAW + `armor_class_bonus`, voir
+/// `ArmorClassResolver`), `null` si inconnue (ancien cache).
+@override final  int? armorClass;
 
 /// Create a copy of CharacterSummary
 /// with the given fields replaced by the non-null parameter values.
@@ -284,16 +302,16 @@ _$CharacterSummaryCopyWith<_CharacterSummary> get copyWith => __$CharacterSummar
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.className, className) || other.className == className)&&(identical(other.level, level) || other.level == level)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.isDead, isDead) || other.isDead == isDead)&&(identical(other.isArchived, isArchived) || other.isArchived == isArchived));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.className, className) || other.className == className)&&(identical(other.level, level) || other.level == level)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.isDead, isDead) || other.isDead == isDead)&&(identical(other.isArchived, isArchived) || other.isArchived == isArchived)&&(identical(other.currentHp, currentHp) || other.currentHp == currentHp)&&(identical(other.maxHp, maxHp) || other.maxHp == maxHp)&&(identical(other.armorClass, armorClass) || other.armorClass == armorClass));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,portraitUrl,raceName,className,level,xp,isDead,isArchived);
+int get hashCode => Object.hash(runtimeType,id,name,portraitUrl,raceName,className,level,xp,isDead,isArchived,currentHp,maxHp,armorClass);
 
 @override
 String toString() {
-  return 'CharacterSummary(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, className: $className, level: $level, xp: $xp, isDead: $isDead, isArchived: $isArchived)';
+  return 'CharacterSummary(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, className: $className, level: $level, xp: $xp, isDead: $isDead, isArchived: $isArchived, currentHp: $currentHp, maxHp: $maxHp, armorClass: $armorClass)';
 }
 
 
@@ -304,7 +322,7 @@ abstract mixin class _$CharacterSummaryCopyWith<$Res> implements $CharacterSumma
   factory _$CharacterSummaryCopyWith(_CharacterSummary value, $Res Function(_CharacterSummary) _then) = __$CharacterSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String? portraitUrl, String? raceName, String? className, int level, int xp, bool isDead, bool isArchived
+ String id, String name, String? portraitUrl, String? raceName, String? className, int level, int xp, bool isDead, bool isArchived, int? currentHp, int? maxHp, int? armorClass
 });
 
 
@@ -321,7 +339,7 @@ class __$CharacterSummaryCopyWithImpl<$Res>
 
 /// Create a copy of CharacterSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = null,Object? xp = null,Object? isDead = null,Object? isArchived = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = null,Object? xp = null,Object? isDead = null,Object? isArchived = null,Object? currentHp = freezed,Object? maxHp = freezed,Object? armorClass = freezed,}) {
   return _then(_CharacterSummary(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -332,7 +350,10 @@ as String?,level: null == level ? _self.level : level // ignore: cast_nullable_t
 as int,xp: null == xp ? _self.xp : xp // ignore: cast_nullable_to_non_nullable
 as int,isDead: null == isDead ? _self.isDead : isDead // ignore: cast_nullable_to_non_nullable
 as bool,isArchived: null == isArchived ? _self.isArchived : isArchived // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,currentHp: freezed == currentHp ? _self.currentHp : currentHp // ignore: cast_nullable_to_non_nullable
+as int?,maxHp: freezed == maxHp ? _self.maxHp : maxHp // ignore: cast_nullable_to_non_nullable
+as int?,armorClass: freezed == armorClass ? _self.armorClass : armorClass // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

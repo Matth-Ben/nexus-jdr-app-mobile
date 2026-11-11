@@ -57,6 +57,18 @@ abstract class CharacterSummary with _$CharacterSummary {
     /// personnage"/"Désarchiver" de l'onglet "Personnage"
     /// (`CharacterVitalsCard`) — voir `CharacterRepository.setArchived`.
     @Default(false) bool isArchived,
+
+    /// `characters.current_hp` (P18, carte de la liste). `null` = inconnu
+    /// (ancien cache écrit avant P18) : la ligne PV n'est jamais affichée,
+    /// jamais de « 0/0 ».
+    int? currentHp,
+
+    /// `characters.max_hp` (P18) — même règle que [currentHp].
+    int? maxHp,
+
+    /// Classe d'armure finale (calcul RAW + `armor_class_bonus`, voir
+    /// `ArmorClassResolver`), `null` si inconnue (ancien cache).
+    int? armorClass,
   }) = _CharacterSummary;
 
   /// XP cumulée requise pour le niveau suivant, `null` si [level] est déjà

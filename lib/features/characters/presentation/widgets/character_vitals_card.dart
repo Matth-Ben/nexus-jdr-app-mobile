@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/display_text.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
+import '../../../../core/widgets/zero_hp_indicator.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 import 'condition_chips.dart';
@@ -287,57 +288,6 @@ class _HpGauge extends StatelessWidget {
     }
     return const LinearGradient(
       colors: [AppColors.hpCriticalStart, AppColors.hpCriticalEnd],
-    );
-  }
-}
-
-/// Signal d'état "À 0 PV" (décision du 09/11/2026) : icône + libellé, jamais
-/// la couleur seule (accessibilité) — mêmes tokens que `AlertBanner`
-/// (fond [AppColors.alertBannerBackground], bordure/icône
-/// [AppColors.accentBrick]) mais texte en [AppColors.textPrimary] pour un
-/// contraste AA. Constat d'état uniquement : aucune règle de jeu.
-@visibleForTesting
-class ZeroHpIndicator extends StatelessWidget {
-  const ZeroHpIndicator();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.alertBannerBackground,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: AppColors.accentBrick, width: 1),
-      ),
-      // `Flexible` : le libellé passe à la ligne (texte système agrandi,
-      // 320 px) au lieu de déborder ; icône purement décorative.
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const ExcludeSemantics(
-            child: Icon(
-              Icons.heart_broken_outlined,
-              size: 16,
-              color: AppColors.accentBrick,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Flexible(
-            child: Text(
-              AppLocalizations.of(context)!.characterVitalsCardZeroHpLabel,
-              style: AppTypography.body(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

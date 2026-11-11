@@ -1626,7 +1626,19 @@ class SupabaseCharacterRepository implements CharacterRepository {
             is_dead,
             is_archived,
             race_id,
-            character_classes(class_id, level, is_primary)
+            current_hp,
+            max_hp,
+            armor_class_bonus,
+            character_classes(class_id, subclass_id, level, is_primary),
+            character_ability_scores(ability_id, score),
+            character_class_options(class_feature_id, chosen_value),
+            character_inventory(
+              id, item_id, quantity, equipped, is_attuned,
+              items(
+                category, requires_attunement, ac_bonus, ac_bonus_kind,
+                armor_properties(ac_base, ac_dex_bonus, slot)
+              )
+            )
           ''')
           .eq('owner_id', ownerId)
           .order('created_at');
@@ -1643,10 +1655,22 @@ class SupabaseCharacterRepository implements CharacterRepository {
         entityIds: classIds,
       );
 
+      // Pour la CA de la carte (P18) : Résilience draconique / Défense.
+      final subclassNames = await _fetchTranslatedNames(
+        entityType: 'subclass',
+        entityIds: CharacterRowMapper.collectSubclassIds(characterRows),
+      );
+      final classFeatureNames = await _fetchTranslatedNames(
+        entityType: 'class_feature',
+        entityIds: CharacterRowMapper.collectClassFeatureIds(characterRows),
+      );
+
       final payload = <String, dynamic>{
         CharacterListCache.characterRowsKey: characterRows,
         CharacterListCache.raceNamesKey: raceNames,
         CharacterListCache.classNamesKey: classNames,
+        CharacterListCache.subclassNamesKey: subclassNames,
+        CharacterListCache.classFeatureNamesKey: classFeatureNames,
       };
       await _writeCacheBestEffort(cacheKey, payload);
       unawaited(_syncState?.markSuccess(ownerId));
@@ -1656,15 +1680,45 @@ class SupabaseCharacterRepository implements CharacterRepository {
     } on PostgrestException catch (error) {
       final cached = await _mappedFromCache(cacheKey, _mapCharacterListPayload);
       if (cached != null) {
-        return cached;
+        return _withPendingHp(cached, ownerId: ownerId);
       }
       throw mapCharacterError(error);
     } catch (_) {
       final cached = await _mappedFromCache(cacheKey, _mapCharacterListPayload);
       if (cached != null) {
-        return cached;
+        return _withPendingHp(cached, ownerId: ownerId);
       }
       throw mapUnknownCharacterError();
+    }
+  }
+
+  /// Hors ligne (repli cache de [fetchCharacters]) : superpose les écritures
+  /// PV encore en file (`PendingCharacterWriteKind.hp`, dernière valeur
+  /// gagnante) aux PV de la carte (P18), comme [_withPendingWrites] pour la
+  /// fiche. Best-effort : une lecture de file en échec laisse les valeurs du
+  /// cache. Une carte sans PV connus (ancien cache) n'est jamais touchée.
+  Future<List<CharacterSummary>> _withPendingHp(
+    List<CharacterSummary> summaries, {
+    required String ownerId,
+  }) async {
+    try {
+      final pending = await _pendingWrites.allForOwner(ownerId);
+      final hpByCharacter = <String, int>{
+        for (final write in pending)
+          if (write.kind == PendingCharacterWriteKind.hp &&
+              write.payload['currentHp'] is num)
+            write.characterId: (write.payload['currentHp'] as num).toInt(),
+      };
+      if (hpByCharacter.isEmpty) return summaries;
+      return [
+        for (final summary in summaries)
+          if (hpByCharacter[summary.id] != null && summary.maxHp != null)
+            summary.copyWith(currentHp: hpByCharacter[summary.id])
+          else
+            summary,
+      ];
+    } catch (_) {
+      return summaries;
     }
   }
 
@@ -8806,6 +8860,12 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final characterRows = _rowsOf(payload[CharacterListCache.characterRowsKey]);
     final raceNames = _namesOf(payload[CharacterListCache.raceNamesKey]);
     final classNames = _namesOf(payload[CharacterListCache.classNamesKey]);
+    final subclassNames = _namesOf(
+      payload[CharacterListCache.subclassNamesKey],
+    );
+    final classFeatureNames = _namesOf(
+      payload[CharacterListCache.classFeatureNamesKey],
+    );
 
     final summaries = characterRows
         .map(
@@ -8813,6 +8873,8 @@ class SupabaseCharacterRepository implements CharacterRepository {
             row,
             raceNames: raceNames,
             classNames: classNames,
+            subclassNames: subclassNames,
+            classFeatureNames: classFeatureNames,
           ),
         )
         .toList();

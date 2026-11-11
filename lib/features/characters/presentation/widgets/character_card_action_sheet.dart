@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,9 +8,11 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
+import '../../../../core/widgets/undo_snack_bar.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../character_creation/presentation/widgets/character_edit_flow.dart';
 import '../../domain/character_failure.dart';
+import '../../data/character_repository.dart';
 import '../../domain/character_summary.dart';
 import '../../domain/write_outcome.dart';
 import '../providers/character_providers.dart';
@@ -90,25 +94,53 @@ String _resolveCharacterFailureMessage(
 
 /// Bascule `characters.is_archived` — même contrat que
 /// `character_detail_screen.dart::_toggleArchived`.
+///
+/// Après un archivage réussi (jamais pour « Désarchiver », ni en cas d'échec),
+/// affiche un SnackBar « {nom} archivé » avec « Annuler » (P18). L'écriture
+/// serveur reste immédiate ; annuler = `setArchived(isArchived: false)` puis
+/// invalidation de la liste. Le SnackBar survit à la navigation : le
+/// repository, le `ProviderContainer`, le messager et les libellés sont
+/// capturés AVANT l'`await`, jamais le [WidgetRef] de la liste.
 Future<void> _toggleArchived(
   BuildContext context,
   WidgetRef ref,
   CharacterSummary character,
 ) async {
   final l10n = AppLocalizations.of(context)!;
+  final repository = ref.read(characterRepositoryProvider);
+  final container = ProviderScope.containerOf(context);
+  final messenger = ScaffoldMessenger.of(context);
+  final archiving = !character.isArchived;
   try {
-    final outcome = await ref
-        .read(characterRepositoryProvider)
-        .setArchived(
-          characterId: character.id,
-          isArchived: !character.isArchived,
-        );
+    final outcome = await repository.setArchived(
+      characterId: character.id,
+      isArchived: archiving,
+    );
     if (!context.mounted) return;
     if (outcome == WriteOutcome.rejectedOffline) {
       _showSnackBar(context, l10n.characterOfflineNotPersistedMessage);
       return;
     }
     ref.invalidate(charactersProvider);
+    if (archiving) {
+      showUndoSnackBar(
+        context,
+        message: l10n.characterListArchivedSnackBarMessage(character.name),
+        undoLabel: l10n.spellSlotUsedSnackBarUndoLabel,
+        announcement: l10n.characterListArchivedSnackBarAnnouncement(
+          character.name,
+        ),
+        onUndo: () => unawaited(
+          _undoArchive(
+            repository: repository,
+            container: container,
+            messenger: messenger,
+            l10n: l10n,
+            characterId: character.id,
+          ),
+        ),
+      );
+    }
   } on CharacterFailure catch (failure) {
     _showSnackBar(context, _resolveCharacterFailureMessage(l10n, failure));
   } catch (_) {
@@ -116,6 +148,36 @@ Future<void> _toggleArchived(
       context,
       l10n.characterCardActionSheetUpdateStatusGenericError,
     );
+  }
+}
+
+/// « Annuler » après un archivage (P18) : `setArchived(isArchived: false)`
+/// puis invalidation de la liste. Réussite silencieuse ; hors ligne, le
+/// personnage reste archivé (`setArchived` ne met jamais en file) et le
+/// message habituel est affiché ; erreur : message générique existant.
+Future<void> _undoArchive({
+  required CharacterRepository repository,
+  required ProviderContainer container,
+  required ScaffoldMessengerState messenger,
+  required AppLocalizations l10n,
+  required String characterId,
+}) async {
+  void say(String message) =>
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+  try {
+    final outcome = await repository.setArchived(
+      characterId: characterId,
+      isArchived: false,
+    );
+    if (outcome == WriteOutcome.rejectedOffline) {
+      say(l10n.characterOfflineNotPersistedMessage);
+      return;
+    }
+    container.invalidate(charactersProvider);
+  } on CharacterFailure catch (failure) {
+    say(_resolveCharacterFailureMessage(l10n, failure));
+  } catch (_) {
+    say(l10n.characterCardActionSheetUpdateStatusGenericError);
   }
 }
 

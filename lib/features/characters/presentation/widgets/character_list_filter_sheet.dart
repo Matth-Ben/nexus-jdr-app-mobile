@@ -5,21 +5,25 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/checkable_option_tile.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../../core/widgets/selectable_option_tile.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/character_list_sort.dart';
 import '../../domain/character_status_filter.dart';
 
-/// Sélection courante des deux filtres de la liste des personnages — voir
-/// [showCharacterListFilterSheet].
+/// Sélection courante des filtres et du tri de la liste des personnages —
+/// voir [showCharacterListFilterSheet].
 typedef CharacterListFilterSelection = ({
   Set<CharacterStatusFilter> statuses,
   Set<String> classNames,
+  CharacterListSort sort,
 });
 
-/// Sheet "Filtrer" de la liste des personnages (icône entonnoir de la barre
-/// de recherche, voir `character_list_screen.dart`) — deux sections à choix
-/// multiple via [CheckableOptionTile] : "STATUT" (Vivants/Archivé/Mort,
+/// Sheet "Filtrer et trier" de la liste des personnages (icône entonnoir de la barre
+/// de recherche, voir `character_list_screen.dart`) — une section "TRIER
+/// PAR" à choix exclusif en tête (P18, [SelectableOptionTile]), puis deux
+/// sections à choix multiple via [CheckableOptionTile] : "STATUT" (Vivants/Archivé/Mort,
 /// demande utilisateur du 16/09/2026, hors cahier des charges) puis "CLASSE"
 /// (déjà existant). Anciennement `character_class_filter_sheet.dart`,
 /// renommé en généralisant son contenu plutôt qu'en ajoutant un second bouton
@@ -33,6 +37,7 @@ Future<CharacterListFilterSelection?> showCharacterListFilterSheet(
   required List<String> availableClassNames,
   required Set<String> selectedClassNames,
   required Set<CharacterStatusFilter> selectedStatuses,
+  CharacterListSort selectedSort = CharacterListSort.defaultOrder,
 }) {
   return showModalBottomSheet<CharacterListFilterSelection>(
     context: context,
@@ -42,6 +47,7 @@ Future<CharacterListFilterSelection?> showCharacterListFilterSheet(
       availableClassNames: availableClassNames,
       initialClassSelection: selectedClassNames,
       initialStatusSelection: selectedStatuses,
+      initialSort: selectedSort,
     ),
   );
 }
@@ -51,11 +57,13 @@ class _CharacterListFilterSheetContent extends StatefulWidget {
     required this.availableClassNames,
     required this.initialClassSelection,
     required this.initialStatusSelection,
+    required this.initialSort,
   });
 
   final List<String> availableClassNames;
   final Set<String> initialClassSelection;
   final Set<CharacterStatusFilter> initialStatusSelection;
+  final CharacterListSort initialSort;
 
   @override
   State<_CharacterListFilterSheetContent> createState() =>
@@ -69,8 +77,12 @@ class _CharacterListFilterSheetContentState
     ...widget.initialStatusSelection,
   };
 
+  late CharacterListSort _sort = widget.initialSort;
+
   bool get _hasSelection =>
-      _classSelection.isNotEmpty || _statusSelection.isNotEmpty;
+      _classSelection.isNotEmpty ||
+      _statusSelection.isNotEmpty ||
+      _sort != CharacterListSort.defaultOrder;
 
   void _toggleClass(String className) {
     setState(() {
@@ -109,6 +121,19 @@ class _CharacterListFilterSheetContentState
                   key: const Key('characterListFilterOptions'),
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   children: [
+                    _SectionLabel(l10n.characterListFilterSheetSortSection),
+                    const SizedBox(height: AppSpacing.sm),
+                    for (final mode in CharacterListSort.values) ...[
+                      SelectableOptionTile(
+                        title: _sortTitle(l10n, mode),
+                        subtitle: _sortSubtitle(l10n, mode),
+                        subtitleMaxLines: null,
+                        selected: _sort == mode,
+                        onTap: () => setState(() => _sort = mode),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                    const SizedBox(height: AppSpacing.sm),
                     _SectionLabel(l10n.characterListFilterSheetStatusSection),
                     const SizedBox(height: AppSpacing.sm),
                     for (final status in CharacterStatusFilter.values) ...[
@@ -152,6 +177,7 @@ class _CharacterListFilterSheetContentState
                             ? () => setState(() {
                                 _classSelection = {};
                                 _statusSelection = {};
+                                _sort = CharacterListSort.defaultOrder;
                               })
                             : null,
                       ),
@@ -163,6 +189,7 @@ class _CharacterListFilterSheetContentState
                         onPressed: () => Navigator.of(context).pop((
                           statuses: _statusSelection,
                           classNames: _classSelection,
+                          sort: _sort,
                         )),
                       ),
                     ),
@@ -174,6 +201,28 @@ class _CharacterListFilterSheetContentState
         ),
       ),
     );
+  }
+
+  String _sortTitle(AppLocalizations l10n, CharacterListSort mode) {
+    switch (mode) {
+      case CharacterListSort.defaultOrder:
+        return l10n.characterListSortDefaultTitle;
+      case CharacterListSort.name:
+        return l10n.characterListSortNameTitle;
+      case CharacterListSort.lastOpened:
+        return l10n.characterListSortLastOpenedTitle;
+    }
+  }
+
+  String _sortSubtitle(AppLocalizations l10n, CharacterListSort mode) {
+    switch (mode) {
+      case CharacterListSort.defaultOrder:
+        return l10n.characterListSortDefaultSubtitle;
+      case CharacterListSort.name:
+        return l10n.characterListSortNameSubtitle;
+      case CharacterListSort.lastOpened:
+        return l10n.characterListSortLastOpenedSubtitle;
+    }
   }
 
   /// Résout le libellé localisé d'un [CharacterStatusFilter] — voir la doc de

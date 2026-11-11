@@ -7,6 +7,7 @@ import '../../../../core/widgets/dashed_border_painter.dart';
 import '../../../../core/widgets/display_text.dart';
 import '../../../../core/widgets/portrait_frame.dart';
 import '../../../../core/widgets/selection_checkbox.dart';
+import '../../../../core/widgets/zero_hp_indicator.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_summary.dart';
 
@@ -153,6 +154,11 @@ class CharacterCard extends StatelessWidget {
                   _summaryLine(l10n, character),
                   style: AppTypography.body(fontSize: 13, color: summaryColor),
                 ),
+                // PV/CA (P18) : seulement en jeu (ni mort ni archivé).
+                if (!isDead && !isArchived && _hasVitals(character)) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  _VitalsLine(character: character),
+                ],
                 if (isArchived || isDead) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Wrap(
@@ -208,6 +214,12 @@ class CharacterCard extends StatelessWidget {
         ? Semantics(selected: selected, child: inkWell)
         : inkWell;
   }
+
+  /// `true` si au moins un des éléments PV/CA est affichable (valeurs non
+  /// nulles) — sinon la ligne est omise.
+  static bool _hasVitals(CharacterSummary character) =>
+      (character.currentHp != null && character.maxHp != null) ||
+      character.armorClass != null;
 
   /// "Race · Classe · Niv. X", en omettant les segments non résolus (race
   /// personnalisée ou personnage sans classe enregistrée) plutôt que
@@ -334,6 +346,89 @@ class _XpGauge extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Ligne « PV 12/20 · CA 15 » de la carte (P18) : deux éléments dans un
+/// `Wrap` (retour à la ligne à 320 dp / police ×2,0, sans troncature), icône
+/// 16 px décorative + texte `font.body` 13 px gras, sans fond ni bordure ni
+/// jauge. À 0 PV (personnage non mort) : [ZeroHpIndicator] remplace « PV
+/// x/y ». Un `Semantics(label)` par élément, le texte visible exclu.
+class _VitalsLine extends StatelessWidget {
+  const _VitalsLine({required this.character});
+
+  final CharacterSummary character;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final currentHp = character.currentHp;
+    final maxHp = character.maxHp;
+    final armorClass = character.armorClass;
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (currentHp != null && maxHp != null)
+          if (currentHp <= 0)
+            Semantics(
+              label: l10n.characterCardZeroHpSemantics(maxHp),
+              excludeSemantics: true,
+              child: const ZeroHpIndicator(),
+            )
+          else
+            _VitalsItem(
+              icon: Icons.favorite_border,
+              text: l10n.characterCardHpValue(currentHp, maxHp),
+              semanticsLabel: l10n.characterCardHpSemantics(currentHp, maxHp),
+            ),
+        if (armorClass != null)
+          _VitalsItem(
+            icon: Icons.shield_outlined,
+            text: l10n.characterCardArmorClassValue(armorClass),
+            semanticsLabel: l10n.characterCardArmorClassSemantics(armorClass),
+          ),
+      ],
+    );
+  }
+}
+
+class _VitalsItem extends StatelessWidget {
+  const _VitalsItem({
+    required this.icon,
+    required this.text,
+    required this.semanticsLabel,
+  });
+
+  final IconData icon;
+  final String text;
+  final String semanticsLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: semanticsLabel,
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: AppSpacing.xs),
+          Flexible(
+            child: Text(
+              text,
+              style: AppTypography.body(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

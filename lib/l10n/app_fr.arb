@@ -1323,11 +1323,11 @@
   "@characterListSearchClearTooltip": {
     "description": "`tooltip` du bouton \"×\" qui vide le champ de recherche."
   },
-  "characterListFilterButtonLabel": "Filtrer les personnages",
+  "characterListFilterButtonLabel": "Filtrer et trier les personnages",
   "@characterListFilterButtonLabel": {
     "description": "Libellé d'accessibilité (`Semantics.label`) du bouton entonnoir de `_SearchRow`."
   },
-  "characterListFilterButtonActiveValue": "Filtre actif",
+  "characterListFilterButtonActiveValue": "Filtre ou tri actif",
   "@characterListFilterButtonActiveValue": {
     "description": "Valeur sémantique (`Semantics.value`) du bouton entonnoir quand au moins un filtre est actif."
   },
@@ -1403,7 +1403,7 @@
     }
   },
 
-  "characterListFilterSheetTitle": "FILTRER",
+  "characterListFilterSheetTitle": "FILTRER ET TRIER",
   "@characterListFilterSheetTitle": {
     "description": "Titre de la sheet \"Filtrer\" (`SheetHeaderBar`, `character_list_filter_sheet.dart`), déjà en majuscules."
   },
@@ -5936,5 +5936,102 @@
   "characterShareRetryButton": "Réessayer",
   "@characterShareRetryButton": {
     "description": "Bouton de relance de l'état d'erreur de `character_share_screen.dart`."
+  },
+  "characterListArchivedSnackBarMessage": "{name} archivé",
+  "@characterListArchivedSnackBarMessage": {
+    "description": "SnackBar affiché après l'archivage d'un personnage depuis la liste (P18).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "characterListArchivedSnackBarAnnouncement": "{name} archivé. Bouton Annuler disponible.",
+  "@characterListArchivedSnackBarAnnouncement": {
+    "description": "Annonce sémantique (liveRegion) du SnackBar d'archivage (P18).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "characterCardHpValue": "PV {current}/{max}",
+  "@characterCardHpValue": {
+    "description": "Valeur PV sur la carte de la liste (P18).",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "characterCardArmorClassValue": "CA {value}",
+  "@characterCardArmorClassValue": {
+    "description": "Valeur CA sur la carte de la liste (P18).",
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "characterCardHpSemantics": "Points de vie : {current} sur {max}",
+  "@characterCardHpSemantics": {
+    "description": "Libellé sémantique des PV de la carte (P18).",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "characterCardArmorClassSemantics": "Classe d'armure : {value}",
+  "@characterCardArmorClassSemantics": {
+    "description": "Libellé sémantique de la CA de la carte (P18).",
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "characterCardZeroHpSemantics": "À 0 points de vie sur {max}",
+  "@characterCardZeroHpSemantics": {
+    "description": "Libellé sémantique de l'état « À 0 PV » de la carte (P18).",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "characterListFilterSheetSortSection": "TRIER PAR",
+  "@characterListFilterSheetSortSection": {
+    "description": "Libellé de la section de tri de la feuille de filtre (P18)."
+  },
+  "characterListSortDefaultTitle": "Par défaut",
+  "@characterListSortDefaultTitle": {
+    "description": "Option de tri « Par défaut » (P18)."
+  },
+  "characterListSortDefaultSubtitle": "En jeu, archivés, puis morts, par date de création",
+  "@characterListSortDefaultSubtitle": {
+    "description": "Sous-titre de l'option de tri par défaut (P18)."
+  },
+  "characterListSortNameTitle": "Nom (A → Z)",
+  "@characterListSortNameTitle": {
+    "description": "Option de tri par nom (P18)."
+  },
+  "characterListSortNameSubtitle": "Au sein de chaque groupe",
+  "@characterListSortNameSubtitle": {
+    "description": "Sous-titre de l'option de tri par nom (P18)."
+  },
+  "characterListSortLastOpenedTitle": "Dernière ouverture",
+  "@characterListSortLastOpenedTitle": {
+    "description": "Option de tri par dernière ouverture (P18)."
+  },
+  "characterListSortLastOpenedSubtitle": "Les plus récents d'abord, au sein de chaque groupe",
+  "@characterListSortLastOpenedSubtitle": {
+    "description": "Sous-titre de l'option de tri par dernière ouverture (P18)."
   }
 }

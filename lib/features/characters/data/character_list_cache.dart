@@ -30,6 +30,14 @@ abstract final class CharacterListCache {
   /// résolue (`{class_id: name}`), même rationale que [raceNamesKey].
   static const String classNamesKey = 'classNames';
 
+  /// Noms de sous-classe déjà résolus (`{subclass_id: name}`) — pour la CA
+  /// de la carte (P18). Absent d'un ancien payload.
+  static const String subclassNamesKey = 'subclassNames';
+
+  /// Noms d'aptitude de classe déjà résolus (`{class_feature_id: name}`) —
+  /// pour repérer « Style de combat » (P18). Absent d'un ancien payload.
+  static const String classFeatureNamesKey = 'classFeatureNames';
+
   /// Clé de cache de la liste des personnages du compte [ownerId]. Scopée
   /// par `ownerId` : même rationale ("Isolation par utilisateur") que
   /// `CharacterDetailCache.keyFor` — la liste est une donnée privée

@@ -1014,6 +1014,259 @@ void main() {
     },
   );
 
+  group('SupabaseCharacterRepository.fetchCharacters — PV/CA de la carte '
+      '(P18)', () {
+    late AppDatabase db;
+    late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(db);
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const ownerId = 'owner-1';
+    final cacheKey = 'character_list:$ownerId';
+
+    final enrichedRows = <String, List<Map<String, dynamic>>>{
+      'characters': [
+        {
+          'id': 'char-1',
+          'name': 'Aragorn',
+          'portrait_url': null,
+          'xp': 100,
+          'is_dead': false,
+          'is_archived': false,
+          'race_id': 1,
+          'current_hp': 12,
+          'max_hp': 20,
+          'armor_class_bonus': 1,
+          'character_classes': [
+            {
+              'class_id': 2,
+              'subclass_id': null,
+              'level': 5,
+              'is_primary': true,
+            },
+          ],
+          'character_ability_scores': [
+            {'ability_id': 'dex', 'score': 14},
+          ],
+          'character_class_options': <Map<String, dynamic>>[],
+          'character_inventory': [
+            {
+              'id': 'inv-1',
+              'item_id': 1,
+              'quantity': 1,
+              'equipped': true,
+              'items': {
+                'category': 'armure',
+                'armor_properties': {'ac_base': 12, 'ac_dex_bonus': 'max_2'},
+              },
+            },
+          ],
+        },
+      ],
+      'translations': [
+        {'entity_id': '1', 'value': 'Humain'},
+        {'entity_id': '2', 'value': 'Guerrier'},
+      ],
+    };
+
+    SupabaseCharacterRepository repositoryFor(
+      dynamic client, {
+      ConnectivityChecker? connectivity,
+    }) => SupabaseCharacterRepository(
+      client,
+      cache,
+      pendingWrites,
+      connectivity ?? _AlwaysOnlineConnectivityChecker(),
+    );
+
+    test('le select demande PV, bonus de CA et les données de la CA ; la '
+        'carte porte PV et CA (12 + 2 + 1 = 15)', () async {
+      String? select;
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        tableRows: enrichedRows,
+        onRequest: (request) {
+          if (request.url.pathSegments.last == 'characters' &&
+              request.method == 'GET') {
+            select = request.url.queryParameters['select'];
+          }
+        },
+      );
+
+      final summaries = await repositoryFor(client).fetchCharacters();
+
+      for (final fragment in [
+        'current_hp',
+        'max_hp',
+        'armor_class_bonus',
+        'subclass_id',
+        'character_ability_scores',
+        'character_class_options',
+        'character_inventory',
+        'armor_properties',
+      ]) {
+        expect(select, contains(fragment));
+      }
+      expect(summaries.single.currentHp, 12);
+      expect(summaries.single.maxHp, 20);
+      expect(summaries.single.armorClass, 15);
+    });
+
+    test('hors ligne : PV et CA viennent du cache', () async {
+      await repositoryFor(
+        await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: enrichedRows,
+        ),
+      ).fetchCharacters();
+
+      final offline = await repositoryFor(
+        await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          failureStatusCode: 500,
+        ),
+      ).fetchCharacters();
+
+      expect(offline.single.currentHp, 12);
+      expect(offline.single.maxHp, 20);
+      expect(offline.single.armorClass, 15);
+    });
+
+    test('hors ligne : un ajustement de PV en attente est superposé aux PV '
+        'du cache (dernière valeur gagnante)', () async {
+      await repositoryFor(
+        await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: enrichedRows,
+        ),
+      ).fetchCharacters();
+      await pendingWrites.enqueue(
+        characterId: 'char-1',
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        targetId: '',
+        payload: {'currentHp': 3, 'temporaryHp': 0},
+      );
+
+      final offline = await repositoryFor(
+        await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          failureStatusCode: 500,
+        ),
+      ).fetchCharacters();
+
+      expect(offline.single.currentHp, 3);
+      expect(offline.single.maxHp, 20, reason: 'le max n\'est jamais touché');
+    });
+
+    test('la superposition ignore la file d\'un autre compte', () async {
+      await repositoryFor(
+        await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: enrichedRows,
+        ),
+      ).fetchCharacters();
+      await pendingWrites.enqueue(
+        characterId: 'char-1',
+        ownerId: 'owner-2',
+        kind: PendingCharacterWriteKind.hp,
+        targetId: '',
+        payload: {'currentHp': 1, 'temporaryHp': 0},
+      );
+
+      final offline = await repositoryFor(
+        await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          failureStatusCode: 500,
+        ),
+      ).fetchCharacters();
+
+      expect(offline.single.currentHp, 12);
+    });
+
+    test('ancien cache (écrit avant P18, sans PV ni données de CA) : cartes '
+        'sans PV ni CA, jamais « 0/0 »', () async {
+      await cache.put(cacheKey, {
+        'characterRows': [
+          {
+            'id': 'char-1',
+            'name': 'Vieux cache',
+            'portrait_url': null,
+            'xp': 0,
+            'is_dead': false,
+            'is_archived': false,
+            'race_id': 1,
+            'character_classes': [
+              {'class_id': 2, 'level': 1, 'is_primary': true},
+            ],
+          },
+        ],
+        'raceNames': {'1': 'Humain'},
+        'classNames': {'2': 'Guerrier'},
+      });
+      // Une file d'attente PV existe : sans PV de base connus, rien n'est
+      // inventé.
+      await pendingWrites.enqueue(
+        characterId: 'char-1',
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        targetId: '',
+        payload: {'currentHp': 3, 'temporaryHp': 0},
+      );
+
+      final offline = await repositoryFor(
+        await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          failureStatusCode: 500,
+        ),
+      ).fetchCharacters();
+
+      expect(offline.single.name, 'Vieux cache');
+      expect(offline.single.currentHp, isNull);
+      expect(offline.single.maxHp, isNull);
+      expect(offline.single.armorClass, isNull);
+    });
+
+    test(
+      'le tri par défaut du repository reste en jeu, archivés, morts',
+      () async {
+        final rows = <String, List<Map<String, dynamic>>>{
+          'characters': [
+            {
+              ...enrichedRows['characters']!.first,
+              'id': 'dead',
+              'is_dead': true,
+            },
+            {
+              ...enrichedRows['characters']!.first,
+              'id': 'arch',
+              'is_archived': true,
+            },
+            {...enrichedRows['characters']!.first, 'id': 'live'},
+          ],
+          'translations': enrichedRows['translations']!,
+        };
+        final summaries = await repositoryFor(
+          await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            tableRows: rows,
+          ),
+        ).fetchCharacters();
+
+        expect(summaries.map((s) => s.id), ['live', 'arch', 'dead']);
+      },
+    );
+  });
+
   group('SupabaseCharacterRepository.fetchCharacters (cache de secours)', () {
     // Même principe que le groupe `fetchCharacterDetail (cache de secours)`
     // ci-dessus : 3 scénarios communs (succès réseau écrit le cache, échec
