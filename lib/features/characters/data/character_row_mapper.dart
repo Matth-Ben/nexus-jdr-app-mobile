@@ -31,7 +31,6 @@ abstract final class CharacterRowMapper {
     final ids = <String>{};
     for (final row in characterRows) {
       final raceId = row['race_id'];
-
       if (raceId != null) {
         ids.add(raceId.toString());
       }
