@@ -4371,4 +4371,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get characterSavingThrowNotProficient => 'non maîtrisé';
+
+  @override
+  String get diceRollKeptLabel => 'Retenu';
+
+  @override
+  String get diceRollDiscardedLabel => 'Écarté';
 }

@@ -4333,4 +4333,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get characterSavingThrowNotProficient => 'not proficient';
+
+  @override
+  String get diceRollKeptLabel => 'Kept';
+
+  @override
+  String get diceRollDiscardedLabel => 'Discarded';
 }

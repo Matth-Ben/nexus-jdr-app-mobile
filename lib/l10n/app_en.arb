@@ -1352,5 +1352,7 @@
   "characterSavingThrowLabelWis": "Wisdom saving throw",
   "characterSavingThrowLabelCha": "Charisma saving throw",
   "characterSavingThrowProficient": "proficient",
-  "characterSavingThrowNotProficient": "not proficient"
+  "characterSavingThrowNotProficient": "not proficient",
+  "diceRollKeptLabel": "Kept",
+  "diceRollDiscardedLabel": "Discarded"
 }
