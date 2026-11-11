@@ -245,8 +245,9 @@ void main() {
                 .byType(ConditionChip)
                 .evaluate()
                 .map((e) => tester.getRect(find.byWidget(e.widget)))) {
-          if (r.top < edit.bottom)
+          if (r.top < edit.bottom) {
             expect(r.right, lessThanOrEqualTo(edit.left));
+          }
         }
       });
     }
