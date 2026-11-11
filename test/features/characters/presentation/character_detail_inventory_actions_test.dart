@@ -1511,4 +1511,48 @@ void main() {
       },
     );
   });
+
+  group("snackbar d'équipement (F16 : formulation sans accord de genre)", () {
+    const chainMail = CharacterInventoryItem(
+      id: 'inv-9',
+      itemId: 9,
+      name: 'Cotte de mailles',
+      category: 'armure',
+      quantity: 1,
+      equipped: false,
+      armorProperties: CharacterInventoryArmorProperties(
+        acBase: 16,
+        acDexBonus: 'aucun',
+        stealthDisadvantage: true,
+      ),
+    );
+
+    testWidgets('équiper puis déséquiper : « Équipé : X. » / « Déséquipé : '
+        'X. », jamais « X équipé. »', (tester) async {
+      final repository = await pumpDetail(
+        tester,
+        initialDetail: detail.copyWith(inventory: [chainMail]),
+      );
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Cotte de mailles'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Équiper'));
+      await tester.pumpAndSettle();
+
+      expect(repository.setEquippedCallCount, 1);
+      expect(find.text('Équipé : Cotte de mailles.'), findsOneWidget);
+      expect(find.text('Cotte de mailles équipé.'), findsNothing);
+      // Laisse disparaître le premier snackbar avant le second.
+      await tester.pump(const Duration(seconds: 6));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Cotte de mailles'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Déséquiper'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Déséquipé : Cotte de mailles.'), findsOneWidget);
+    });
+  });
 }

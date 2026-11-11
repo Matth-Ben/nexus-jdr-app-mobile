@@ -5636,5 +5636,39 @@
   "spellFilterNoMatchResetButton": "Réinitialiser les filtres",
   "@spellFilterNoMatchResetButton": {
     "description": "Bouton de l'état vide des filtres de sorts."
-  }
+  },
+  "characterInventoryItemCardNotProficientBadge": "Non maîtrisé",
+  "@characterInventoryItemCardNotProficientBadge": {
+    "description": "Pastille (`NotProficientBadge`) d'une armure ou d'un bouclier que le personnage ne maîtrise pas — informative, sans effet sur la CA ni les jets."
+  },
+  "characterInventoryItemCardNotProficientSemantics": "non maîtrisé : désavantage aux tests, sauvegardes et attaques de Force ou Dextérité, sorts impossibles",
+  "@characterInventoryItemCardNotProficientSemantics": {
+    "description": "Complément du libellé d'accessibilité de la ligne d'inventaire et de l'en-tête de feuille pour un objet non maîtrisé (la pastille elle-même est exclue de la sémantique)."
+  },
+  "inventoryNotProficientArmorBanner": "Armure non maîtrisée : désavantage aux tests, sauvegardes et attaques de Force/Dextérité ; sorts impossibles.",
+  "@inventoryNotProficientArmorBanner": {
+    "description": "Bannière informative (`InfoBanner`) au-dessus du bouton Équiper/Déséquiper d'une armure non maîtrisée (feuille d'actions et panneau Infos). RAW, identique 2014/2024 ; rien sur la CA."
+  },
+  "inventoryNotProficientShieldBanner": "Bouclier non maîtrisé : désavantage aux tests, sauvegardes et attaques de Force/Dextérité ; sorts impossibles.",
+  "@inventoryNotProficientShieldBanner": {
+    "description": "Même bannière que `inventoryNotProficientArmorBanner`, pour un bouclier."
+  },
+  "characterDetailItemEquippedMessage": "Équipé : {item}.",
+  "@characterDetailItemEquippedMessage": {
+    "description": "Snackbar après avoir équipé une armure/un bouclier/un objet. Formulation sans accord (le genre de l'objet varie : « Cotte de mailles équipé » était fautif — F16).",
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "characterDetailItemUnequippedMessage": "Déséquipé : {item}.",
+  "@characterDetailItemUnequippedMessage": {
+    "description": "Snackbar après avoir déséquipé un objet, même formulation sans accord que `characterDetailItemEquippedMessage`.",
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  }
 }

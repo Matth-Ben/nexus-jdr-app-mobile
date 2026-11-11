@@ -1324,5 +1324,11 @@
   "spellFilterSelectedSemanticLabel": "{label}, selected",
   "spellFilterResultCountAnnouncement": "{count, plural, =0{No spells shown} =1{1 spell shown} other{{count} spells shown}}",
   "spellFilterNoMatchMessage": "No spell matches these filters.",
-  "spellFilterNoMatchResetButton": "Reset filters"
+  "spellFilterNoMatchResetButton": "Reset filters",
+  "characterInventoryItemCardNotProficientBadge": "Not proficient",
+  "characterInventoryItemCardNotProficientSemantics": "not proficient: disadvantage on Strength or Dexterity checks, saves and attacks, can't cast spells",
+  "inventoryNotProficientArmorBanner": "Not proficient with this armor: disadvantage on Strength/Dexterity checks, saves and attacks; can't cast spells.",
+  "inventoryNotProficientShieldBanner": "Not proficient with this shield: disadvantage on Strength/Dexterity checks, saves and attacks; can't cast spells.",
+  "characterDetailItemEquippedMessage": "Equipped: {item}.",
+  "characterDetailItemUnequippedMessage": "Unequipped: {item}."
 }

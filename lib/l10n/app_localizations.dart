@@ -6863,6 +6863,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Réinitialiser les filtres'**
   String get spellFilterNoMatchResetButton;
+
+  /// Pastille (`NotProficientBadge`) d'une armure ou d'un bouclier que le personnage ne maîtrise pas — informative, sans effet sur la CA ni les jets.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non maîtrisé'**
+  String get characterInventoryItemCardNotProficientBadge;
+
+  /// Complément du libellé d'accessibilité de la ligne d'inventaire et de l'en-tête de feuille pour un objet non maîtrisé (la pastille elle-même est exclue de la sémantique).
+  ///
+  /// In fr, this message translates to:
+  /// **'non maîtrisé : désavantage aux tests, sauvegardes et attaques de Force ou Dextérité, sorts impossibles'**
+  String get characterInventoryItemCardNotProficientSemantics;
+
+  /// Bannière informative (`InfoBanner`) au-dessus du bouton Équiper/Déséquiper d'une armure non maîtrisée (feuille d'actions et panneau Infos). RAW, identique 2014/2024 ; rien sur la CA.
+  ///
+  /// In fr, this message translates to:
+  /// **'Armure non maîtrisée : désavantage aux tests, sauvegardes et attaques de Force/Dextérité ; sorts impossibles.'**
+  String get inventoryNotProficientArmorBanner;
+
+  /// Même bannière que `inventoryNotProficientArmorBanner`, pour un bouclier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bouclier non maîtrisé : désavantage aux tests, sauvegardes et attaques de Force/Dextérité ; sorts impossibles.'**
+  String get inventoryNotProficientShieldBanner;
+
+  /// Snackbar après avoir équipé une armure/un bouclier/un objet. Formulation sans accord (le genre de l'objet varie : « Cotte de mailles équipé » était fautif — F16).
+  ///
+  /// In fr, this message translates to:
+  /// **'Équipé : {item}.'**
+  String characterDetailItemEquippedMessage(String item);
+
+  /// Snackbar après avoir déséquipé un objet, même formulation sans accord que `characterDetailItemEquippedMessage`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déséquipé : {item}.'**
+  String characterDetailItemUnequippedMessage(String item);
 }
 
 class _AppLocalizationsDelegate

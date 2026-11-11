@@ -4226,4 +4226,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spellFilterNoMatchResetButton => 'Reset filters';
+
+  @override
+  String get characterInventoryItemCardNotProficientBadge => 'Not proficient';
+
+  @override
+  String get characterInventoryItemCardNotProficientSemantics =>
+      'not proficient: disadvantage on Strength or Dexterity checks, saves and attacks, can\'t cast spells';
+
+  @override
+  String get inventoryNotProficientArmorBanner =>
+      'Not proficient with this armor: disadvantage on Strength/Dexterity checks, saves and attacks; can\'t cast spells.';
+
+  @override
+  String get inventoryNotProficientShieldBanner =>
+      'Not proficient with this shield: disadvantage on Strength/Dexterity checks, saves and attacks; can\'t cast spells.';
+
+  @override
+  String characterDetailItemEquippedMessage(String item) {
+    return 'Equipped: $item.';
+  }
+
+  @override
+  String characterDetailItemUnequippedMessage(String item) {
+    return 'Unequipped: $item.';
+  }
 }

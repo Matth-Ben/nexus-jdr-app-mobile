@@ -1501,8 +1501,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         outcome == WriteOutcome.queued
             ? _offlineQueuedMessage(l10n)
             : newEquipped
-            ? '${item.name} équipé.'
-            : '${item.name} déséquipé.',
+            ? l10n.characterDetailItemEquippedMessage(item.name)
+            : l10n.characterDetailItemUnequippedMessage(item.name),
       );
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
@@ -2964,6 +2964,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         ),
         actionsDisabled: _isWritingInventory,
         filterAnchorKey: _inventoryFilterKey,
+        showArmorProficiencyWarning: true,
       ),
       CharacterDetailTab.story => CharacterStoryTabBody(
         detail: detail,
