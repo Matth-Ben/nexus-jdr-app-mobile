@@ -4180,13 +4180,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // garantie d'isolation, même principe que [leaveStory]. Le filtre
     // `.eq('character_id', characterId)` ci-dessous reste une redondance
     // défensive côté client, pas un filet de sécurité indispensable.
-    _requireOwnerId();
+    final ownerId = _requireOwnerId();
 
     // Voir la documentation de [CharacterRepository.useInventoryItem] :
     // jamais mis en file.
     if (!await _connectivityChecker.hasConnection()) {
       return WriteOutcome.rejectedOffline;
     }
+
+    // T5b-1 : une ligne dont l'ajout ou le retrait est encore en file n'existe
+    // pas (ou plus) côté serveur : l'écriture toucherait zéro ligne sans
+    // erreur et serait confirmée à tort. Refus sans rien écrire (l'usage hors
+    // ligne propre relève de T5b-3).
+    final pendingLine = await _pendingWriteBeforeOnlineWrite(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: PendingCharacterWriteKind.inventoryItem,
+      targetId: inventoryId,
+    );
+    if (pendingLine != null) return WriteOutcome.rejectedOffline;
 
     try {
       if (newQuantity <= 0) {

@@ -716,8 +716,9 @@ class PendingCharacterWriteSyncer {
     }
   }
 
-  /// `false` si [write] est un réglage d'état (T5a) ou une écriture de journal
-  /// (T4) ou une ligne d'inventaire (T5b-1) au payload ou à la cible invalide : il ne doit jamais être rejoué. Toujours `true` pour les
+  /// `false` si [write] est un réglage d'état (T5a), une écriture de journal
+  /// (T4) ou une ligne d'inventaire (T5b-1) au payload ou à la cible
+  /// invalide : il ne doit jamais être rejoué. Toujours `true` pour les
   /// autres kinds (validés ailleurs).
   bool _isReplayableState(PendingCharacterWrite write) {
     switch (write.kind) {

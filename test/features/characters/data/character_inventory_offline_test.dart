@@ -466,6 +466,71 @@ void main() {
   });
 
   // ---------------------------------------------------------------------
+  group('useInventoryItem : garde sur les lignes en file (T5b-1)', () {
+    test(
+      'ajout en file, réseau revenu : usage refusé, aucune requête',
+      () async {
+        final id = await addOffline('Potion');
+        goOnline();
+
+        final outcome = await repository.useInventoryItem(
+          characterId: _characterId,
+          inventoryId: id,
+          newQuantity: 0,
+        );
+
+        expect(outcome, WriteOutcome.rejectedOffline);
+        expect(server.requests, isEmpty);
+        expect((await lines()).single.payload['op'], 'add');
+      },
+    );
+
+    test('tombstone en file : usage refusé, aucune requête', () async {
+      goOffline();
+      await repository.removeInventoryItem(
+        characterId: _characterId,
+        inventoryId: _srv1,
+      );
+      goOnline();
+
+      final outcome = await repository.useInventoryItem(
+        characterId: _characterId,
+        inventoryId: _srv1,
+        newQuantity: 2,
+      );
+
+      expect(outcome, WriteOutcome.rejectedOffline);
+      expect(server.requests, isEmpty);
+    });
+
+    test(
+      'ligne sans entrée en file : usage normal (UPDATE puis DELETE)',
+      () async {
+        expect(
+          await repository.useInventoryItem(
+            characterId: _characterId,
+            inventoryId: _srv1,
+            newQuantity: 3,
+          ),
+          WriteOutcome.synced,
+        );
+        expect(
+          await repository.useInventoryItem(
+            characterId: _characterId,
+            inventoryId: _srv2,
+            newQuantity: 0,
+          ),
+          WriteOutcome.synced,
+        );
+
+        expect(inventoryWrites().map((w) => w.method), ['PATCH', 'DELETE']);
+        expect(rows.map((r) => r['id']), [_srv1]);
+        expect(rows.single['quantity'], 3);
+      },
+    );
+  });
+
+  // ---------------------------------------------------------------------
   group('interaction avec inventoryState', () {
     test('ajout + équipement + set d\'arme + harmonisation hors ligne : une '
         'seule ligne de file, un seul INSERT à l\'état final, aucune '
