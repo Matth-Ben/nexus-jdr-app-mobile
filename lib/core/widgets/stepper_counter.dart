@@ -19,6 +19,8 @@ class StepperCounter extends StatelessWidget {
     required this.value,
     required this.onIncrement,
     required this.onDecrement,
+    this.decrementLabel = 'Diminuer',
+    this.incrementLabel = 'Augmenter',
     super.key,
   });
 
@@ -31,6 +33,13 @@ class StepperCounter extends StatelessWidget {
   /// `null` désactive le bouton "-".
   final VoidCallback? onDecrement;
 
+  /// Libellé d'accessibilité du bouton "-" (défaut inchangé : « Diminuer »),
+  /// à préciser quand plusieurs compteurs coexistent à l'écran.
+  final String decrementLabel;
+
+  /// Libellé d'accessibilité du bouton "+" (défaut inchangé : « Augmenter »).
+  final String incrementLabel;
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -39,7 +48,7 @@ class StepperCounter extends StatelessWidget {
         _StepperButton(
           icon: Icons.remove,
           onPressed: onDecrement,
-          semanticLabel: 'Diminuer',
+          semanticLabel: decrementLabel,
         ),
         SizedBox(
           width: 32,
@@ -55,7 +64,7 @@ class StepperCounter extends StatelessWidget {
         _StepperButton(
           icon: Icons.add,
           onPressed: onIncrement,
-          semanticLabel: 'Augmenter',
+          semanticLabel: incrementLabel,
         ),
       ],
     );

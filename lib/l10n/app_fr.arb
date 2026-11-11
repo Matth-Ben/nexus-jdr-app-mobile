@@ -4562,33 +4562,9 @@
       }
     }
   },
-  "characterDetailCastSpellWithSlotSuccessMessage": "{spellName} lancé (emplacement niveau {slotLevel}).",
-  "@characterDetailCastSpellWithSlotSuccessMessage": {
-    "description": "SnackBar de succès de `_castSpell` pour un emplacement classique.",
-    "placeholders": {
-      "spellName": {
-        "type": "String"
-      },
-      "slotLevel": {
-        "type": "int"
-      }
-    }
-  },
   "characterDetailCastSpellErrorMessage": "Impossible de lancer ce sort. Réessayez.",
   "@characterDetailCastSpellErrorMessage": {
     "description": "SnackBar d'échec générique de `_castSpell`/`_castPactSpell`/`_castInnateSpell`."
-  },
-  "characterDetailCastPactSpellSuccessMessage": "{spellName} lancé (emplacement de pacte niveau {pactLevel}).",
-  "@characterDetailCastPactSpellSuccessMessage": {
-    "description": "SnackBar de succès de `_castPactSpell`.",
-    "placeholders": {
-      "spellName": {
-        "type": "String"
-      },
-      "pactLevel": {
-        "type": "int"
-      }
-    }
   },
   "characterDetailCastInnateSpellSuccessMessage": "{spellName} lancé (sort inné).",
   "@characterDetailCastInnateSpellSuccessMessage": {
@@ -5414,5 +5390,102 @@
     "placeholders": {
       "count": {"type": "int"}
     }
+  },
+  "spellSlotUsedSnackBarMessage": "Emplacement de niveau {level} utilisé",
+  "@spellSlotUsedSnackBarMessage": {
+    "description": "Message du SnackBar affiché après un lancer qui consomme un emplacement classique (remplace l'ancien message « sort lancé (emplacement niveau N) »).",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "spellPactSlotUsedSnackBarMessage": "Emplacement de pacte utilisé",
+  "@spellPactSlotUsedSnackBarMessage": {
+    "description": "Message du SnackBar affiché après un lancer qui consomme un emplacement de magie de pacte."
+  },
+  "spellSlotUsedSnackBarUndoLabel": "Annuler",
+  "@spellSlotUsedSnackBarUndoLabel": {
+    "description": "Action du SnackBar de lancer : rend l'emplacement consommé (correction, pas une règle D&D)."
+  },
+  "spellSlotUsedSnackBarAnnouncement": "{message}. Bouton Annuler.",
+  "@spellSlotUsedSnackBarAnnouncement": {
+    "description": "Annonce lecteur d'écran (liveRegion) du SnackBar de lancer ; {message} est le texte du SnackBar.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "spellSlotCorrectionOpenButton": "Corriger",
+  "@spellSlotCorrectionOpenButton": {
+    "description": "Bouton de l'en-tête de la carte Emplacements qui ouvre la feuille de correction manuelle."
+  },
+  "spellSlotCorrectionSheetTitle": "Corriger les emplacements",
+  "@spellSlotCorrectionSheetTitle": {
+    "description": "Titre de la feuille de correction des emplacements."
+  },
+  "spellSlotCorrectionHintRecover": "Pour une Récupération arcanique, une Perle de pouvoir ou la magie de pacte.",
+  "@spellSlotCorrectionHintRecover": {
+    "description": "Texte d'aide de la feuille de correction : cas légitimes d'ajustement."
+  },
+  "spellSlotCorrectionHintNoUndo": "Les règles n'ont pas d'annulation : ceci corrige le suivi de vos emplacements.",
+  "@spellSlotCorrectionHintNoUndo": {
+    "description": "Texte d'aide de la feuille de correction : précise qu'il s'agit d'une correction de suivi."
+  },
+  "spellSlotCorrectionDoneButton": "Terminer",
+  "@spellSlotCorrectionDoneButton": {
+    "description": "Bouton primaire qui ferme la feuille de correction (chaque appui est déjà écrit)."
+  },
+  "spellSlotCorrectionPactRowLabel": "Pacte (niveau {level})",
+  "@spellSlotCorrectionPactRowLabel": {
+    "description": "Libellé de la ligne de magie de pacte dans la feuille de correction.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "spellSlotCorrectionRowSemanticLabel": "Niveau {level} : {remaining} restants sur {total}",
+  "@spellSlotCorrectionRowSemanticLabel": {
+    "description": "Sémantique d'une ligne de niveau de la feuille de correction.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "spellSlotCorrectionPactRowSemanticLabel": "Pacte, niveau {level} : {remaining} restants sur {total}",
+  "@spellSlotCorrectionPactRowSemanticLabel": {
+    "description": "Sémantique de la ligne de pacte de la feuille de correction.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "spellSlotCorrectionAddLabel": "Ajouter un emplacement",
+  "@spellSlotCorrectionAddLabel": {
+    "description": "Libellé du bouton + (rend un emplacement) de la feuille de correction."
+  },
+  "spellSlotCorrectionRemoveLabel": "Retirer un emplacement",
+  "@spellSlotCorrectionRemoveLabel": {
+    "description": "Libellé du bouton − (consomme un emplacement) de la feuille de correction."
+  },
+  "spellSlotCorrectionErrorMessage": "Impossible de corriger les emplacements. Réessayez.",
+  "@spellSlotCorrectionErrorMessage": {
+    "description": "SnackBar d'échec d'une annulation de lancer ou d'une correction d'emplacement."
   }
 }

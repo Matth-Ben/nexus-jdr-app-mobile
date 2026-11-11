@@ -21,6 +21,7 @@ import 'character_spells_section.dart';
 import 'class_feature_action_sheet.dart';
 import 'spell_action_sheet.dart';
 import 'spell_preparation_card.dart';
+import 'spell_slot_correction_button.dart';
 
 /// Contenu de l'onglet "Sorts" de la fiche personnage — scindé de l'onglet
 /// "Compétences" (voir `character_skills_tab_body.dart`) pour donner aux
@@ -73,6 +74,7 @@ class CharacterSpellsTabBody extends ConsumerStatefulWidget {
     required this.onCastSpell,
     required this.onTogglePrepared,
     this.onUseFeature,
+    this.onCorrectSlots,
     this.actionsDisabled = false,
     this.searchFocusNode,
     super.key,
@@ -88,6 +90,12 @@ class CharacterSpellsTabBody extends ConsumerStatefulWidget {
   /// callback d'écriture à proposer à un lecteur anonyme), même convention
   /// que les autres callbacks d'écriture de cet écran.
   final UseClassFeatureCallback? onUseFeature;
+
+  /// Ouvre la feuille « Corriger les emplacements » (P9, bouton de l'en-tête
+  /// de la carte Emplacements). `null` masque le bouton (vue en lecture seule
+  /// d'une fiche partagée : aucune écriture à proposer) ; [actionsDisabled]
+  /// le désactive (repos ou écriture en cours).
+  final VoidCallback? onCorrectSlots;
 
   final bool actionsDisabled;
 
@@ -162,6 +170,13 @@ class _CharacterSpellsTabBodyState
 
     final availableSlots = _availableSlotLevels(detail.spellSlots);
     final hasPactSlots = (detail.pactSpellSlot?.total ?? 0) > 0;
+    final slotsCard = availableSlots.isNotEmpty
+        ? _SpellSlotsCard(
+            slots: availableSlots,
+            onCorrect: widget.onCorrectSlots,
+            correctEnabled: !widget.actionsDisabled,
+          )
+        : null;
 
     if (detail.spells.isEmpty) {
       // Un personnage qui a des emplacements (sous-classe lanceuse du
@@ -197,8 +212,8 @@ class _CharacterSpellsTabBodyState
       return ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
-          if (availableSlots.isNotEmpty) ...[
-            _SpellSlotsCard(slots: availableSlots),
+          if (slotsCard != null) ...[
+            slotsCard,
             const SizedBox(height: AppSpacing.md),
           ],
           const _EmptySpellsState(),
@@ -258,8 +273,8 @@ class _CharacterSpellsTabBodyState
       children: [
         _SpellSearchField(controller: _searchController, focusNode: _focusNode),
         const SizedBox(height: AppSpacing.md),
-        if (availableSlots.isNotEmpty) ...[
-          _SpellSlotsCard(slots: availableSlots),
+        if (slotsCard != null) ...[
+          slotsCard,
           const SizedBox(height: AppSpacing.md),
         ],
         if (hasPreparation) ...[
@@ -280,6 +295,11 @@ class _CharacterSpellsTabBodyState
             onCastSpell: widget.onCastSpell,
             onTogglePrepared: widget.onTogglePrepared,
             actionsDisabled: widget.actionsDisabled,
+            // Occultiste « pur » : pas de carte Emplacements, le bouton
+            // « Corriger » vit dans la carte « Magie de pacte ».
+            onCorrectSlots: availableSlots.isEmpty
+                ? widget.onCorrectSlots
+                : null,
           ),
         if (showLimitedUseCard) ...[
           const SizedBox(height: AppSpacing.md),
@@ -463,10 +483,22 @@ List<CharacterSpellSlot> _availableSlotLevels(List<CharacterSpellSlot> slots) {
 /// d'emplacement disponible (voir [_availableSlotLevels]), indépendamment
 /// des sorts connus (bug F15). `Wrap` pour ne jamais déborder à 320 px ou
 /// avec un texte système agrandi.
+///
+/// En-tête : titre + bouton « Corriger » ([onCorrect], P9) — ouvre la feuille
+/// de correction manuelle ; masqué si [onCorrect] est nul, désactivé si
+/// [correctEnabled] est faux. Un Occultiste « pur » (aucun emplacement
+/// classique, donc pas de carte) trouve ce bouton dans la carte « Magie de
+/// pacte » de [CharacterSpellsSection].
 class _SpellSlotsCard extends StatelessWidget {
-  const _SpellSlotsCard({required this.slots});
+  const _SpellSlotsCard({
+    required this.slots,
+    required this.onCorrect,
+    required this.correctEnabled,
+  });
 
   final List<CharacterSpellSlot> slots;
+  final VoidCallback? onCorrect;
+  final bool correctEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -482,12 +514,22 @@ class _SpellSlotsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DisplayText(
-            l10n.characterSpellsTabBodySlotsCardTitle,
-            style: AppTypography.display(
-              fontSize: 11,
-              color: AppColors.textSecondary,
-            ),
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              DisplayText(
+                l10n.characterSpellsTabBodySlotsCardTitle,
+                style: AppTypography.display(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              if (onCorrect != null)
+                SpellSlotCorrectionButton(
+                  onPressed: correctEnabled ? onCorrect : null,
+                ),
+            ],
           ),
           for (final slot in slots) ...[
             const SizedBox(height: AppSpacing.sm),

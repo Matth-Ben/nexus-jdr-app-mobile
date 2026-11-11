@@ -153,37 +153,29 @@ Future<void> _castPactSpell(
 
 void main() {
   testWidgets('lancer avec le seul emplacement de pacte disponible : message '
-      '« lancé (emplacement de pacte niveau N) » affiché', (tester) async {
+      '« Emplacement de pacte utilisé » affiché (SnackBar « Annuler »)', (
+    tester,
+  ) async {
     final repository = await _pumpDetail(tester);
 
     await _castPactSpell(tester);
 
     expect(repository.castSpellCallCount, 1);
     expect(repository.lastIsPactSlot, isTrue);
-    expect(
-      find.text('Rayon de givre lancé (emplacement de pacte niveau 2).'),
-      findsOneWidget,
-    );
+    expect(find.text('Emplacement de pacte utilisé'), findsOneWidget);
   });
 
   group('locale anglaise', () {
-    testWidgets(
-      'lancer : message "cast (level N pact slot)" affiché en anglais',
-      (tester) async {
-        final repository = await _pumpDetail(
-          tester,
-          locale: const Locale('en'),
-        );
+    testWidgets('lancer : message "Pact slot used" affiché en anglais', (
+      tester,
+    ) async {
+      final repository = await _pumpDetail(tester, locale: const Locale('en'));
 
-        await _castPactSpell(tester, tabLabel: 'SPELLS', castLabel: 'CAST');
+      await _castPactSpell(tester, tabLabel: 'SPELLS', castLabel: 'CAST');
 
-        expect(repository.castSpellCallCount, 1);
-        expect(repository.lastIsPactSlot, isTrue);
-        expect(
-          find.text('Rayon de givre cast (level 2 pact slot).'),
-          findsOneWidget,
-        );
-      },
-    );
+      expect(repository.castSpellCallCount, 1);
+      expect(repository.lastIsPactSlot, isTrue);
+      expect(find.text('Pact slot used'), findsOneWidget);
+    });
   });
 }
