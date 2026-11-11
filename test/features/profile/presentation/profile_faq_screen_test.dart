@@ -211,7 +211,7 @@ void main() {
     expect(find.textContaining('« Importer XML »'), findsOneWidget);
     expect(find.textContaining("Ton MJ t'envoie un lien"), findsOneWidget);
     expect(
-      find.textContaining('un seul repos est mis en attente'),
+      find.textContaining('Un seul repos est mis en attente'),
       findsOneWidget,
     );
   });
@@ -253,7 +253,7 @@ void main() {
         find.textContaining('sends you an invitation link'),
         findsOneWidget,
       );
-      expect(find.textContaining('only one rest is held'), findsOneWidget);
+      expect(find.textContaining('Only one rest is held'), findsOneWidget);
     });
   });
 }
