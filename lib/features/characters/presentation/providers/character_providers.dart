@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/cache/cache_providers.dart';
@@ -121,11 +123,13 @@ Future<List<InventoryCatalogItem>> inventoryCatalog(Ref ref) async {
         .watch(characterRepositoryProvider)
         .fetchInventoryCatalog();
     // Servi hors ligne (cache périmé) : à recharger dès que le réseau revient.
-    try {
-      needsReload = !await checker.hasConnection();
-    } catch (_) {
-      needsReload = false;
-    }
+    // Déterminé sans bloquer l'affichage du catalogue (best-effort).
+    unawaited(
+      checker
+          .hasConnection()
+          .then((connected) => needsReload = !connected)
+          .catchError((_) => false),
+    );
     return items;
   } catch (_) {
     needsReload = true;
