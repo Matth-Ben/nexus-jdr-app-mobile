@@ -62,4 +62,9 @@ void main() {
       }
     });
   }
+
+  test('un second repos est refusé, jamais "le dernier envoyé" (D187)', () {
+    expect(answers['fr'], isNot(contains('seul le dernier')));
+    expect(answers['en'], isNot(contains('only the last one')));
+  });
 }
