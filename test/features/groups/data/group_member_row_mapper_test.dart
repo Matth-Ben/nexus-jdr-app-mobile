@@ -316,6 +316,37 @@ void main() {
       expect(member.armorClassBonus, 0);
     });
 
+    test('P7 : une armure personnalisée équipée ne change pas la CA du '
+        'membre (PR 1, lecture seule)', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(
+          character: {
+            'name': 'Sylvi',
+            'character_ability_scores': [
+              {'ability_id': 'dex', 'score': 14},
+            ],
+            'character_inventory': [
+              {
+                'id': 'inv-1',
+                'item_id': null,
+                'custom_name': 'Cotte maison',
+                'quantity': 1,
+                'equipped': true,
+                'custom_kind': 'armure',
+                'custom_ac_base': 16,
+                'custom_armor_category': 'lourde',
+                'custom_weight': 25,
+              },
+            ],
+          },
+        ),
+        raceNames: const {},
+        classNames: const {},
+      );
+
+      expect(member.armorClass, 12);
+    });
+
     test('sans armure équipée -> 10 + Dex (repli RAW de base)', () {
       final member = GroupMemberRowMapper.toGroupMember(
         _row(

@@ -470,7 +470,9 @@ CharacterSpellSlot? _firstPactSlot(dynamic value) {
 CharacterInventoryItem _mapInventoryItem(Map<String, dynamic> row) {
   final itemId = row['item_id'] is num ? (row['item_id'] as num).toInt() : null;
   final quantity = _asInt(row['quantity']);
-  final weight = row['weight'];
+  // Objet personnalisé : `custom_weight` (kg/unité, P7) ; clé absente d'une
+  // ancienne réponse -> `null`.
+  final weight = itemId != null ? row['weight'] : row['custom_weight'];
   final unitWeight = weight is num ? weight.toDouble() : null;
   final hasKnownWeight = unitWeight != null && quantity > 0;
 
@@ -503,6 +505,26 @@ CharacterInventoryItem _mapInventoryItem(Map<String, dynamic> row) {
         ? _mapWeaponProperties(_mapOf(row['weapon_properties']))
         : _mapCustomWeaponProperties(row),
     armorProperties: _mapArmorProperties(_mapOf(row['armor_properties'])),
+    // Colonnes P7 (lecture seule), clés absentes d'une ancienne réponse
+    // tolérées.
+    customKind: itemId == null ? row['custom_kind'] as String? : null,
+    magicBonus: itemId == null && row['custom_magic_bonus'] is num
+        ? (row['custom_magic_bonus'] as num).toInt()
+        : 0,
+    customAcBase: itemId == null && row['custom_ac_base'] is num
+        ? (row['custom_ac_base'] as num).toInt()
+        : null,
+    customArmorCategory: itemId == null
+        ? row['custom_armor_category'] as String?
+        : null,
+    customRequiresAttunement:
+        itemId == null && row['custom_requires_attunement'] == true,
+    customWeaponCategory: itemId == null
+        ? row['custom_weapon_category'] as String?
+        : null,
+    customWeaponRange: itemId == null
+        ? row['custom_weapon_range'] as String?
+        : null,
   );
 }
 

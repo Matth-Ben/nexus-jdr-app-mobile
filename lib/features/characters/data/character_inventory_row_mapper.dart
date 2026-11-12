@@ -48,6 +48,14 @@ abstract final class CharacterInventoryRowMapper {
     return weight is num ? weight.toDouble() : null;
   }
 
+  /// Extrait `character_inventory.custom_weight` (numeric, kg par unité) d'un
+  /// objet personnalisé. Clé absente (ancien payload en cache, fiche sans la
+  /// colonne) ou type inattendu : `null`, jamais `0`.
+  static double? parseCustomWeight(Map<String, dynamic> row) {
+    final weight = row['custom_weight'];
+    return weight is num ? weight.toDouble() : null;
+  }
+
   /// Extrait le montant de la colonne jsonb `items.cost`
   /// (`{"amount", "currency"}`) en `double` — `null` si [raw] n'est pas une
   /// map exploitable ou si la clé `"amount"` est absente/d'un type inattendu
@@ -192,7 +200,11 @@ abstract final class CharacterInventoryRowMapper {
       final itemId = rawItemId is num ? rawItemId.toInt() : null;
       final quantity = (row['quantity'] as num?)?.toInt() ?? 1;
       final itemRow = row['items'] as Map<String, dynamic>?;
-      final unitWeight = parseUnitWeight(itemRow);
+      // Objet personnalisé : `custom_weight` (kg par unité, P7) ; absent d'un
+      // ancien payload -> `null` (jamais 0).
+      final unitWeight = itemId != null
+          ? parseUnitWeight(itemRow)
+          : parseCustomWeight(row);
 
       final String name;
       if (itemId != null) {
@@ -238,9 +250,32 @@ abstract final class CharacterInventoryRowMapper {
           weaponSlot: WeaponSlot.fromValue(row['weapon_slot'] as String?),
           acBonus: (itemRow?['ac_bonus'] as num?)?.toInt(),
           acBonusKind: itemRow?['ac_bonus_kind'] as String?,
+          // Colonnes P7 (lecture seule) : réservées aux objets personnalisés ;
+          // clés absentes d'un ancien payload -> `null`/0/`false`, sans crash.
+          customKind: itemId == null ? row['custom_kind'] as String? : null,
+          magicBonus: itemId == null ? _asInt(row['custom_magic_bonus']) : 0,
+          customAcBase: itemId == null
+              ? _asIntOrNull(row['custom_ac_base'])
+              : null,
+          customArmorCategory: itemId == null
+              ? row['custom_armor_category'] as String?
+              : null,
+          customRequiresAttunement:
+              itemId == null && row['custom_requires_attunement'] == true,
+          customWeaponCategory: itemId == null
+              ? row['custom_weapon_category'] as String?
+              : null,
+          customWeaponRange: itemId == null
+              ? row['custom_weapon_range'] as String?
+              : null,
         ),
       );
     }
     return result;
   }
+
+  static int? _asIntOrNull(dynamic value) =>
+      value is num ? value.toInt() : null;
+
+  static int _asInt(dynamic value) => _asIntOrNull(value) ?? 0;
 }

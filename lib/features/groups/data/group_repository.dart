@@ -479,6 +479,10 @@ class SupabaseGroupRepository implements GroupRepository {
               character_class_options(class_feature_id, chosen_value),
               character_inventory(
                 id, item_id, quantity, equipped, is_attuned,
+                custom_kind, custom_magic_bonus, custom_ac_base,
+                custom_armor_category, custom_weight,
+                custom_requires_attunement, custom_weapon_category,
+                custom_weapon_range,
                 items(
                   category, requires_attunement, ac_bonus, ac_bonus_kind,
                   armor_properties(ac_base, ac_dex_bonus, slot)

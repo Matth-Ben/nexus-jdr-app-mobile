@@ -250,6 +250,61 @@ void main() {
       expect((inventory.single as Map<String, dynamic>)['name'], 'Épée longue');
     });
 
+    test('P7 : inventaire exporté avec les champs d objet '
+        'personnalisé enrichi', () async {
+      final detail = buildDetail(id: 'char-1', name: 'Aranea').copyWith(
+        inventory: const [
+          CharacterInventoryItem(
+            id: 'inv-9',
+            name: 'Cotte maison',
+            quantity: 1,
+            equipped: true,
+            unitWeight: 20.5,
+            totalWeight: 20.5,
+            customKind: 'armure',
+            magicBonus: 2,
+            customAcBase: 15,
+            customArmorCategory: 'intermediaire',
+            customRequiresAttunement: true,
+            customWeaponCategory: 'guerre',
+            customWeaponRange: 'melee',
+          ),
+        ],
+      );
+      final characterRepository = _FakeCharacterRepository()
+        ..summaries = [
+          const CharacterSummary(
+            id: 'char-1',
+            name: 'Aranea',
+            level: 2,
+            xp: 120,
+          ),
+        ]
+        ..detailsById['char-1'] = detail;
+      final repository = await buildRepository(
+        characterRepository: characterRepository,
+      );
+
+      final path = await repository.exportMyData();
+      final payload =
+          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+      final character =
+          (payload['characters'] as List<dynamic>).single
+              as Map<String, dynamic>;
+      final item =
+          (character['inventory'] as List<dynamic>).single
+              as Map<String, dynamic>;
+
+      expect(item['customKind'], 'armure');
+      expect(item['customMagicBonus'], 2);
+      expect(item['customAcBase'], 15);
+      expect(item['customArmorCategory'], 'intermediaire');
+      expect(item['unitWeight'], 20.5);
+      expect(item['customRequiresAttunement'], isTrue);
+      expect(item['customWeaponCategory'], 'guerre');
+      expect(item['customWeaponRange'], 'melee');
+    });
+
     test('sorts accordés par une sous-classe : statut stocké conservé, sort '
         'purement dérivé exclu', () async {
       final base = buildDetail(id: 'char-1', name: 'Aranea');
