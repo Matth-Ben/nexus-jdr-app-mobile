@@ -4750,4 +4750,180 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get featTagCampaign => 'Campagne';
+
+  @override
+  String get customItemTypeWeaponTitle => 'Arme';
+
+  @override
+  String get customItemTypeWeaponSubtitle =>
+      'Dégâts, type de dégâts, bonus magique';
+
+  @override
+  String get customItemTypeOtherTitle => 'Objet magique ou autre';
+
+  @override
+  String get customItemTypeOtherSubtitle => 'Nom, poids, harmonisation';
+
+  @override
+  String customItemTypeLine(String kind) {
+    return 'Type : $kind';
+  }
+
+  @override
+  String get customItemChangeTypeButton => 'Changer';
+
+  @override
+  String get customItemChangeTypeSemantics => 'Changer le type d\'objet';
+
+  @override
+  String get customItemDamageTypeAcid => 'Acide';
+
+  @override
+  String get customItemDamageTypeFire => 'Feu';
+
+  @override
+  String get customItemDamageTypeLightning => 'Foudre';
+
+  @override
+  String get customItemDamageTypeCold => 'Froid';
+
+  @override
+  String get customItemDamageTypeForce => 'Force';
+
+  @override
+  String get customItemDamageTypeNecrotic => 'Nécrotique';
+
+  @override
+  String get customItemDamageTypePoison => 'Poison';
+
+  @override
+  String get customItemDamageTypePsychic => 'Psychique';
+
+  @override
+  String get customItemDamageTypeRadiant => 'Radiant';
+
+  @override
+  String get customItemDamageTypeThunder => 'Tonnerre';
+
+  @override
+  String get customItemWeaponCategorySectionLabel => 'CATÉGORIE D\'ARME';
+
+  @override
+  String get customItemWeaponCategoryCommon => 'Courante';
+
+  @override
+  String get customItemWeaponCategoryMartial => 'De guerre';
+
+  @override
+  String get customItemWeaponCategoryHint =>
+      'Non renseignée : la maîtrise de l\'arme ne sera pas évaluée.';
+
+  @override
+  String get customItemWeaponRangeSectionLabel => 'PORTÉE';
+
+  @override
+  String get customItemWeaponRangeMelee => 'Corps à corps';
+
+  @override
+  String get customItemWeaponRangeRanged => 'Distance';
+
+  @override
+  String get customItemWeaponRangeHint =>
+      'Non renseignée : traitée comme une arme de corps à corps (Force).';
+
+  @override
+  String get customItemAdvancedTitle => 'Options avancées';
+
+  @override
+  String get customItemMagicBonusSectionLabel => 'BONUS MAGIQUE';
+
+  @override
+  String get customItemMagicBonusNone => 'Aucun';
+
+  @override
+  String get customItemWeightSectionLabel => 'POIDS (KG PAR UNITÉ)';
+
+  @override
+  String get customItemWeightHint => 'Ex. 1,5';
+
+  @override
+  String get customItemWeightError => 'Entrez un poids entre 0 et 9 999,99 kg.';
+
+  @override
+  String customItemNameTooLongError(int max) {
+    return '$max caractères au plus.';
+  }
+
+  @override
+  String get customItemRequiresAttunementLabel => 'Nécessite une harmonisation';
+
+  @override
+  String get customItemAttuneNowLabel => 'Harmoniser maintenant';
+
+  @override
+  String customItemAttunementCapCaption(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Vous avez déjà $count objets harmonisés. Cet objet sera créé non harmonisé ; vous pourrez l\'harmoniser plus tard.',
+      one: 'Vous avez déjà 1 objet harmonisé. Cet objet sera créé non harmonisé ; vous pourrez l\'harmoniser plus tard.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customItemMissingLine(String fields) {
+    return 'Il manque : $fields';
+  }
+
+  @override
+  String get customItemMissingName => 'nom';
+
+  @override
+  String get customItemMissingDamageType => 'type de dégâts';
+
+  @override
+  String magicBonusBadgeSemantics(int bonus) {
+    return 'Bonus magique +$bonus';
+  }
+
+  @override
+  String inventoryCardSubtitleWeaponWithType(String damageType, int quantity) {
+    return 'Arme · $damageType · x$quantity';
+  }
+
+  @override
+  String inventoryCardSubtitleWeapon(int quantity) {
+    return 'Arme · x$quantity';
+  }
+
+  @override
+  String get inventoryCardAttunementPendingSemantics =>
+      'harmonisation requise, objet non harmonisé';
+
+  @override
+  String get itemInfoPanelTypeLabel => 'Type';
+
+  @override
+  String get itemInfoPanelMagicBonusLabel => 'Bonus magique';
+
+  @override
+  String get itemInfoPanelAttunementLabel => 'Harmonisation';
+
+  @override
+  String get itemInfoPanelAttunementRequiredValue => 'Requise';
+
+  @override
+  String get itemInfoPanelAttunementAttunedValue => 'Requise · harmonisé';
+
+  @override
+  String get itemInfoPanelAttunementPendingValue => 'Requise · non harmonisé';
+
+  @override
+  String get itemInfoPanelMagicBonusInactiveLegend =>
+      'Bonus magique inactif tant que l\'objet n\'est pas harmonisé.';
+
+  @override
+  String get itemInfoPanelWeaponCategoryLabel => 'Catégorie d\'arme';
 }

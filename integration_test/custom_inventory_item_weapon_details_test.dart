@@ -102,6 +102,9 @@ void main() {
       await pumpUntilSettled(tester, attempts: 4);
       await tapText(tester, 'Objet personnalisé');
       await pumpUntilSettled(tester, attempts: 4);
+      // Formulaire en deux temps (P7) : étape 1 « TYPE D'OBJET ».
+      await tester.tap(find.byKey(const Key('customItemKindOther')));
+      await pumpUntilSettled(tester, attempts: 4);
       await tester.enterText(
         find.byKey(const Key('customItemNameField')),
         'QA Amulette Simple',
@@ -150,17 +153,25 @@ void main() {
       await pumpUntilSettled(tester, attempts: 4);
       await tapText(tester, 'Objet personnalisé');
       await pumpUntilSettled(tester, attempts: 4);
+      // Étape 1 : tuile « Arme » ; la description vit dans « Options
+      // avancées » pour une arme.
+      await tester.tap(find.byKey(const Key('customItemKindWeapon')));
+      await pumpUntilSettled(tester, attempts: 4);
       await tester.enterText(
         find.byKey(const Key('customItemNameField')),
         'QA Zanbato Ancestral',
       );
+      await tester.pump();
+      await tester.ensureVisible(
+        find.byKey(const Key('advancedSectionHeader')),
+      );
+      await tester.tap(find.byKey(const Key('advancedSectionHeader')));
+      await pumpUntilSettled(tester, attempts: 4);
       await tester.enterText(
         find.byKey(const Key('customItemDescriptionField')),
         'Une lame de test QA transmise de génération en génération.',
       );
       await tester.pump();
-      await tapText(tester, 'ARME');
-      await pumpUntilSettled(tester, attempts: 4);
 
       final addButtonNoDamageType = tester.widget<PrimaryButton>(
         find.widgetWithText(PrimaryButton, 'AJOUTER'),

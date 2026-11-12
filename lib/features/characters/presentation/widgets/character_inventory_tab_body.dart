@@ -10,6 +10,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/armor_proficiency_rules.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
+import '../../domain/custom_item_enrichment.dart';
 import '../../domain/currency_kind.dart';
 import '../../domain/inventory_catalog_item.dart';
 import '../../domain/inventory_category_filter.dart';
@@ -99,6 +100,7 @@ class CharacterInventoryTabBody extends StatefulWidget {
     String? damageDice,
     String? damageType,
     List<String> properties,
+    CustomItemEnrichment? enrichment,
   })
   onAddCustomInventoryItem;
 
@@ -275,7 +277,10 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
   }
 
   Future<void> _openAddItem(BuildContext context) async {
-    final picked = await pickInventoryAddition(context);
+    final picked = await pickInventoryAddition(
+      context,
+      attunedCount: widget.detail.attunedItemCount,
+    );
     if (picked == null) return;
 
     if (picked.isCustom) {
@@ -286,6 +291,7 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
         damageDice: picked.customDamageDice,
         damageType: picked.customDamageType,
         properties: picked.customProperties,
+        enrichment: picked.customEnrichment,
       );
     } else {
       widget.onAddInventoryItem(picked.item!, picked.quantity);

@@ -13,6 +13,7 @@ import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
+import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
 import 'package:personnages/features/characters/domain/level_up_feat_option.dart';
@@ -228,6 +229,7 @@ class FakeRepository implements CharacterRepository {
     String? damageDice,
     String? damageType,
     List<String> properties = const [],
+    CustomItemEnrichment? enrichment,
   }) => throw UnimplementedError();
 
   @override
@@ -404,6 +406,10 @@ const _zanbato = InventoryCatalogItem(
 /// par les tests qui n'ont pas besoin d'inspecter le résultat final (états
 /// intermédiaires des sheets), voir les tests dédiés plus bas pour ceux qui
 /// vérifient le résultat retourné.
+///
+/// Forme simple (`enriched: false`, celle de la récompense et du butin de
+/// groupe) : le formulaire enrichi en deux temps est couvert par
+/// `custom_item_form_sheet_test.dart`.
 Future<void> _pumpAndPick(
   WidgetTester tester, {
   required FakeRepository repository,
@@ -420,7 +426,8 @@ Future<void> _pumpAndPick(
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(
-                onPressed: () => pickInventoryAddition(context),
+                onPressed: () =>
+                    pickInventoryAddition(context, enriched: false),
                 child: const Text('Ouvrir'),
               ),
             ),
@@ -610,7 +617,10 @@ void main() {
                 body: Center(
                   child: ElevatedButton(
                     onPressed: () async {
-                      result = await pickInventoryAddition(context);
+                      result = await pickInventoryAddition(
+                        context,
+                        enriched: false,
+                      );
                     },
                     child: const Text('Ouvrir'),
                   ),
@@ -688,7 +698,10 @@ void main() {
                   body: Center(
                     child: ElevatedButton(
                       onPressed: () async {
-                        result = await pickInventoryAddition(context);
+                        result = await pickInventoryAddition(
+                          context,
+                          enriched: false,
+                        );
                       },
                       child: const Text('Ouvrir'),
                     ),

@@ -27,6 +27,7 @@ import '../domain/character_spell_slot.dart';
 import '../domain/condition_type.dart';
 import '../domain/spell_status_formatter.dart';
 import '../domain/currency_kind.dart';
+import '../domain/custom_item_enrichment.dart';
 import '../domain/hit_dice_pool.dart';
 import '../domain/hp_adjustment.dart';
 import '../domain/innate_spell_usage.dart';
@@ -1755,6 +1756,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     String? damageDice,
     String? damageType,
     List<String> properties = const [],
+    CustomItemEnrichment? enrichment,
   }) async {
     // Capturé avant le premier `await` — voir la doc de
     // [_offlineQueuedMessage].
@@ -1771,6 +1773,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             damageDice: damageDice,
             damageType: damageType,
             properties: properties,
+            enrichment: enrichment,
           );
       if (outcome == WriteOutcome.rejectedOffline) {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);

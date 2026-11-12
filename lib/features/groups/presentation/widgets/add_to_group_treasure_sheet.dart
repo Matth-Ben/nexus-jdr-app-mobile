@@ -101,7 +101,8 @@ class _AddToGroupTreasureSheetContentState
   /// Plusieurs objets du catalogue d'un coup (sélection multiple, voir
   /// `pickInventoryAdditions`) plutôt qu'un par un.
   Future<void> _addItems() async {
-    final picked = await pickInventoryAdditions(context);
+    // Forme simple : le butin de groupe ne porte pas les colonnes enrichies.
+    final picked = await pickInventoryAdditions(context, enriched: false);
     if (picked.isEmpty || !mounted) return;
 
     setState(() {
