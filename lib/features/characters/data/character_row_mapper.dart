@@ -1,5 +1,6 @@
 import '../domain/character_class_row.dart';
 import '../domain/character_summary.dart';
+import 'armor_class_row_resolver.dart';
 
 /// Fonctions de mapping pures entre les lignes brutes renvoyées par
 /// PostgREST (`characters`, `character_classes`, `translations`) et les
@@ -52,6 +53,37 @@ abstract final class CharacterRowMapper {
     return ids;
   }
 
+  /// Identifiants de sous-classe (`character_classes.subclass_id`), pour la
+  /// CA de la carte (P18) — mêmes règles que [collectClassIds].
+  static Set<String> collectSubclassIds(
+    List<Map<String, dynamic>> characterRows,
+  ) {
+    final ids = <String>{};
+    for (final row in characterRows) {
+      for (final classRow in classRowsOf(row)) {
+        final subclassId = classRow['subclass_id'];
+        if (subclassId != null) ids.add(subclassId.toString());
+      }
+    }
+    return ids;
+  }
+
+  /// Identifiants d'aptitude de classe (`character_class_options
+  /// .class_feature_id`), pour repérer « Style de combat » (P18).
+  static Set<String> collectClassFeatureIds(
+    List<Map<String, dynamic>> characterRows,
+  ) {
+    final ids = <String>{};
+    for (final row in characterRows) {
+      final raw = row['character_class_options'] as List<dynamic>?;
+      for (final option in raw?.cast<Map<String, dynamic>>() ?? const []) {
+        final id = option['class_feature_id'];
+        if (id != null) ids.add(id.toString());
+      }
+    }
+    return ids;
+  }
+
   /// Parse les lignes brutes de `translations` (colonnes réelles
   /// `entity_id`/`value`, PAS `name` — voir
   /// `20260825090050_create_translations_table.sql` côté dépôt web) en
@@ -78,6 +110,8 @@ abstract final class CharacterRowMapper {
     Map<String, dynamic> row, {
     required Map<String, String> raceNames,
     required Map<String, String> classNames,
+    Map<String, String> subclassNames = const {},
+    Map<String, String> classFeatureNames = const {},
   }) {
     final classRows = classRowsOf(row)
         .where((classRow) => classRow['class_id'] != null)
@@ -95,6 +129,12 @@ abstract final class CharacterRowMapper {
 
     final raceId = row['race_id'];
 
+    // PV/CA (P18) : `null` quand la ligne ne les porte pas (ancien cache
+    // écrit avant P18) — jamais « 0/0 » ni une CA devinée.
+    final currentHp = (row['current_hp'] as num?)?.toInt();
+    final maxHp = (row['max_hp'] as num?)?.toInt();
+    final hasHp = currentHp != null && maxHp != null;
+
     return CharacterSummary(
       id: row['id'] as String,
       name: row['name'] as String,
@@ -110,6 +150,16 @@ abstract final class CharacterRowMapper {
       xp: (row['xp'] as num?)?.toInt() ?? 0,
       isDead: row['is_dead'] == true,
       isArchived: row['is_archived'] == true,
+      currentHp: hasHp ? currentHp : null,
+      maxHp: hasHp ? maxHp : null,
+      armorClass: ArmorClassRowResolver.hasData(row)
+          ? ArmorClassRowResolver.fromCharacterRow(
+              row,
+              classNames: classNames,
+              subclassNames: subclassNames,
+              classFeatureNames: classFeatureNames,
+            )
+          : null,
     );
   }
 }

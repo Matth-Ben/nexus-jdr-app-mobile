@@ -44,6 +44,7 @@ import 'package:personnages/core/notifications/push_notification_gateway.dart';
 import 'package:personnages/core/notifications/push_token_repository.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
@@ -1614,6 +1615,29 @@ void main() {
     }
 
     group('signOut', () {
+      test('signOut : purge les horodatages « dernière ouverture » de CE '
+          "compte, jamais ceux d'un autre", () async {
+        SharedPreferences.setMockInitialValues({
+          'character_last_opened:fake-user-id': '{"c1":1}',
+          'character_last_opened:autre-compte': '{"c2":2}',
+        });
+        final client = await buildSignedInClient();
+
+        await SupabaseAuthRepository(
+          client,
+          pendingWriteQueue: queue,
+          referenceDataCache: cache,
+          syncPendingWrites: () async {},
+        ).signOut();
+
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('character_last_opened:fake-user-id'), isNull);
+        expect(
+          prefs.getString('character_last_opened:autre-compte'),
+          '{"c2":2}',
+        );
+      });
+
       test('file vide : déconnecte et purge le cache local (catalogue de '
           'référence + file PV/XP du compte)', () async {
         final client = await buildSignedInClient();
@@ -1767,6 +1791,29 @@ void main() {
     });
 
     group('deleteAccount', () {
+      test('deleteAccount : purge les horodatages « dernière ouverture » de CE '
+          "compte, jamais ceux d'un autre", () async {
+        SharedPreferences.setMockInitialValues({
+          'character_last_opened:fake-user-id': '{"c1":1}',
+          'character_last_opened:autre-compte': '{"c2":2}',
+        });
+        final client = await buildSignedInClient();
+
+        await SupabaseAuthRepository(
+          client,
+          pendingWriteQueue: queue,
+          referenceDataCache: cache,
+          syncPendingWrites: () async {},
+        ).deleteAccount();
+
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('character_last_opened:fake-user-id'), isNull);
+        expect(
+          prefs.getString('character_last_opened:autre-compte'),
+          '{"c2":2}',
+        );
+      });
+
       test('file vide : supprime puis purge le cache local', () async {
         final client = await buildSignedInClient();
 

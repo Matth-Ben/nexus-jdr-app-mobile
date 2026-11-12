@@ -38,6 +38,7 @@ import '../domain/weapon_slot_rules.dart';
 import '../domain/write_outcome.dart';
 import 'providers/character_conditions_providers.dart';
 import 'providers/character_detail_provider.dart';
+import 'providers/character_last_opened_provider.dart';
 import 'providers/character_providers.dart';
 import 'providers/pact_weapon_providers.dart';
 import '../../character_creation/presentation/widgets/character_edit_flow.dart';
@@ -121,6 +122,21 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// (icône filtre du bandeau bois, recettage direction-artistique du
   /// 13/09) — voir `CharacterInventoryTabBody.filterAnchorKey`.
   final GlobalKey _inventoryFilterKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    // Tri « Dernière ouverture » de la liste (P18) : horodatage LOCAL écrit à
+    // l'ouverture de la fiche (jamais synchronisé, voir
+    // `CharacterLastOpened`). Best-effort : un échec d'écriture locale ne
+    // doit jamais gêner l'ouverture de la fiche.
+    unawaited(
+      ref
+          .read(characterLastOpenedProvider.notifier)
+          .record(widget.characterId)
+          .catchError((Object _) {}),
+    );
+  }
 
   @override
   void dispose() {

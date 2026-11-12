@@ -123,6 +123,7 @@ void main() {
         characterRepositoryProvider.overrideWithValue(fakeCharacterRepository),
         authRepositoryProvider.overrideWithValue(_FakeAuthRepository()),
         routeObserverProvider.overrideWithValue(observer),
+        currentUserProvider.overrideWithValue(null),
         appVersionRepositoryProvider.overrideWithValue(
           _FakeAppVersionRepository(),
         ),
@@ -154,10 +155,16 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// Active le filtre de statut "Mort" depuis la sheet "FILTRER".
+  /// Active le filtre de statut "Mort" depuis la sheet "FILTRER ET TRIER".
   Future<void> activateFilter(WidgetTester tester) async {
     await tester.tap(_filterButton());
     await tester.pumpAndSettle();
+    // Section « STATUT » sous « TRIER PAR » : liste paresseuse, on défile.
+    await tester.dragUntilVisible(
+      find.text('Mort'),
+      find.byKey(const Key('characterListFilterOptions')),
+      const Offset(0, -100),
+    );
     await tester.tap(find.text('Mort'));
     await tester.tap(find.text('APPLIQUER'));
     await tester.pumpAndSettle();
@@ -255,12 +262,12 @@ void main() {
         'sheet de filtre', (tester) async {
       await pumpScreen(tester);
       await activateFilter(tester);
-      expect(find.text('FILTRER'), findsNothing);
+      expect(find.text('FILTRER ET TRIER'), findsNothing);
 
       await tester.tap(_activeDot());
       await tester.pumpAndSettle();
 
-      expect(find.text('FILTRER'), findsOneWidget);
+      expect(find.text('FILTRER ET TRIER'), findsOneWidget);
     });
   });
 
@@ -303,30 +310,33 @@ void main() {
   });
 
   group('sémantique', () {
-    testWidgets('filtre inactif : bouton "Filtrer les personnages", sans '
-        'valeur', (tester) async {
-      final handle = tester.ensureSemantics();
-      await pumpScreen(tester);
+    testWidgets(
+      'filtre inactif : bouton "Filtrer et trier les personnages", sans '
+      'valeur',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await pumpScreen(tester);
 
-      expect(
-        tester.getSemantics(_filterButton()),
-        matchesSemantics(
-          label: 'Filtrer les personnages',
-          isButton: true,
-          hasEnabledState: true,
-          isEnabled: true,
-          isFocusable: true,
-          hasTapAction: true,
-          hasFocusAction: true,
-        ),
-      );
-      // `matchesSemantics` ne compare pas une valeur qu'on ne lui passe pas :
-      // l'absence de valeur doit être vérifiée explicitement.
-      expect(tester.getSemantics(_filterButton()).value, isEmpty);
-      handle.dispose();
-    });
+        expect(
+          tester.getSemantics(_filterButton()),
+          matchesSemantics(
+            label: 'Filtrer et trier les personnages',
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: true,
+            isFocusable: true,
+            hasTapAction: true,
+            hasFocusAction: true,
+          ),
+        );
+        // `matchesSemantics` ne compare pas une valeur qu'on ne lui passe pas :
+        // l'absence de valeur doit être vérifiée explicitement.
+        expect(tester.getSemantics(_filterButton()).value, isEmpty);
+        handle.dispose();
+      },
+    );
 
-    testWidgets('filtre actif : même libellé, valeur "Filtre actif"', (
+    testWidgets('filtre actif : même libellé, valeur "Filtre ou tri actif"', (
       tester,
     ) async {
       final handle = tester.ensureSemantics();
@@ -336,8 +346,8 @@ void main() {
       expect(
         tester.getSemantics(_filterButton()),
         matchesSemantics(
-          label: 'Filtrer les personnages',
-          value: 'Filtre actif',
+          label: 'Filtrer et trier les personnages',
+          value: 'Filtre ou tri actif',
           isButton: true,
           hasEnabledState: true,
           isEnabled: true,
@@ -360,7 +370,7 @@ void main() {
       expect(
         tester.getSemantics(_filterButton()),
         matchesSemantics(
-          label: 'Filtrer les personnages',
+          label: 'Filtrer et trier les personnages',
           isButton: true,
           hasEnabledState: true,
         ),
@@ -370,7 +380,7 @@ void main() {
       // Sans effet : rien à filtrer tant que la liste n'a pas résolu.
       await tester.tap(_filterButton());
       await tester.pump();
-      expect(find.text('FILTRER'), findsNothing);
+      expect(find.text('FILTRER ET TRIER'), findsNothing);
       handle.dispose();
     });
 
@@ -385,7 +395,10 @@ void main() {
       expect(button.childrenCount, 0);
       expect(tester.getSemantics(_filterIcon()).id, button.id);
       expect(tester.getSemantics(_activeDot()).id, button.id);
-      expect(find.bySemanticsLabel('Filtrer les personnages'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Filtrer et trier les personnages'),
+        findsOneWidget,
+      );
       handle.dispose();
     });
   });

@@ -1119,10 +1119,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get characterListSearchClearTooltip => 'Effacer';
 
   @override
-  String get characterListFilterButtonLabel => 'Filtrer les personnages';
+  String get characterListFilterButtonLabel =>
+      'Filtrer et trier les personnages';
 
   @override
-  String get characterListFilterButtonActiveValue => 'Filtre actif';
+  String get characterListFilterButtonActiveValue => 'Filtre ou tri actif';
 
   @override
   String get characterListSelectionModeButtonLabel =>
@@ -1191,7 +1192,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get characterListFilterSheetTitle => 'FILTRER';
+  String get characterListFilterSheetTitle => 'FILTRER ET TRIER';
 
   @override
   String get characterListFilterSheetStatusSection => 'STATUT';
@@ -4478,4 +4479,62 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get characterShareRetryButton => 'Réessayer';
+
+  @override
+  String characterListArchivedSnackBarMessage(String name) {
+    return '$name archivé';
+  }
+
+  @override
+  String characterListArchivedSnackBarAnnouncement(String name) {
+    return '$name archivé. Bouton Annuler disponible.';
+  }
+
+  @override
+  String characterCardHpValue(int current, int max) {
+    return 'PV $current/$max';
+  }
+
+  @override
+  String characterCardArmorClassValue(int value) {
+    return 'CA $value';
+  }
+
+  @override
+  String characterCardHpSemantics(int current, int max) {
+    return 'Points de vie : $current sur $max';
+  }
+
+  @override
+  String characterCardArmorClassSemantics(int value) {
+    return 'Classe d\'armure : $value';
+  }
+
+  @override
+  String characterCardZeroHpSemantics(int max) {
+    return 'À 0 points de vie sur $max';
+  }
+
+  @override
+  String get characterListFilterSheetSortSection => 'TRIER PAR';
+
+  @override
+  String get characterListSortDefaultTitle => 'Par défaut';
+
+  @override
+  String get characterListSortDefaultSubtitle =>
+      'En jeu, archivés, puis morts, par date de création';
+
+  @override
+  String get characterListSortNameTitle => 'Nom (A → Z)';
+
+  @override
+  String get characterListSortNameSubtitle => 'Au sein de chaque groupe';
+
+  @override
+  String get characterListSortLastOpenedTitle => 'Dernière ouverture';
+
+  @override
+  String get characterListSortLastOpenedSubtitle =>
+      'Les plus récents d\'abord, au sein de chaque groupe';
 }

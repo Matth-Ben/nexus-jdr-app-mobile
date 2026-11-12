@@ -2,7 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/rules/spell_status.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
-import 'armor_class_calculator.dart';
+import 'armor_class_resolver.dart';
 import 'carrying_capacity_calculator.dart';
 import 'character_adventure.dart';
 import 'character_class_choice.dart';
@@ -507,7 +507,7 @@ abstract class CharacterDetail with _$CharacterDetail {
   /// Classe d'Armure, calculée à la volée depuis [abilityScores]/[inventory]
   /// — jamais stockée en base. Voir `ArmorClassCalculator` pour le détail
   /// des règles couvertes.
-  int get armorClass => ArmorClassCalculator.compute(
+  int get armorClass => ArmorClassResolver.resolve(
     abilityScores: abilityScores,
     inventory: inventory,
     classNames: {for (final row in classes) row.className},

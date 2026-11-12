@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/widgets/zero_hp_indicator.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_vitals_card.dart';
 import 'package:personnages/l10n/app_localizations.dart';

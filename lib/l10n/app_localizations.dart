@@ -1997,13 +1997,13 @@ abstract class AppLocalizations {
   /// Libellé d'accessibilité (`Semantics.label`) du bouton entonnoir de `_SearchRow`.
   ///
   /// In fr, this message translates to:
-  /// **'Filtrer les personnages'**
+  /// **'Filtrer et trier les personnages'**
   String get characterListFilterButtonLabel;
 
   /// Valeur sémantique (`Semantics.value`) du bouton entonnoir quand au moins un filtre est actif.
   ///
   /// In fr, this message translates to:
-  /// **'Filtre actif'**
+  /// **'Filtre ou tri actif'**
   String get characterListFilterButtonActiveValue;
 
   /// Libellé d'accessibilité (`Semantics.label`) du bouton d'entrée en mode sélection multiple.
@@ -2093,7 +2093,7 @@ abstract class AppLocalizations {
   /// Titre de la sheet "Filtrer" (`SheetHeaderBar`, `character_list_filter_sheet.dart`), déjà en majuscules.
   ///
   /// In fr, this message translates to:
-  /// **'FILTRER'**
+  /// **'FILTRER ET TRIER'**
   String get characterListFilterSheetTitle;
 
   /// Libellé de la section "STATUT" de la sheet "Filtrer", déjà en majuscules.
@@ -7198,6 +7198,90 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Réessayer'**
   String get characterShareRetryButton;
+
+  /// SnackBar affiché après l'archivage d'un personnage depuis la liste (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} archivé'**
+  String characterListArchivedSnackBarMessage(String name);
+
+  /// Annonce sémantique (liveRegion) du SnackBar d'archivage (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} archivé. Bouton Annuler disponible.'**
+  String characterListArchivedSnackBarAnnouncement(String name);
+
+  /// Valeur PV sur la carte de la liste (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'PV {current}/{max}'**
+  String characterCardHpValue(int current, int max);
+
+  /// Valeur CA sur la carte de la liste (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'CA {value}'**
+  String characterCardArmorClassValue(int value);
+
+  /// Libellé sémantique des PV de la carte (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'Points de vie : {current} sur {max}'**
+  String characterCardHpSemantics(int current, int max);
+
+  /// Libellé sémantique de la CA de la carte (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'Classe d\'armure : {value}'**
+  String characterCardArmorClassSemantics(int value);
+
+  /// Libellé sémantique de l'état « À 0 PV » de la carte (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'À 0 points de vie sur {max}'**
+  String characterCardZeroHpSemantics(int max);
+
+  /// Libellé de la section de tri de la feuille de filtre (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'TRIER PAR'**
+  String get characterListFilterSheetSortSection;
+
+  /// Option de tri « Par défaut » (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'Par défaut'**
+  String get characterListSortDefaultTitle;
+
+  /// Sous-titre de l'option de tri par défaut (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'En jeu, archivés, puis morts, par date de création'**
+  String get characterListSortDefaultSubtitle;
+
+  /// Option de tri par nom (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom (A → Z)'**
+  String get characterListSortNameTitle;
+
+  /// Sous-titre de l'option de tri par nom (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'Au sein de chaque groupe'**
+  String get characterListSortNameSubtitle;
+
+  /// Option de tri par dernière ouverture (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'Dernière ouverture'**
+  String get characterListSortLastOpenedTitle;
+
+  /// Sous-titre de l'option de tri par dernière ouverture (P18).
+  ///
+  /// In fr, this message translates to:
+  /// **'Les plus récents d\'abord, au sein de chaque groupe'**
+  String get characterListSortLastOpenedSubtitle;
 }
 
 class _AppLocalizationsDelegate

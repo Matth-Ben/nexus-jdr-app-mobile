@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,9 +26,12 @@ import '../../character_creation/presentation/providers/character_creation_retur
 import '../../character_creation/presentation/providers/character_edit_session_provider.dart';
 import '../domain/character_failure.dart';
 import '../domain/character_list_filter.dart';
+import '../domain/character_list_sort.dart';
+import '../domain/character_list_sorter.dart';
 import '../domain/character_status_filter.dart';
 import '../domain/character_summary.dart';
 import '../domain/write_outcome.dart';
+import 'providers/character_last_opened_provider.dart';
 import 'providers/character_providers.dart';
 import 'widgets/character_card.dart';
 import 'widgets/character_card_action_sheet.dart';
@@ -90,6 +95,11 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   Set<String> _selectedClassNames = {};
   Set<CharacterStatusFilter> _selectedStatuses = {};
 
+  /// Tri choisi (P18) — par session, non persisté, comme les filtres. Jamais
+  /// remis à zéro par [_resetSearch] (qui ne concerne que la recherche et les
+  /// filtres) : seul « Réinitialiser » de la feuille y touche.
+  CharacterListSort _selectedSort = CharacterListSort.defaultOrder;
+
   /// `true` pendant le mode sélection multiple (bouton `_SelectionModeButton`
   /// de `_SearchRow`) — voir la spec de la tâche "Mode sélection multiple +
   /// suppression groupée".
@@ -147,11 +157,13 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
       availableClassNames: CharacterListFilter.distinctClassNames(characters),
       selectedClassNames: _selectedClassNames,
       selectedStatuses: _selectedStatuses,
+      selectedSort: _selectedSort,
     );
     if (result == null || !mounted) return;
     setState(() {
       _selectedClassNames = result.classNames;
       _selectedStatuses = result.statuses;
+      _selectedSort = result.sort;
     });
   }
 
@@ -331,6 +343,18 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   Widget _buildList(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final charactersAsync = ref.watch(charactersProvider);
+    // Purge des horodatages « dernière ouverture » des personnages disparus, à
+    // chaque chargement de la liste (P18).
+    ref.listen(charactersProvider, (_, next) {
+      final loaded = next.value;
+      if (loaded != null) {
+        unawaited(
+          ref.read(characterLastOpenedProvider.notifier).purge({
+            for (final c in loaded) c.id,
+          }),
+        );
+      }
+    });
 
     // Échec du chargement initial : écran dédié plein écran ("Connexion
     // impossible", recettage direction artistique du 13/09/2026 — voir
@@ -353,13 +377,18 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
     // `maybeWhen` ci-dessous) : `_SelectionModeButton` a besoin de connaître
     // la liste visible (après recherche/filtre) pour son état désactivé,
     // avant même d'atteindre la zone de contenu.
+    final lastOpened = ref.watch(characterLastOpenedProvider);
     final visible = characters == null
         ? null
-        : CharacterListFilter.apply(
-            characters: characters,
-            query: _searchController.text,
-            classNames: _selectedClassNames,
-            statuses: _selectedStatuses,
+        : CharacterListSorter.sortBy(
+            CharacterListFilter.apply(
+              characters: characters,
+              query: _searchController.text,
+              classNames: _selectedClassNames,
+              statuses: _selectedStatuses,
+            ),
+            _selectedSort,
+            lastOpened,
           );
 
     final headerBlock = Padding(
@@ -389,7 +418,9 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
           _SearchRow(
             controller: _searchController,
             filterActive:
-                _selectedClassNames.isNotEmpty || _selectedStatuses.isNotEmpty,
+                _selectedClassNames.isNotEmpty ||
+                _selectedStatuses.isNotEmpty ||
+                _selectedSort != CharacterListSort.defaultOrder,
             // `null` (chargement) : bouton filtre sans effet, rien à
             // filtrer tant que la liste n'a pas résolu.
             onTapFilter: characters == null

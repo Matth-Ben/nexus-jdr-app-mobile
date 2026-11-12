@@ -54,6 +54,9 @@ import 'package:personnages/core/sync/sync_status_providers.dart';
 import 'package:personnages/core/widgets/alert_banner.dart';
 import 'package:personnages/core/widgets/info_banner.dart';
 import 'package:personnages/core/theme/app_colors.dart';
+import 'package:personnages/core/widgets/selectable_option_tile.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show User;
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
 import 'package:personnages/core/widgets/dashed_border_painter.dart';
 import 'package:personnages/core/widgets/selection_checkbox.dart';
@@ -113,11 +116,30 @@ class _FakeCharacterRepository implements CharacterRepository {
     throw UnimplementedError();
   }
 
+  /// P18 : appels de [setArchived] `(id, isArchived)`, et résultats à
+  /// consommer dans l'ordre (un `WriteOutcome` à retourner, ou toute autre
+  /// valeur à lever) ; vide = succès. Un succès met à jour
+  /// [charactersToReturn] comme le ferait le serveur.
+  final List<(String, bool)> setArchivedCalls = [];
+  final List<Object> setArchivedResults = [];
+
   @override
   Future<WriteOutcome> setArchived({
     required String characterId,
     required bool isArchived,
-  }) => throw UnimplementedError();
+  }) async {
+    setArchivedCalls.add((characterId, isArchived));
+    if (setArchivedResults.isNotEmpty) {
+      final result = setArchivedResults.removeAt(0);
+      if (result is WriteOutcome) return result;
+      throw result;
+    }
+    charactersToReturn = [
+      for (final c in charactersToReturn ?? const <CharacterSummary>[])
+        if (c.id == characterId) c.copyWith(isArchived: isArchived) else c,
+    ];
+    return WriteOutcome.synced;
+  }
 
   @override
   Future<WriteOutcome> deleteCharacter({required String characterId}) async {
@@ -551,6 +573,15 @@ Finder _filterButton() => find.ancestor(
   matching: find.byType(InkWell),
 );
 
+/// Fait défiler la feuille de filtre jusqu'à [finder] (liste paresseuse : la
+/// section « TRIER PAR » en tête pousse « STATUT » hors de la zone montée).
+Future<void> _scrollFilterSheetTo(WidgetTester tester, Finder finder) =>
+    tester.dragUntilVisible(
+      finder,
+      find.byKey(const Key('characterListFilterOptions')),
+      const Offset(0, -100),
+    );
+
 void main() {
   // `packageInfoProvider` (lu par `appVersionCheckProvider`, dépendance de
   // `UpdateSuggestedBanner`) : mockée une fois pour tout le fichier, même
@@ -670,6 +701,7 @@ void main() {
     Locale locale = const Locale('fr'),
     double textScale = 1.0,
     List<Override> extraOverrides = const [],
+    User? currentUser,
   }) {
     final observer = routeObserver ?? RouteObserver<PageRoute<dynamic>>();
     return ProviderScope(
@@ -677,6 +709,7 @@ void main() {
         characterRepositoryProvider.overrideWithValue(fakeCharacterRepository),
         authRepositoryProvider.overrideWithValue(fakeAuthRepository),
         routeObserverProvider.overrideWithValue(observer),
+        currentUserProvider.overrideWithValue(currentUser),
         ...extraOverrides,
         appVersionRepositoryProvider.overrideWithValue(
           appVersionRepository ?? fakeAppVersionRepository,
@@ -1116,6 +1149,7 @@ void main() {
             fakeCharacterRepository,
           ),
           authRepositoryProvider.overrideWithValue(fakeAuthRepository),
+          currentUserProvider.overrideWithValue(null),
           appVersionRepositoryProvider.overrideWithValue(
             fakeAppVersionRepository,
           ),
@@ -1534,7 +1568,7 @@ void main() {
         await tester.tap(_filterButton());
         await tester.pumpAndSettle();
 
-        expect(find.text('FILTRER'), findsOneWidget);
+        expect(find.text('FILTRER ET TRIER'), findsOneWidget);
 
         // La section "CLASSE" est en bas de la sheet, sous "STATUT"
         // (`ListView`, chargement paresseux des enfants hors viewport) :
@@ -1574,6 +1608,8 @@ void main() {
           find.byKey(const Key('characterListFilterOptions')),
           const Offset(0, -100),
         );
+        await tester.ensureVisible(find.text('Guerrier'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Guerrier'));
         await tester.tap(find.text('APPLIQUER'));
         await tester.pumpAndSettle();
@@ -1683,6 +1719,7 @@ void main() {
           await tester.tap(_filterButton());
           await tester.pumpAndSettle();
 
+          await _scrollFilterSheetTo(tester, find.text('Mort'));
           expect(find.text('STATUT'), findsOneWidget);
           expect(find.text('Vivants'), findsOneWidget);
           expect(find.text('Archivé'), findsOneWidget);
@@ -1707,6 +1744,7 @@ void main() {
 
         await tester.tap(_filterButton());
         await tester.pumpAndSettle();
+        await _scrollFilterSheetTo(tester, find.text('Mort'));
         await tester.tap(find.text('Archivé'));
         await tester.tap(find.text('Mort'));
         await tester.tap(find.text('APPLIQUER'));
@@ -1728,6 +1766,7 @@ void main() {
 
           await tester.tap(_filterButton());
           await tester.pumpAndSettle();
+          await _scrollFilterSheetTo(tester, find.text('Mort'));
           await tester.tap(find.text('Mort'));
           await tester.tap(find.text('APPLIQUER'));
           await tester.pumpAndSettle();
@@ -2614,7 +2653,8 @@ void main() {
       await tester.tap(_filterButton());
       await tester.pumpAndSettle();
 
-      expect(find.text('FILTER'), findsOneWidget);
+      expect(find.text('FILTER AND SORT'), findsOneWidget);
+      await _scrollFilterSheetTo(tester, find.text('Dead'));
       expect(find.text('STATUS'), findsOneWidget);
       expect(find.text('Alive'), findsOneWidget);
       expect(find.text('Archived'), findsOneWidget);
@@ -2826,5 +2866,475 @@ void main() {
         );
       });
     }
+  });
+  group('P18 — annuler l\'archivage', () {
+    const halltesse = CharacterSummary(
+      id: '1',
+      name: 'Halltesse Ambrelune',
+      level: 5,
+      xp: 0,
+    );
+    const offlineMessage =
+        'Hors ligne : cette action n\'a pas pu être enregistrée. '
+        'Réessayez une fois reconnecté.';
+
+    Future<void> pumpList(
+      WidgetTester tester,
+      List<CharacterSummary> characters,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = characters;
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+    }
+
+    /// Ouvre la sheet d'actions et tape [label]. Pas de `pumpAndSettle` après
+    /// l'action : il laisserait le SnackBar expirer (6 s).
+    Future<void> runAction(WidgetTester tester, String label) async {
+      await tester.longPress(find.byType(CharacterCard));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    Future<void> tapUndo(WidgetTester tester) async {
+      await tester.tap(find.text('ANNULER'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    testWidgets('archivage réussi : SnackBar « {nom} archivé » + Annuler, '
+        'écriture serveur immédiate, liste rechargée', (tester) async {
+      await pumpList(tester, const [halltesse]);
+      final fetchesBefore = fakeCharacterRepository.fetchCallCount;
+
+      await runAction(tester, 'Archiver ce personnage');
+
+      expect(find.text('Halltesse Ambrelune archivé'), findsOneWidget);
+      expect(find.text('ANNULER'), findsOneWidget);
+      expect(fakeCharacterRepository.setArchivedCalls, [('1', true)]);
+      expect(
+        fakeCharacterRepository.fetchCallCount,
+        greaterThan(fetchesBefore),
+      );
+      expect(find.text('ARCHIVÉ'), findsOneWidget);
+    });
+
+    testWidgets('Annuler : désarchive, invalide la liste, silencieux', (
+      tester,
+    ) async {
+      await pumpList(tester, const [halltesse]);
+      await runAction(tester, 'Archiver ce personnage');
+      final fetchesBefore = fakeCharacterRepository.fetchCallCount;
+
+      await tapUndo(tester);
+
+      expect(fakeCharacterRepository.setArchivedCalls, [
+        ('1', true),
+        ('1', false),
+      ]);
+      expect(
+        fakeCharacterRepository.fetchCallCount,
+        greaterThan(fetchesBefore),
+      );
+      expect(find.text('ARCHIVÉ'), findsNothing);
+      expect(find.text('Halltesse Ambrelune archivé'), findsNothing);
+      expect(find.text('ANNULER'), findsNothing);
+      expect(find.text(offlineMessage), findsNothing);
+    });
+
+    testWidgets('Annuler hors ligne : message dédié, le personnage reste '
+        'archivé, liste non invalidée', (tester) async {
+      await pumpList(tester, const [halltesse]);
+      await runAction(tester, 'Archiver ce personnage');
+      fakeCharacterRepository.setArchivedResults.add(
+        WriteOutcome.rejectedOffline,
+      );
+      final fetchesBefore = fakeCharacterRepository.fetchCallCount;
+
+      await tapUndo(tester);
+
+      expect(find.text(offlineMessage), findsOneWidget);
+      expect(fakeCharacterRepository.fetchCallCount, fetchesBefore);
+      expect(find.text('ARCHIVÉ'), findsOneWidget);
+    });
+
+    testWidgets('Annuler en erreur : message générique, liste non invalidée', (
+      tester,
+    ) async {
+      await pumpList(tester, const [halltesse]);
+      await runAction(tester, 'Archiver ce personnage');
+      fakeCharacterRepository.setArchivedResults.add(Exception('boom'));
+      final fetchesBefore = fakeCharacterRepository.fetchCallCount;
+
+      await tapUndo(tester);
+
+      expect(
+        find.text('Impossible de mettre à jour le statut. Réessayez.'),
+        findsOneWidget,
+      );
+      expect(fakeCharacterRepository.fetchCallCount, fetchesBefore);
+    });
+
+    testWidgets('échec de l\'archivage : message d\'erreur, pas de SnackBar '
+        'Annuler', (tester) async {
+      await pumpList(tester, const [halltesse]);
+      fakeCharacterRepository.setArchivedResults.add(
+        const CharacterFailure('Refusé par le serveur.'),
+      );
+
+      await runAction(tester, 'Archiver ce personnage');
+
+      expect(find.text('Refusé par le serveur.'), findsOneWidget);
+      expect(find.text('Halltesse Ambrelune archivé'), findsNothing);
+      expect(find.text('ANNULER'), findsNothing);
+    });
+
+    testWidgets('archivage hors ligne (refus actuel) : pas de SnackBar '
+        'Annuler', (tester) async {
+      await pumpList(tester, const [halltesse]);
+      fakeCharacterRepository.setArchivedResults.add(
+        WriteOutcome.rejectedOffline,
+      );
+
+      await runAction(tester, 'Archiver ce personnage');
+
+      expect(find.text(offlineMessage), findsOneWidget);
+      expect(find.text('ANNULER'), findsNothing);
+    });
+
+    testWidgets('désarchiver : aucun SnackBar d\'annulation', (tester) async {
+      await pumpList(tester, [halltesse.copyWith(isArchived: true)]);
+
+      await runAction(tester, 'Désarchiver');
+
+      expect(fakeCharacterRepository.setArchivedCalls, [('1', false)]);
+      expect(find.text('ANNULER'), findsNothing);
+      expect(find.textContaining('archivé'), findsNothing);
+    });
+
+    testWidgets('annonce sémantique (liveRegion) avec mention du bouton', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpList(tester, const [halltesse]);
+
+      await runAction(tester, 'Archiver ce personnage');
+
+      expect(
+        find.bySemanticsLabel(
+          RegExp('Halltesse Ambrelune archivé. Bouton Annuler disponible.'),
+        ),
+        findsOneWidget,
+      );
+      handle.dispose();
+    });
+
+    testWidgets('en anglais : « archived » et « Undo »', (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [halltesse];
+      await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+      await tester.pumpAndSettle();
+      await tester.longPress(find.byType(CharacterCard));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Archive this character'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('Halltesse Ambrelune archived'), findsOneWidget);
+      expect(find.text('UNDO'), findsOneWidget);
+    });
+
+    testWidgets('le SnackBar survit au démontage de la liste : Annuler '
+        'fonctionne encore', (tester) async {
+      await pumpList(tester, const [halltesse]);
+      await runAction(tester, 'Archiver ce personnage');
+      expect(find.text('ANNULER'), findsOneWidget);
+
+      // La liste est démontée (navigation par remplacement).
+      GoRouter.of(tester.element(find.byType(CharacterListScreen)))
+          .go('/profile');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(CharacterListScreen), findsNothing);
+      expect(find.text('Halltesse Ambrelune archivé'), findsOneWidget);
+
+      await tapUndo(tester);
+
+      expect(fakeCharacterRepository.setArchivedCalls, [
+        ('1', true),
+        ('1', false),
+      ]);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('P18 — tri de la liste', () {
+    final owner = User(
+      id: 'owner-1',
+      appMetadata: const {},
+      userMetadata: const {},
+      aud: 'authenticated',
+      createdAt: '2026-01-01T00:00:00Z',
+    );
+
+    const characters = [
+      CharacterSummary(id: 'b', name: 'Borgan', level: 1, xp: 0),
+      CharacterSummary(id: 'e', name: 'émile', level: 1, xp: 0),
+      CharacterSummary(id: 'a', name: 'Adèle', level: 1, xp: 0),
+      CharacterSummary(
+        id: 'arch',
+        name: 'Aaron archivé',
+        level: 1,
+        xp: 0,
+        isArchived: true,
+      ),
+      CharacterSummary(
+        id: 'dead',
+        name: 'Aaa mort',
+        level: 1,
+        xp: 0,
+        isDead: true,
+      ),
+    ];
+
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    Widget screen({User? user}) => buildTestWidget(currentUser: user);
+
+    // Surface haute : les 5 cartes doivent toutes être montées (liste
+    // paresseuse).
+    void tall(WidgetTester tester) {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+    }
+
+    /// Noms affichés, du haut vers le bas.
+    List<String> displayedOrder(WidgetTester tester) {
+      final names = [for (final c in characters) c.name]
+          .where((n) => find.text(n).evaluate().isNotEmpty)
+          .toList();
+      names.sort(
+        (x, y) => tester
+            .getTopLeft(find.text(x))
+            .dy
+            .compareTo(tester.getTopLeft(find.text(y)).dy),
+      );
+      return names;
+    }
+
+    Future<void> chooseSort(WidgetTester tester, String title) async {
+      await tester.tap(_filterButton());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(title));
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+    }
+
+    Finder activeDot() => find.descendant(
+      of: _filterButton(),
+      matching: find.byWidgetPredicate((widget) {
+        if (widget is! Container) return false;
+        final decoration = widget.decoration;
+        return decoration is BoxDecoration &&
+            decoration.shape == BoxShape.circle &&
+            decoration.color == AppColors.goldEnd;
+      }),
+    );
+
+    testWidgets('la feuille s\'appelle « FILTRER ET TRIER » et commence par '
+        '« TRIER PAR » (3 options, sous-titres, Par défaut coché)', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = characters;
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+
+      await tester.tap(_filterButton());
+      await tester.pumpAndSettle();
+
+      expect(find.text('FILTRER ET TRIER'), findsOneWidget);
+      expect(find.text('TRIER PAR'), findsOneWidget);
+      expect(find.text('Par défaut'), findsOneWidget);
+      expect(
+        find.text('En jeu, archivés, puis morts, par date de création'),
+        findsOneWidget,
+      );
+      expect(find.text('Nom (A → Z)'), findsOneWidget);
+      expect(find.text('Au sein de chaque groupe'), findsOneWidget);
+      expect(find.text('Dernière ouverture'), findsOneWidget);
+      expect(
+        find.text('Les plus récents d\'abord, au sein de chaque groupe'),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<SelectableOptionTile>(
+              find.widgetWithText(SelectableOptionTile, 'Par défaut'),
+            )
+            .selected,
+        isTrue,
+      );
+      // « TRIER PAR » est au-dessus de « STATUT ».
+      expect(
+        tester.getTopLeft(find.text('TRIER PAR')).dy,
+        lessThan(tester.getTopLeft(find.text('STATUT')).dy),
+      );
+    });
+
+    testWidgets('par nom : insensible à la casse/accents, groupes toujours '
+        'en jeu / archivés / morts', (tester) async {
+      tall(tester);
+      fakeCharacterRepository.charactersToReturn = characters;
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+      expect(displayedOrder(tester), [
+        'Borgan',
+        'émile',
+        'Adèle',
+        'Aaron archivé',
+        'Aaa mort',
+      ]);
+
+      await chooseSort(tester, 'Nom (A → Z)');
+
+      expect(displayedOrder(tester), [
+        'Adèle',
+        'Borgan',
+        'émile',
+        'Aaron archivé',
+        'Aaa mort',
+      ]);
+    });
+
+    testWidgets('dernière ouverture : les plus récents d\'abord, jamais '
+        'ouvert en dernier, groupes préservés', (tester) async {
+      tall(tester);
+      SharedPreferences.setMockInitialValues({
+        'character_last_opened:owner-1': '{"e":300,"a":200,"arch":999}',
+      });
+      fakeCharacterRepository.charactersToReturn = characters;
+      await tester.pumpWidget(screen(user: owner));
+      await tester.pumpAndSettle();
+
+      await chooseSort(tester, 'Dernière ouverture');
+
+      expect(displayedOrder(tester), [
+        'émile',
+        'Adèle',
+        'Borgan',
+        'Aaron archivé',
+        'Aaa mort',
+      ]);
+    });
+
+    testWidgets('un tri seul : pastille active, valeur sémantique « Filtre ou '
+        'tri actif », jamais l\'état vide de recherche', (tester) async {
+      final handle = tester.ensureSemantics();
+      fakeCharacterRepository.charactersToReturn = characters;
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+      expect(activeDot(), findsNothing);
+
+      await chooseSort(tester, 'Nom (A → Z)');
+
+      expect(activeDot(), findsOneWidget);
+      expect(
+        tester
+            .getSemantics(
+              find.bySemanticsLabel('Filtrer et trier les personnages'),
+            )
+            .value,
+        'Filtre ou tri actif',
+      );
+      expect(find.textContaining('AUCUN RÉSULTAT'), findsNothing);
+      expect(find.text('Borgan'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('Réinitialiser remet « Par défaut » et éteint la pastille', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = characters;
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+      await chooseSort(tester, 'Nom (A → Z)');
+      expect(activeDot(), findsOneWidget);
+
+      await tester.tap(_filterButton());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('RÉINITIALISER'));
+      await tester.pump();
+      expect(
+        tester
+            .widget<SelectableOptionTile>(
+              find.widgetWithText(SelectableOptionTile, 'Par défaut'),
+            )
+            .selected,
+        isTrue,
+      );
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(activeDot(), findsNothing);
+      expect(displayedOrder(tester).first, 'Borgan');
+    });
+
+    testWidgets('la réinitialisation de la recherche ne touche pas au tri', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = characters;
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+      await chooseSort(tester, 'Nom (A → Z)');
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Rechercher un personnage'),
+        'zzz',
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('AUCUN RÉSULTAT'), findsOneWidget);
+      await tester.tap(find.text('RÉINITIALISER'));
+      await tester.pumpAndSettle();
+
+      expect(activeDot(), findsOneWidget);
+      expect(displayedOrder(tester).first, 'Adèle');
+    });
+
+    testWidgets('le choix de tri n\'est pas persisté : un nouvel écran '
+        'repart sur « Par défaut »', (tester) async {
+      fakeCharacterRepository.charactersToReturn = characters;
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+      await chooseSort(tester, 'Nom (A → Z)');
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+
+      expect(activeDot(), findsNothing);
+      expect(displayedOrder(tester).first, 'Borgan');
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getKeys().where((k) => !k.startsWith('character_last_opened')),
+        isEmpty,
+      );
+    });
+
+    testWidgets('purge : la liste chargée retire les identifiants disparus '
+        'des horodatages', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'character_last_opened:owner-1': '{"e":300,"gone":5}',
+      });
+      fakeCharacterRepository.charactersToReturn = characters;
+      await tester.pumpWidget(screen(user: owner));
+      await tester.pumpAndSettle();
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('character_last_opened:owner-1'), '{"e":300}');
+    });
   });
 }

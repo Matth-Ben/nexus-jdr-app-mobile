@@ -3,9 +3,11 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/cache/character_last_opened_key.dart';
 import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/notifications/push_notification_gateway.dart';
@@ -802,6 +804,19 @@ class SupabaseAuthRepository implements AuthRepository {
     final queue = pendingWriteQueue;
     if (queue != null && ownerId != null) {
       await queue.removeAllForOwner(ownerId);
+    }
+
+    // Horodatages locaux « dernière ouverture » (tri de la liste, P18) de
+    // CE compte : donnée locale propre au compte, purgée comme le reste.
+    // Best-effort : un échec de lecture des préférences ne doit jamais
+    // empêcher la déconnexion.
+    if (ownerId != null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(characterLastOpenedKey(ownerId));
+      } catch (_) {
+        // Best-effort — voir ci-dessus.
+      }
     }
   }
 
