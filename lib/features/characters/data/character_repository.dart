@@ -618,6 +618,41 @@ abstract class CharacterRepository {
     CustomItemEnrichment? enrichment,
   });
 
+  /// Modification / enrichissement d'un objet personnalisé **existant** (P7
+  /// PR 4, actions « Modifier » / « Enrichir » de la sheet d'actions d'objet) :
+  /// met à jour, en **un seul `UPDATE`**, toutes les colonnes `custom_*` de la
+  /// ligne [inventoryId] (nom, description, dé/type de dégâts, propriétés,
+  /// [enrichment]) avec des `NULL` **explicites** pour les champs devenus sans
+  /// objet (ex. armure devenue arme : `custom_ac_base` et
+  /// `custom_armor_category` à `NULL`, sinon les `CHECK` de la table
+  /// refuseraient la ligne). Le dé, le type de dégâts et les propriétés ne sont
+  /// conservés que pour une arme. La quantité n'est pas touchée.
+  ///
+  /// Un objet qui ne requiert plus l'harmonisation est aussi remis à non
+  /// harmonisé (`is_attuned = false`, même requête) ; l'inverse n'harmonise
+  /// jamais l'objet. Validé comme au rejeu de la file ([CharacterFailure] si le
+  /// nom est vide/trop long ou l'enrichissement incohérent). Le contrôle « type
+  /// d'un objet équipé » est fait par l'interface (voir
+  /// `domain/custom_item_edit_rules.dart`), pas ici.
+  ///
+  /// Mode hors ligne : mis en file (`inventoryItem`, op `updateCustom`,
+  /// instantané complet, dernière écriture gagnante — une seconde modification
+  /// remplace la première) et [WriteOutcome.queued] ; fusion avec l'ajout
+  /// encore en file de la ligne (un seul `INSERT`) ou avec un usage en file.
+  /// Pas de détection de conflit entre appareils (dernière écriture gagnante,
+  /// décision de Matthias) ; ligne supprimée entre-temps : refus 42501 au
+  /// rejeu, abandon avec alerte de synchro comme l'usage d'un objet.
+  Future<WriteOutcome> updateCustomInventoryItem({
+    required String characterId,
+    required String inventoryId,
+    required String customName,
+    required CustomItemEnrichment enrichment,
+    String? description,
+    String? damageDice,
+    String? damageType,
+    List<String> properties = const [],
+  });
+
   /// Ajoute une récompense (bouton "cadeau" du bandeau de l'onglet
   /// "Inventaire", `presentation/widgets/add_reward_sheet.dart`) : au plus
   /// un `UPDATE` (monnaie, si [newCurrencyTotals] est non vide — valeurs
@@ -2278,6 +2313,19 @@ class SupabaseCharacterRepository implements CharacterRepository {
         if (item.id != inventoryId) item,
     ];
     if (write.op == InventoryItemOp.delete) return others;
+    if (write.op == InventoryItemOp.updateCustom) {
+      // Modification d'un objet personnalisé (P7 PR 4) : la ligne existante est
+      // reconstruite par le même mapper qu'une ligne du serveur, avec les
+      // colonnes `custom_*` de l'instantané (la CA, le poids, les armes
+      // équipées se recalculent).
+      return [
+        for (final item in items)
+          if (item.id == inventoryId)
+            _withCustomUpdate(item, characterId, write)
+          else
+            item,
+      ];
+    }
     if (write.op == InventoryItemOp.quantity) {
       // Usage (T5b-3) : quantité effective ; une ligne à 0 est masquée comme
       // un tombstone. Poids total et dérivés suivent (recalculés).
@@ -2313,6 +2361,30 @@ class SupabaseCharacterRepository implements CharacterRepository {
         descriptions: {key: ?catalog?.descriptions[key]},
       ),
     ];
+  }
+
+  CharacterInventoryItem _withCustomUpdate(
+    CharacterInventoryItem item,
+    String characterId,
+    InventoryItemWrite write,
+  ) {
+    final row = write.applyToRow({
+      'id': item.id,
+      'character_id': characterId,
+      'item_id': null,
+      'custom_name': item.name,
+      'quantity': item.quantity,
+      'equipped': item.equipped,
+      'notes': item.notes,
+      'is_attuned': item.isAttuned,
+      'weapon_slot': item.weaponSlot?.value,
+    });
+    final mapped = CharacterInventoryRowMapper.toCharacterInventoryItems(
+      [row],
+      names: const <String, String>{},
+      descriptions: const <String, String>{},
+    );
+    return mapped.isEmpty ? item : mapped.first;
   }
 
   /// Applique [write] à la liste [entries] du journal (superposition d'une
@@ -3077,7 +3149,8 @@ class SupabaseCharacterRepository implements CharacterRepository {
           // Un usage en file (`quantity`, T5b-3) touche une autre colonne :
           // indépendant du réglage d'état.
           if (pendingItem == null ||
-              pendingItem.op == InventoryItemOp.quantity) {
+              pendingItem.op == InventoryItemOp.quantity ||
+              pendingItem.op == InventoryItemOp.updateCustom) {
             return _writeInventoryStateAbsolute(
               characterId: characterId,
               inventoryId: inventoryId,
@@ -4844,6 +4917,19 @@ class SupabaseCharacterRepository implements CharacterRepository {
             .eq('character_id', characterId)
             .select('id');
         if (updated.isEmpty) throw _noRowAffected('character_inventory');
+      case InventoryItemOp.updateCustom:
+        // Modification d'un objet personnalisé (P7 PR 4) : instantané complet
+        // des colonnes `custom_*`, `null` explicites compris (le client
+        // Supabase envoie les `null` d'un `update` tels quels). Zéro ligne =
+        // ligne supprimée ailleurs ou refus RLS silencieux : non rejouable
+        // (42501), comme l'usage d'un objet.
+        final updated = await _client
+            .from('character_inventory')
+            .update(write.toUpdateColumns())
+            .eq('id', inventoryId)
+            .eq('character_id', characterId)
+            .select('id');
+        if (updated.isEmpty) throw _noRowAffected('character_inventory');
     }
   }
 
@@ -4945,6 +5031,197 @@ class SupabaseCharacterRepository implements CharacterRepository {
             : null,
       ),
     );
+  }
+
+  @override
+  Future<WriteOutcome> updateCustomInventoryItem({
+    required String characterId,
+    required String inventoryId,
+    required String customName,
+    required CustomItemEnrichment enrichment,
+    String? description,
+    String? damageDice,
+    String? damageType,
+    List<String> properties = const [],
+  }) async {
+    // Mêmes bornes à l'enfilage et au rejeu : jamais accepté puis supprimé en
+    // silence de la file.
+    if (!isValidInventoryCustomName(customName)) {
+      throw const CharacterFailure(
+        'Le nom de l\'objet ne peut pas être vide (200 caractères au plus).',
+      );
+    }
+    if (!enrichment.isValid) {
+      throw const CharacterFailure(
+        "Les caractéristiques de l'objet ne sont pas valides.",
+      );
+    }
+    if (!isValidInventoryItemTargetId(inventoryId)) {
+      throw const CharacterFailure(
+        'Objet introuvable.',
+        code: CharacterErrorCode.itemNotFound,
+      );
+    }
+    String? nonEmpty(String? value) =>
+        value == null || value.isEmpty ? null : value;
+    final isWeapon = enrichment.kind == CustomItemKinds.weapon;
+    final requested = InventoryItemWrite.updateCustom(
+      customName: customName,
+      customDescription: nonEmpty(description),
+      customDamageDice: isWeapon ? nonEmpty(damageDice) : null,
+      customDamageType: isWeapon ? nonEmpty(damageType) : null,
+      customProperties: isWeapon ? properties : const [],
+      // « Harmoniser maintenant » n'existe pas à l'édition : jamais
+      // d'harmonisation automatique.
+      enrichment: CustomItemEnrichment(
+        kind: enrichment.kind,
+        magicBonus: enrichment.magicBonus,
+        weight: enrichment.weight,
+        requiresAttunement: enrichment.requiresAttunement,
+        weaponCategory: enrichment.weaponCategory,
+        weaponRange: enrichment.weaponRange,
+        acBase: enrichment.acBase,
+        armorCategory: enrichment.armorCategory,
+      ),
+    );
+    final ownerId = _requireOwnerId();
+    try {
+      return await _pendingWrites.runExclusive(
+        characterId: characterId,
+        kind: PendingCharacterWriteKind.inventoryItem,
+        targetId: inventoryId,
+        action: () async {
+          final pending = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.inventoryItem,
+            targetId: inventoryId,
+          );
+          final plan = planInventoryCustomUpdate(
+            pending: pending == null
+                ? null
+                : parseInventoryItemPayload(pending.payload),
+            requested: requested,
+          );
+          // Un retrait est déjà en file : la ligne est retirée, rien à modifier.
+          if (plan.isRejected) {
+            throw const CharacterFailure(
+              'Cet objet a déjà été retiré de l\'inventaire.',
+            );
+          }
+          final write = plan.write!;
+          final dropsAttunement = !(requested.enrichment!.requiresAttunement);
+
+          Future<WriteOutcome> queue() async {
+            await _pendingWrites.enqueue(
+              characterId: characterId,
+              ownerId: ownerId,
+              kind: PendingCharacterWriteKind.inventoryItem,
+              targetId: inventoryId,
+              payload: write.toPayload(),
+            );
+            if (dropsAttunement) {
+              await _clearPendingAttunement(
+                characterId: characterId,
+                ownerId: ownerId,
+                inventoryId: inventoryId,
+              );
+            }
+            return WriteOutcome.queued;
+          }
+
+          // L'ajout de la ligne est en file : elle n'existe pas côté serveur,
+          // la modification est fusionnée dans l'ajout (jamais d'`UPDATE` sur
+          // zéro ligne), y compris réseau revenu.
+          if (plan.mergedIntoPendingAdd) return queue();
+          if (!await _connectivityChecker.hasConnection()) return queue();
+          try {
+            await applyInventoryItemWriteOnline(
+              characterId: characterId,
+              inventoryId: inventoryId,
+              write: write,
+            );
+          } on CharacterFailure {
+            rethrow;
+          } on PostgrestException {
+            rethrow;
+          } catch (error) {
+            if (isTransportFailure(error)) return queue();
+            rethrow;
+          }
+          await _recordConfirmedWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            columns: null,
+            supersededWrite: pending,
+          );
+          if (dropsAttunement) {
+            await _clearPendingAttunement(
+              characterId: characterId,
+              ownerId: ownerId,
+              inventoryId: inventoryId,
+            );
+          }
+          await _detailCache.applyConfirmedInventoryItem(
+            ownerId: ownerId,
+            characterId: characterId,
+            inventoryId: inventoryId,
+            write: write,
+          );
+          return WriteOutcome.synced;
+        },
+      );
+    } on CharacterFailure {
+      rethrow;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (error, stackTrace) {
+      reportNonFatal(error, stackTrace);
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  /// Retire l'harmonisation d'un éventuel réglage d'état `inventoryState` en
+  /// file de la ligne [inventoryId] : un objet qui ne requiert plus
+  /// l'harmonisation ne doit pas être ré-harmonisé par le rejeu d'un réglage
+  /// plus ancien (ordre de rejeu des entrées non garanti). Best-effort.
+  Future<void> _clearPendingAttunement({
+    required String characterId,
+    required String ownerId,
+    required String inventoryId,
+  }) async {
+    try {
+      await _pendingWrites.runExclusive(
+        characterId: characterId,
+        kind: PendingCharacterWriteKind.inventoryState,
+        targetId: inventoryId,
+        action: () async {
+          final state = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.inventoryState,
+            targetId: inventoryId,
+          );
+          if (state == null) return;
+          final patch = parseInventoryStatePayload(state.payload);
+          if (patch == null || patch.attuned != true) return;
+          await _pendingWrites.enqueue(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.inventoryState,
+            targetId: inventoryId,
+            payload: InventoryStatePatch(
+              equipped: patch.equipped,
+              hasWeaponSlot: patch.hasWeaponSlot,
+              weaponSlot: patch.weaponSlot,
+              attuned: false,
+            ).toPayload(),
+          );
+        },
+      );
+    } catch (_) {
+      // Best-effort : voir la documentation de cette méthode.
+    }
   }
 
   @override

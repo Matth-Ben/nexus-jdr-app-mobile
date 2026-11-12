@@ -8072,6 +8072,54 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Catégorie d\'armure'**
   String get itemInfoPanelArmorCategoryLabel;
+
+  /// Titre de la feuille d'édition d'un objet personnalisé typé (P7 PR 4).
+  ///
+  /// In fr, this message translates to:
+  /// **'MODIFIER L\'OBJET'**
+  String get customItemEditTitle;
+
+  /// Titre de la feuille d'enrichissement d'un ancien objet personnalisé sans type (P7 PR 4).
+  ///
+  /// In fr, this message translates to:
+  /// **'ENRICHIR L\'OBJET'**
+  String get customItemEnrichTitle;
+
+  /// Bouton de validation de la feuille d'édition/enrichissement d'un objet personnalisé (à la place de « Ajouter »).
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get customItemSaveButton;
+
+  /// Confirmation affichée après la modification d'un objet personnalisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet mis à jour'**
+  String get customItemUpdatedSnackbar;
+
+  /// Action « Modifier » de la sheet d'actions d'un objet personnalisé typé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier'**
+  String get itemActionSheetEditLabel;
+
+  /// Action « Enrichir » de la sheet d'actions d'un ancien objet personnalisé sans type.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enrichir'**
+  String get itemActionSheetEnrichLabel;
+
+  /// Message affiché quand on tente de changer le type d'un objet personnalisé équipé (la CA et les emplacements d'armes dépendent du type).
+  ///
+  /// In fr, this message translates to:
+  /// **'Déséquipez l\'objet avant de changer son type'**
+  String get customItemKindChangeBlockedEquipped;
+
+  /// Sémantique de la tuile du type actuel de l'objet à l'étape « Type d'objet » de l'édition.
+  ///
+  /// In fr, this message translates to:
+  /// **'Type actuel'**
+  String get customItemKindCurrentSemantics;
 }
 
 class _AppLocalizationsDelegate

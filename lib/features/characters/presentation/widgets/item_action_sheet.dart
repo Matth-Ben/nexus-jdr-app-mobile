@@ -12,6 +12,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/armor_proficiency_rules.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
+import '../../domain/custom_item_edit_rules.dart';
 import '../../domain/inventory_category_rules.dart';
 import '../../domain/weapon_attack_calculator.dart';
 import '../../domain/weapon_slot.dart';
@@ -51,6 +52,13 @@ typedef RemoveInventoryItemCallback = void Function(
 typedef EquipWeaponToSlotCallback = void Function(
   CharacterInventoryItem item,
   WeaponSlot slot,
+);
+
+/// Callback de l'action « Modifier » / « Enrichir » d'un objet personnalisé
+/// (P7 PR 4) : ouvre le formulaire pré-rempli puis écrit le résultat, voir
+/// `character_inventory_tab_body.dart`.
+typedef EditCustomInventoryItemCallback = Future<void> Function(
+  CharacterInventoryItem item,
 );
 
 /// Catégories pour lesquelles l'action "Équiper"/"Déséquiper" a un sens —
@@ -119,6 +127,7 @@ Future<void> showItemActionSheet(
   int? weaponDamageModifier,
   WeaponAttackStats? weaponStats,
   bool notProficient = false,
+  EditCustomInventoryItemCallback? onEditCustomItem,
 }) async {
   final action = await showModalBottomSheet<_ItemSheetAction>(
     context: context,
@@ -128,6 +137,7 @@ Future<void> showItemActionSheet(
       item: item,
       attunedCount: attunedCount,
       notProficient: notProficient,
+      editMode: onEditCustomItem == null ? null : customItemEditModeOf(item),
     ),
   );
   if (action == null || !context.mounted) return;
@@ -160,6 +170,8 @@ Future<void> showItemActionSheet(
       );
       if (slot == null || !context.mounted) return;
       onEquipWeaponToSlot(item, slot);
+    case _ItemSheetAction.editCustom:
+      await onEditCustomItem?.call(item);
     case _ItemSheetAction.remove:
       await removeItemFlow(context, item: item, onRemoveItem: onRemoveItem);
   }
@@ -189,6 +201,7 @@ enum _ItemSheetAction {
   toggleEquipped,
   toggleAttuned,
   equipWeapon,
+  editCustom,
   remove,
 }
 
@@ -197,10 +210,15 @@ class _ItemActionSheetContent extends StatelessWidget {
     required this.item,
     required this.attunedCount,
     this.notProficient = false,
+    this.editMode,
   });
 
   final CharacterInventoryItem item;
   final int attunedCount;
+
+  /// Action « Modifier » / « Enrichir » à afficher (`null` : aucune — objet du
+  /// catalogue, vue en lecture seule).
+  final CustomItemEditMode? editMode;
 
   /// Armure/bouclier non maîtrisé (P10/F16) : pastille dans l'en-tête et
   /// bannière informative au-dessus de « Équiper »/« Déséquiper ».
@@ -324,6 +342,15 @@ class _ItemActionSheetContent extends StatelessWidget {
                     : null,
                 onTap: () =>
                     Navigator.of(context).pop(_ItemSheetAction.toggleAttuned),
+              ),
+            if (editMode != null)
+              SheetActionRow(
+                icon: Icons.edit,
+                label: editMode == CustomItemEditMode.enrich
+                    ? l10n.itemActionSheetEnrichLabel
+                    : l10n.itemActionSheetEditLabel,
+                onTap: () =>
+                    Navigator.of(context).pop(_ItemSheetAction.editCustom),
               ),
             const SheetActionDivider(),
             SheetActionRow(

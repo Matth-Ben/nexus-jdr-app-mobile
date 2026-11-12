@@ -219,6 +219,14 @@ class CharacterDetailCache {
                 else
                   row,
             ];
+          case InventoryItemOp.updateCustom:
+            // Modification d'un objet personnalisé (P7 PR 4) : colonnes
+            // `custom_*` (et `is_attuned` remis à faux si l'objet ne requiert
+            // plus l'harmonisation) reportées sur la ligne existante.
+            return [
+              for (final row in rows)
+                if (row['id'] == inventoryId) write.applyToRow(row) else row,
+            ];
           case InventoryItemOp.add:
             return [
               ...others,

@@ -1535,5 +1535,13 @@
   "inventoryCardSubtitleArmor": "{category, select, legere{Light armor} intermediaire{Medium armor} lourde{Heavy armor} other{Armor}} · AC {armorClass} · x{quantity}",
   "inventoryCardSubtitleShield": "Shield · +{bonus} AC · x{quantity}",
   "itemInfoPanelShieldBonusLabel": "AC bonus",
-  "itemInfoPanelArmorCategoryLabel": "Armor category"
+  "itemInfoPanelArmorCategoryLabel": "Armor category",
+  "customItemEditTitle": "EDIT ITEM",
+  "customItemEnrichTitle": "ENRICH ITEM",
+  "customItemSaveButton": "Save",
+  "customItemUpdatedSnackbar": "Item updated",
+  "itemActionSheetEditLabel": "Edit",
+  "itemActionSheetEnrichLabel": "Enrich",
+  "customItemKindChangeBlockedEquipped": "Unequip the item before changing its type",
+  "customItemKindCurrentSemantics": "Current type"
 }

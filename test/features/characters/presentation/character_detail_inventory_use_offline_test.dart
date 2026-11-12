@@ -79,6 +79,7 @@ class _QueueBackedRepository implements CharacterRepository {
               if (item.id != write.targetId) item,
           ];
         case InventoryItemOp.add:
+        case InventoryItemOp.updateCustom:
           break;
       }
     }

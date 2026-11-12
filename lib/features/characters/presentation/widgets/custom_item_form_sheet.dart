@@ -15,6 +15,7 @@ import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../../../core/widgets/stepper_counter.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
+import '../../domain/custom_item_edit_rules.dart';
 import '../../domain/custom_item_enrichment.dart';
 import '../../domain/inventory_category_rules.dart';
 import '../custom_item_labels.dart';
@@ -86,22 +87,35 @@ int? parseCustomItemIntInput(String raw) => int.tryParse(raw.trim());
 ///
 /// [attunedCount] : nombre d'objets harmonisés du personnage (si connu) pour
 /// « Harmoniser maintenant » ; `null` masque cet interrupteur.
+///
+/// [initial] (P7 PR 4) : édition d'un objet existant. Mode
+/// [CustomItemEditMode.edit] : le formulaire s'ouvre **pré-rempli à l'étape 2**
+/// (« Changer » ramène à l'étape 1) ; [CustomItemEditMode.enrich] : il s'ouvre
+/// à l'étape 1 avec le type déduit présélectionné. Titre « Modifier/Enrichir
+/// l'objet », bouton « Enregistrer », pas de quantité (autre action) ni
+/// d'« Harmoniser maintenant » ; un objet équipé ne peut pas changer de type
+/// ([isCustomKindChangeBlockedFor]).
 Future<CustomItemFormResult?> showCustomItemFormSheet(
   BuildContext context, {
   int? attunedCount,
+  CustomItemInitialValues? initial,
 }) {
   return showModalBottomSheet<CustomItemFormResult>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (context) => CustomItemFormSheet(attunedCount: attunedCount),
+    builder: (context) =>
+        CustomItemFormSheet(attunedCount: attunedCount, initial: initial),
   );
 }
 
 class CustomItemFormSheet extends StatefulWidget {
-  const CustomItemFormSheet({this.attunedCount, super.key});
+  const CustomItemFormSheet({this.attunedCount, this.initial, super.key});
 
   final int? attunedCount;
+
+  /// Valeurs de départ d'une édition (`null` : création).
+  final CustomItemInitialValues? initial;
 
   @override
   State<CustomItemFormSheet> createState() => _CustomItemFormSheetState();
@@ -136,9 +150,72 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
   bool _attuneNow = false;
   int _quantity = 1;
 
+  /// Plafond du stepper de dés : 10, ou la valeur déjà stockée si elle est
+  /// plus grande (jamais de troncature silencieuse en édition).
+  int _diceCountMax = customDiceCountMax;
+
+  bool get _isEditing => widget.initial != null;
+
+  /// Poids en kg saisi sans zéros inutiles (« 0.5 », « 20 »).
+  static String _formatWeight(double weight) {
+    final fixed = weight.toStringAsFixed(2);
+    return fixed.replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+
+  void _applyInitial(CustomItemInitialValues initial) {
+    _nameController.text = initial.name;
+    _descriptionController.text = initial.description ?? '';
+    _propertiesController.text = initial.properties.join(', ');
+    final weight = initial.weight;
+    if (weight != null) _weightController.text = _formatWeight(weight);
+    _diceCount = initial.diceCount;
+    _diceSides = initial.diceSides;
+    if (_diceCount > _diceCountMax) _diceCountMax = _diceCount;
+    _damageType = CustomDamageTypes.all.contains(initial.damageType)
+        ? initial.damageType
+        : null;
+    _weaponCategory = initial.weaponCategory;
+    _weaponRange = initial.weaponRange;
+    _magicBonus = initial.magicBonus.clamp(0, customMagicBonusMax);
+    _requiresAttunement = initial.requiresAttunement;
+    _armorCategory = initial.armorCategory ?? CustomArmorCategories.light;
+    final acBase = initial.acBase;
+    if (initial.kind == CustomItemKinds.armor && acBase != null) {
+      _armorClassController.text = '$acBase';
+      // Une CA saisie par le joueur ne suit plus la catégorie.
+      _armorClassEdited = true;
+    }
+    if (initial.kind == CustomItemKinds.shield && acBase != null) {
+      _shieldBonusController.text = '$acBase';
+    }
+    // Édition d'un objet typé : directement l'étape 2 ; enrichissement : étape
+    // 1 avec le type déduit présélectionné (voir `_currentKind`).
+    _kind = initial.mode == CustomItemEditMode.edit ? initial.kind : null;
+  }
+
+  /// Type actuel de l'objet édité (tuile présélectionnée à l'étape 1).
+  String? get _currentKind => widget.initial?.kind;
+
+  /// Faces de dé proposées : celles de l'ajout, plus la valeur déjà stockée
+  /// (un `1d20` existant reste affiché).
+  List<int> get _diceSidesOptions =>
+      {...customItemDiceSidesOptions, _diceSides}.toList()..sort();
+
+  bool _kindChangeBlocked(String newKind) {
+    final initial = widget.initial;
+    return initial != null &&
+        isCustomKindChangeBlockedFor(
+          equipped: initial.equipped,
+          currentKind: initial.kind,
+          newKind: newKind,
+        );
+  }
+
   @override
   void initState() {
     super.initState();
+    final initial = widget.initial;
+    if (initial != null) _applyInitial(initial);
     _nameController.addListener(_handleChanged);
     _weightController.addListener(_handleChanged);
     _armorClassController.addListener(_handleChanged);
@@ -282,7 +359,9 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
       onPressed: () => Navigator.of(context).pop(),
     );
     final add = PrimaryButton(
-      label: l10n.addItemFlowCustomAddButton,
+      label: _isEditing
+          ? l10n.customItemSaveButton
+          : l10n.addItemFlowCustomAddButton,
       onPressed: _canSubmit ? _submit : null,
     );
 
@@ -294,7 +373,13 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
           decoration: const BoxDecoration(color: AppColors.parchmentBg),
           child: Column(
             children: [
-              SheetHeaderBar(title: l10n.addItemFlowCustomSheetTitle),
+              SheetHeaderBar(
+                title: !_isEditing
+                    ? l10n.addItemFlowCustomSheetTitle
+                    : widget.initial!.mode == CustomItemEditMode.enrich
+                    ? l10n.customItemEnrichTitle
+                    : l10n.customItemEditTitle,
+              ),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(AppSpacing.lg),
@@ -370,41 +455,70 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
             color: AppColors.textSecondary,
           ),
         ),
+        if (widget.initial?.equipped ?? false) ...[
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              l10n.customItemKindChangeBlockedEquipped,
+              key: const Key('customItemKindBlockedCaption'),
+              style: AppTypography.body(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: AppSpacing.md),
         _KindTile(
           key: const Key('customItemKindWeapon'),
+          selected: _currentKind == CustomItemKinds.weapon,
+          blocked: _kindChangeBlocked(CustomItemKinds.weapon),
           icon: InventoryCategoryRules.iconFor('arme'),
           color: InventoryCategoryRules.colorFor('arme'),
           title: l10n.customItemTypeWeaponTitle,
           subtitle: l10n.customItemTypeWeaponSubtitle,
-          onTap: () => setState(() => _kind = CustomItemKinds.weapon),
+          onTap: _kindChangeBlocked(CustomItemKinds.weapon)
+              ? null
+              : () => setState(() => _kind = CustomItemKinds.weapon),
         ),
         const SizedBox(height: AppSpacing.sm),
         _KindTile(
           key: const Key('customItemKindArmor'),
+          selected: _currentKind == CustomItemKinds.armor,
+          blocked: _kindChangeBlocked(CustomItemKinds.armor),
           icon: InventoryCategoryRules.iconFor('armure'),
           color: InventoryCategoryRules.colorFor('armure'),
           title: l10n.customItemTypeArmorTitle,
           subtitle: l10n.customItemTypeArmorSubtitle,
-          onTap: () => setState(() => _kind = CustomItemKinds.armor),
+          onTap: _kindChangeBlocked(CustomItemKinds.armor)
+              ? null
+              : () => setState(() => _kind = CustomItemKinds.armor),
         ),
         const SizedBox(height: AppSpacing.sm),
         _KindTile(
           key: const Key('customItemKindShield'),
+          selected: _currentKind == CustomItemKinds.shield,
+          blocked: _kindChangeBlocked(CustomItemKinds.shield),
           icon: InventoryCategoryRules.iconFor('bouclier'),
           color: InventoryCategoryRules.colorFor('bouclier'),
           title: l10n.customItemTypeShieldTitle,
           subtitle: l10n.customItemTypeShieldSubtitle,
-          onTap: () => setState(() => _kind = CustomItemKinds.shield),
+          onTap: _kindChangeBlocked(CustomItemKinds.shield)
+              ? null
+              : () => setState(() => _kind = CustomItemKinds.shield),
         ),
         const SizedBox(height: AppSpacing.sm),
         _KindTile(
           key: const Key('customItemKindOther'),
+          selected: _currentKind == CustomItemKinds.other,
+          blocked: _kindChangeBlocked(CustomItemKinds.other),
           icon: InventoryCategoryRules.iconFor('objet_magique'),
           color: InventoryCategoryRules.colorFor('objet_magique'),
           title: l10n.customItemTypeOtherTitle,
           subtitle: l10n.customItemTypeOtherSubtitle,
-          onTap: () => setState(() => _kind = CustomItemKinds.other),
+          onTap: _kindChangeBlocked(CustomItemKinds.other)
+              ? null
+              : () => setState(() => _kind = CustomItemKinds.other),
         ),
       ],
     );
@@ -462,13 +576,21 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
                   foregroundColor: AppColors.textSecondary,
                 ),
                 // Seul le type change : nom, quantité, poids, harmonisation et
-                // description restent dans leurs contrôleurs/variables.
-                onPressed: () => setState(() => _kind = null),
+                // description restent dans leurs contrôleurs/variables. Un
+                // objet équipé garde son type (bouton désactivé + légende).
+                onPressed: (widget.initial?.equipped ?? false)
+                    ? null
+                    : () => setState(() => _kind = null),
                 child: Text(l10n.customItemChangeTypeButton),
               ),
             ),
           ],
         ),
+        if (widget.initial?.equipped ?? false)
+          Semantics(
+            liveRegion: true,
+            child: _caption(l10n.customItemKindChangeBlockedEquipped),
+          ),
         const SizedBox(height: AppSpacing.md),
         _label(l10n.addItemFlowCustomNameSectionLabel),
         TextFormField(
@@ -514,13 +636,18 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
-        _label(l10n.addItemFlowCustomQuantitySectionLabel),
-        StepperCounter(
-          value: _quantity,
-          onIncrement: () => setState(() => _quantity++),
-          onDecrement: _quantity > 1 ? () => setState(() => _quantity--) : null,
-        ),
+        // La quantité a sa propre action : jamais modifiée par l'édition.
+        if (!_isEditing) ...[
+          const SizedBox(height: AppSpacing.md),
+          _label(l10n.addItemFlowCustomQuantitySectionLabel),
+          StepperCounter(
+            value: _quantity,
+            onIncrement: () => setState(() => _quantity++),
+            onDecrement: _quantity > 1
+                ? () => setState(() => _quantity--)
+                : null,
+          ),
+        ],
       ],
     );
   }
@@ -549,7 +676,7 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
       children: [
         StepperCounter(
           value: _diceCount,
-          onIncrement: _diceCount < customDiceCountMax
+          onIncrement: _diceCount < _diceCountMax
               ? () => setState(() => _diceCount++)
               : null,
           onDecrement: _diceCount > 1
@@ -568,7 +695,7 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
             initialValue: _diceSides,
             isExpanded: true,
             items: [
-              for (final sides in customItemDiceSidesOptions)
+              for (final sides in _diceSidesOptions)
                 DropdownMenuItem(value: sides, child: Text('$sides')),
             ],
             onChanged: (value) =>
@@ -793,6 +920,8 @@ class _KindTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.selected = false,
+    this.blocked = false,
     super.key,
   });
 
@@ -800,61 +929,81 @@ class _KindTile extends StatelessWidget {
   final Color color;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+
+  /// `null` : tuile désactivée (type interdit pour un objet équipé).
+  final VoidCallback? onTap;
+
+  /// Type actuel de l'objet édité : coche + bordure marquée (jamais la couleur
+  /// seule) et sémantique « sélectionné ».
+  final bool selected;
+
+  /// Type interdit (objet équipé) : atténuée.
+  final bool blocked;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Semantics(
       button: true,
       container: true,
       excludeSemantics: true,
-      label: '$title, $subtitle',
+      enabled: onTap != null,
+      selected: selected,
+      label: selected
+          ? '$title, $subtitle, ${l10n.customItemKindCurrentSemantics}'
+          : '$title, $subtitle',
       onTap: onTap,
-      child: Material(
-        color: AppColors.parchmentCard,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: InkWell(
-          onTap: onTap,
+      child: Opacity(
+        opacity: blocked ? 0.5 : 1,
+        child: Material(
+          color: AppColors.parchmentCard,
           borderRadius: BorderRadius.circular(AppRadius.md),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 64),
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(
-                color: AppColors.woodLight,
-                width: AppBorders.card,
-              ),
-            ),
-            child: Row(
-              children: [
-                AccentIconBadge(icon: icon, color: color),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        style: AppTypography.body(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: AppTypography.body(
-                          fontSize: 12,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 64),
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: selected ? AppColors.woodDark : AppColors.woodLight,
+                  width: selected ? AppBorders.card * 2 : AppBorders.card,
                 ),
-                const Icon(Icons.chevron_right, color: AppColors.textMuted),
-              ],
+              ),
+              child: Row(
+                children: [
+                  AccentIconBadge(icon: icon, color: color),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title,
+                          style: AppTypography.body(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: AppTypography.body(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    selected ? Icons.check_circle : Icons.chevron_right,
+                    color: selected ? AppColors.woodDark : AppColors.textMuted,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
