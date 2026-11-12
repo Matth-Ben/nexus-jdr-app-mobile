@@ -4629,4 +4629,15 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get creationSessionExpiredImportErrorMessage =>
       'Session expirée. Reconnectez-vous pour importer un personnage.';
+
+  @override
+  String memberConditionsSheetTitle(String name) {
+    return 'États de $name';
+  }
+
+  @override
+  String get conditionsMoreChipHint => 'Ouvre la liste des états';
+
+  @override
+  String get memberConditionsSheetEmpty => 'Aucun état actif.';
 }

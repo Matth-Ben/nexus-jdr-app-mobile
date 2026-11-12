@@ -13,6 +13,7 @@ import '../../domain/character_vital_status.dart';
 import '../../domain/group_detail.dart';
 import '../../domain/group_member.dart';
 import 'group_invite_code_chip.dart';
+import 'member_conditions_sheet.dart';
 
 /// Callback "Exclure {personnage}" (owner uniquement, jamais sur sa propre
 /// ligne) — la confirmation est gérée par l'appelant (`group_screen.dart`),
@@ -215,6 +216,7 @@ class _MemberCard extends StatelessWidget {
         onTap: onOpen,
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: _buildCard(
+          context,
           isDead: isDead,
           nameColor: nameColor,
           portrait: portrait,
@@ -223,7 +225,8 @@ class _MemberCard extends StatelessWidget {
     );
   }
 
-  Widget _buildCard({
+  Widget _buildCard(
+    BuildContext context, {
     required bool isDead,
     required Color nameColor,
     required Widget portrait,
@@ -311,6 +314,7 @@ class _MemberCard extends StatelessWidget {
                     ),
                     // Conditions actives (P6) : pastilles compactes en lecture
                     // seule, sans zone de tap propre (la carte reste tappable) ;
+                    // seule « +N » ouvre la feuille de tous les états (V3-5) ;
                     // aucune ligne — donc aucune hauteur en plus — sans condition.
                     if (member.conditions.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.xs),
@@ -318,6 +322,11 @@ class _MemberCard extends StatelessWidget {
                         conditions: member.conditions,
                         maxFullChips: 2,
                         compact: true,
+                        onTapMore: () => showMemberConditionsSheet(
+                          context,
+                          member.name,
+                          member.conditions,
+                        ),
                       ),
                     ],
                     if (member.armorClass != null) ...[

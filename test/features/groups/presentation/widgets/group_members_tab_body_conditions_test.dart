@@ -143,13 +143,17 @@ void main() {
     );
     expect(find.byType(ConditionChip), findsNWidgets(2));
     expect(find.text('+3'), findsOneWidget);
-    // Lecture seule : aucune zone de tap propre ni bouton d'édition.
+    // Lecture seule : aucune zone de tap sur les pastilles individuelles ni
+    // bouton d'édition ; depuis V3-5 la seule zone de tap est celle de « +N »
+    // (voir group_members_tab_body_more_chip_test.dart).
+    final tapZones = find.descendant(
+      of: find.byType(ConditionsZone),
+      matching: find.byType(InkWell),
+    );
+    expect(tapZones, findsOneWidget);
     expect(
-      find.descendant(
-        of: find.byType(ConditionsZone),
-        matching: find.byType(InkWell),
-      ),
-      findsNothing,
+      find.descendant(of: tapZones, matching: find.text('+3')),
+      findsOneWidget,
     );
     expect(
       find.descendant(

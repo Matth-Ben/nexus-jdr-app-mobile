@@ -1419,5 +1419,8 @@
   "creationAccessDeniedErrorMessage": "You don't have access to this action.",
   "creationSessionExpiredCreateErrorMessage": "Session expired. Sign in again to create a character.",
   "creationSessionExpiredEditErrorMessage": "Session expired. Sign in again and try again.",
-  "creationSessionExpiredImportErrorMessage": "Session expired. Sign in again to import a character."
+  "creationSessionExpiredImportErrorMessage": "Session expired. Sign in again to import a character.",
+  "memberConditionsSheetTitle": "{name}'s conditions",
+  "conditionsMoreChipHint": "Opens the list of conditions",
+  "memberConditionsSheetEmpty": "No active condition."
 }

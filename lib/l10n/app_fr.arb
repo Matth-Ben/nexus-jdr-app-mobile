@@ -6143,5 +6143,22 @@
   "creationSessionExpiredImportErrorMessage": "Session expirée. Reconnectez-vous pour importer un personnage.",
   "@creationSessionExpiredImportErrorMessage": {
     "description": "`CharacterCreationErrorCode.sessionExpiredImport` (D141)."
+  },
+  "memberConditionsSheetTitle": "États de {name}",
+  "@memberConditionsSheetTitle": {
+    "description": "Titre de la feuille en lecture seule listant tous les états d'un membre (V3-5).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "conditionsMoreChipHint": "Ouvre la liste des états",
+  "@conditionsMoreChipHint": {
+    "description": "Indication d'accessibilité (hint) de la pastille « +N » d'une carte membre (V3-5)."
+  },
+  "memberConditionsSheetEmpty": "Aucun état actif.",
+  "@memberConditionsSheetEmpty": {
+    "description": "État vide de la feuille des états d'un membre (V3-5)."
   }
 }

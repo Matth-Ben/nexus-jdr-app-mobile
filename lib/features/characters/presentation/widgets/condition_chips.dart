@@ -19,7 +19,8 @@ const double kConditionsCapMaxTextScale = 1.3;
 ///   condition, les pastilles puis un bouton d'édition distinct. Un tap sur
 ///   une pastille, sur « +N » ou sur le bouton appelle [onEdit].
 /// - Lecture seule ([onEdit] nul) : pastilles sans zone de tap, rien du tout
-///   si aucune condition (la hauteur de la carte hôte ne change pas).
+///   si aucune condition (la hauteur de la carte hôte ne change pas). Seule
+///   exception : « +N » est un bouton si [onTapMore] est fourni (V3-5).
 ///
 /// [maxFullChips] plafonne les pastilles complètes (puis « +N ») tant que la
 /// police reste normale ; `null` = toutes les pastilles. [compact] = variante
@@ -28,6 +29,7 @@ class ConditionsZone extends StatelessWidget {
   const ConditionsZone({
     required this.conditions,
     this.onEdit,
+    this.onTapMore,
     this.maxFullChips,
     this.compact = false,
     super.key,
@@ -35,6 +37,10 @@ class ConditionsZone extends StatelessWidget {
 
   final List<ConditionType> conditions;
   final VoidCallback? onEdit;
+
+  /// Tap sur la seule pastille « +N » (V3-5) : prioritaire sur [onEdit] pour
+  /// cette pastille ; les pastilles individuelles ne sont jamais concernées.
+  final VoidCallback? onTapMore;
   final int? maxFullChips;
   final bool compact;
 
@@ -84,7 +90,13 @@ class ConditionsZone extends StatelessWidget {
                     onTap: onEdit,
                   ),
                 if (hidden.isNotEmpty)
-                  _MoreChip(hidden: hidden, compact: compact, onTap: onEdit),
+                  _MoreChip(
+                    hidden: hidden,
+                    compact: compact,
+                    onTap: onTapMore ?? onEdit,
+                    // Le hint annonce la feuille de liste, pas l'éditeur.
+                    withListHint: onTapMore != null,
+                  ),
               ],
             ),
           ),
@@ -136,11 +148,13 @@ class _MoreChip extends StatelessWidget {
     required this.hidden,
     required this.compact,
     required this.onTap,
+    required this.withListHint,
   });
 
   final List<ConditionType> hidden;
   final bool compact;
   final VoidCallback? onTap;
+  final bool withListHint;
 
   @override
   Widget build(BuildContext context) {
@@ -153,6 +167,8 @@ class _MoreChip extends StatelessWidget {
       compact: compact,
       onTap: onTap,
       label: l10n.conditionsMoreChipLabel(hidden.length),
+      hint: withListHint ? l10n.conditionsMoreChipHint : null,
+      minTapWidth: 44,
     );
   }
 }
@@ -164,6 +180,8 @@ class _ChipShell extends StatelessWidget {
     required this.onTap,
     required this.label,
     this.leading,
+    this.hint,
+    this.minTapWidth = 0,
   });
 
   final String semanticsLabel;
@@ -171,6 +189,10 @@ class _ChipShell extends StatelessWidget {
   final VoidCallback? onTap;
   final String label;
   final Widget? leading;
+  final String? hint;
+
+  /// Largeur minimale de la zone de tap (44 pour « +N », court sinon).
+  final double minTapWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -213,6 +235,7 @@ class _ChipShell extends StatelessWidget {
       container: true,
       button: tap != null,
       label: semanticsLabel,
+      hint: hint,
       excludeSemantics: true,
       onTap: tap,
       child: tap == null
@@ -223,7 +246,10 @@ class _ChipShell extends StatelessWidget {
                 onTap: tap,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 44),
+                  constraints: BoxConstraints(
+                    minHeight: 44,
+                    minWidth: minTapWidth,
+                  ),
                   child: Center(widthFactor: 1, child: visual),
                 ),
               ),
