@@ -6037,5 +6037,51 @@
   "characterSpellsTabBodyUnsupportedCasterMessage": "Les sorts de ce personnage ne sont pas gérés par l'app.",
   "@characterSpellsTabBodyUnsupportedCasterMessage": {
     "description": "Message de `_NonCasterEmptyState` pour un tiers-lanceur non géré (Chevalier occulte, Escroc arcanique) : le personnage lance des sorts, mais l'app n'en gère ni les emplacements ni la liste (V2-5)."
+  },
+  "updateBannerMessage": "Nouvelle version disponible",
+  "@updateBannerMessage": {
+    "description": "Message de `UpdateSuggestedBanner` (bandeau de mise à jour suggérée de la liste des personnages)."
+  },
+  "updateBannerAction": "Mettre à jour",
+  "@updateBannerAction": {
+    "description": "Lien d'action de `UpdateSuggestedBanner` : ouvre la fiche de l'application sur le store."
+  },
+  "updateBannerDismissTooltip": "Fermer",
+  "@updateBannerDismissTooltip": {
+    "description": "Info-bulle/sémantique du bouton qui referme `UpdateSuggestedBanner` pour la version proposée."
+  },
+  "forceUpdateTitleLine1": "MISE À JOUR",
+  "@forceUpdateTitleLine1": {
+    "description": "Première ligne du titre de `ForceUpdateScreen` (écran bloquant)."
+  },
+  "forceUpdateTitleLine2": "REQUISE",
+  "@forceUpdateTitleLine2": {
+    "description": "Seconde ligne du titre de `ForceUpdateScreen`."
+  },
+  "forceUpdateBody": "Cette version de Nexus JDR n'est plus prise en charge. Mets à jour l'application pour continuer à gérer tes personnages en toute sécurité.",
+  "@forceUpdateBody": {
+    "description": "Texte explicatif de `ForceUpdateScreen`."
+  },
+  "forceUpdateButton": "↓ Mettre à jour",
+  "@forceUpdateButton": {
+    "description": "Libellé du bouton primaire de `ForceUpdateScreen` (ouvre le store)."
+  },
+  "forceUpdateVersionLine": "Version installée : {installed} · minimum requis : {minimum}",
+  "@forceUpdateVersionLine": {
+    "description": "Ligne de versions en bas de `ForceUpdateScreen`.",
+    "placeholders": {
+      "installed": {
+        "type": "String",
+        "example": "0.1.0"
+      },
+      "minimum": {
+        "type": "String",
+        "example": "0.3.0"
+      }
+    }
+  },
+  "updateStoreOpenError": "Impossible d'ouvrir la fiche de l'application. Réessayez.",
+  "@updateStoreOpenError": {
+    "description": "SnackBar affiché par `openAppStorePage` quand la fiche store ne peut pas être ouverte."
   }
 }

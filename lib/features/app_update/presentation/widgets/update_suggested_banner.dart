@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/app_version_check_result.dart';
 import '../../domain/app_version_status.dart';
 import '../app_store_launcher.dart';
@@ -99,14 +100,18 @@ bool _shouldStack(BuildContext context, double maxWidth) {
     )..layout(maxWidth: width);
   }
 
-  final link = layout(_UpdateLink.label, _UpdateLink.style(), double.infinity);
+  final link = layout(
+    AppLocalizations.of(context)!.updateBannerAction,
+    _UpdateLink.style(),
+    double.infinity,
+  );
   final linkWidth = link.width;
   link.dispose();
 
   final messageWidth = maxWidth - _bannerChromeWidth - linkWidth;
   if (messageWidth <= 0) return true;
   final message = layout(
-    _UpdateMessage.label,
+    AppLocalizations.of(context)!.updateBannerMessage,
     _UpdateMessage.style(),
     messageWidth,
   );
@@ -157,7 +162,7 @@ class _BannerContent extends StatelessWidget {
           width: 44,
           height: 44,
           child: IconButton(
-            tooltip: 'Fermer',
+            tooltip: AppLocalizations.of(context)!.updateBannerDismissTooltip,
             icon: const Icon(Icons.close, color: AppColors.textMuted),
             onPressed: onDismiss,
           ),
@@ -172,8 +177,6 @@ class _BannerContent extends StatelessWidget {
 /// system).
 class _UpdateLink extends StatelessWidget {
   const _UpdateLink({required this.storeUrl});
-
-  static const label = 'Mettre à jour';
 
   static TextStyle style() => AppTypography.body(
     fontWeight: FontWeight.w800,
@@ -193,7 +196,10 @@ class _UpdateLink extends StatelessWidget {
           heightFactor: 1,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-            child: Text(label, style: style()),
+            child: Text(
+              AppLocalizations.of(context)!.updateBannerAction,
+              style: style(),
+            ),
           ),
         ),
       ),
@@ -204,8 +210,6 @@ class _UpdateLink extends StatelessWidget {
 class _UpdateMessage extends StatelessWidget {
   const _UpdateMessage();
 
-  static const label = 'Nouvelle version disponible';
-
   static TextStyle style() => AppTypography.body(
     fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
@@ -213,6 +217,9 @@ class _UpdateMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(label, style: style());
+    return Text(
+      AppLocalizations.of(context)!.updateBannerMessage,
+      style: style(),
+    );
   }
 }

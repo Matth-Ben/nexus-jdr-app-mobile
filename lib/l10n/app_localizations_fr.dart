@@ -4541,4 +4541,35 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get characterSpellsTabBodyUnsupportedCasterMessage =>
       'Les sorts de ce personnage ne sont pas gérés par l\'app.';
+
+  @override
+  String get updateBannerMessage => 'Nouvelle version disponible';
+
+  @override
+  String get updateBannerAction => 'Mettre à jour';
+
+  @override
+  String get updateBannerDismissTooltip => 'Fermer';
+
+  @override
+  String get forceUpdateTitleLine1 => 'MISE À JOUR';
+
+  @override
+  String get forceUpdateTitleLine2 => 'REQUISE';
+
+  @override
+  String get forceUpdateBody =>
+      'Cette version de Nexus JDR n\'est plus prise en charge. Mets à jour l\'application pour continuer à gérer tes personnages en toute sécurité.';
+
+  @override
+  String get forceUpdateButton => '↓ Mettre à jour';
+
+  @override
+  String forceUpdateVersionLine(String installed, String minimum) {
+    return 'Version installée : $installed · minimum requis : $minimum';
+  }
+
+  @override
+  String get updateStoreOpenError =>
+      'Impossible d\'ouvrir la fiche de l\'application. Réessayez.';
 }

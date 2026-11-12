@@ -10,13 +10,17 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:personnages/features/app_update/presentation/force_update_screen.dart';
 
 void main() {
   Future<void> pumpScreen(WidgetTester tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: ForceUpdateScreen(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
+        home: const ForceUpdateScreen(
           installedVersion: '0.1.0',
           minimumVersion: '0.3.0',
         ),

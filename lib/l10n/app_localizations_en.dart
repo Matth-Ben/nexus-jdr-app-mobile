@@ -4502,4 +4502,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get characterSpellsTabBodyUnsupportedCasterMessage =>
       'This character\'s spells aren\'t supported in the app.';
+
+  @override
+  String get updateBannerMessage => 'A new version is available';
+
+  @override
+  String get updateBannerAction => 'Update';
+
+  @override
+  String get updateBannerDismissTooltip => 'Dismiss';
+
+  @override
+  String get forceUpdateTitleLine1 => 'UPDATE';
+
+  @override
+  String get forceUpdateTitleLine2 => 'REQUIRED';
+
+  @override
+  String get forceUpdateBody =>
+      'This version of Nexus JDR is no longer supported. Update the app to keep managing your characters safely.';
+
+  @override
+  String get forceUpdateButton => '↓ Update';
+
+  @override
+  String forceUpdateVersionLine(String installed, String minimum) {
+    return 'Installed version: $installed · minimum required: $minimum';
+  }
+
+  @override
+  String get updateStoreOpenError =>
+      'Couldn\'t open the app\'s store page. Try again.';
 }

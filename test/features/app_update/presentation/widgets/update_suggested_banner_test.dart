@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:personnages/features/app_update/data/app_version_repository.dart';
 import 'package:personnages/features/app_update/presentation/providers/app_version_providers.dart';
 import 'package:personnages/features/app_update/presentation/widgets/update_suggested_banner.dart';
@@ -49,7 +50,12 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [appVersionRepositoryProvider.overrideWithValue(repository)],
-        child: const MaterialApp(home: Scaffold(body: UpdateSuggestedBanner())),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('fr'),
+          home: const Scaffold(body: UpdateSuggestedBanner()),
+        ),
       ),
     );
     await tester.pumpAndSettle();

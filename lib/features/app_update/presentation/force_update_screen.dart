@@ -6,6 +6,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/display_text.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
+import '../../../l10n/app_localizations.dart';
 import 'app_store_launcher.dart';
 
 /// Écran "Erreur — Mise à jour obligatoire" — recettage direction-artistique
@@ -41,6 +42,7 @@ class ForceUpdateScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SceneScaffold(
       body: SafeArea(
         child: Center(
@@ -52,7 +54,7 @@ class ForceUpdateScreen extends StatelessWidget {
                 const _UpdateBadge(),
                 const SizedBox(height: AppSpacing.md),
                 DisplayText(
-                  'MISE À JOUR',
+                  l10n.forceUpdateTitleLine1,
                   textAlign: TextAlign.center,
                   style: AppTypography.display(
                     fontSize: 15,
@@ -60,7 +62,7 @@ class ForceUpdateScreen extends StatelessWidget {
                   ),
                 ),
                 DisplayText(
-                  'REQUISE',
+                  l10n.forceUpdateTitleLine2,
                   textAlign: TextAlign.center,
                   style: AppTypography.display(
                     fontSize: 15,
@@ -69,9 +71,7 @@ class ForceUpdateScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  "Cette version de Nexus JDR n'est plus prise en charge. "
-                  "Mets à jour l'application pour continuer à gérer tes "
-                  'personnages en toute sécurité.',
+                  l10n.forceUpdateBody,
                   textAlign: TextAlign.center,
                   style: AppTypography.body(color: AppColors.textOnWoodMuted),
                 ),
@@ -79,15 +79,14 @@ class ForceUpdateScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: PrimaryButton(
-                    label: '↓ Mettre à jour',
+                    label: l10n.forceUpdateButton,
                     onPressed: () =>
                         openAppStorePage(context, storeUrl: storeUrl),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Version installée : $installedVersion · minimum requis : '
-                  '$minimumVersion',
+                  l10n.forceUpdateVersionLine(installedVersion, minimumVersion),
                   textAlign: TextAlign.center,
                   style: AppTypography.body(
                     fontSize: 11,

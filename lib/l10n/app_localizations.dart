@@ -7288,6 +7288,60 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Les sorts de ce personnage ne sont pas gérés par l\'app.'**
   String get characterSpellsTabBodyUnsupportedCasterMessage;
+
+  /// Message de `UpdateSuggestedBanner` (bandeau de mise à jour suggérée de la liste des personnages).
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle version disponible'**
+  String get updateBannerMessage;
+
+  /// Lien d'action de `UpdateSuggestedBanner` : ouvre la fiche de l'application sur le store.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mettre à jour'**
+  String get updateBannerAction;
+
+  /// Info-bulle/sémantique du bouton qui referme `UpdateSuggestedBanner` pour la version proposée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer'**
+  String get updateBannerDismissTooltip;
+
+  /// Première ligne du titre de `ForceUpdateScreen` (écran bloquant).
+  ///
+  /// In fr, this message translates to:
+  /// **'MISE À JOUR'**
+  String get forceUpdateTitleLine1;
+
+  /// Seconde ligne du titre de `ForceUpdateScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'REQUISE'**
+  String get forceUpdateTitleLine2;
+
+  /// Texte explicatif de `ForceUpdateScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette version de Nexus JDR n\'est plus prise en charge. Mets à jour l\'application pour continuer à gérer tes personnages en toute sécurité.'**
+  String get forceUpdateBody;
+
+  /// Libellé du bouton primaire de `ForceUpdateScreen` (ouvre le store).
+  ///
+  /// In fr, this message translates to:
+  /// **'↓ Mettre à jour'**
+  String get forceUpdateButton;
+
+  /// Ligne de versions en bas de `ForceUpdateScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Version installée : {installed} · minimum requis : {minimum}'**
+  String forceUpdateVersionLine(String installed, String minimum);
+
+  /// SnackBar affiché par `openAppStorePage` quand la fiche store ne peut pas être ouverte.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ouvrir la fiche de l\'application. Réessayez.'**
+  String get updateStoreOpenError;
 }
 
 class _AppLocalizationsDelegate

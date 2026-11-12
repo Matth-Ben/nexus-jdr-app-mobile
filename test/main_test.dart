@@ -264,6 +264,10 @@ void main() {
       'AppVersionStatus.updateRequired -> affiche ForceUpdateScreen à la '
       'place de `child`, jamais `child` lui-même',
       (tester) async {
+        // Écran bloquant dans son propre `MaterialApp` : suit la langue du
+        // téléphone (D141) — ici français explicite.
+        tester.platformDispatcher.localesTestValue = [const Locale('fr')];
+        addTearDown(tester.platformDispatcher.clearLocalesTestValue);
         await pumpBootstrap(
           tester,
           repository: _FakeAppVersionRepository(
@@ -302,6 +306,36 @@ void main() {
         expect(find.text('App prête'), findsOneWidget);
       },
     );
+
+    for (final (device, expected) in [
+      (
+        const Locale('en'),
+        'Installed version: 0.1.0 · minimum required: 0.3.0',
+      ),
+      (
+        // Langue ni FR ni EN : repli français voulu.
+        const Locale('de'),
+        'Version installée : 0.1.0 · minimum requis : 0.3.0',
+      ),
+    ]) {
+      testWidgets('updateRequired : ForceUpdateScreen suit la langue du '
+          'téléphone (${device.languageCode})', (tester) async {
+        tester.platformDispatcher.localesTestValue = [device];
+        addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+        await pumpBootstrap(
+          tester,
+          repository: _FakeAppVersionRepository(
+            const AppVersionRow(
+              minimumSupportedVersion: '0.3.0',
+              latestVersion: '0.5.0',
+            ),
+          ),
+        );
+
+        expect(find.byType(ForceUpdateScreen), findsOneWidget);
+        expect(find.text(expected), findsOneWidget);
+      });
+    }
 
     testWidgets('AppVersionStatus.upToDate -> laisse passer vers `child` '
         'normalement', (tester) async {
