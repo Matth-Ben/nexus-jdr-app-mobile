@@ -3341,9 +3341,46 @@ void main() {
         expect(import.bottom, lessThanOrEqualTo(640));
       });
 
+      testWidgets('plafond FORCÉ (x3,0 sur 320x300) : pied limité à 35 %, '
+          'défilement interne réel, contenu complet atteignable', (
+        tester,
+      ) async {
+        surface(tester, const Size(320, 300));
+        fakeCharacterRepository.charactersToReturn = many(4);
+        await pumpList(tester, scale: 3);
+
+        expect(tester.takeException(), isNull);
+        final footer = find.byKey(const Key('characterListFooterScroll'));
+        final footerRect = tester.getRect(footer);
+        // Hauteur naturelle des deux boutons en colonne à x3,0 > 105 dp :
+        // c'est bien le plafond qui borne le pied.
+        expect(footerRect.height, closeTo(300 * 0.35, 0.5));
+        final position = tester
+            .state<ScrollableState>(
+              find.descendant(of: footer, matching: find.byType(Scrollable)),
+            )
+            .position;
+        expect(position.maxScrollExtent, greaterThan(0));
+        expect(position.pixels, 0);
+        // Départ : « Importer » dépasse du pied (rogné).
+        expect(
+          tester.getRect(footerImport()).bottom,
+          greaterThan(footerRect.bottom),
+        );
+        await tester.dragFrom(footerRect.center, const Offset(0, -400));
+        await tester.pumpAndSettle();
+        expect(position.pixels, greaterThan(0));
+        // Fin : « Importer » entièrement dans la fenêtre du pied.
+        expect(
+          tester.getRect(footerImport()).bottom,
+          lessThanOrEqualTo(footerRect.bottom + 0.5),
+        );
+        expect(tester.takeException(), isNull);
+      });
+
       for (final size in const [Size(360, 640), Size(320, 568)]) {
         testWidgets('x3,0 sur ${size.width.toInt()}x${size.height.toInt()} : '
-            'plafonné à 35 %, défilant en interne, boutons atteignables', (
+            'pied sous le plafond de 35 %, boutons atteignables', (
           tester,
         ) async {
           surface(tester, size);

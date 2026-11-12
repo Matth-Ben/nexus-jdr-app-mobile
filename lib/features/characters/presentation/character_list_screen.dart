@@ -433,9 +433,6 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
     );
 
     final largeText = _isLargeText(context);
-    final syncActive =
-        ref.watch(syncBannerProvider(characterId: null)).kind !=
-        SyncBannerKind.none;
 
     return SceneScaffold(
       body: SafeArea(
@@ -477,7 +474,6 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
                           child: Padding(
                             padding: EdgeInsets.symmetric(horizontal: side),
                             child: _SyncBand(
-                              active: syncActive,
                               capHeight: largeText
                                   ? constraints.maxHeight *
                                         _syncBandMaxHeightFraction
@@ -764,14 +760,19 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
 /// ([SyncStatusBanner] se réduit alors à une boîte vide). À police agrandie
 /// ([capHeight] non nul) et bandeau actif, sa hauteur est plafonnée avec
 /// défilement interne pour ne jamais manger la zone de défilement principale.
-class _SyncBand extends StatelessWidget {
-  const _SyncBand({required this.active, required this.capHeight});
+///
+/// `ConsumerWidget` : seul ce sliver observe l'état du bandeau, un changement
+/// de synchro ne reconstruit donc pas tout l'écran.
+class _SyncBand extends ConsumerWidget {
+  const _SyncBand({required this.capHeight});
 
-  final bool active;
   final double? capHeight;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final active =
+        ref.watch(syncBannerProvider(characterId: null)).kind !=
+        SyncBannerKind.none;
     const banner = SyncStatusBanner(
       visiblePadding: EdgeInsets.only(bottom: AppSpacing.sm),
     );
