@@ -350,6 +350,31 @@ class FakeRepository implements CharacterRepository {
   /// échoue ensuite.
   bool failNextAddReward = false;
 
+  int updateCustomInventoryItemCallCount = 0;
+  String? lastUpdatedInventoryId;
+  String? lastUpdatedName;
+  String? lastUpdatedDescription;
+  CustomItemEnrichment? lastUpdatedEnrichment;
+
+  @override
+  Future<WriteOutcome> updateCustomInventoryItem({
+    required String characterId,
+    required String inventoryId,
+    required String customName,
+    required CustomItemEnrichment enrichment,
+    String? description,
+    String? damageDice,
+    String? damageType,
+    List<String> properties = const [],
+  }) async {
+    updateCustomInventoryItemCallCount++;
+    lastUpdatedInventoryId = inventoryId;
+    lastUpdatedName = customName;
+    lastUpdatedDescription = description;
+    lastUpdatedEnrichment = enrichment;
+    return outcomeToReturn;
+  }
+
   @override
   Future<WriteOutcome> addReward({
     required String characterId,
@@ -912,6 +937,77 @@ void main() {
     expect(repository.removeInventoryItemCallCount, 1);
     expect(repository.lastInventoryId, 'inv-1');
     expect(find.text('Dague retiré de l\'inventaire.'), findsOneWidget);
+  });
+
+  group('modifier un objet personnalisé (P7 PR 4)', () {
+    const customShield = CharacterInventoryItem(
+      id: 'inv-shield',
+      name: 'Égide',
+      quantity: 1,
+      equipped: false,
+      customKind: CustomItemKinds.shield,
+      customAcBase: 2,
+    );
+
+    CharacterDetail withShield() =>
+        detail.copyWith(inventory: [_dagger, customShield]);
+
+    testWidgets('« Modifier » : updateCustomInventoryItem reçoit la ligne et '
+        'la saisie, snackbar « Objet mis à jour »', (tester) async {
+      final repository = await pumpDetail(tester, initialDetail: withShield());
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Égide'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Modifier'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('customItemShieldBonusField')),
+        '4',
+      );
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+      await tester.pumpAndSettle();
+
+      expect(repository.updateCustomInventoryItemCallCount, 1);
+      expect(repository.lastUpdatedInventoryId, 'inv-shield');
+      expect(repository.lastUpdatedName, 'Égide');
+      expect(repository.lastUpdatedEnrichment?.kind, 'bouclier');
+      expect(repository.lastUpdatedEnrichment?.acBase, 4);
+      expect(repository.addCustomInventoryItemCallCount, 0);
+      expect(find.text('Objet mis à jour'), findsOneWidget);
+    });
+
+    testWidgets('hors ligne (mis en file) : message « sera synchronisé », '
+        'jamais « Objet mis à jour »', (tester) async {
+      final repository = await pumpDetail(tester, initialDetail: withShield());
+      repository.outcomeToReturn = WriteOutcome.queued;
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Égide'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Modifier'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+      await tester.pumpAndSettle();
+
+      expect(repository.updateCustomInventoryItemCallCount, 1);
+      expect(find.text('Objet mis à jour'), findsNothing);
+    });
+
+    testWidgets('un objet du catalogue n\'a pas d\'action « Modifier »', (
+      tester,
+    ) async {
+      final repository = await pumpDetail(tester);
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Dague'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Infos'), findsOneWidget);
+      expect(find.text('Modifier'), findsNothing);
+      expect(repository.updateCustomInventoryItemCallCount, 0);
+    });
   });
 
   testWidgets(

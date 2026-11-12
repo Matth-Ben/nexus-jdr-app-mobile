@@ -25,6 +25,17 @@ import 'weapon_slot.dart';
 ///   `quantity` du payload d'ajout est modifiée (un seul `INSERT`) ; à 0 c'est
 ///   un tombstone ([planInventoryUse]) ;
 ///
+/// - modification d'un objet personnalisé existant (P7 PR 4) : `{"op":
+///   "updateCustom", "customName": "...", + **instantané complet** des champs
+///   personnalisés non vides (une clé absente = colonne remise à `NULL`),
+///   + `quantity`/`base` optionnels}` — dernière écriture gagnante, une seule
+///   écriture par ligne (la seconde remplace la première). Les clés
+///   `quantity`/`base` ne sont présentes que si un **usage** (`quantity`) de la
+///   même ligne était en file : la file n'a qu'une entrée `inventoryItem` par
+///   ligne, la fusion garde donc les deux effets. Modifier une ligne dont
+///   l'**ajout** est encore en file réécrit le payload d'ajout
+///   ([planInventoryCustomUpdate]) ;
+///
 /// Ce fichier porte le format, sa **validation stricte** et la **fusion** des
 /// écritures successives : un payload qui ne passe pas
 /// [parseInventoryItemPayload] n'est JAMAIS rejoué ni superposé (la ligne est
@@ -47,7 +58,7 @@ abstract final class InventoryItemPayloadKeys {
 /// (le nom est affiché sur une carte) appliqué à l'enfilage ET au rejeu.
 const int inventoryCustomNameMaxLength = 200;
 
-enum InventoryItemOp { add, delete, quantity }
+enum InventoryItemOp { add, delete, quantity, updateCustom }
 
 /// Une écriture de ligne d'inventaire : ajout d'un objet complet, retrait, ou
 /// nouvelle quantité absolue (usage d'un objet).
@@ -95,6 +106,23 @@ class InventoryItemWrite {
       enrichment = null,
       state = null;
 
+  /// Modification complète d'un objet personnalisé existant (P7 PR 4) :
+  /// instantané de toutes les colonnes `custom_*` ([customName], description,
+  /// dé/type de dégâts, propriétés, [enrichment]). [quantity]/[base] : usage
+  /// de la même ligne déjà en file, fusionné ici (jamais saisi par l'édition).
+  const InventoryItemWrite.updateCustom({
+    required String this.customName,
+    this.customDescription,
+    this.customDamageDice,
+    this.customDamageType,
+    this.customProperties = const [],
+    required CustomItemEnrichment this.enrichment,
+    this.quantity,
+    this.base,
+  }) : op = InventoryItemOp.updateCustom,
+       itemId = null,
+       state = null;
+
   final InventoryItemOp op;
 
   /// Base de la détection de conflit d'une écriture `quantity` (voir le
@@ -127,6 +155,20 @@ class InventoryItemWrite {
       return {
         InventoryItemPayloadKeys.op: 'quantity',
         InventoryItemPayloadKeys.quantity: quantity,
+        InventoryItemPayloadKeys.base: ?base,
+      };
+    }
+    if (op == InventoryItemOp.updateCustom) {
+      return {
+        InventoryItemPayloadKeys.op: 'updateCustom',
+        InventoryItemPayloadKeys.customName: customName,
+        InventoryItemPayloadKeys.customDescription: ?customDescription,
+        InventoryItemPayloadKeys.customDamageDice: ?customDamageDice,
+        InventoryItemPayloadKeys.customDamageType: ?customDamageType,
+        if (customProperties.isNotEmpty)
+          InventoryItemPayloadKeys.customProperties: customProperties,
+        ...?enrichment?.toPayload(),
+        InventoryItemPayloadKeys.quantity: ?quantity,
         InventoryItemPayloadKeys.base: ?base,
       };
     }
@@ -186,6 +228,35 @@ class InventoryItemWrite {
     if (customProperties.isNotEmpty) 'custom_properties': customProperties,
     ...?enrichment?.toInsertColumns(),
     ..._stateColumns(),
+  };
+
+  /// Corps de l'`UPDATE` d'une modification d'objet personnalisé : **toutes**
+  /// les colonnes `custom_*`, avec des `null` **explicites** pour les champs
+  /// devenus sans objet (jamais omis : un `UPDATE` partiel laisserait par
+  /// exemple `custom_ac_base` sur une armure devenue arme et violerait les
+  /// `CHECK` de la table). Un objet qui ne requiert plus l'harmonisation est
+  /// aussi remis à non harmonisé (`is_attuned = false`) dans la même requête ;
+  /// l'inverse n'harmonise jamais. [quantity] n'est écrite que si un usage
+  /// de la ligne a été fusionné.
+  Map<String, dynamic> toUpdateColumns() {
+    final e = enrichment ?? const CustomItemEnrichment();
+    return {
+      'custom_name': customName,
+      'custom_description': customDescription,
+      'custom_damage_dice': customDamageDice,
+      'custom_damage_type': customDamageType,
+      'custom_properties': customProperties.isEmpty ? null : customProperties,
+      ...e.toRowColumns(),
+      if (!e.requiresAttunement) 'is_attuned': false,
+      'quantity': ?quantity,
+    };
+  }
+
+  /// Superpose cette modification à une ligne brute existante [row]
+  /// (superposition hors ligne, cache de la fiche).
+  Map<String, dynamic> applyToRow(Map<String, dynamic> row) => {
+    ...row,
+    ...toUpdateColumns(),
   };
 
   /// Colonnes de l'`UPDATE` de réalignement après un `23505` (la ligne existe
@@ -283,6 +354,7 @@ InventoryItemWrite? parseInventoryItemPayload(Object? raw) {
       base: isValidInventoryUseQuantity(base) ? base as int : null,
     );
   }
+  if (op == 'updateCustom') return _parseUpdateCustomPayload(raw);
   if (op != 'add') return null;
 
   // Au moins un `itemId` (catalogue) ou un `customName` (personnalisé), comme
@@ -368,6 +440,138 @@ InventoryItemWrite? parseInventoryItemPayload(Object? raw) {
           )
         : null,
   );
+}
+
+/// Analyse stricte d'un payload `updateCustom` : nom valide (non vide, <= 200),
+/// textes optionnels non vides, propriétés = liste de textes, enrichissement
+/// cohérent ([CustomItemEnrichment.isValid]), `quantity` optionnelle >= 1,
+/// `base` optionnelle ignorée si invalide. Aucune clé d'enrichissement :
+/// toutes les colonnes `custom_*` sont remises à `NULL`.
+InventoryItemWrite? _parseUpdateCustomPayload(Map<dynamic, dynamic> raw) {
+  if (!isValidInventoryCustomName(raw[InventoryItemPayloadKeys.customName])) {
+    return null;
+  }
+  if (raw.containsKey(InventoryItemPayloadKeys.itemId)) return null;
+  bool textOk(String key) =>
+      !raw.containsKey(key) || (raw[key] is String && raw[key] != '');
+  if (!textOk(InventoryItemPayloadKeys.customDescription) ||
+      !textOk(InventoryItemPayloadKeys.customDamageDice) ||
+      !textOk(InventoryItemPayloadKeys.customDamageType)) {
+    return null;
+  }
+  var properties = const <String>[];
+  if (raw.containsKey(InventoryItemPayloadKeys.customProperties)) {
+    final rawProperties = raw[InventoryItemPayloadKeys.customProperties];
+    if (rawProperties is! List || rawProperties.any((e) => e is! String)) {
+      return null;
+    }
+    properties = List<String>.from(rawProperties);
+  }
+  int? quantity;
+  if (raw.containsKey(InventoryItemPayloadKeys.quantity)) {
+    final rawQuantity = raw[InventoryItemPayloadKeys.quantity];
+    if (!isValidInventoryQuantity(rawQuantity)) return null;
+    quantity = rawQuantity as int;
+  }
+  final base = raw[InventoryItemPayloadKeys.base];
+  final parsedEnrichment = parseCustomItemEnrichment(raw);
+  if (!parsedEnrichment.isValid) return null;
+  return InventoryItemWrite.updateCustom(
+    customName: raw[InventoryItemPayloadKeys.customName] as String,
+    customDescription:
+        raw[InventoryItemPayloadKeys.customDescription] as String?,
+    customDamageDice: raw[InventoryItemPayloadKeys.customDamageDice] as String?,
+    customDamageType: raw[InventoryItemPayloadKeys.customDamageType] as String?,
+    customProperties: properties,
+    enrichment: parsedEnrichment.value ?? const CustomItemEnrichment(),
+    quantity: quantity,
+    base: quantity != null && isValidInventoryUseQuantity(base)
+        ? base as int
+        : null,
+  );
+}
+
+/// Résultat de la fusion d'une modification d'objet personnalisé avec
+/// l'écriture déjà en file pour la même ligne ([planInventoryCustomUpdate]).
+class InventoryCustomUpdatePlan {
+  const InventoryCustomUpdatePlan._({
+    this.write,
+    this.mergedIntoPendingAdd = false,
+  });
+
+  /// Modification impossible : un tombstone est en file, la ligne est retirée.
+  static const rejected = InventoryCustomUpdatePlan._();
+
+  /// Écriture à mettre en file (ou à écrire en ligne) ; `null` si [rejected].
+  final InventoryItemWrite? write;
+
+  /// `true` : l'ajout de la ligne est encore en file, [write] est cet ajout
+  /// modifié (un seul `INSERT`, jamais d'`UPDATE` sur une ligne absente du
+  /// serveur).
+  final bool mergedIntoPendingAdd;
+
+  bool get isRejected => write == null;
+}
+
+/// Plan d'une modification [requested] (op `updateCustom`) selon l'écriture
+/// [pending] déjà en file pour la ligne (`null` si aucune ou illisible) :
+///
+/// - tombstone : [InventoryCustomUpdatePlan.rejected] ;
+/// - ajout en file : l'ajout est **réécrit** avec les nouveaux champs (nom,
+///   description, dégâts, enrichissement) en gardant sa quantité et son état
+///   initial ; un objet qui ne requiert plus l'harmonisation perd son
+///   harmonisation initiale ;
+/// - usage (`quantity`) en file : la modification reprend sa quantité et sa
+///   base (une seule entrée `inventoryItem` par ligne, aucune donnée perdue) ;
+/// - modification déjà en file : **remplacée** (dernière écriture gagnante),
+///   usage éventuel conservé ;
+/// - sinon : la modification telle quelle.
+InventoryCustomUpdatePlan planInventoryCustomUpdate({
+  required InventoryItemWrite? pending,
+  required InventoryItemWrite requested,
+}) {
+  final enrichment = requested.enrichment ?? const CustomItemEnrichment();
+  InventoryItemWrite update({int? quantity, int? base}) =>
+      InventoryItemWrite.updateCustom(
+        customName: requested.customName!,
+        customDescription: requested.customDescription,
+        customDamageDice: requested.customDamageDice,
+        customDamageType: requested.customDamageType,
+        customProperties: requested.customProperties,
+        enrichment: enrichment,
+        quantity: quantity,
+        base: base,
+      );
+  switch (pending?.op) {
+    case InventoryItemOp.delete:
+      return InventoryCustomUpdatePlan.rejected;
+    case InventoryItemOp.add:
+      final state = pending!.state;
+      final dropAttunement =
+          !enrichment.requiresAttunement && state?.attuned == true;
+      return InventoryCustomUpdatePlan._(
+        mergedIntoPendingAdd: true,
+        write: InventoryItemWrite.add(
+          customName: requested.customName,
+          quantity: pending.quantity!,
+          customDescription: requested.customDescription,
+          customDamageDice: requested.customDamageDice,
+          customDamageType: requested.customDamageType,
+          customProperties: requested.customProperties,
+          enrichment: enrichment.isEmpty ? null : enrichment,
+          state: dropAttunement
+              ? state!.merge(const InventoryStatePatch(attuned: false))
+              : state,
+        ),
+      );
+    case InventoryItemOp.quantity:
+    case InventoryItemOp.updateCustom:
+      return InventoryCustomUpdatePlan._(
+        write: update(quantity: pending!.quantity, base: pending.base),
+      );
+    case null:
+      return InventoryCustomUpdatePlan._(write: update());
+  }
 }
 
 /// Fusionne un réglage d'état [patch] (équiper, set d'arme, harmoniser) dans
@@ -490,6 +694,22 @@ InventoryUsePlan planInventoryUse({
         state: pending.state,
       ),
       mergedIntoPendingAdd: true,
+    );
+  }
+  if (pending?.op == InventoryItemOp.updateCustom) {
+    // Modification en file : l'usage s'y fusionne (une seule entrée par
+    // ligne) ; base du premier usage conservée si un usage y était déjà.
+    return InventoryUsePlan._(
+      write: InventoryItemWrite.updateCustom(
+        customName: pending!.customName!,
+        customDescription: pending.customDescription,
+        customDamageDice: pending.customDamageDice,
+        customDamageType: pending.customDamageType,
+        customProperties: pending.customProperties,
+        enrichment: pending.enrichment!,
+        quantity: newQuantity,
+        base: pending.quantity != null ? pending.base : serverQuantity,
+      ),
     );
   }
   return InventoryUsePlan._(

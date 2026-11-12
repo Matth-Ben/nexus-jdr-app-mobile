@@ -5040,4 +5040,29 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get itemInfoPanelArmorCategoryLabel => 'Catégorie d\'armure';
+
+  @override
+  String get customItemEditTitle => 'MODIFIER L\'OBJET';
+
+  @override
+  String get customItemEnrichTitle => 'ENRICHIR L\'OBJET';
+
+  @override
+  String get customItemSaveButton => 'Enregistrer';
+
+  @override
+  String get customItemUpdatedSnackbar => 'Objet mis à jour';
+
+  @override
+  String get itemActionSheetEditLabel => 'Modifier';
+
+  @override
+  String get itemActionSheetEnrichLabel => 'Enrichir';
+
+  @override
+  String get customItemKindChangeBlockedEquipped =>
+      'Déséquipez l\'objet avant de changer son type';
+
+  @override
+  String get customItemKindCurrentSemantics => 'Type actuel';
 }

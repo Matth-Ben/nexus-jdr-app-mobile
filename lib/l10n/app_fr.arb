@@ -6672,5 +6672,37 @@
   "itemInfoPanelArmorCategoryLabel": "Catégorie d'armure",
   "@itemInfoPanelArmorCategoryLabel": {
     "description": "Ligne « Catégorie d'armure » du panneau Infos d'une armure personnalisée."
+  },
+  "customItemEditTitle": "MODIFIER L'OBJET",
+  "@customItemEditTitle": {
+    "description": "Titre de la feuille d'édition d'un objet personnalisé typé (P7 PR 4)."
+  },
+  "customItemEnrichTitle": "ENRICHIR L'OBJET",
+  "@customItemEnrichTitle": {
+    "description": "Titre de la feuille d'enrichissement d'un ancien objet personnalisé sans type (P7 PR 4)."
+  },
+  "customItemSaveButton": "Enregistrer",
+  "@customItemSaveButton": {
+    "description": "Bouton de validation de la feuille d'édition/enrichissement d'un objet personnalisé (à la place de « Ajouter »)."
+  },
+  "customItemUpdatedSnackbar": "Objet mis à jour",
+  "@customItemUpdatedSnackbar": {
+    "description": "Confirmation affichée après la modification d'un objet personnalisé."
+  },
+  "itemActionSheetEditLabel": "Modifier",
+  "@itemActionSheetEditLabel": {
+    "description": "Action « Modifier » de la sheet d'actions d'un objet personnalisé typé."
+  },
+  "itemActionSheetEnrichLabel": "Enrichir",
+  "@itemActionSheetEnrichLabel": {
+    "description": "Action « Enrichir » de la sheet d'actions d'un ancien objet personnalisé sans type."
+  },
+  "customItemKindChangeBlockedEquipped": "Déséquipez l'objet avant de changer son type",
+  "@customItemKindChangeBlockedEquipped": {
+    "description": "Message affiché quand on tente de changer le type d'un objet personnalisé équipé (la CA et les emplacements d'armes dépendent du type)."
+  },
+  "customItemKindCurrentSemantics": "Type actuel",
+  "@customItemKindCurrentSemantics": {
+    "description": "Sémantique de la tuile du type actuel de l'objet à l'étape « Type d'objet » de l'édition."
   }
 }

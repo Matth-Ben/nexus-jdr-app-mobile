@@ -262,6 +262,18 @@ class FakeRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<WriteOutcome> updateCustomInventoryItem({
+    required String characterId,
+    required String inventoryId,
+    required String customName,
+    required CustomItemEnrichment enrichment,
+    String? description,
+    String? damageDice,
+    String? damageType,
+    List<String> properties = const [],
+  }) => throw UnimplementedError();
+
+  @override
   Future<WriteOutcome> addReward({
     required String characterId,
     required Map<CurrencyKind, int> newCurrencyTotals,

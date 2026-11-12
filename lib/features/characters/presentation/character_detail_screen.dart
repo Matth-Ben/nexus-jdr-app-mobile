@@ -27,6 +27,7 @@ import '../domain/character_spell_slot.dart';
 import '../domain/condition_type.dart';
 import '../domain/spell_status_formatter.dart';
 import '../domain/currency_kind.dart';
+import '../domain/custom_item_edit_rules.dart';
 import '../domain/custom_item_enrichment.dart';
 import '../domain/hit_dice_pool.dart';
 import '../domain/hp_adjustment.dart';
@@ -58,6 +59,7 @@ import 'widgets/character_equipped_weapons_card.dart';
 import 'widgets/character_identity_card.dart';
 import 'widgets/character_inventory_tab_body.dart';
 import 'widgets/character_pact_weapon_card.dart';
+import 'widgets/custom_item_form_sheet.dart';
 import 'widgets/character_saving_throws_card.dart';
 import 'widgets/character_stat_pills_row.dart';
 import 'widgets/character_skills_tab_body.dart';
@@ -1796,6 +1798,68 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Modification / enrichissement d'un objet personnalisé (formulaire
+  /// pré-rempli, P7 PR 4) : met à jour toutes ses colonnes `custom_*` (champs
+  /// devenus sans objet remis à `NULL`), hors ligne comme en ligne. La quantité
+  /// n'est pas touchée.
+  ///
+  /// Garde-fou : le type d'un objet **équipé** ne change pas (le formulaire
+  /// l'empêche déjà ; contrôle redondant sur la fiche courante, au cas où
+  /// l'objet aurait été équipé entre-temps).
+  Future<void> _updateCustomInventoryItem(
+    CharacterInventoryItem item,
+    CustomItemFormResult result,
+  ) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
+    final latest =
+        ref
+            .read(characterDetailProvider(widget.characterId))
+            .value
+            ?.inventory
+            .where((candidate) => candidate.id == item.id)
+            .firstOrNull ??
+        item;
+    if (isCustomKindChangeBlocked(latest, result.enrichment.kind ?? '')) {
+      _showSnackBar(l10n.customItemKindChangeBlockedEquipped);
+      return;
+    }
+    setState(() => _isWritingInventory = true);
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .updateCustomInventoryItem(
+            characterId: widget.characterId,
+            inventoryId: item.id,
+            customName: result.name,
+            description: result.description,
+            damageDice: result.damageDice,
+            damageType: result.damageType,
+            properties: result.properties,
+            enrichment: result.enrichment,
+          );
+      if (outcome == WriteOutcome.rejectedOffline) {
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
+        return;
+      }
+      // Hors ligne, la modification est mise en file (la relecture superpose
+      // l'instantané) : succès avec le message « sera synchronisé ».
+      await _refreshCharacterDetail();
+      _showSnackBar(
+        outcome == WriteOutcome.queued
+            ? _offlineQueuedMessage(l10n)
+            : l10n.customItemUpdatedSnackbar,
+      );
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.localizedWith(l10n));
+    } catch (_) {
+      _showSnackBar('Impossible de mettre à jour cet objet. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
   /// Ajoute une récompense (`add_reward_sheet.dart`) : [currencyDeltas] sont
   /// des montants à *ajouter* (pas des valeurs absolues, contrairement à
   /// [_adjustCurrency]) — recalculés ici en valeurs absolues à partir de
@@ -3060,6 +3124,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         onConvertCurrency: _convertCurrency,
         onAddInventoryItem: _addInventoryItem,
         onAddCustomInventoryItem: _addCustomInventoryItem,
+        onUpdateCustomInventoryItem: _updateCustomInventoryItem,
         onEquipWeaponToSlot: (item, slot) =>
             _equipWeaponToSlot(detail, item, slot),
         onAddReward: () => showAddRewardSheet(

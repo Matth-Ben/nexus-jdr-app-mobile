@@ -4999,4 +4999,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get itemInfoPanelArmorCategoryLabel => 'Armor category';
+
+  @override
+  String get customItemEditTitle => 'EDIT ITEM';
+
+  @override
+  String get customItemEnrichTitle => 'ENRICH ITEM';
+
+  @override
+  String get customItemSaveButton => 'Save';
+
+  @override
+  String get customItemUpdatedSnackbar => 'Item updated';
+
+  @override
+  String get itemActionSheetEditLabel => 'Edit';
+
+  @override
+  String get itemActionSheetEnrichLabel => 'Enrich';
+
+  @override
+  String get customItemKindChangeBlockedEquipped =>
+      'Unequip the item before changing its type';
+
+  @override
+  String get customItemKindCurrentSemantics => 'Current type';
 }

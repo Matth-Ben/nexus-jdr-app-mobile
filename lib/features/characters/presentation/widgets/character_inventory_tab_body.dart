@@ -12,6 +12,7 @@ import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/custom_item_enrichment.dart';
 import '../../domain/currency_kind.dart';
+import '../../domain/custom_item_edit_rules.dart';
 import '../../domain/inventory_catalog_item.dart';
 import '../../domain/inventory_category_filter.dart';
 import '../../domain/inventory_stat_boxes_resolver.dart';
@@ -22,6 +23,7 @@ import 'character_inventory_capacity_gauge.dart';
 import 'character_inventory_item_card.dart';
 import 'character_inventory_stat_boxes_row.dart';
 import 'currency_adjustment_sheet.dart';
+import 'custom_item_form_sheet.dart';
 import 'inventory_category_filter_sheet.dart';
 import 'item_action_sheet.dart';
 import 'item_info_panel.dart';
@@ -68,6 +70,7 @@ class CharacterInventoryTabBody extends StatefulWidget {
     required this.onEquipWeaponToSlot,
     this.onAddReward,
     this.onConvertCurrency,
+    this.onUpdateCustomInventoryItem,
     this.actionsDisabled = false,
     this.filterAnchorKey,
     this.showArmorProficiencyWarning = false,
@@ -103,6 +106,13 @@ class CharacterInventoryTabBody extends StatefulWidget {
     CustomItemEnrichment? enrichment,
   })
   onAddCustomInventoryItem;
+
+  /// Reçoit l'objet personnalisé modifié et la saisie validée du formulaire
+  /// pré-rempli (actions « Modifier » / « Enrichir », P7 PR 4) — voir
+  /// `character_detail_screen.dart::_updateCustomInventoryItem`. `null` :
+  /// aucune action de modification (vue en lecture seule).
+  final void Function(CharacterInventoryItem item, CustomItemFormResult result)?
+  onUpdateCustomInventoryItem;
 
   /// Action "Équiper"/"Changer de set" d'une arme (sheet "Actions d'objet",
   /// choix du set via `weapon_slot_picker_sheet.dart`) — voir
@@ -206,7 +216,26 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
       weaponDamageModifier: stats?.damageModifier,
       weaponStats: stats,
       notProficient: _isNotProficient(item),
+      onEditCustomItem: widget.onUpdateCustomInventoryItem == null
+          ? null
+          : (item) => _editCustomItem(context, item),
     );
+  }
+
+  /// Ouvre le formulaire d'objet personnalisé pré-rempli (« Modifier » /
+  /// « Enrichir ») puis relaie la saisie validée à l'écran.
+  Future<void> _editCustomItem(
+    BuildContext context,
+    CharacterInventoryItem item,
+  ) async {
+    final update = widget.onUpdateCustomInventoryItem;
+    if (update == null) return;
+    final result = await showCustomItemFormSheet(
+      context,
+      initial: customItemInitialValuesOf(item),
+    );
+    if (result == null || !mounted) return;
+    update(item, result);
   }
 
   /// Panneau "Infos" en lecture seule, ouvert directement au tap sur une
