@@ -403,7 +403,7 @@ final class CharacterDetailPrefetcherProvider
 }
 
 String _$characterDetailPrefetcherHash() =>
-    r'c08c6a3f2dde02e512ff9bd2b2d2ba76f3da7954';
+    r'b306ac441a292ddf0501c38e9f8b67f333c2ff61';
 
 /// Catalogue complet des objets `items`, exposé aux sheets "Depuis le
 /// catalogue" de l'onglet "Inventaire" (`presentation/widgets

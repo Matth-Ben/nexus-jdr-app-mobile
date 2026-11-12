@@ -36,6 +36,7 @@ class CharacterDetailPrefetcher {
     required this.currentOwnerId,
     required this.fetchDetail,
     this.concurrency = 2,
+    this.maxCharacters = 10,
     this.freshness = const Duration(minutes: 15),
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
@@ -50,37 +51,70 @@ class CharacterDetailPrefetcher {
   /// Nombre maximal de fiches téléchargées simultanément.
   final int concurrency;
 
+  /// Nombre maximal de fiches préchargées par passage (coût borné).
+  final int maxCharacters;
+
   /// Âge en deçà duquel une fiche en cache est considérée à jour.
   final Duration freshness;
 
   /// Personnages à précharger parmi [characters] : en jeu seulement (ni
   /// morts, ni archivés), dans l'ordre reçu.
-  static List<String> eligibleIds(List<CharacterSummary> characters) => [
-    for (final character in characters)
-      if (!character.isDead && !character.isArchived) character.id,
-  ];
+  ///
+  /// Au plus [maxCharacters] fiches : d'abord la dernière ouverte
+  /// ([lastOpened] : `{characterId: epochMs}`, plus récent en premier), puis
+  /// l'ordre de la liste (tri stable) — borne le coût à
+  /// `maxCharacters × (10 à 23 requêtes)`.
+  List<String> eligibleIds(
+    List<CharacterSummary> characters, {
+    Map<String, int> lastOpened = const {},
+  }) {
+    final ids = [
+      for (final character in characters)
+        if (!character.isDead && !character.isArchived) character.id,
+    ];
+    final indexed = ids.asMap().entries.toList()
+      ..sort((a, b) {
+        final byOpened = (lastOpened[b.value] ?? -1).compareTo(
+          lastOpened[a.value] ?? -1,
+        );
+        return byOpened != 0 ? byOpened : a.key.compareTo(b.key);
+      });
+    return [for (final entry in indexed.take(maxCharacters)) entry.value];
+  }
+
+  /// Fiches en cours de téléchargement, partagées entre un préchargement
+  /// annulé puis relancé (l'instance est unique) : jamais deux vols
+  /// simultanés pour la même fiche.
+  final Set<String> _inFlight = {};
 
   /// Précharge les fiches éligibles de [characters]. Ne lève jamais.
   Future<void> prefetch(
     List<CharacterSummary> characters, {
     required bool Function() isCancelled,
+    Map<String, int> lastOpened = const {},
   }) async {
     try {
       final ownerId = currentOwnerId();
       if (ownerId == null) return;
-      final queue = eligibleIds(characters);
+      final queue = eligibleIds(characters, lastOpened: lastOpened);
       var next = 0;
 
       Future<void> worker() async {
         while (next < queue.length) {
           final characterId = queue[next++];
+          if (_inFlight.contains(characterId)) continue;
           final decision = await _decide(ownerId, characterId, isCancelled);
           if (decision == _Decision.stop) return;
           if (decision == _Decision.skip) continue;
+          // Réservé de façon synchrone avec la vérification ci-dessus : aucun
+          // `await` entre les deux.
+          if (!_inFlight.add(characterId)) continue;
           try {
             await fetchDetail(characterId);
           } catch (_) {
             // Une fiche en échec ne bloque pas les suivantes ; silencieux.
+          } finally {
+            _inFlight.remove(characterId);
           }
         }
       }

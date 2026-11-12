@@ -67,6 +67,10 @@ class ReferenceDataCache {
     return jsonDecode(row.payload);
   }
 
+  /// Nombre de purges ([clear]) faites depuis l'ouverture de la base — à
+  /// capturer au départ d'une lecture réseau et à comparer avant d'écrire.
+  int get clearGeneration => _db.cacheClearGeneration;
+
   /// Date de dernière écriture complète ([put]) de [key], `null` si [key] n'a
   /// jamais été mise en cache. Ne décode pas le payload (contrairement à
   /// [getFresh]) : sert à décider si une entrée volumineuse (fiche
@@ -125,6 +129,8 @@ class ReferenceDataCache {
   /// au-delà d'un re-fetch réseau au prochain accès, ce cache n'ayant pas de
   /// notion d'historique ni d'expiration (voir [put]).
   Future<void> clear() async {
+    // Avant la suppression : toute écriture en vol voit déjà la purge.
+    _db.cacheClearGeneration++;
     await _db.delete(_db.cachedReferenceEntries).go();
   }
 

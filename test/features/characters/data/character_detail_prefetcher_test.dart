@@ -34,8 +34,15 @@ CharacterSummary _summary(
 class _FakeConnectivity implements ConnectivityChecker {
   bool connected = true;
 
+  /// Appelé à chaque `hasConnection` (permet de changer d'état pendant les
+  /// lectures asynchrones du préchargeur).
+  void Function()? onCheck;
+
   @override
-  Future<bool> hasConnection() async => connected;
+  Future<bool> hasConnection() async {
+    onCheck?.call();
+    return connected;
+  }
 
   @override
   Stream<bool> get onConnectivityRestored => const Stream.empty();
@@ -95,8 +102,11 @@ void main() {
     await db.close();
   });
 
-  Future<void> run(CharacterDetailPrefetcher p, List<CharacterSummary> list) =>
-      p.prefetch(list, isCancelled: () => cancelled);
+  Future<void> run(
+    CharacterDetailPrefetcher p,
+    List<CharacterSummary> list, {
+    Map<String, int> lastOpened = const {},
+  }) => p.prefetch(list, isCancelled: () => cancelled, lastOpened: lastOpened);
 
   test('précharge uniquement les personnages en jeu, dans l\'ordre', () async {
     await run(build(concurrency: 1), [
@@ -277,6 +287,60 @@ void main() {
     await run(build(), [_summary('a')]);
 
     expect(fetched, ['a']);
+  });
+
+  test('plafond de 10 fiches par passage', () async {
+    await run(build(), [for (var i = 0; i < 14; i++) _summary('c$i')]);
+
+    expect(fetched.length, 10);
+    expect(fetched.toSet(), {for (var i = 0; i < 10; i++) 'c$i'});
+  });
+
+  test('priorité du plafond : les plus récemment ouvertes d\'abord, puis '
+      'l\'ordre de la liste', () async {
+    await run(
+      build(concurrency: 1),
+      [for (var i = 0; i < 14; i++) _summary('c$i')],
+      lastOpened: {'c13': 300, 'c12': 200, 'c11': 100},
+    );
+
+    expect(fetched.take(3), ['c13', 'c12', 'c11']);
+    expect(fetched.length, 10);
+    expect(fetched.skip(3), [for (var i = 0; i < 7; i++) 'c$i']);
+    expect(fetched, isNot(contains('c10')));
+  });
+
+  test('une fiche déjà en vol (préchargement annulé puis relancé) n\'est '
+      'pas demandée une seconde fois', () async {
+    final gate = Completer<void>();
+    onFetch = (_) => gate.future;
+    final prefetcher = build(concurrency: 1);
+
+    final first = run(prefetcher, [_summary('a')]);
+    await pumpEventQueue();
+    expect(fetched, ['a']);
+
+    // Relance (autre instance de liste) pendant que la première fiche vole.
+    await run(prefetcher, [_summary('a')]);
+    expect(fetched, ['a']);
+
+    gate.complete();
+    await first;
+
+    // Une fois terminée, la fiche peut de nouveau être demandée.
+    await run(prefetcher, [_summary('a')]);
+    expect(fetched, ['a', 'a']);
+  });
+
+  test('changement de compte pendant les lectures locales qui précèdent le '
+      'départ : la fiche n\'est pas demandée', () async {
+    // Le compte change juste après la vérification d'ouverture, avant la
+    // seconde vérification (celle qui précède `fetchDetail`).
+    connectivity.onCheck = () => owner = 'owner-2';
+
+    await run(build(), [_summary('a')]);
+
+    expect(fetched, isEmpty);
   });
 
   test('liste vide : rien à faire', () async {

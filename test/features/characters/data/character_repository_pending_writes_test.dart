@@ -29,6 +29,7 @@ import 'package:personnages/core/cache/pending_character_write_queue.dart';
 import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/features/characters/data/character_detail_cache.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/data/pending_character_write_syncer.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
@@ -161,6 +162,125 @@ void main() {
           ),
         ),
       );
+    });
+
+    // RGPD B1 (D31) : une lecture en vol ne ré-écrit jamais le cache d'un
+    // compte parti.
+    test('déconnexion pendant la lecture : aucune écriture de cache après la '
+        'purge', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final inFlight = repository.fetchCharacterDetail(_characterId);
+      await pumpEventQueue();
+
+      await client.auth.signOut(scope: SignOutScope.local);
+      await cache.clear();
+      gate.complete();
+      try {
+        await inFlight;
+      } catch (_) {}
+
+      expect(await cache.get(_cacheKey), isNull);
+    });
+
+    test('déconnexion sans purge encore passée : aucune écriture non plus '
+        '(garde sur la session)', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final inFlight = repository.fetchCharacterDetail(_characterId);
+      await pumpEventQueue();
+
+      await client.auth.signOut(scope: SignOutScope.local);
+      gate.complete();
+      try {
+        await inFlight;
+      } catch (_) {}
+
+      expect(await cache.get(_cacheKey), isNull);
+    });
+
+    test('changement de compte pendant la lecture : rien n\'est écrit sous '
+        'l\'ancien compte', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final inFlight = repository.fetchCharacterDetail(_characterId);
+      await pumpEventQueue();
+
+      await client.auth.recoverSession(
+        jsonEncode({
+          'access_token': 'fake-access-token-owner-2',
+          'token_type': 'bearer',
+          'user': {'id': 'owner-2'},
+        }),
+      );
+      gate.complete();
+      try {
+        await inFlight;
+      } catch (_) {}
+
+      expect(await cache.get(_cacheKey), isNull);
+      expect(await cache.get('character_detail:owner-2:$_characterId'), isNull);
+    });
+
+    test('suppression de compte (purge sans déconnexion locale) pendant la '
+        'lecture : aucune écriture de cache', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final inFlight = repository.fetchCharacterDetail(_characterId);
+      await pumpEventQueue();
+
+      // `deleteAccount` purge le cache alors que la session locale existe
+      // encore.
+      await cache.clear();
+      gate.complete();
+      await inFlight;
+
+      expect(await cache.get(_cacheKey), isNull);
+    });
+
+    test('préchargement : une écriture mise en file PENDANT la lecture '
+        'empêche l\'écriture du cache', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final inFlight = repository.prefetchCharacterDetail(_characterId);
+      await pumpEventQueue();
+
+      await pendingWrites.enqueue(
+        characterId: _characterId,
+        ownerId: _ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        targetId: '',
+        payload: {'currentHp': 4, 'temporaryHp': 0},
+      );
+      gate.complete();
+      await inFlight;
+
+      expect(await cache.get(_cacheKey), isNull);
+    });
+
+    test('préchargement sans écriture en attente : le cache est écrit '
+        '(témoin)', () async {
+      await repository.prefetchCharacterDetail(_characterId);
+
+      expect(await cache.get(_cacheKey), isNotNull);
+    });
+
+    test('préchargement : un cache écrit entre-temps (ouverture manuelle) '
+        'n\'est pas remplacé par une réponse plus ancienne', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final prefetching = repository.prefetchCharacterDetail(_characterId);
+      await pumpEventQueue();
+
+      // Réponse du préchargement figée à 10 PV ; l'ouverture manuelle lit 8.
+      server.characterRow['current_hp'] = 8;
+      await repository.fetchCharacterDetail(_characterId);
+      gate.complete();
+      await prefetching;
+
+      final hp = await CharacterDetailCache(cache)
+          .readHp(ownerId: _ownerId, characterId: _characterId);
+      expect(hp?.currentHp, 8);
     });
 
     test('PV : la fiche relue depuis le cache affiche la valeur mise en '

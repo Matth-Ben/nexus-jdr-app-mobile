@@ -1723,8 +1723,56 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }
 
   @override
-  Future<CharacterDetail> fetchCharacterDetail(String characterId) async {
+  Future<CharacterDetail> fetchCharacterDetail(String characterId) =>
+      _loadCharacterDetail(characterId);
+
+  /// Préchargement en arrière-plan de la fiche (V5-5, voir
+  /// `CharacterDetailPrefetcher`) : même lecture que [fetchCharacterDetail],
+  /// mais le cache n'est écrit que si, au moment de l'écriture, aucune
+  /// écriture n'est en attente pour ce personnage et si personne d'autre (ex.
+  /// ouverture manuelle de la fiche) n'a écrit le cache depuis le départ.
+  /// Sinon, le cache — base de la détection de modification concurrente
+  /// (F19/D178) — serait remplacé par un état serveur d'avant l'écriture.
+  Future<void> prefetchCharacterDetail(String characterId) async {
+    // Tronqué à la seconde : `cachedAt` est stocké à la seconde par drift.
+    final now = DateTime.now();
+    final startedAt = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute,
+      now.second,
+    );
+    await _loadCharacterDetail(
+      characterId,
+      mayWriteCache: (ownerId) async {
+        try {
+          final pending = await _pendingWrites.forCharacter(
+            ownerId: ownerId,
+            characterId: characterId,
+          );
+          if (pending.isNotEmpty) return false;
+          final cachedAt = await _cache.cachedAt(
+            CharacterDetailCache.keyFor(
+              ownerId: ownerId,
+              characterId: characterId,
+            ),
+          );
+          return cachedAt == null || cachedAt.isBefore(startedAt);
+        } catch (_) {
+          return false;
+        }
+      },
+    );
+  }
+
+  Future<CharacterDetail> _loadCharacterDetail(
+    String characterId, {
+    Future<bool> Function(String ownerId)? mayWriteCache,
+  }) async {
     final ownerId = _requireOwnerId();
+    final cacheGeneration = _cache.clearGeneration;
     // Scopée par ownerId — voir la documentation de classe
     // ("Isolation par utilisateur").
     final cacheKey = CharacterDetailCache.keyFor(
@@ -1839,8 +1887,20 @@ class SupabaseCharacterRepository implements CharacterRepository {
       final payload = await _buildCharacterDetailPayload(row);
       // Le cache garde l'état serveur brut : les écritures en attente ne
       // sont superposées qu'au résultat renvoyé (voir [_withPendingWrites]).
-      await _writeCacheBestEffort(cacheKey, payload);
-      unawaited(_syncState?.markSuccess(ownerId));
+      //
+      // Jamais d'écriture si le compte a changé ou si le cache a été purgé
+      // (déconnexion, suppression de compte, D31) pendant les 10 à 23
+      // requêtes ci-dessus : la fiche complète du compte parti survivrait
+      // sinon à la purge.
+      final stillSameSession =
+          _client.auth.currentUser?.id == ownerId &&
+          _cache.clearGeneration == cacheGeneration;
+      if (stillSameSession) {
+        if (mayWriteCache == null || await mayWriteCache(ownerId)) {
+          await _writeCacheBestEffort(cacheKey, payload);
+        }
+        unawaited(_syncState?.markSuccess(ownerId));
+      }
       return await _withPendingWrites(
         _mapCharacterDetailPayload(payload),
         ownerId: ownerId,

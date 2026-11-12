@@ -14,6 +14,7 @@ import '../../data/sync_alert_recorder.dart';
 import '../../data/warlock_pact_spell_repository.dart';
 import '../../domain/character_summary.dart';
 import '../../domain/inventory_catalog_item.dart';
+import 'character_last_opened_provider.dart';
 
 part 'character_providers.g.dart';
 
@@ -113,9 +114,14 @@ Future<void> _prefetchDetails(
     // Laisse la liste s'afficher avant toute lecture locale ou réseau.
     await Future<void>.delayed(Duration.zero);
     if (isCancelled()) return;
+    // Dernières ouvertures (priorité du plafond de 10 fiches) : best-effort.
+    var lastOpened = const <String, int>{};
+    try {
+      lastOpened = ref.read(characterLastOpenedProvider);
+    } catch (_) {}
     await ref
         .read(characterDetailPrefetcherProvider)
-        .prefetch(list, isCancelled: isCancelled);
+        .prefetch(list, isCancelled: isCancelled, lastOpened: lastOpened);
   } catch (_) {
     // Best-effort : jamais d'erreur visible ni journalisée.
   }
@@ -132,7 +138,12 @@ CharacterDetailPrefetcher characterDetailPrefetcher(Ref ref) {
     pendingWrites: ref.watch(pendingCharacterWriteQueueProvider),
     connectivity: ref.watch(connectivityCheckerProvider),
     currentOwnerId: () => client.auth.currentUser?.id,
-    fetchDetail: repository.fetchCharacterDetail,
+    // Variante qui n'écrit pas le cache s'il a changé entre-temps (écriture
+    // en attente, ouverture manuelle) ; repli sur la lecture ordinaire pour
+    // un dépôt autre que Supabase (doubles de test).
+    fetchDetail: (characterId) => repository is SupabaseCharacterRepository
+        ? repository.prefetchCharacterDetail(characterId)
+        : repository.fetchCharacterDetail(characterId),
   );
 }
 
