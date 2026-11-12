@@ -58,8 +58,9 @@ void main() {
       expect(item.customRequiresAttunement, isTrue);
       expect(item.customWeaponCategory, 'guerre');
       expect(item.customWeaponRange, 'distance');
-      // Inchangés dans cette PR : l'UI ne propose pas l'harmonisation.
-      expect(item.requiresAttunement, isFalse);
+      // P7 PR 2 : l'harmonisation d'un objet personnalisé vient de
+      // `custom_requires_attunement`.
+      expect(item.requiresAttunement, isTrue);
       expect(item.armorProperties, isNull);
     });
 

@@ -29,6 +29,7 @@ import '../domain/condition_type.dart';
 import '../domain/character_summary.dart';
 import '../domain/hit_point_bonus_rules.dart';
 import '../domain/currency_kind.dart';
+import '../domain/custom_item_enrichment.dart';
 import '../domain/edition_content_resolver.dart';
 import '../domain/gallery_photo_storage_path_resolver.dart';
 import '../domain/inventory_catalog_item.dart';
@@ -601,6 +602,11 @@ abstract class CharacterRepository {
   /// équipé/harmonisé/set d'arme avant sa synchronisation. Un refus est un
   /// échec, jamais mis en file. Nom vide/trop long ou quantité < 1 :
   /// [CharacterFailure].
+  ///
+  /// [enrichment] (P7) : type d'objet, bonus magique, poids, harmonisation,
+  /// catégorie/portée d'arme — colonnes `custom_*`, omises quand non
+  /// renseignées. Validé comme au rejeu de la file ([CharacterFailure] si
+  /// hors bornes/ensembles). `attuneNow` crée la ligne déjà harmonisée.
   Future<WriteOutcome> addCustomInventoryItem({
     required String characterId,
     required String customName,
@@ -609,6 +615,7 @@ abstract class CharacterRepository {
     String? damageDice,
     String? damageType,
     List<String> properties = const [],
+    CustomItemEnrichment? enrichment,
   });
 
   /// Ajoute une récompense (bouton "cadeau" du bandeau de l'onglet
@@ -4889,6 +4896,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     String? damageDice,
     String? damageType,
     List<String> properties = const [],
+    CustomItemEnrichment? enrichment,
   }) async {
     // Mêmes bornes à l'enfilage et au rejeu : jamais accepté puis supprimé en
     // silence de la file.
@@ -4903,8 +4911,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
         code: CharacterErrorCode.invalidQuantity,
       );
     }
+    if (enrichment != null && !enrichment.isValid) {
+      throw const CharacterFailure(
+        "Les caractéristiques de l'objet ne sont pas valides.",
+      );
+    }
     String? nonEmpty(String? value) =>
         value == null || value.isEmpty ? null : value;
+    final storedEnrichment = enrichment == null || enrichment.isEmpty
+        ? null
+        : enrichment;
     // L'UUID de la ligne est généré ici (colonne `uuid` acceptant un `id`
     // explicite) : même identifiant en ligne, en file et au rejeu, donc un
     // `INSERT` idempotent.
@@ -4918,6 +4934,15 @@ class SupabaseCharacterRepository implements CharacterRepository {
         customDamageDice: nonEmpty(damageDice),
         customDamageType: nonEmpty(damageType),
         customProperties: properties,
+        enrichment: storedEnrichment,
+        // « Harmoniser maintenant » : état initial de la ligne (jamais pour
+        // un objet qui ne requiert pas l'harmonisation).
+        state:
+            enrichment != null &&
+                enrichment.attuneNow &&
+                enrichment.requiresAttunement
+            ? const InventoryStatePatch(attuned: true)
+            : null,
       ),
     );
   }

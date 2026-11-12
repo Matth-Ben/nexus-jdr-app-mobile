@@ -4711,4 +4711,180 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get featTagCampaign => 'Campaign';
+
+  @override
+  String get customItemTypeWeaponTitle => 'Weapon';
+
+  @override
+  String get customItemTypeWeaponSubtitle => 'Damage, damage type, magic bonus';
+
+  @override
+  String get customItemTypeOtherTitle => 'Magic or other item';
+
+  @override
+  String get customItemTypeOtherSubtitle => 'Name, weight, attunement';
+
+  @override
+  String customItemTypeLine(String kind) {
+    return 'Type: $kind';
+  }
+
+  @override
+  String get customItemChangeTypeButton => 'Change';
+
+  @override
+  String get customItemChangeTypeSemantics => 'Change item type';
+
+  @override
+  String get customItemDamageTypeAcid => 'Acid';
+
+  @override
+  String get customItemDamageTypeFire => 'Fire';
+
+  @override
+  String get customItemDamageTypeLightning => 'Lightning';
+
+  @override
+  String get customItemDamageTypeCold => 'Cold';
+
+  @override
+  String get customItemDamageTypeForce => 'Force';
+
+  @override
+  String get customItemDamageTypeNecrotic => 'Necrotic';
+
+  @override
+  String get customItemDamageTypePoison => 'Poison';
+
+  @override
+  String get customItemDamageTypePsychic => 'Psychic';
+
+  @override
+  String get customItemDamageTypeRadiant => 'Radiant';
+
+  @override
+  String get customItemDamageTypeThunder => 'Thunder';
+
+  @override
+  String get customItemWeaponCategorySectionLabel => 'WEAPON CATEGORY';
+
+  @override
+  String get customItemWeaponCategoryCommon => 'Simple';
+
+  @override
+  String get customItemWeaponCategoryMartial => 'Martial';
+
+  @override
+  String get customItemWeaponCategoryHint =>
+      'Not set: weapon proficiency will not be evaluated.';
+
+  @override
+  String get customItemWeaponRangeSectionLabel => 'RANGE';
+
+  @override
+  String get customItemWeaponRangeMelee => 'Melee';
+
+  @override
+  String get customItemWeaponRangeRanged => 'Ranged';
+
+  @override
+  String get customItemWeaponRangeHint =>
+      'Not set: treated as a melee weapon (Strength).';
+
+  @override
+  String get customItemAdvancedTitle => 'Advanced options';
+
+  @override
+  String get customItemMagicBonusSectionLabel => 'MAGIC BONUS';
+
+  @override
+  String get customItemMagicBonusNone => 'None';
+
+  @override
+  String get customItemWeightSectionLabel => 'WEIGHT (KG PER UNIT)';
+
+  @override
+  String get customItemWeightHint => 'E.g. 1.5';
+
+  @override
+  String get customItemWeightError =>
+      'Enter a weight between 0 and 9,999.99 kg.';
+
+  @override
+  String customItemNameTooLongError(int max) {
+    return '$max characters at most.';
+  }
+
+  @override
+  String get customItemRequiresAttunementLabel => 'Requires attunement';
+
+  @override
+  String get customItemAttuneNowLabel => 'Attune now';
+
+  @override
+  String customItemAttunementCapCaption(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'You already have $count attuned items. This item will be created unattuned; you can attune it later.',
+      one: 'You already have 1 attuned item. This item will be created unattuned; you can attune it later.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customItemMissingLine(String fields) {
+    return 'Missing: $fields';
+  }
+
+  @override
+  String get customItemMissingName => 'name';
+
+  @override
+  String get customItemMissingDamageType => 'damage type';
+
+  @override
+  String magicBonusBadgeSemantics(int bonus) {
+    return 'Magic bonus +$bonus';
+  }
+
+  @override
+  String inventoryCardSubtitleWeaponWithType(String damageType, int quantity) {
+    return 'Weapon · $damageType · x$quantity';
+  }
+
+  @override
+  String inventoryCardSubtitleWeapon(int quantity) {
+    return 'Weapon · x$quantity';
+  }
+
+  @override
+  String get inventoryCardAttunementPendingSemantics =>
+      'attunement required, item not attuned';
+
+  @override
+  String get itemInfoPanelTypeLabel => 'Type';
+
+  @override
+  String get itemInfoPanelMagicBonusLabel => 'Magic bonus';
+
+  @override
+  String get itemInfoPanelAttunementLabel => 'Attunement';
+
+  @override
+  String get itemInfoPanelAttunementRequiredValue => 'Required';
+
+  @override
+  String get itemInfoPanelAttunementAttunedValue => 'Required · attuned';
+
+  @override
+  String get itemInfoPanelAttunementPendingValue => 'Required · not attuned';
+
+  @override
+  String get itemInfoPanelMagicBonusInactiveLegend =>
+      'Magic bonus inactive until the item is attuned.';
+
+  @override
+  String get itemInfoPanelWeaponCategoryLabel => 'Weapon category';
 }

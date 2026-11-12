@@ -107,7 +107,8 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
   bool get _canApply => _currencyDeltas.isNotEmpty || _items.isNotEmpty;
 
   Future<void> _addItem() async {
-    final picked = await pickInventoryAddition(context);
+    // Forme simple : une récompense ne porte pas les colonnes enrichies.
+    final picked = await pickInventoryAddition(context, enriched: false);
     if (picked == null || !mounted) return;
 
     setState(() {

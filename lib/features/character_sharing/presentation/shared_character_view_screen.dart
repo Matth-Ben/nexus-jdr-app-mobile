@@ -185,6 +185,7 @@ class _SharedCharacterViewScreenState
           damageDice,
           damageType,
           properties = const [],
+          enrichment,
         }) {},
         onEquipWeaponToSlot: (_, _) {},
         actionsDisabled: true,

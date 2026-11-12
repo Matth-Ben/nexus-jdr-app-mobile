@@ -106,6 +106,7 @@ Future<_Recorder> _pump(
             damageDice,
             damageType,
             properties = const [],
+            enrichment,
           }) => recorder.addCustomItemCalls.add((name, quantity)),
           onEquipWeaponToSlot: (item, slot) =>
               recorder.equipWeaponCalls.add((item, slot)),
@@ -563,6 +564,9 @@ void main() {
 
       await tester.tap(find.text('Objet personnalisé'));
       await tester.pumpAndSettle();
+      // Formulaire en deux temps : étape 1 (type d'objet).
+      await tester.tap(find.byKey(const Key('customItemKindOther')));
+      await tester.pumpAndSettle();
 
       await tester.enterText(
         find.byKey(const Key('customItemNameField')),
@@ -614,6 +618,7 @@ void main() {
                 damageDice,
                 damageType,
                 properties = const [],
+                enrichment,
               }) {},
               onEquipWeaponToSlot: (_, _) {},
               onAddReward: () => rewardTapCount++,
@@ -855,6 +860,8 @@ void main() {
         await tester.tap(find.text('Objet'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Objet personnalisé'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('customItemKindOther')));
         await tester.pumpAndSettle();
         await tester.enterText(
           find.byKey(const Key('customItemNameField')),

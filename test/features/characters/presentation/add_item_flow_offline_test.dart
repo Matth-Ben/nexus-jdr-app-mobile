@@ -113,6 +113,9 @@ void main() {
     await tester.tap(find.text('AJOUTER UN OBJET PERSONNALISÉ'));
     await tester.pumpAndSettle();
     expect(find.textContaining(offlineMessage), findsNothing);
+    // Formulaire en deux temps : étape 1 (type d'objet) puis nom.
+    await tester.tap(find.byKey(const Key('customItemKindOther')));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('customItemNameField')),
       'Amulette',
@@ -131,7 +134,9 @@ void main() {
     List<PickedInventoryAddition>? result;
     await pump(
       tester,
-      onOpen: (context) async => result = await pickInventoryAdditions(context),
+      // Butin de groupe : forme simple (aucune colonne enrichie).
+      onOpen: (context) async =>
+          result = await pickInventoryAdditions(context, enriched: false),
     );
 
     await tester.tap(find.text('AJOUTER UN OBJET PERSONNALISÉ'));

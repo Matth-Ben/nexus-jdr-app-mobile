@@ -7588,6 +7588,306 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Campagne'**
   String get featTagCampaign;
+
+  /// Tuile « Arme » de l'étape 1 du formulaire d'objet personnalisé, et valeur de la ligne « Type ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Arme'**
+  String get customItemTypeWeaponTitle;
+
+  /// Sous-titre de la tuile « Arme » (étape 1).
+  ///
+  /// In fr, this message translates to:
+  /// **'Dégâts, type de dégâts, bonus magique'**
+  String get customItemTypeWeaponSubtitle;
+
+  /// Tuile « Objet magique ou autre » de l'étape 1, et valeur de la ligne « Type ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet magique ou autre'**
+  String get customItemTypeOtherTitle;
+
+  /// Sous-titre de la tuile « Objet magique ou autre » (étape 1).
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom, poids, harmonisation'**
+  String get customItemTypeOtherSubtitle;
+
+  /// Ligne de rappel du type choisi, au-dessus du formulaire (étape 2).
+  ///
+  /// In fr, this message translates to:
+  /// **'Type : {kind}'**
+  String customItemTypeLine(String kind);
+
+  /// Bouton qui ramène à l'étape 1 sans perdre les champs saisis.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer'**
+  String get customItemChangeTypeButton;
+
+  /// Libellé d'accessibilité du bouton « Changer ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer le type d\'objet'**
+  String get customItemChangeTypeSemantics;
+
+  /// Type de dégâts « acide » (valeur stockée : acide).
+  ///
+  /// In fr, this message translates to:
+  /// **'Acide'**
+  String get customItemDamageTypeAcid;
+
+  /// Type de dégâts « feu » (valeur stockée : feu).
+  ///
+  /// In fr, this message translates to:
+  /// **'Feu'**
+  String get customItemDamageTypeFire;
+
+  /// Type de dégâts « foudre » (valeur stockée : foudre).
+  ///
+  /// In fr, this message translates to:
+  /// **'Foudre'**
+  String get customItemDamageTypeLightning;
+
+  /// Type de dégâts « froid » (valeur stockée : froid).
+  ///
+  /// In fr, this message translates to:
+  /// **'Froid'**
+  String get customItemDamageTypeCold;
+
+  /// Type de dégâts « force » (valeur stockée : force).
+  ///
+  /// In fr, this message translates to:
+  /// **'Force'**
+  String get customItemDamageTypeForce;
+
+  /// Type de dégâts « nécrotique » (valeur stockée : nécrotique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Nécrotique'**
+  String get customItemDamageTypeNecrotic;
+
+  /// Type de dégâts « poison » (valeur stockée : poison).
+  ///
+  /// In fr, this message translates to:
+  /// **'Poison'**
+  String get customItemDamageTypePoison;
+
+  /// Type de dégâts « psychique » (valeur stockée : psychique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Psychique'**
+  String get customItemDamageTypePsychic;
+
+  /// Type de dégâts « radiant » (valeur stockée : radiant).
+  ///
+  /// In fr, this message translates to:
+  /// **'Radiant'**
+  String get customItemDamageTypeRadiant;
+
+  /// Type de dégâts « tonnerre » (valeur stockée : tonnerre).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tonnerre'**
+  String get customItemDamageTypeThunder;
+
+  /// Libellé de section de la catégorie d'une arme personnalisée.
+  ///
+  /// In fr, this message translates to:
+  /// **'CATÉGORIE D\'ARME'**
+  String get customItemWeaponCategorySectionLabel;
+
+  /// Catégorie d'arme « courante » (valeur stockée : courante).
+  ///
+  /// In fr, this message translates to:
+  /// **'Courante'**
+  String get customItemWeaponCategoryCommon;
+
+  /// Catégorie d'arme « de guerre » (valeur stockée : guerre).
+  ///
+  /// In fr, this message translates to:
+  /// **'De guerre'**
+  String get customItemWeaponCategoryMartial;
+
+  /// Aide sous la catégorie d'arme.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non renseignée : la maîtrise de l\'arme ne sera pas évaluée.'**
+  String get customItemWeaponCategoryHint;
+
+  /// Libellé de section de la portée d'une arme personnalisée.
+  ///
+  /// In fr, this message translates to:
+  /// **'PORTÉE'**
+  String get customItemWeaponRangeSectionLabel;
+
+  /// Portée « corps à corps » (valeur stockée : melee).
+  ///
+  /// In fr, this message translates to:
+  /// **'Corps à corps'**
+  String get customItemWeaponRangeMelee;
+
+  /// Portée « distance » (valeur stockée : distance).
+  ///
+  /// In fr, this message translates to:
+  /// **'Distance'**
+  String get customItemWeaponRangeRanged;
+
+  /// Aide sous la portée de l'arme.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non renseignée : traitée comme une arme de corps à corps (Force).'**
+  String get customItemWeaponRangeHint;
+
+  /// En-tête de la section repliable du formulaire d'objet personnalisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Options avancées'**
+  String get customItemAdvancedTitle;
+
+  /// Libellé de section du bonus magique (+1 à +3).
+  ///
+  /// In fr, this message translates to:
+  /// **'BONUS MAGIQUE'**
+  String get customItemMagicBonusSectionLabel;
+
+  /// Segment « aucun bonus magique ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun'**
+  String get customItemMagicBonusNone;
+
+  /// Libellé de section du poids d'un objet personnalisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'POIDS (KG PAR UNITÉ)'**
+  String get customItemWeightSectionLabel;
+
+  /// Exemple dans le champ poids.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. 1,5'**
+  String get customItemWeightHint;
+
+  /// Erreur inline du champ poids.
+  ///
+  /// In fr, this message translates to:
+  /// **'Entrez un poids entre 0 et 9 999,99 kg.'**
+  String get customItemWeightError;
+
+  /// Erreur inline du champ nom trop long.
+  ///
+  /// In fr, this message translates to:
+  /// **'{max} caractères au plus.'**
+  String customItemNameTooLongError(int max);
+
+  /// Interrupteur d'harmonisation requise d'un objet personnalisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nécessite une harmonisation'**
+  String get customItemRequiresAttunementLabel;
+
+  /// Interrupteur qui crée l'objet déjà harmonisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Harmoniser maintenant'**
+  String get customItemAttuneNowLabel;
+
+  /// Légende de « Harmoniser maintenant » désactivé (plafond atteint).
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Vous avez déjà 1 objet harmonisé. Cet objet sera créé non harmonisé ; vous pourrez l\'harmoniser plus tard.} other{Vous avez déjà {count} objets harmonisés. Cet objet sera créé non harmonisé ; vous pourrez l\'harmoniser plus tard.}}'**
+  String customItemAttunementCapCaption(int count);
+
+  /// Ligne au-dessus du pied du formulaire listant les champs requis manquants.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il manque : {fields}'**
+  String customItemMissingLine(String fields);
+
+  /// Champ requis manquant : le nom.
+  ///
+  /// In fr, this message translates to:
+  /// **'nom'**
+  String get customItemMissingName;
+
+  /// Champ requis manquant : le type de dégâts.
+  ///
+  /// In fr, this message translates to:
+  /// **'type de dégâts'**
+  String get customItemMissingDamageType;
+
+  /// Libellé d'accessibilité de la pastille de bonus magique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonus magique +{bonus}'**
+  String magicBonusBadgeSemantics(int bonus);
+
+  /// Sous-titre d'une carte d'arme personnalisée avec type de dégâts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arme · {damageType} · x{quantity}'**
+  String inventoryCardSubtitleWeaponWithType(String damageType, int quantity);
+
+  /// Sous-titre d'une carte d'arme personnalisée sans type de dégâts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arme · x{quantity}'**
+  String inventoryCardSubtitleWeapon(int quantity);
+
+  /// Sémantique de l'icône « harmonisation requise » d'une carte d'objet.
+  ///
+  /// In fr, this message translates to:
+  /// **'harmonisation requise, objet non harmonisé'**
+  String get inventoryCardAttunementPendingSemantics;
+
+  /// Ligne « Type » du panneau Infos d'un objet personnalisé enrichi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Type'**
+  String get itemInfoPanelTypeLabel;
+
+  /// Ligne « Bonus magique » du panneau Infos.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonus magique'**
+  String get itemInfoPanelMagicBonusLabel;
+
+  /// Ligne « Harmonisation » du panneau Infos d'un objet personnalisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Harmonisation'**
+  String get itemInfoPanelAttunementLabel;
+
+  /// Harmonisation requise (valeur de la ligne).
+  ///
+  /// In fr, this message translates to:
+  /// **'Requise'**
+  String get itemInfoPanelAttunementRequiredValue;
+
+  /// Harmonisation requise et réalisée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Requise · harmonisé'**
+  String get itemInfoPanelAttunementAttunedValue;
+
+  /// Harmonisation requise mais non réalisée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Requise · non harmonisé'**
+  String get itemInfoPanelAttunementPendingValue;
+
+  /// Légende quand le bonus magique est suspendu faute d'harmonisation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonus magique inactif tant que l\'objet n\'est pas harmonisé.'**
+  String get itemInfoPanelMagicBonusInactiveLegend;
+
+  /// Ligne « Catégorie d'arme » du panneau Infos d'une arme personnalisée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Catégorie d\'arme'**
+  String get itemInfoPanelWeaponCategoryLabel;
 }
 
 class _AppLocalizationsDelegate

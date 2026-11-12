@@ -239,7 +239,11 @@ abstract final class CharacterInventoryRowMapper {
               ? descriptions[itemId.toString()]
               : row['custom_description'] as String?,
           rarity: itemRow?['rarity'] as String?,
-          requiresAttunement: itemRow?['requires_attunement'] == true,
+          // Objet personnalisé : harmonisation portée par
+          // `custom_requires_attunement` (P7) ; catalogue inchangé.
+          requiresAttunement: itemId != null
+              ? (itemRow?['requires_attunement'] == true)
+              : (row['custom_requires_attunement'] == true),
           isAttuned: row['is_attuned'] == true,
           consumable: itemRow?['consumable'] == true,
           notes: row['notes'] as String?,

@@ -16,11 +16,13 @@ import '../../../../core/widgets/stepper_counter.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../character_creation/domain/gold_amount_formatter.dart';
 import '../../domain/character_failure.dart';
+import '../../domain/custom_item_enrichment.dart';
 import '../../domain/inventory_catalog_item.dart';
 import '../../domain/inventory_category_rules.dart';
 import '../../domain/weight_formatter.dart';
 import '../providers/character_providers.dart';
 import '../character_failure_l10n.dart';
+import 'custom_item_form_sheet.dart';
 
 /// Choix de la sheet d'entrée "+ Ajouter un objet" (tuile en bas de l'onglet
 /// "Inventaire", ou tuile "+ Ajouter un objet" de la sheet "Ajouter une
@@ -49,6 +51,7 @@ class PickedInventoryAddition {
     this.customDamageDice,
     this.customDamageType,
     this.customProperties = const [],
+    this.customEnrichment,
   });
 
   factory PickedInventoryAddition.catalog(
@@ -63,6 +66,7 @@ class PickedInventoryAddition {
     String? damageDice,
     String? damageType,
     List<String> properties = const [],
+    CustomItemEnrichment? enrichment,
   }) => PickedInventoryAddition._(
     customName: customName,
     quantity: quantity,
@@ -70,6 +74,7 @@ class PickedInventoryAddition {
     customDamageDice: damageDice,
     customDamageType: damageType,
     customProperties: properties,
+    customEnrichment: enrichment,
   );
 
   final InventoryCatalogItem? item;
@@ -79,6 +84,11 @@ class PickedInventoryAddition {
   final String? customDamageDice;
   final String? customDamageType;
   final List<String> customProperties;
+
+  /// Colonnes `custom_*` enrichies (P7 : type, bonus magique, poids,
+  /// harmonisation...) saisies par le formulaire en deux temps ; `null` pour
+  /// un objet du catalogue ou pour la forme simple (`enriched: false`).
+  final CustomItemEnrichment? customEnrichment;
 
   bool get isCustom => item == null;
 
@@ -108,9 +118,18 @@ Future<AddItemEntryChoice?> showAddItemEntrySheet(BuildContext context) {
 /// objet, quelle quantité" — jamais l'écriture réseau, laissée à l'appelant
 /// dans les deux cas, même principe que le reste des sheets de ce dépôt
 /// ("la sheet retourne l'action/le choix, l'appelant orchestre la suite").
+///
+/// [enriched] (`true` par défaut) : « Objet personnalisé » ouvre le
+/// formulaire en deux temps (type d'objet puis champs adaptés, P7). Les flux
+/// qui ne savent porter que la forme simple (récompense, butin de groupe)
+/// passent `false` et gardent l'ancienne feuille « Objet simple / Arme ».
+/// [attunedCount] : nombre d'objets harmonisés du personnage, pour
+/// « Harmoniser maintenant » du formulaire enrichi.
 Future<PickedInventoryAddition?> pickInventoryAddition(
-  BuildContext context,
-) async {
+  BuildContext context, {
+  bool enriched = true,
+  int? attunedCount,
+}) async {
   final choice = await showAddItemEntrySheet(context);
   if (choice == null || !context.mounted) return null;
 
@@ -123,15 +142,41 @@ Future<PickedInventoryAddition?> pickInventoryAddition(
       // F20 : catalogue indisponible hors ligne, le joueur a choisi
       // l'objet personnalisé depuis la feuille du catalogue.
       if (picked != AddItemEntryChoice.custom || !context.mounted) return null;
-      return _pickCustomAddition(context);
+      return _pickCustomAddition(
+        context,
+        enriched: enriched,
+        attunedCount: attunedCount,
+      );
     case AddItemEntryChoice.custom:
-      return _pickCustomAddition(context);
+      return _pickCustomAddition(
+        context,
+        enriched: enriched,
+        attunedCount: attunedCount,
+      );
   }
 }
 
 Future<PickedInventoryAddition?> _pickCustomAddition(
-  BuildContext context,
-) async {
+  BuildContext context, {
+  required bool enriched,
+  int? attunedCount,
+}) async {
+  if (enriched) {
+    final form = await showCustomItemFormSheet(
+      context,
+      attunedCount: attunedCount,
+    );
+    if (form == null) return null;
+    return PickedInventoryAddition.custom(
+      form.name,
+      form.quantity,
+      description: form.description,
+      damageDice: form.damageDice,
+      damageType: form.damageType,
+      properties: form.properties,
+      enrichment: form.enrichment,
+    );
+  }
   final picked = await showCustomItemPickerSheet(context);
   if (picked == null) return null;
   return PickedInventoryAddition.custom(
@@ -149,9 +194,13 @@ Future<PickedInventoryAddition?> _pickCustomAddition(
 /// avant de les ajouter au butin du groupe, plutôt qu'un par un). « Depuis
 /// le catalogue » ouvre le catalogue en sélection multiple ; « Objet
 /// personnalisé » reste unitaire (une saisie de nom). Liste vide si annulé.
+///
+/// [enriched] : voir [pickInventoryAddition] (le butin de groupe passe `false`).
 Future<List<PickedInventoryAddition>> pickInventoryAdditions(
-  BuildContext context,
-) async {
+  BuildContext context, {
+  bool enriched = true,
+  int? attunedCount,
+}) async {
   final choice = await showAddItemEntrySheet(context);
   if (choice == null || !context.mounted) return const [];
 
@@ -167,10 +216,18 @@ Future<List<PickedInventoryAddition>> pickInventoryAdditions(
       if (picked != AddItemEntryChoice.custom || !context.mounted) {
         return const [];
       }
-      final custom = await _pickCustomAddition(context);
+      final custom = await _pickCustomAddition(
+        context,
+        enriched: enriched,
+        attunedCount: attunedCount,
+      );
       return custom == null ? const [] : [custom];
     case AddItemEntryChoice.custom:
-      final custom = await _pickCustomAddition(context);
+      final custom = await _pickCustomAddition(
+        context,
+        enriched: enriched,
+        attunedCount: attunedCount,
+      );
       return custom == null ? const [] : [custom];
   }
 }

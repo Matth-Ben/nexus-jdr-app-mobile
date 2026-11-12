@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/l10n/app_localizations.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
@@ -54,6 +55,7 @@ class FakeRepository implements CharacterRepository {
   int removeInventoryItemCallCount = 0;
   int adjustCurrencyCallCount = 0;
   int addCustomInventoryItemCallCount = 0;
+  CustomItemEnrichment? lastCustomEnrichment;
   int addRewardCallCount = 0;
   int fetchCharacterDetailCallCount = 0;
   int equipWeaponToSlotCallCount = 0;
@@ -327,6 +329,7 @@ class FakeRepository implements CharacterRepository {
     String? damageDice,
     String? damageType,
     List<String> properties = const [],
+    CustomItemEnrichment? enrichment,
   }) async {
     addCustomInventoryItemCallCount++;
     lastCustomName = customName;
@@ -335,6 +338,7 @@ class FakeRepository implements CharacterRepository {
     lastCustomDamageDice = damageDice;
     lastCustomDamageType = damageType;
     lastCustomProperties = properties;
+    lastCustomEnrichment = enrichment;
     return outcomeToReturn;
   }
 
@@ -944,6 +948,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Objet personnalisé'));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('customItemKindOther')));
+      await tester.pumpAndSettle();
 
       await tester.enterText(
         find.byKey(const Key('customItemNameField')),
@@ -956,6 +962,9 @@ void main() {
       expect(repository.addCustomInventoryItemCallCount, 1);
       expect(repository.lastCustomName, 'Amulette de famille');
       expect(repository.lastCustomQuantity, 1);
+      // Type « Objet magique ou autre » : seule la colonne de type est écrite.
+      expect(repository.lastCustomEnrichment?.kind, 'autre');
+      expect(repository.lastCustomEnrichment?.magicBonus, 0);
       expect(repository.lastCustomDescription, isNull);
       expect(repository.lastCustomDamageDice, isNull);
       expect(repository.lastCustomDamageType, isNull);
@@ -977,20 +986,15 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Objet personnalisé'));
       await tester.pumpAndSettle();
+      // Étape 1 « TYPE D'OBJET » : tuile « Arme ».
+      await tester.tap(find.byKey(const Key('customItemKindWeapon')));
+      await tester.pumpAndSettle();
 
       await tester.enterText(
         find.byKey(const Key('customItemNameField')),
         'Zanbato ancestral',
       );
-      await tester.enterText(
-        find.byKey(const Key('customItemDescriptionField')),
-        'Une lame transmise de génération en génération.',
-      );
       await tester.pump();
-
-      // Bascule "Arme" du `SegmentedToggle` "TYPE D'OBJET".
-      await tester.tap(find.text('ARME'));
-      await tester.pumpAndSettle();
 
       // Bouton "Ajouter" désactivé tant qu'aucun type de dégâts n'est
       // choisi (requis pour une arme, pas de valeur par défaut).
@@ -1008,11 +1012,22 @@ void main() {
       await tester.tap(find.text('Tranchant').last);
       await tester.pumpAndSettle();
 
+      // Propriétés et description : section « Options avancées ».
+      await tester.ensureVisible(
+        find.byKey(const Key('advancedSectionHeader')),
+      );
+      await tester.tap(find.byKey(const Key('advancedSectionHeader')));
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const Key('customItemPropertiesField')),
         'lourde, deux mains',
       );
+      await tester.enterText(
+        find.byKey(const Key('customItemDescriptionField')),
+        'Une lame transmise de génération en génération.',
+      );
       await tester.pump();
+      await tester.ensureVisible(find.widgetWithText(PrimaryButton, 'AJOUTER'));
 
       await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
       await tester.pumpAndSettle();
@@ -1028,6 +1043,7 @@ void main() {
       expect(repository.lastCustomDamageDice, '1d6');
       expect(repository.lastCustomDamageType, 'tranchant');
       expect(repository.lastCustomProperties, ['lourde', 'deux mains']);
+      expect(repository.lastCustomEnrichment?.kind, 'arme');
     },
   );
 

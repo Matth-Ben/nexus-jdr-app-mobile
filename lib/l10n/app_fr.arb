@@ -6282,5 +6282,243 @@
   "featTagCampaign": "Campagne",
   "@featTagCampaign": {
     "description": "Pastille « Campagne » d'un don issu d'un supplément de campagne — informative, le don reste choisissable."
+  },
+  "customItemTypeWeaponTitle": "Arme",
+  "@customItemTypeWeaponTitle": {
+    "description": "Tuile « Arme » de l'étape 1 du formulaire d'objet personnalisé, et valeur de la ligne « Type »."
+  },
+  "customItemTypeWeaponSubtitle": "Dégâts, type de dégâts, bonus magique",
+  "@customItemTypeWeaponSubtitle": {
+    "description": "Sous-titre de la tuile « Arme » (étape 1)."
+  },
+  "customItemTypeOtherTitle": "Objet magique ou autre",
+  "@customItemTypeOtherTitle": {
+    "description": "Tuile « Objet magique ou autre » de l'étape 1, et valeur de la ligne « Type »."
+  },
+  "customItemTypeOtherSubtitle": "Nom, poids, harmonisation",
+  "@customItemTypeOtherSubtitle": {
+    "description": "Sous-titre de la tuile « Objet magique ou autre » (étape 1)."
+  },
+  "customItemTypeLine": "Type : {kind}",
+  "@customItemTypeLine": {
+    "description": "Ligne de rappel du type choisi, au-dessus du formulaire (étape 2).",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "customItemChangeTypeButton": "Changer",
+  "@customItemChangeTypeButton": {
+    "description": "Bouton qui ramène à l'étape 1 sans perdre les champs saisis."
+  },
+  "customItemChangeTypeSemantics": "Changer le type d'objet",
+  "@customItemChangeTypeSemantics": {
+    "description": "Libellé d'accessibilité du bouton « Changer »."
+  },
+  "customItemDamageTypeAcid": "Acide",
+  "@customItemDamageTypeAcid": {
+    "description": "Type de dégâts « acide » (valeur stockée : acide)."
+  },
+  "customItemDamageTypeFire": "Feu",
+  "@customItemDamageTypeFire": {
+    "description": "Type de dégâts « feu » (valeur stockée : feu)."
+  },
+  "customItemDamageTypeLightning": "Foudre",
+  "@customItemDamageTypeLightning": {
+    "description": "Type de dégâts « foudre » (valeur stockée : foudre)."
+  },
+  "customItemDamageTypeCold": "Froid",
+  "@customItemDamageTypeCold": {
+    "description": "Type de dégâts « froid » (valeur stockée : froid)."
+  },
+  "customItemDamageTypeForce": "Force",
+  "@customItemDamageTypeForce": {
+    "description": "Type de dégâts « force » (valeur stockée : force)."
+  },
+  "customItemDamageTypeNecrotic": "Nécrotique",
+  "@customItemDamageTypeNecrotic": {
+    "description": "Type de dégâts « nécrotique » (valeur stockée : nécrotique)."
+  },
+  "customItemDamageTypePoison": "Poison",
+  "@customItemDamageTypePoison": {
+    "description": "Type de dégâts « poison » (valeur stockée : poison)."
+  },
+  "customItemDamageTypePsychic": "Psychique",
+  "@customItemDamageTypePsychic": {
+    "description": "Type de dégâts « psychique » (valeur stockée : psychique)."
+  },
+  "customItemDamageTypeRadiant": "Radiant",
+  "@customItemDamageTypeRadiant": {
+    "description": "Type de dégâts « radiant » (valeur stockée : radiant)."
+  },
+  "customItemDamageTypeThunder": "Tonnerre",
+  "@customItemDamageTypeThunder": {
+    "description": "Type de dégâts « tonnerre » (valeur stockée : tonnerre)."
+  },
+  "customItemWeaponCategorySectionLabel": "CATÉGORIE D'ARME",
+  "@customItemWeaponCategorySectionLabel": {
+    "description": "Libellé de section de la catégorie d'une arme personnalisée."
+  },
+  "customItemWeaponCategoryCommon": "Courante",
+  "@customItemWeaponCategoryCommon": {
+    "description": "Catégorie d'arme « courante » (valeur stockée : courante)."
+  },
+  "customItemWeaponCategoryMartial": "De guerre",
+  "@customItemWeaponCategoryMartial": {
+    "description": "Catégorie d'arme « de guerre » (valeur stockée : guerre)."
+  },
+  "customItemWeaponCategoryHint": "Non renseignée : la maîtrise de l'arme ne sera pas évaluée.",
+  "@customItemWeaponCategoryHint": {
+    "description": "Aide sous la catégorie d'arme."
+  },
+  "customItemWeaponRangeSectionLabel": "PORTÉE",
+  "@customItemWeaponRangeSectionLabel": {
+    "description": "Libellé de section de la portée d'une arme personnalisée."
+  },
+  "customItemWeaponRangeMelee": "Corps à corps",
+  "@customItemWeaponRangeMelee": {
+    "description": "Portée « corps à corps » (valeur stockée : melee)."
+  },
+  "customItemWeaponRangeRanged": "Distance",
+  "@customItemWeaponRangeRanged": {
+    "description": "Portée « distance » (valeur stockée : distance)."
+  },
+  "customItemWeaponRangeHint": "Non renseignée : traitée comme une arme de corps à corps (Force).",
+  "@customItemWeaponRangeHint": {
+    "description": "Aide sous la portée de l'arme."
+  },
+  "customItemAdvancedTitle": "Options avancées",
+  "@customItemAdvancedTitle": {
+    "description": "En-tête de la section repliable du formulaire d'objet personnalisé."
+  },
+  "customItemMagicBonusSectionLabel": "BONUS MAGIQUE",
+  "@customItemMagicBonusSectionLabel": {
+    "description": "Libellé de section du bonus magique (+1 à +3)."
+  },
+  "customItemMagicBonusNone": "Aucun",
+  "@customItemMagicBonusNone": {
+    "description": "Segment « aucun bonus magique »."
+  },
+  "customItemWeightSectionLabel": "POIDS (KG PAR UNITÉ)",
+  "@customItemWeightSectionLabel": {
+    "description": "Libellé de section du poids d'un objet personnalisé."
+  },
+  "customItemWeightHint": "Ex. 1,5",
+  "@customItemWeightHint": {
+    "description": "Exemple dans le champ poids."
+  },
+  "customItemWeightError": "Entrez un poids entre 0 et 9 999,99 kg.",
+  "@customItemWeightError": {
+    "description": "Erreur inline du champ poids."
+  },
+  "customItemNameTooLongError": "{max} caractères au plus.",
+  "@customItemNameTooLongError": {
+    "description": "Erreur inline du champ nom trop long.",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "customItemRequiresAttunementLabel": "Nécessite une harmonisation",
+  "@customItemRequiresAttunementLabel": {
+    "description": "Interrupteur d'harmonisation requise d'un objet personnalisé."
+  },
+  "customItemAttuneNowLabel": "Harmoniser maintenant",
+  "@customItemAttuneNowLabel": {
+    "description": "Interrupteur qui crée l'objet déjà harmonisé."
+  },
+  "customItemAttunementCapCaption": "{count, plural, =1{Vous avez déjà 1 objet harmonisé. Cet objet sera créé non harmonisé ; vous pourrez l'harmoniser plus tard.} other{Vous avez déjà {count} objets harmonisés. Cet objet sera créé non harmonisé ; vous pourrez l'harmoniser plus tard.}}",
+  "@customItemAttunementCapCaption": {
+    "description": "Légende de « Harmoniser maintenant » désactivé (plafond atteint).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customItemMissingLine": "Il manque : {fields}",
+  "@customItemMissingLine": {
+    "description": "Ligne au-dessus du pied du formulaire listant les champs requis manquants.",
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "customItemMissingName": "nom",
+  "@customItemMissingName": {
+    "description": "Champ requis manquant : le nom."
+  },
+  "customItemMissingDamageType": "type de dégâts",
+  "@customItemMissingDamageType": {
+    "description": "Champ requis manquant : le type de dégâts."
+  },
+  "magicBonusBadgeSemantics": "Bonus magique +{bonus}",
+  "@magicBonusBadgeSemantics": {
+    "description": "Libellé d'accessibilité de la pastille de bonus magique.",
+    "placeholders": {
+      "bonus": {
+        "type": "int"
+      }
+    }
+  },
+  "inventoryCardSubtitleWeaponWithType": "Arme · {damageType} · x{quantity}",
+  "@inventoryCardSubtitleWeaponWithType": {
+    "description": "Sous-titre d'une carte d'arme personnalisée avec type de dégâts.",
+    "placeholders": {
+      "damageType": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+  "inventoryCardSubtitleWeapon": "Arme · x{quantity}",
+  "@inventoryCardSubtitleWeapon": {
+    "description": "Sous-titre d'une carte d'arme personnalisée sans type de dégâts.",
+    "placeholders": {
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+  "inventoryCardAttunementPendingSemantics": "harmonisation requise, objet non harmonisé",
+  "@inventoryCardAttunementPendingSemantics": {
+    "description": "Sémantique de l'icône « harmonisation requise » d'une carte d'objet."
+  },
+  "itemInfoPanelTypeLabel": "Type",
+  "@itemInfoPanelTypeLabel": {
+    "description": "Ligne « Type » du panneau Infos d'un objet personnalisé enrichi."
+  },
+  "itemInfoPanelMagicBonusLabel": "Bonus magique",
+  "@itemInfoPanelMagicBonusLabel": {
+    "description": "Ligne « Bonus magique » du panneau Infos."
+  },
+  "itemInfoPanelAttunementLabel": "Harmonisation",
+  "@itemInfoPanelAttunementLabel": {
+    "description": "Ligne « Harmonisation » du panneau Infos d'un objet personnalisé."
+  },
+  "itemInfoPanelAttunementRequiredValue": "Requise",
+  "@itemInfoPanelAttunementRequiredValue": {
+    "description": "Harmonisation requise (valeur de la ligne)."
+  },
+  "itemInfoPanelAttunementAttunedValue": "Requise · harmonisé",
+  "@itemInfoPanelAttunementAttunedValue": {
+    "description": "Harmonisation requise et réalisée."
+  },
+  "itemInfoPanelAttunementPendingValue": "Requise · non harmonisé",
+  "@itemInfoPanelAttunementPendingValue": {
+    "description": "Harmonisation requise mais non réalisée."
+  },
+  "itemInfoPanelMagicBonusInactiveLegend": "Bonus magique inactif tant que l'objet n'est pas harmonisé.",
+  "@itemInfoPanelMagicBonusInactiveLegend": {
+    "description": "Légende quand le bonus magique est suspendu faute d'harmonisation."
+  },
+  "itemInfoPanelWeaponCategoryLabel": "Catégorie d'arme",
+  "@itemInfoPanelWeaponCategoryLabel": {
+    "description": "Ligne « Catégorie d'arme » du panneau Infos d'une arme personnalisée."
   }
 }

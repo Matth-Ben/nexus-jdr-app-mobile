@@ -28,6 +28,7 @@ import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
+import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/features/characters/domain/offline_inventory_writes.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
@@ -93,6 +94,7 @@ class _QueueBackedRepository implements CharacterRepository {
     String? damageDice,
     String? damageType,
     List<String> properties = const [],
+    CustomItemEnrichment? enrichment,
   }) => real.addCustomInventoryItem(
     characterId: characterId,
     customName: customName,
@@ -101,6 +103,7 @@ class _QueueBackedRepository implements CharacterRepository {
     damageDice: damageDice,
     damageType: damageType,
     properties: properties,
+    enrichment: enrichment,
   );
 
   @override
@@ -243,6 +246,9 @@ void main() {
     await tester.tap(find.text('Objet'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Objet personnalisé'));
+    await tester.pumpAndSettle();
+    // Formulaire en deux temps : étape 1 (type d'objet).
+    await tester.tap(find.byKey(const Key('customItemKindOther')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('customItemNameField')), name);
     await tester.pump();

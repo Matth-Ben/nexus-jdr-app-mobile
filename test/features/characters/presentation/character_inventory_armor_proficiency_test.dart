@@ -143,6 +143,7 @@ Future<List<String>> _pump(
             damageDice,
             damageType,
             properties = const [],
+            enrichment,
           }) => writes.add('addCustom'),
           onEquipWeaponToSlot: (i, s) => writes.add('equipWeapon'),
         ),
