@@ -382,3 +382,36 @@ taches (le libellé accompagne toujours l'icône). Hauteur utile du sélecteur :
 ligne à 320 dp/×2,0. **Non exécuté** : fiche partagée anonyme `/p/token` (indiscernable de la fiche
 membre), « jamais » de la dernière synchronisation, vrai redémarrage du processus, « Quitter quand même »,
 N = 0 isolé pour le dialogue, exactement 4 conditions, coupure réseau en pleine réponse.
+
+## Vérification sur émulateur du chantier hors ligne et des PR #269 à #286 (12/11/2026, `main` = dcb0d59)
+
+Campagne automatisée + parcours manuels (compte QA MJ, build release `dev`, données `QA-` nettoyées, Magnus intact).
+**Réussi** : écritures hors ligne en file (PV 8/8→7/8, conditions, aptitude de classe, monnaies, journal,
+inventaire : retrait, déséquipement, ajout d'objet personnalisé), bandeau « Hors ligne · N modifications en
+attente » puis « Synchronisé » ≈ 2 s ; un seul repos en file, le second refusé avec le message prévu ; conflit
+(alerte non bloquante, persistée, dédoublonnée « +N autres ») et abandon (D193 : « La fiche affiche la valeur
+du serveur ») ; repos court puis long en ligne : « +1 dé de vie récupéré » (F13/F14 vérifié) ; démarrage à froid
+hors ligne : l'écran de chargement est quitté en ≈ 11 s (V4-5 : pas de blocage infini) ; liste en un seul
+défilement, recherche épinglée, PV/CA, feuille « Filtrer et trier », archivage ; polices ×2,0 et ×3,0 utilisables
+(liste, fiche, assistant) ; dé 3D : résultat lisible dans la pastille, formule, modes ; icônes pixel redessinées
+(à terre, agrippé, étourdi) lisibles ; texte de la bannière de mise à jour en anglais relevé.
+**Non vérifié** : fluidité du dé 3D (build debug, `gfxinfo` à 0 image), avantage/désavantage, saut au tap, dé plein
+écran ; emplacement de sort dépensé hors ligne, ajout/équipement d'objet de catalogue hors ligne ; ordre du
+tri, annulation d'archivage ; assistant de création à ×2,0 ; vrai démarrage à froid (process tué).
+
+| Réf. | Constat | Gravité | Suite |
+|---|---|---|---|
+| V5-1 | `_CharacterListScreenState.didPopNext` (`character_list_screen.dart:~197`) invalide un provider pendant le `didUpdateWidget` du Navigator de go_router : `setState() or markNeedsBuild() called during build` après la création d'un personnage (debug : écran rouge, `pumpAndSettle` expire ; reproduit 3 fois) | Moyenne | Corrigé par la PR en cours `fix/emulator-campaign-bugs` |
+| V5-2 | Mode sélection à ×2,0 : « Aucun personnage sélectionné » réduit à une lettre ou deux par ligne ; alerte de synchro persistante + bannière de mise à jour = ≈ 65 % de l'écran de la liste à ×2,0 (alerte tronquée, chevauchement) ; une croix tapée par erreur a ouvert le mode sélection | Moyenne | Corrigé par la PR en cours |
+| V5-3 | Libellés collés aux valeurs sur la carte des PV (« POINTS DE VIE12 / 12 », « EXPÉRIENCE0 / 300 ») même à ×1,0 : régression probable de `_LabelValueRow` (#283) | Basse | Corrigé par la PR en cours |
+| V5-4 | Démarrage à froid hors ligne : la liste reste en spinner ≈ 6 s après la sortie de l'écran de chargement (≈ 11 s à ≈ 17 s) avant d'afficher les cartes en cache | Basse à moyenne | À examiner (cache de liste au démarrage) |
+| V5-5 | Fiche jamais ouverte sur l'appareil + hors ligne : « Impossible de contacter le serveur » + RÉESSAYER, alors que le bandeau « Hors ligne » est affiché ; rien n'indique quelles fiches sont disponibles hors ligne | Moyenne | **Fiche B au comité** |
+| V5-6 | Archivage/désarchivage depuis le menu de la fiche : aucun retour visible (ni snackbar ni badge sur la fiche) | Basse | À arbitrer |
+| V5-7 | `AuthRetryableFetchException` (refresh de jeton hors ligne) a terminé un scénario de test ; non reproduit en conditions réelles | Basse | À surveiller (Crashlytics) |
+| V5-8 | Les alertes de conflit et d'abandon s'empilent (« +2 autres ») sans écran de consultation ; trompeuses si les personnages sont supprimés ailleurs ; un bandeau « 1 modification en attente d'envoi » reste affiché en ligne tant qu'une écriture orpheline n'est pas traitée | Basse | **Fiche A au comité** |
+
+**Propositions pour le comité de revue (non décidées)** : **A** — liste des alertes de synchronisation (écran ou
+panneau repliable listant toutes les alertes avec « tout écarter », V5-2/V5-8) ; **B** — disponibilité hors ligne
+explicite (indiquer sur la liste quelles fiches sont en cache, ou précharger les fiches au premier chargement de
+la liste, V5-5). Contenu du catalogue encore en français en anglais (« Humain · Guerrier ») : chantier i18n du
+contenu déjà tracé.
