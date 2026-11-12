@@ -675,6 +675,21 @@ void main() {
           ),
         ),
         GoRoute(
+          // Simule la fin de la création d'un personnage
+          // (`edition_step_screen.dart` : `context.go('/')`) : le routeur
+          // reconstruit la pile de pages, et le `RouteObserver` notifie
+          // `didPopNext` pendant le `didUpdateWidget` du `Navigator`.
+          path: '/retour-par-go',
+          builder: (context, state) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => context.go('/'),
+                child: const Text('Terminer par go'),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
           path: '/join',
           builder: (context, state) => const Scaffold(
             body: Center(child: Text('Rejoindre une histoire — étape 1')),
@@ -1391,6 +1406,57 @@ void main() {
         expect(find.text('Halltesse Ambrelune'), findsOneWidget);
         expect(find.text('Niv. 5'), findsOneWidget);
         expect(fakeCharacterRepository.fetchCallCount, 2);
+      },
+    );
+
+    testWidgets(
+      'un retour par context.go (fin de la création) relance '
+      'charactersProvider SANS invalider pendant le build (aucune erreur '
+      '"setState() or markNeedsBuild() called during build")',
+      (WidgetTester tester) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(
+            id: '42',
+            name: 'Halltesse Ambrelune',
+            level: 5,
+            xp: 7000,
+          ),
+        ];
+        final observer = RouteObserver<PageRoute<dynamic>>();
+        await tester.pumpWidget(buildTestWidget(routeObserver: observer));
+        await tester.pumpAndSettle();
+        expect(fakeCharacterRepository.fetchCallCount, 1);
+
+        final router = GoRouter.of(tester.element(find.byType(CharacterCard)));
+        unawaited(router.push('/retour-par-go'));
+        await tester.pumpAndSettle();
+        expect(find.text('Terminer par go'), findsOneWidget);
+
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(
+            id: '42',
+            name: 'Halltesse Ambrelune',
+            level: 6,
+            xp: 14000,
+          ),
+        ];
+
+        await tester.tap(find.text('Terminer par go'));
+        await tester.pumpAndSettle();
+
+        final exception = tester.takeException();
+        expect(
+          exception,
+          isNull,
+          reason: 'didPopNext ne doit pas invalider un provider pendant le '
+              'build du Navigator : $exception',
+        );
+        expect(find.text('Niv. 6'), findsOneWidget);
+        expect(
+          fakeCharacterRepository.fetchCallCount,
+          2,
+          reason: 'un seul refetch au retour, pas de requête doublée',
+        );
       },
     );
 

@@ -192,10 +192,27 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   /// Appelé par le [RouteObserver] quand une route poussée par-dessus cet
   /// écran est dépilée et que celui-ci redevient visible — voir la
   /// documentation de classe de [CharacterListScreen].
+  ///
+  /// L'invalidation est reportée après la frame en cours : quand le retour
+  /// vient d'un `context.go` (fin de la création d'un personnage), le
+  /// `RouteObserver` notifie pendant le `didUpdateWidget` du `Navigator`, donc
+  /// en pleine phase de build — invalider un provider à ce moment lève
+  /// « setState() or markNeedsBuild() called during build » (écran rouge en
+  /// debug). Un seul refetch même si l'observateur notifie plusieurs fois
+  /// avant la fin de la frame ; rien n'est fait si l'écran est démonté entre
+  /// temps.
   @override
   void didPopNext() {
-    ref.invalidate(charactersProvider);
+    if (_refreshScheduled) return;
+    _refreshScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshScheduled = false;
+      if (!mounted) return;
+      ref.invalidate(charactersProvider);
+    });
   }
+
+  bool _refreshScheduled = false;
 
   void _enterSelectionMode() {
     setState(() {
