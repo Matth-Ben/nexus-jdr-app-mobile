@@ -804,11 +804,13 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final title = l10n.characterListHeaderTitle;
-    final style = AppTypography.display(
-      fontSize: 15,
-      color: AppColors.textOnWood,
+    // Le style est passé directement à `DisplayText` (garde de plafonnement
+    // de la police pixel) puis relu pour la mesure ci-dessous.
+    final titleWidget = DisplayText(
+      title,
+      style: AppTypography.display(fontSize: 15, color: AppColors.textOnWood),
     );
-    final titleWidget = DisplayText(title, style: style);
+    final style = titleWidget.style;
     const buttons = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
