@@ -1616,6 +1616,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final cacheKey = CharacterListCache.keyFor(ownerId: ownerId);
     final cacheGeneration = _cache.clearGeneration;
 
+    // Hors ligne déclaré (aucune interface réseau) : cartes du cache tout de
+    // suite, sans attendre l'échec/délai de la requête réseau (V5-4). Sans
+    // cache, on retombe sur la tentative réseau (erreur habituelle).
+    if (!await _hasConnectionSafe()) {
+      final cached = await _mappedFromCache(cacheKey, _mapCharacterListPayload);
+      if (cached != null) {
+        return _withPendingHp(cached, ownerId: ownerId);
+      }
+    }
+
     try {
       final characterRows = await _client
           .from('characters')

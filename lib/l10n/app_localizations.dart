@@ -7571,6 +7571,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{Alertes de synchronisation : 1 alerte. Ouvrir la liste.} other{Alertes de synchronisation : {count} alertes. Ouvrir la liste.}}'**
   String syncAlertsProfileRowSemantics(int count);
 
+  /// SnackBar affiché après le désarchivage d'un personnage depuis la fiche (V5-6), sans action Annuler.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} désarchivé'**
+  String characterDetailUnarchivedSnackBarMessage(String name);
+
   /// Pastille « Épopée » d'un don proposé au choix (faveur épique) — informative, le don reste choisissable.
   ///
   /// In fr, this message translates to:

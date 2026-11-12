@@ -6266,6 +6266,15 @@
       }
     }
   },
+  "characterDetailUnarchivedSnackBarMessage": "{name} désarchivé",
+  "@characterDetailUnarchivedSnackBarMessage": {
+    "description": "SnackBar affiché après le désarchivage d'un personnage depuis la fiche (V5-6), sans action Annuler.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "featTagEpic": "Épopée",
   "@featTagEpic": {
     "description": "Pastille « Épopée » d'un don proposé au choix (faveur épique) — informative, le don reste choisissable."
