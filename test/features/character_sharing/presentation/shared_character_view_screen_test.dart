@@ -145,8 +145,9 @@ void main() {
   // par défaut d'un `ListView` sur 800×600 — même ajustement que
   // `character_detail_screen_test.dart`.
   Future<void> pumpSharedView(WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 2000));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(buildTestWidget());
   }
 
@@ -805,8 +806,9 @@ void main() {
     'fiche d’un membre de groupe (SharedCharacterViewScreen.groupMember)',
     () {
       Future<void> pumpGroupMemberView(WidgetTester tester) async {
-        await tester.binding.setSurfaceSize(const Size(800, 2000));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
+        tester.view.physicalSize = const Size(800, 2000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
         await tester.pumpWidget(
           ProviderScope(
             overrides: [

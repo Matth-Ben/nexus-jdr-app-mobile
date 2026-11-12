@@ -87,8 +87,9 @@ Future<void> _open(
   required ProficiencyTokenKind kind,
   Locale locale = const Locale('fr'),
 }) async {
-  await tester.binding.setSurfaceSize(const Size(800, 1600));
-  addTearDown(() => tester.binding.setSurfaceSize(null));
+  tester.view.physicalSize = const Size(800, 1600);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -269,8 +270,9 @@ void main() {
     final repository = _FakeProficiencyCatalogRepository(
       catalog: const ProficiencyCatalog(weapons: [_dagger]),
     )..gate = Completer<void>();
-    await tester.binding.setSurfaceSize(const Size(800, 1600));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [

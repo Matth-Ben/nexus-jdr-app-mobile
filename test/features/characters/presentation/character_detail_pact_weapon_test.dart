@@ -122,8 +122,9 @@ Future<(_FakeCharacterRepository, _FakePactWeaponRepository)> _pump(
   pact.onWrite = (itemId) => characters.current = _warlock(
     pactWeapon: itemId == 1 ? _rapier : _dagger,
   );
-  await tester.binding.setSurfaceSize(const Size(800, 2400));
-  addTearDown(() => tester.binding.setSurfaceSize(null));
+  tester.view.physicalSize = const Size(800, 2400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [

@@ -78,8 +78,9 @@ Future<_Harness> _open(
   Locale locale = const Locale('fr'),
 }) async {
   final harness = _Harness();
-  await tester.binding.setSurfaceSize(const Size(800, 1600));
-  addTearDown(() => tester.binding.setSurfaceSize(null));
+  tester.view.physicalSize = const Size(800, 1600);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [pactWeaponRepositoryProvider.overrideWithValue(repository)],
@@ -222,8 +223,9 @@ void main() {
   testWidgets('chargement : indicateur de progression', (tester) async {
     final repository = _FakePactWeaponRepository(options: [_rapier])
       ..gate = Completer<void>();
-    await tester.binding.setSurfaceSize(const Size(800, 1600));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [pactWeaponRepositoryProvider.overrideWithValue(repository)],

@@ -17,8 +17,9 @@ void main() {
   for (final scale in [1.0, 2.0]) {
     testWidgets('onglet Sorts sans favori à x$scale', (tester) async {
       SharedPreferences.setMockInitialValues({});
-      await tester.binding.setSurfaceSize(const Size(390, 900));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.view.physicalSize = const Size(390, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
 
       await tester.pumpWidget(
         ProviderScope(

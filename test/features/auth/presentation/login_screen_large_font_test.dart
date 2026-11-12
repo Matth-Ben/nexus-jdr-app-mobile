@@ -82,8 +82,9 @@ void main() {
     Size surface,
     double scale,
   ) async {
-    await tester.binding.setSurfaceSize(surface);
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.physicalSize = surface;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final repository = _FakeAuthRepository();
     await tester.pumpWidget(
       ProviderScope(

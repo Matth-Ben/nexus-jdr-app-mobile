@@ -919,8 +919,9 @@ void main() {
     // (icône 88×88 + titre + corps) quand l'[Expanded] qui l'héberge
     // devient trop petit — jamais atteint par les tests existants
     // (`buildTestWidget()` sans surface réduite, 800×600 par défaut).
-    await tester.binding.setSurfaceSize(const Size(375, 300));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.physicalSize = const Size(375, 300);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
 
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
@@ -2708,8 +2709,9 @@ void main() {
               xp: 1200,
             ),
           ];
-          await tester.binding.setSurfaceSize(surface);
-          addTearDown(() => tester.binding.setSurfaceSize(null));
+          tester.view.physicalSize = surface;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
 
           await tester.pumpWidget(
             buildTestWidget(
@@ -2732,8 +2734,9 @@ void main() {
           tester,
         ) async {
           fakeCharacterRepository.charactersToReturn = const [];
-          await tester.binding.setSurfaceSize(surface);
-          addTearDown(() => tester.binding.setSurfaceSize(null));
+          tester.view.physicalSize = surface;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
 
           await tester.pumpWidget(
             buildTestWidget(
@@ -2783,8 +2786,9 @@ void main() {
       testWidgets('x$scale sur 360x640 : bloc d en-tête non plafonné, aucun '
           'défilement imbriqué', (tester) async {
         fakeCharacterRepository.charactersToReturn = twoCharacters;
-        await tester.binding.setSurfaceSize(const Size(360, 640));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
+        tester.view.physicalSize = const Size(360, 640);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
 
         await tester.pumpWidget(buildTestWidget(textScale: scale));
         await tester.pumpAndSettle();
@@ -2798,8 +2802,9 @@ void main() {
       testWidgets('x2.0 sur ${surface.width.toInt()}x${surface.height.toInt()} '
           ': aucune exception, bloc d en-tête défilant', (tester) async {
         fakeCharacterRepository.charactersToReturn = twoCharacters;
-        await tester.binding.setSurfaceSize(surface);
-        addTearDown(() => tester.binding.setSurfaceSize(null));
+        tester.view.physicalSize = surface;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
 
         await tester.pumpWidget(
           buildTestWidget(
@@ -2823,8 +2828,9 @@ void main() {
       testWidgets('clavier ouvert (x$scale, 360x640) : aucun débordement, la '
           'recherche garde le focus', (tester) async {
         fakeCharacterRepository.charactersToReturn = twoCharacters;
-        await tester.binding.setSurfaceSize(const Size(360, 640));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
+        tester.view.physicalSize = const Size(360, 640);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
 
         await tester.pumpWidget(
           buildTestWidget(

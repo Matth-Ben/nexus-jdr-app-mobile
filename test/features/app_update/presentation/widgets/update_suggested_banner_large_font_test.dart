@@ -54,8 +54,9 @@ void main() {
     required double width,
     required double scale,
   }) async {
-    await tester.binding.setSurfaceSize(Size(width, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.physicalSize = Size(width, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
