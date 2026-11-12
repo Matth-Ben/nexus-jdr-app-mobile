@@ -237,7 +237,7 @@ Vagues proposées (`dev-flutter`, validées par la DA et le QA) : **vague 1** P5
 F15/P14 (environ 5 jours) ; **vague 2** onglet Sorts : P4, P9, P3a ; **vague 3** P2, P10 ;
 **vague 4** dépendantes d'une donnée ou d'une décision : P6, P7, P12, P13, P3b.
 
-**P3b (marqueur et lancement en rituel) : abandonné, décision de Matthias du 12/11/2026.** Il avait d'abord choisi
+**P3b (marqueur et lancement en rituel) : rouvert le 12/11/2026 par Matthias (demande détaillée : rituel et chronos de sorts, spec dans `docs/p3b-rituels-et-chronos.md`), après un abandon le même jour.** Historique de l'abandon : Il avait d'abord choisi
 l'option ambitieuse (action « Lancer en rituel »). `regles-dnd` avait rendu la règle RAW 2014 (classes concernées :
 Magicien, Clerc, Druide, Barde, Artificier, Occultiste avec Pacte du Livre), puis Matthias a arrêté le chantier avant
 l'implémentation. Aucun code écrit ; la carte reste « Abandonné / repoussé ». À rouvrir seulement sur nouvelle demande
