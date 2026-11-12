@@ -316,8 +316,11 @@ void main() {
       expect(member.armorClassBonus, 0);
     });
 
-    test('P7 : une armure personnalisée équipée ne change pas la CA du '
-        'membre (PR 1, lecture seule)', () {
+    // P7 PR 3 : ce test figeait « 12 » (une armure personnalisée n'entrait pas
+    // dans la CA, PR 1) ; une armure lourde 16 équipée donne désormais 16
+    // (la Dex est ignorée), comme sur la fiche.
+    test('P7 PR 3 : une armure personnalisée lourde 16 équipée donne une CA '
+        'de 16 au membre', () {
       final member = GroupMemberRowMapper.toGroupMember(
         _row(
           character: {
@@ -344,7 +347,7 @@ void main() {
         classNames: const {},
       );
 
-      expect(member.armorClass, 12);
+      expect(member.armorClass, 16);
     });
 
     test('sans armure équipée -> 10 + Dex (repli RAW de base)', () {

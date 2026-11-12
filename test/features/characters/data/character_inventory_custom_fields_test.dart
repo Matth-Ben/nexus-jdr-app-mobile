@@ -61,7 +61,12 @@ void main() {
       // P7 PR 2 : l'harmonisation d'un objet personnalisé vient de
       // `custom_requires_attunement`.
       expect(item.requiresAttunement, isTrue);
-      expect(item.armorProperties, isNull);
+      // P7 PR 3 (changement voulu : l'ancien test figeait « armorProperties
+      // nul ») : une armure personnalisée porte ses armorProperties.
+      expect(item.armorProperties, isNotNull);
+      expect(item.armorProperties!.acBase, 15);
+      expect(item.armorProperties!.acDexBonus, 'max_2');
+      expect(item.armorProperties!.slot, 'armure');
     });
 
     test(
@@ -251,7 +256,7 @@ void main() {
     });
   });
 
-  group('non-régression de la CA (PR 1)', () {
+  group('CA et objets personnalisés (PR 1 puis PR 3)', () {
     int ac(List<Map<String, dynamic>> inventory) =>
         ArmorClassRowResolver.fromCharacterRow(
           {
@@ -265,9 +270,34 @@ void main() {
           classFeatureNames: const {},
         );
 
-    test('une armure et un bouclier personnalisés équipés ne changent pas '
-        'la CA', () {
+    test('anciens objets personnalisés, armes et objets « autre » équipés : '
+        'la CA ne change pas (non-régression)', () {
       final without = ac(const []);
+      final withOthers = ac([
+        _customRow(id: 'old', extra: {'equipped': true}),
+        _customRow(
+          id: 'arme',
+          extra: {
+            'equipped': true,
+            'custom_kind': 'arme',
+            'custom_magic_bonus': 3,
+          },
+        ),
+        _customRow(
+          id: 'autre',
+          extra: {'equipped': true, 'custom_kind': 'autre'},
+        ),
+      ]);
+
+      expect(without, 12);
+      expect(withOthers, without);
+    });
+
+    // P7 PR 3 : ce test figeait « une armure et un bouclier personnalisés
+    // équipés ne changent pas la CA » (PR 1) ; ils y entrent désormais.
+    test('une armure et un bouclier personnalisés équipés entrent dans la '
+        'CA : 18 (lourde) + 3 (magique) + 2 (bouclier, bonus suspendu faute '
+        'd\'harmonisation) = 23', () {
       final withCustom = ac([
         _customRow(
           id: 'a',
@@ -290,8 +320,7 @@ void main() {
         ),
       ]);
 
-      expect(without, 12);
-      expect(withCustom, without);
+      expect(withCustom, 23);
     });
   });
 }
