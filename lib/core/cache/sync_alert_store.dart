@@ -175,7 +175,21 @@ class SyncAlertStore {
   /// d'un « Écarter »). La table est `AUTOINCREMENT` : l'`id` d'une ligne
   /// supprimée n'est jamais réattribué à une autre, la ré-insertion ne peut
   /// donc pas entrer en collision. Sans effet si l'`id` existe déjà.
+  ///
+  /// Règle de dédoublonnage de `SyncAlertRecorder` : un seul conflit ouvert par
+  /// (compte, personnage, `dataKind`). Si un nouveau conflit a été enregistré
+  /// depuis l'écartement, l'alerte restaurée serait périmée : on ne la
+  /// ré-insère pas. Les abandons ne se dédoublonnent pas, ils sont toujours
+  /// restaurés.
   Future<void> restore(SyncAlert alert) async {
+    if (alert.kind == SyncAlertKind.conflict) {
+      final open = await findOpenConflict(
+        ownerId: alert.ownerId,
+        characterId: alert.characterId,
+        dataKind: alert.dataKind,
+      );
+      if (open != null && open.id != alert.id) return;
+    }
     await _db
         .into(_db.syncAlerts)
         .insert(
@@ -193,6 +207,16 @@ class SyncAlertStore {
           ),
           mode: InsertMode.insertOrIgnore,
         );
+  }
+
+  /// [restore] de toutes les [alerts] en une transaction : tout ou rien (une
+  /// erreur n'en laisse pas la moitié restaurée).
+  Future<void> restoreAll(List<SyncAlert> alerts) async {
+    await _db.transaction(() async {
+      for (final alert in alerts) {
+        await restore(alert);
+      }
+    });
   }
 
   Future<void> removeAllForOwner(String ownerId) async {

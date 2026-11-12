@@ -4652,11 +4652,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncAlertsKindAbandon => 'Change not sent';
 
   @override
-  String syncAlertsSince(String when) {
-    return 'since $when';
-  }
-
-  @override
   String get syncAlertsOrphan =>
       'This character is no longer in your list (deleted or no longer accessible). This alert no longer applies.';
 

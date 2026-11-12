@@ -22,6 +22,7 @@ import 'package:personnages/core/cache/cache_providers.dart';
 import 'package:personnages/core/cache/pending_character_write_queue.dart';
 import 'package:personnages/core/cache/sync_alert_store.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/core/sync/sync_alerts_panel_providers.dart';
 import 'package:personnages/core/sync/sync_clock_provider.dart';
 import 'package:personnages/core/sync/sync_status_providers.dart';
 import 'package:personnages/core/theme/app_colors.dart';
@@ -277,7 +278,7 @@ void main() {
       await finish(tester);
     });
 
-    testWidgets('conflit : type, icône et date « depuis … »', (tester) async {
+    testWidgets('conflit : type, icône et date relative seule', (tester) async {
       await add(
         tester,
         kind: SyncAlertKind.conflict,
@@ -288,7 +289,7 @@ void main() {
 
       expect(find.text('Modification concurrente'), findsOneWidget);
       expect(find.byIcon(Icons.sync_problem), findsOneWidget);
-      expect(find.text('depuis il y a 2 h'), findsOneWidget);
+      expect(find.text('il y a 2 h'), findsOneWidget);
       expect(
         find.textContaining('Aria a été modifié sur un autre appareil'),
         findsOneWidget,
@@ -296,7 +297,7 @@ void main() {
       await finish(tester);
     });
 
-    testWidgets('date absolue au-delà de 24 h, et « depuis » pour un conflit '
+    testWidgets('date absolue au-delà de 24 h, sans préfixe pour un conflit '
         'ancien', (tester) async {
       await add(
         tester,
@@ -305,7 +306,7 @@ void main() {
       );
       await pumpApp(tester);
       await open(tester);
-      expect(find.textContaining('depuis 2 nov. 2026 à 14:32'), findsOneWidget);
+      expect(find.text('2 nov. 2026 à 14:32'), findsOneWidget);
       await finish(tester);
     });
 
@@ -328,7 +329,7 @@ void main() {
       expect(find.text('Change not sent'), findsOneWidget);
       expect(find.text('Concurrent change'), findsOneWidget);
       expect(find.text('5 min ago'), findsOneWidget);
-      expect(find.text('since 3 h ago'), findsOneWidget);
+      expect(find.text('3 h ago'), findsOneWidget);
       expect(
         find.textContaining('Change not saved: the last known HP of Aria'),
         findsOneWidget,
@@ -643,6 +644,48 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('2 alerts dismissed'), findsOneWidget);
       expect(find.text('UNDO'), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('« Annuler » après fermeture de la base (déconnexion) : aucune '
+        'erreur asynchrone non gérée', (tester) async {
+      await add(tester, name: 'Aria');
+      await add(tester, name: 'Borin');
+      await pumpApp(tester);
+      await open(tester);
+
+      await tester.tap(find.text('Écarter').first);
+      await flushDb(tester);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.runAsync(db.close);
+
+      await tester.tap(find.text('ANNULER'));
+      await flushDb(tester);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(tester.takeException(), isNull);
+      await finish(tester);
+    });
+
+    testWidgets('« Écarter » utilise le compte de l\'alerte, pas celui du '
+        'fournisseur de session', (tester) async {
+      await add(tester, name: 'Aria', owner: 'owner-2');
+      final stored = (await tester.runAsync(
+        () => store.allForOwner('owner-2'),
+      ))!;
+      await pumpApp(
+        tester,
+        extra: [
+          sortedSyncAlertsProvider.overrideWith((ref) => Stream.value(stored)),
+        ],
+      );
+      await open(tester);
+
+      await tester.tap(find.text('Écarter'));
+      await flushDb(tester);
+      expect(
+        await tester.runAsync(() => store.allForOwner('owner-2')),
+        isEmpty,
+      );
       await finish(tester);
     });
 

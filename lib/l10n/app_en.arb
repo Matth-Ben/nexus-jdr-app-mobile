@@ -1435,7 +1435,6 @@
   "syncAlertsLoadError": "Couldn't display the alerts.",
   "syncAlertsKindConflict": "Concurrent change",
   "syncAlertsKindAbandon": "Change not sent",
-  "syncAlertsSince": "since {when}",
   "syncAlertsOrphan": "This character is no longer in your list (deleted or no longer accessible). This alert no longer applies.",
   "syncAlertsBannerCount": "{count, plural, =1{1 sync alert} other{{count} sync alerts}}",
   "syncAlertsBannerAction": "View alerts",

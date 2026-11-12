@@ -5,7 +5,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/cache/sync_alert_store.dart';
 import 'package:personnages/core/sync/sync_alert_payload.dart';
-import 'package:personnages/core/widgets/sync_status_banner.dart';
+import 'package:personnages/core/sync/sync_alert_message.dart';
 import 'package:personnages/l10n/app_localizations.dart';
 import 'package:personnages/l10n/app_localizations_en.dart';
 import 'package:personnages/l10n/app_localizations_fr.dart';

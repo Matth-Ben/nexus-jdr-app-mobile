@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,14 +9,13 @@ import '../cache/cache_providers.dart';
 import '../cache/sync_alert_store.dart';
 import '../sync/relative_sync_time.dart';
 import '../sync/sync_alerts_panel_providers.dart';
+import '../sync/sync_alert_message.dart';
 import '../sync/sync_clock_provider.dart';
-import '../sync/sync_status_providers.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import 'secondary_button.dart';
 import 'sheet_header_bar.dart';
-import 'sync_status_banner.dart';
 import 'undo_snack_bar.dart';
 
 /// Part de la hauteur de l'écran que la feuille ne dépasse jamais.
@@ -102,14 +102,22 @@ class _SyncAlertsPanelState extends ConsumerState<_SyncAlertsPanel> {
     super.dispose();
   }
 
-  String _ownerId(SyncAlert alert) =>
-      ref.read(syncOwnerIdProvider) ?? alert.ownerId;
+  /// Annulation : jamais d'erreur asynchrone non gérée (la base peut avoir été
+  /// fermée entre-temps, ex. déconnexion) ; l'échec est ignoré, journalisé en
+  /// debug seulement.
+  Future<void> _undo(Future<void> Function() restore) async {
+    try {
+      await restore();
+    } catch (error) {
+      if (kDebugMode) debugPrint('Annulation des alertes impossible : $error');
+    }
+  }
 
   Future<void> _dismiss(SyncAlert alert) async {
     final l10n = AppLocalizations.of(context)!;
     final store = ref.read(syncAlertStoreProvider);
     try {
-      await store.dismiss(ownerId: _ownerId(alert), id: alert.id);
+      await store.dismiss(ownerId: alert.ownerId, id: alert.id);
     } catch (_) {
       // Écriture locale échouée : l'alerte reste affichée, rien à annuler.
       return;
@@ -121,7 +129,7 @@ class _SyncAlertsPanelState extends ConsumerState<_SyncAlertsPanel> {
       message: l10n.syncAlertsDismissedSnack,
       undoLabel: l10n.spellSlotUsedSnackBarUndoLabel,
       announcement: l10n.syncAlertsDismissedAnnouncement,
-      onUndo: () => unawaited(store.restore(alert)),
+      onUndo: () => unawaited(_undo(() => store.restore(alert))),
     );
   }
 
@@ -131,7 +139,7 @@ class _SyncAlertsPanelState extends ConsumerState<_SyncAlertsPanel> {
     final store = ref.read(syncAlertStoreProvider);
     final List<SyncAlert> removed;
     try {
-      removed = await store.dismissAll(ownerId: _ownerId(alerts.first));
+      removed = await store.dismissAll(ownerId: alerts.first.ownerId);
     } catch (_) {
       return;
     }
@@ -142,17 +150,8 @@ class _SyncAlertsPanelState extends ConsumerState<_SyncAlertsPanel> {
       message: l10n.syncAlertsDismissedAllSnack(removed.length),
       undoLabel: l10n.spellSlotUsedSnackBarUndoLabel,
       announcement: l10n.syncAlertsDismissedAllAnnouncement(removed.length),
-      onUndo: () => unawaited(_restoreAll(store, removed)),
+      onUndo: () => unawaited(_undo(() => store.restoreAll(removed))),
     );
-  }
-
-  Future<void> _restoreAll(
-    SyncAlertStore store,
-    List<SyncAlert> removed,
-  ) async {
-    for (final alert in removed) {
-      await store.restore(alert);
-    }
   }
 
   @override
@@ -263,7 +262,7 @@ class _AlertCard extends StatelessWidget {
         ? l10n.syncAlertsKindConflict
         : l10n.syncAlertsKindAbandon;
     final when = relativeSyncWhen(l10n, instant: alert.createdAt, now: now);
-    final dateLabel = isConflict ? l10n.syncAlertsSince(when) : when;
+
     final message = syncAlertMessage(l10n, alert, truncateName: false);
     final name = alert.characterName.isEmpty
         ? l10n.syncAlertUnknownCharacter
@@ -323,7 +322,7 @@ class _AlertCard extends StatelessWidget {
                         ],
                       ),
                       Text(
-                        dateLabel,
+                        when,
                         style: AppTypography.body(
                           fontSize: 12,
                           color: AppColors.textMuted,

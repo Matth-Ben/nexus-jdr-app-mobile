@@ -6219,15 +6219,6 @@
   "@syncAlertsKindAbandon": {
     "description": "Type d'alerte : modification hors ligne abandonnée."
   },
-  "syncAlertsSince": "depuis {when}",
-  "@syncAlertsSince": {
-    "description": "Date relative d'une alerte de conflit (date du premier conflit conservée).",
-    "placeholders": {
-      "when": {
-        "type": "String"
-      }
-    }
-  },
   "syncAlertsOrphan": "Ce personnage n'est plus dans ta liste (supprimé ou devenu inaccessible). Cette alerte n'a plus d'objet.",
   "@syncAlertsOrphan": {
     "description": "Ligne d'une alerte dont le personnage n'est plus dans la liste chargée."

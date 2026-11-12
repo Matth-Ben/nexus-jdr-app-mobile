@@ -7523,12 +7523,6 @@ abstract class AppLocalizations {
   /// **'Modification non envoyée'**
   String get syncAlertsKindAbandon;
 
-  /// Date relative d'une alerte de conflit (date du premier conflit conservée).
-  ///
-  /// In fr, this message translates to:
-  /// **'depuis {when}'**
-  String syncAlertsSince(String when);
-
   /// Ligne d'une alerte dont le personnage n'est plus dans la liste chargée.
   ///
   /// In fr, this message translates to:
