@@ -7570,6 +7570,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{count, plural, =1{Alertes de synchronisation : 1 alerte. Ouvrir la liste.} other{Alertes de synchronisation : {count} alertes. Ouvrir la liste.}}'**
   String syncAlertsProfileRowSemantics(int count);
+
+  /// Pastille « Épopée » d'un don proposé au choix (faveur épique) — informative, le don reste choisissable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Épopée'**
+  String get featTagEpic;
+
+  /// Pastille « Campagne » d'un don issu d'un supplément de campagne — informative, le don reste choisissable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Campagne'**
+  String get featTagCampaign;
 }
 
 class _AppLocalizationsDelegate

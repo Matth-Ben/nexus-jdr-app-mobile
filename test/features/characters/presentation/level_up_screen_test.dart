@@ -45,6 +45,8 @@ import 'package:personnages/features/characters/domain/invocation_prerequisites.
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
 import 'package:personnages/features/characters/domain/level_up_arcane_shot_option.dart';
 import 'package:personnages/features/characters/domain/level_up_draconic_ancestry_option.dart';
+import 'package:personnages/core/widgets/feat_tag_badge.dart';
+import 'package:personnages/features/characters/domain/feat_tag.dart';
 import 'package:personnages/features/characters/domain/level_up_feat_option.dart';
 import 'package:personnages/features/characters/domain/level_up_infusion_option.dart';
 import 'package:personnages/features/characters/domain/level_up_infusion_swap.dart';
@@ -3472,6 +3474,42 @@ void main() {
         expect(find.text('Étape 3 sur 4 · Amélioration ou don'), findsNothing);
         expect(find.text('Don'), findsOneWidget);
         expect(find.text('Robuste'), findsOneWidget);
+      },
+    );
+    testWidgets(
+      'etiquettes P13 : pastille Epopee/Campagne seulement sur ces dons, '
+      'aucun don masque ni grise, tous choisissables',
+      (tester) async {
+        fakeRepository.featsToReturn = const [
+          LevelUpFeatOption(
+            id: 1,
+            name: 'Faveur du destin',
+            description: 'd',
+            tag: FeatTag.epic,
+          ),
+          LevelUpFeatOption(
+            id: 2,
+            name: 'Frappe des geants',
+            description: 'd',
+            tag: FeatTag.campaign,
+          ),
+          LevelUpFeatOption(id: 3, name: 'Vigilant', description: 'd'),
+        ];
+
+        await pushToChoiceStep(tester, 8);
+        await tester.tap(find.text('CHOISIR UN DON'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(FeatTagBadge), findsNWidgets(2));
+        expect(find.text('Épopée'), findsOneWidget);
+        expect(find.text('Campagne'), findsOneWidget);
+        expect(find.text('Faveur du destin'), findsOneWidget);
+        expect(find.text('Frappe des geants'), findsOneWidget);
+        expect(find.text('Vigilant'), findsOneWidget);
+
+        await tester.tap(find.text('Faveur du destin'));
+        await tester.pumpAndSettle();
+        expect(find.byIcon(Icons.check), findsOneWidget);
       },
     );
     testWidgets(
