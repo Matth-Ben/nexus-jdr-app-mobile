@@ -33,6 +33,8 @@ extension CharacterFailureL10n on CharacterFailure {
         return l10n.characterNotOwnedErrorMessage;
       case CharacterErrorCode.sessionExpired:
         return l10n.characterSessionExpiredErrorMessage;
+      case CharacterErrorCode.detailNotCachedOffline:
+        return l10n.characterDetailNotCachedOfflineMessage;
       case CharacterErrorCode.generic:
         return message;
     }

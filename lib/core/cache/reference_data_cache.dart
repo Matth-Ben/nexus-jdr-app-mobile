@@ -67,6 +67,19 @@ class ReferenceDataCache {
     return jsonDecode(row.payload);
   }
 
+  /// Date de dernière écriture complète ([put]) de [key], `null` si [key] n'a
+  /// jamais été mise en cache. Ne décode pas le payload (contrairement à
+  /// [getFresh]) : sert à décider si une entrée volumineuse (fiche
+  /// personnage) mérite d'être retéléchargée.
+  Future<DateTime?> cachedAt(String key) async {
+    final table = _db.cachedReferenceEntries;
+    final query = _db.selectOnly(table)
+      ..addColumns([table.cachedAt])
+      ..where(table.key.equals(key));
+    final row = await query.getSingleOrNull();
+    return row?.read(table.cachedAt);
+  }
+
   /// Remplace le payload de [key] par `transform(payload actuel)`, en une
   /// seule transaction (aucune autre écriture de [key] ne peut s'intercaler
   /// entre la lecture et l'écriture). Ne fait rien si [key] n'a jamais été

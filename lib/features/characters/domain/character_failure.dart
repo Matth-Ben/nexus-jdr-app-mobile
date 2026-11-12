@@ -56,6 +56,11 @@ enum CharacterErrorCode {
   /// Aucune session Supabase active.
   sessionExpired,
 
+  /// Fiche demandée hors ligne alors qu'elle n'a jamais été chargée sur cet
+  /// appareil (rien en cache) : pas une panne serveur, voir
+  /// `SupabaseCharacterRepository.fetchCharacterDetail`.
+  detailNotCachedOffline,
+
   /// Tout le reste : code Postgrest non mappé explicitement, ou erreur sans
   /// code exploitable, ou `CharacterFailure` construite directement par un
   /// appelant qui ne précise pas [code]. [CharacterFailure.message] reste

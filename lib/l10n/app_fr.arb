@@ -6160,5 +6160,9 @@
   "memberConditionsSheetEmpty": "Aucun état actif.",
   "@memberConditionsSheetEmpty": {
     "description": "État vide de la feuille des états d'un membre (V3-5)."
+  },
+  "characterDetailNotCachedOfflineMessage": "Cette fiche n'a jamais été ouverte sur cet appareil. Elle sera disponible hors ligne après une première ouverture en ligne.",
+  "@characterDetailNotCachedOfflineMessage": {
+    "description": "`CharacterErrorCode.detailNotCachedOffline` (`domain/character_failure.dart`) — fiche ouverte hors ligne sans copie en cache (V5-5), à garder cohérent avec `SupabaseCharacterRepository.fetchCharacterDetail`."
   }
 }

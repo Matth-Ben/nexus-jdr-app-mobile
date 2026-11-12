@@ -1873,7 +1873,27 @@ class SupabaseCharacterRepository implements CharacterRepository {
           characterId: characterId,
         );
       }
+      // Hors ligne et rien en cache (V5-5) : « Impossible de contacter le
+      // serveur » serait trompeur, le bandeau hors ligne étant déjà affiché.
+      if (!await _hasConnectionSafe()) {
+        throw const CharacterFailure(
+          "Cette fiche n'a jamais été ouverte sur cet appareil. Elle sera "
+          'disponible hors ligne après une première ouverture en ligne.',
+          code: CharacterErrorCode.detailNotCachedOffline,
+        );
+      }
       throw mapUnknownCharacterError();
+    }
+  }
+
+  /// [ConnectivityChecker.hasConnection] sans jamais lever : une erreur du
+  /// canal de plateforme est traitée comme « en ligne » (jamais un faux
+  /// hors-ligne).
+  Future<bool> _hasConnectionSafe() async {
+    try {
+      return await _connectivityChecker.hasConnection();
+    } catch (_) {
+      return true;
     }
   }
 

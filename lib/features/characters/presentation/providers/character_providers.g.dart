@@ -347,7 +347,63 @@ final class CharactersProvider
   }
 }
 
-String _$charactersHash() => r'3a8e32a7a9df2817331ea519b8e72b7ca49ec5ad';
+String _$charactersHash() => r'4c3f86043f175989f9ebc9533d8ac0d7815f3a6d';
+
+/// Préchargement en arrière-plan des fiches « en jeu » pour le hors-ligne —
+/// voir `CharacterDetailPrefetcher`. Déclenché par [characters].
+
+@ProviderFor(characterDetailPrefetcher)
+final characterDetailPrefetcherProvider = CharacterDetailPrefetcherProvider._();
+
+/// Préchargement en arrière-plan des fiches « en jeu » pour le hors-ligne —
+/// voir `CharacterDetailPrefetcher`. Déclenché par [characters].
+
+final class CharacterDetailPrefetcherProvider
+    extends
+        $FunctionalProvider<
+          CharacterDetailPrefetcher,
+          CharacterDetailPrefetcher,
+          CharacterDetailPrefetcher
+        >
+    with $Provider<CharacterDetailPrefetcher> {
+  /// Préchargement en arrière-plan des fiches « en jeu » pour le hors-ligne —
+  /// voir `CharacterDetailPrefetcher`. Déclenché par [characters].
+  CharacterDetailPrefetcherProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'characterDetailPrefetcherProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$characterDetailPrefetcherHash();
+
+  @$internal
+  @override
+  $ProviderElement<CharacterDetailPrefetcher> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CharacterDetailPrefetcher create(Ref ref) {
+    return characterDetailPrefetcher(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CharacterDetailPrefetcher value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CharacterDetailPrefetcher>(value),
+    );
+  }
+}
+
+String _$characterDetailPrefetcherHash() =>
+    r'c08c6a3f2dde02e512ff9bd2b2d2ba76f3da7954';
 
 /// Catalogue complet des objets `items`, exposé aux sheets "Depuis le
 /// catalogue" de l'onglet "Inventaire" (`presentation/widgets

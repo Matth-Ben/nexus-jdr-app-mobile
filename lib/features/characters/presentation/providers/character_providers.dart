@@ -6,6 +6,7 @@ import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/network/connectivity_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../data/character_detail_cache.dart';
+import '../../data/character_detail_prefetcher.dart';
 import '../../data/character_repository.dart';
 import '../../data/pending_character_write_syncer.dart';
 import '../../data/racial_innate_spell_repository.dart';
@@ -91,8 +92,48 @@ PendingCharacterWriteSyncer pendingCharacterWriteSyncer(Ref ref) {
 /// masquerait une erreur persistante (ex. session expirée) derrière des
 /// appels réseau répétés sans que le joueur en soit informé.
 @Riverpod(retry: _noRetry)
-Future<List<CharacterSummary>> characters(Ref ref) {
-  return ref.watch(characterRepositoryProvider).fetchCharacters();
+Future<List<CharacterSummary>> characters(Ref ref) async {
+  // Annule le préchargement ci-dessous dès que la liste n'est plus écoutée
+  // (écran démonté) ou relancée (invalidation).
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
+  final list = await ref.watch(characterRepositoryProvider).fetchCharacters();
+  // Préchargement des fiches pour le hors-ligne (V5-5) : en arrière-plan,
+  // jamais attendu, jamais visible (la liste est déjà prête ci-dessous).
+  unawaited(_prefetchDetails(ref, list, () => disposed));
+  return list;
+}
+
+Future<void> _prefetchDetails(
+  Ref ref,
+  List<CharacterSummary> list,
+  bool Function() isCancelled,
+) async {
+  try {
+    // Laisse la liste s'afficher avant toute lecture locale ou réseau.
+    await Future<void>.delayed(Duration.zero);
+    if (isCancelled()) return;
+    await ref
+        .read(characterDetailPrefetcherProvider)
+        .prefetch(list, isCancelled: isCancelled);
+  } catch (_) {
+    // Best-effort : jamais d'erreur visible ni journalisée.
+  }
+}
+
+/// Préchargement en arrière-plan des fiches « en jeu » pour le hors-ligne —
+/// voir `CharacterDetailPrefetcher`. Déclenché par [characters].
+@Riverpod(keepAlive: true)
+CharacterDetailPrefetcher characterDetailPrefetcher(Ref ref) {
+  final client = ref.watch(supabaseClientProvider);
+  final repository = ref.watch(characterRepositoryProvider);
+  return CharacterDetailPrefetcher(
+    cache: ref.watch(referenceDataCacheProvider),
+    pendingWrites: ref.watch(pendingCharacterWriteQueueProvider),
+    connectivity: ref.watch(connectivityCheckerProvider),
+    currentOwnerId: () => client.auth.currentUser?.id,
+    fetchDetail: repository.fetchCharacterDetail,
+  );
 }
 
 /// Catalogue complet des objets `items`, exposé aux sheets "Depuis le

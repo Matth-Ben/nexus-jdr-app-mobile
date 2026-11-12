@@ -32,6 +32,7 @@ import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/data/pending_character_write_syncer.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
+import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/condition_type.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_detail_provider.dart';
@@ -135,9 +136,31 @@ void main() {
 
       await expectLater(
         repository.fetchCharacterDetail(_characterId),
-        throwsA(anything),
+        throwsA(
+          isA<CharacterFailure>().having(
+            (failure) => failure.code,
+            'code',
+            CharacterErrorCode.detailNotCachedOffline,
+          ),
+        ),
       );
       expect(server.requests, isNotEmpty);
+    });
+
+    test('en ligne sans cache et serveur injoignable : message réseau '
+        'habituel (pas le message « jamais ouverte »)', () async {
+      server.network = _Network.down;
+
+      await expectLater(
+        repository.fetchCharacterDetail(_characterId),
+        throwsA(
+          isA<CharacterFailure>().having(
+            (failure) => failure.code,
+            'code',
+            CharacterErrorCode.network,
+          ),
+        ),
+      );
     });
 
     test('PV : la fiche relue depuis le cache affiche la valeur mise en '
