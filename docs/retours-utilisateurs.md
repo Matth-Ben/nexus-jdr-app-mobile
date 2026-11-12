@@ -457,5 +457,6 @@ Avis croisés (tous consultatifs, aucun ne tranche) :
   règles d'égalité et d'édition d'initiative à fixer ; « tour en cours » porté par l'état serveur ; hors ligne en lecture
   seule sans file ; seulement 2 comptes QA (un 3e nécessaire pour tester proprement tour suivant et notification).
 
-Décision de Matthias : à consigner ici après les choix soumis le 12/11/2026 (groupe ou Histoire, emplacement UI, règles
-d'égalité et d'édition, périmètre V1).
+**Décision de Matthias (12/11/2026) :** combat porté par le **groupe** (MJ = propriétaire), bandeau + écran dédié, le MJ
+réordonne les égalités (chaque joueur corrige son initiative, le MJ peut tout éditer), V1 avec « ×N » et état lisible si le MJ
+quitte. Spec consolidée et critères d'acceptation : `docs/combat-groupe.md`.
