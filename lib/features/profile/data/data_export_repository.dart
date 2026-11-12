@@ -318,6 +318,13 @@ Map<String, dynamic> _inventoryItemToJson(CharacterInventoryItem item) {
     'requiresAttunement': item.requiresAttunement,
     'consumable': item.consumable,
     'notes': item.notes,
+    'customKind': item.customKind,
+    'customMagicBonus': item.magicBonus,
+    'customAcBase': item.customAcBase,
+    'customArmorCategory': item.customArmorCategory,
+    'customRequiresAttunement': item.customRequiresAttunement,
+    'customWeaponCategory': item.customWeaponCategory,
+    'customWeaponRange': item.customWeaponRange,
     'weaponProperties': item.weaponProperties == null
         ? null
         : {

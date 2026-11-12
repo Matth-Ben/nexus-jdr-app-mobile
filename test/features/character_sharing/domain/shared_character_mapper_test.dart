@@ -292,6 +292,63 @@ void main() {
       expect(item.weaponProperties, isNull);
     });
 
+    test('P7 : objet personnalisé enrichi (clés plates snake_case, poids '
+        'custom_weight)', () {
+      final detail = mapSharedCharacterJson({
+        'character': {'id': 'char-1', 'name': 'Test'},
+        'inventory': [
+          {
+            'id': 'inv-4',
+            'item_id': null,
+            'custom_name': 'Targe runique',
+            'quantity': 2,
+            'equipped': true,
+            'custom_kind': 'bouclier',
+            'custom_magic_bonus': 1,
+            'custom_ac_base': 2,
+            'custom_armor_category': null,
+            'custom_weight': 3.5,
+            'custom_requires_attunement': true,
+            'custom_weapon_category': null,
+            'custom_weapon_range': null,
+          },
+        ],
+      });
+
+      final item = detail.inventory.single;
+      expect(item.customKind, 'bouclier');
+      expect(item.magicBonus, 1);
+      expect(item.customAcBase, 2);
+      expect(item.customRequiresAttunement, isTrue);
+      expect(item.unitWeight, 3.5);
+      expect(item.totalWeight, 7);
+      expect(item.armorProperties, isNull);
+    });
+
+    test('P7 : fiche partagée ancienne réponse (sans clés enrichies) reste '
+        'lisible', () {
+      final detail = mapSharedCharacterJson({
+        'character': {'id': 'char-1', 'name': 'Test'},
+        'inventory': [
+          {
+            'id': 'inv-5',
+            'item_id': null,
+            'custom_name': 'Vieux truc',
+            'quantity': 1,
+            'equipped': false,
+          },
+        ],
+      });
+
+      final item = detail.inventory.single;
+      expect(item.customKind, isNull);
+      expect(item.magicBonus, 0);
+      expect(item.customAcBase, isNull);
+      expect(item.unitWeight, isNull);
+      expect(item.totalWeight, isNull);
+      expect(item.customRequiresAttunement, isFalse);
+    });
+
     test('renvoie une fiche exploitable même avec un json quasi vide '
         '(character absent)', () {
       final detail = mapSharedCharacterJson(const {});

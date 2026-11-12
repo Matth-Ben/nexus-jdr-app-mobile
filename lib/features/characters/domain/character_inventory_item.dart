@@ -32,7 +32,50 @@ class CharacterInventoryItem {
     this.weaponSlot,
     this.acBonus,
     this.acBonusKind,
+    this.customKind,
+    this.magicBonus = 0,
+    this.customAcBase,
+    this.customArmorCategory,
+    this.customRequiresAttunement = false,
+    this.customWeaponCategory,
+    this.customWeaponRange,
   });
+
+  /// `character_inventory.custom_kind` brut ('arme'/'armure'/'bouclier'/
+  /// 'autre'), `null` pour un objet du catalogue ou un ancien objet
+  /// personnalisé sans type : voir [resolvedCustomKind] (P7, lecture seule).
+  final String? customKind;
+
+  /// `character_inventory.custom_magic_bonus` (0..3, `null` en base = 0).
+  /// Lu seulement : aucun calcul (CA, attaque) ne l'utilise encore.
+  final int magicBonus;
+
+  /// `character_inventory.custom_ac_base` (CA de base d'une armure, bonus
+  /// d'un bouclier), `null` si non renseigné. Pas encore utilisé par la CA.
+  final int? customAcBase;
+
+  /// `character_inventory.custom_armor_category` ('legere'/'intermediaire'/
+  /// 'lourde'), `null` si non renseigné.
+  final String? customArmorCategory;
+
+  /// `character_inventory.custom_requires_attunement`. Distinct de
+  /// [requiresAttunement] (inchangé : l'UI ne propose pas encore
+  /// l'harmonisation d'un objet personnalisé).
+  final bool customRequiresAttunement;
+
+  /// `character_inventory.custom_weapon_category` ('courante'/'guerre').
+  final String? customWeaponCategory;
+
+  /// `character_inventory.custom_weapon_range` ('melee'/'distance').
+  final String? customWeaponRange;
+
+  /// Type d'un objet personnalisé : [customKind], ou, pour un ancien objet
+  /// sans type, 'arme' s'il porte un dé de dégâts (sans backfill en base).
+  /// `null` pour un objet du catalogue.
+  String? get resolvedCustomKind {
+    if (!isCustom) return null;
+    return customKind ?? (weaponProperties?.damageDice != null ? 'arme' : null);
+  }
 
   /// `items.ac_bonus` — bonus de CA d'un objet magique (Anneau de
   /// protection +1, Armure +2...), `null` sinon. S'applique selon
@@ -192,31 +235,12 @@ class CharacterInventoryItem {
   /// Copie avec une autre [quantity] superposée depuis la file hors ligne
   /// (usage d'un objet, T5b-3) : le poids total est recalculé comme le mapper
   /// ([unitWeight] x quantité, `null` si le poids unitaire est inconnu).
-  CharacterInventoryItem copyWithQuantity(int quantity) =>
-      CharacterInventoryItem(
-        id: id,
-        itemId: itemId,
-        name: name,
-        category: category,
-        quantity: quantity,
-        equipped: equipped,
-        totalWeight: unitWeight != null && quantity > 0
-            ? unitWeight! * quantity
-            : null,
-        unitWeight: unitWeight,
-        costAmount: costAmount,
-        description: description,
-        rarity: rarity,
-        requiresAttunement: requiresAttunement,
-        isAttuned: isAttuned,
-        consumable: consumable,
-        notes: notes,
-        weaponProperties: weaponProperties,
-        armorProperties: armorProperties,
-        weaponSlot: weaponSlot,
-        acBonus: acBonus,
-        acBonusKind: acBonusKind,
-      );
+  CharacterInventoryItem copyWithQuantity(int quantity) => _copy(
+    quantity: quantity,
+    totalWeight: unitWeight != null && quantity > 0
+        ? unitWeight! * quantity
+        : null,
+  );
 
   /// Copie avec l'état équipé/set d'arme/harmonisé superposé depuis la file
   /// hors ligne (T5a). [weaponSlot] n'est pris en compte que si
@@ -226,14 +250,30 @@ class CharacterInventoryItem {
     bool changeWeaponSlot = false,
     WeaponSlot? weaponSlot,
     bool? isAttuned,
+  }) => _copy(
+    equipped: equipped,
+    isAttuned: isAttuned,
+    weaponSlot: changeWeaponSlot ? weaponSlot : this.weaponSlot,
+  );
+
+  /// Unique point où tous les champs sont recopiés à la main : les deux
+  /// `copyWith*` publics y passent pour ne jamais en perdre un (P7).
+  CharacterInventoryItem _copy({
+    int? quantity,
+    bool? equipped,
+    bool? isAttuned,
+    Object? totalWeight = _keep,
+    Object? weaponSlot = _keep,
   }) => CharacterInventoryItem(
     id: id,
     itemId: itemId,
     name: name,
     category: category,
-    quantity: quantity,
+    quantity: quantity ?? this.quantity,
     equipped: equipped ?? this.equipped,
-    totalWeight: totalWeight,
+    totalWeight: identical(totalWeight, _keep)
+        ? this.totalWeight
+        : totalWeight as double?,
     unitWeight: unitWeight,
     costAmount: costAmount,
     description: description,
@@ -244,11 +284,22 @@ class CharacterInventoryItem {
     notes: notes,
     weaponProperties: weaponProperties,
     armorProperties: armorProperties,
-    weaponSlot: changeWeaponSlot ? weaponSlot : this.weaponSlot,
+    weaponSlot: identical(weaponSlot, _keep)
+        ? this.weaponSlot
+        : weaponSlot as WeaponSlot?,
     acBonus: acBonus,
     acBonusKind: acBonusKind,
+    customKind: customKind,
+    magicBonus: magicBonus,
+    customAcBase: customAcBase,
+    customArmorCategory: customArmorCategory,
+    customRequiresAttunement: customRequiresAttunement,
+    customWeaponCategory: customWeaponCategory,
+    customWeaponRange: customWeaponRange,
   );
 }
+
+const Object _keep = Object();
 
 /// Caractéristiques d'arme — `public.weapon_properties` pour un objet du
 /// catalogue (`category == 'arme'`), ou les colonnes `custom_*` de
