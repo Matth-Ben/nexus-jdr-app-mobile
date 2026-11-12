@@ -7432,6 +7432,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Session expirée. Reconnectez-vous pour importer un personnage.'**
   String get creationSessionExpiredImportErrorMessage;
+
+  /// Titre de la feuille en lecture seule listant tous les états d'un membre (V3-5).
+  ///
+  /// In fr, this message translates to:
+  /// **'États de {name}'**
+  String memberConditionsSheetTitle(String name);
+
+  /// Indication d'accessibilité (hint) de la pastille « +N » d'une carte membre (V3-5).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvre la liste des états'**
+  String get conditionsMoreChipHint;
+
+  /// État vide de la feuille des états d'un membre (V3-5).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun état actif.'**
+  String get memberConditionsSheetEmpty;
 }
 
 class _AppLocalizationsDelegate

@@ -505,6 +505,64 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('V3-5 : onTapMore rend « +N » seul tappable (lecture seule)', (
+      tester,
+    ) async {
+      var more = 0;
+      await _pump(
+        tester,
+        ConditionsZone(
+          conditions: _five,
+          maxFullChips: 2,
+          onTapMore: () => more++,
+        ),
+      );
+      expect(find.byType(InkWell), findsOneWidget);
+      await tester.tap(find.text('Aveuglé'));
+      expect(more, 0);
+      await tester.tap(find.text('+3'));
+      expect(more, 1);
+    });
+
+    testWidgets('V3-5 : sans onTapMore ni onEdit, « +N » n’est pas un bouton', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _pump(
+        tester,
+        const ConditionsZone(conditions: _five, maxFullChips: 2),
+      );
+      expect(find.byType(InkWell), findsNothing);
+      final node = tester.getSemantics(
+        find.bySemanticsLabel(RegExp('^3 autres états')),
+      );
+      expect(node.flagsCollection.isButton, isFalse);
+      expect(node.hint, isEmpty);
+      handle.dispose();
+    });
+
+    testWidgets('V3-5 : onTapMore prime sur onEdit pour « +N » seulement', (
+      tester,
+    ) async {
+      var more = 0;
+      var edit = 0;
+      await _pump(
+        tester,
+        ConditionsZone(
+          conditions: _five,
+          maxFullChips: 3,
+          onEdit: () => edit++,
+          onTapMore: () => more++,
+        ),
+      );
+      await tester.tap(find.text('+2'));
+      expect(more, 1);
+      expect(edit, 0);
+      await tester.tap(find.text('Aveuglé'));
+      expect(edit, 1);
+      expect(more, 1);
+    });
+
     testWidgets('PixelIcon exclu de l arbre sémantique', (tester) async {
       final handle = tester.ensureSemantics();
       await _pump(

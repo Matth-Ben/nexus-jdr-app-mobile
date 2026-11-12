@@ -4590,4 +4590,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get creationSessionExpiredImportErrorMessage =>
       'Session expired. Sign in again to import a character.';
+
+  @override
+  String memberConditionsSheetTitle(String name) {
+    return '$name\'s conditions';
+  }
+
+  @override
+  String get conditionsMoreChipHint => 'Opens the list of conditions';
+
+  @override
+  String get memberConditionsSheetEmpty => 'No active condition.';
 }
