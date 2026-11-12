@@ -3269,44 +3269,73 @@ void main() {
         await finish(tester);
       });
 
-      Future<void> addSecondAlert(WidgetTester tester) => tester.runAsync(
-        () => SyncAlertStore(db).add(
-          ownerId: 'owner-1',
-          kind: SyncAlertKind.abandon,
-          characterId: 'c2',
-          characterName: 'Borgan Pierrefort',
-          dataKind: 'hp',
-          serverValue: {'currentHp': 3, 'maxHp': 20},
-        ),
-      );
+      Future<void> addMoreAlerts(WidgetTester tester) =>
+          tester.runAsync(() async {
+            final store = SyncAlertStore(db);
+            await store.add(
+              ownerId: 'owner-1',
+              kind: SyncAlertKind.abandon,
+              characterId: 'c2',
+              characterName: 'Borgan Pierrefort',
+              dataKind: 'hp',
+              serverValue: {'currentHp': 3, 'maxHp': 20},
+            );
+            await store.add(
+              ownerId: 'owner-1',
+              kind: SyncAlertKind.conflict,
+              characterId: 'c3',
+              characterName: 'Halltesse Ambrelune',
+              dataKind: 'hp',
+              serverValue: {'currentHp': 3, 'maxHp': 20},
+            );
+          });
 
+      // Critère d'acceptation de la fiche A (D211) : à x2,0, avec 3 alertes ET
+      // le bandeau de mise à jour, le bandeau ne reste plus qu'un libellé court
+      // plafonné à 20 % de la hauteur. Le texte de la première alerte n'est
+      // plus dans le bandeau : sa hauteur ne dépend plus de la longueur des
+      // messages.
       for (final size in const [Size(360, 640), Size(320, 568)]) {
         testWidgets('x2,0 sur ${size.width.toInt()}x${size.height.toInt()} : '
-            'alerte de synchro longue + mise à jour, sans chevauchement et '
-            'avec de la place pour la liste', (tester) async {
+            '3 alertes + mise à jour, sans chevauchement, bandeau plafonné à '
+            '20 %, place pour la liste', (tester) async {
           surface(tester, size);
           fakeCharacterRepository.charactersToReturn = many(8);
           await addAlert(tester);
-          await addSecondAlert(tester);
+          await addMoreAlerts(tester);
           await pumpWithSync(tester, scale: 2, withUpdate: true);
 
           expect(tester.takeException(), isNull);
+          expect(find.text('3 alertes de synchronisation'), findsOneWidget);
           final band = find.byKey(const Key('characterListSyncBandScroll'));
           final update = find.text(
             'Nouvelle version disponible',
             skipOffstage: false,
           );
           final footer = find.byKey(const Key('characterListFooterScroll'));
+          final scroll = tester.getRect(find.byType(CustomScrollView));
           final bandRect = tester.getRect(band);
           final updateRect = tester.getRect(update);
           // Pas de chevauchement au repos : la mise à jour est sous le bandeau.
           expect(updateRect.top, greaterThanOrEqualTo(bandRect.bottom - 0.5));
-          // Le bandeau reste plafonné à 30 %, avec défilement interne.
-          expect(bandRect.height, lessThanOrEqualTo(size.height * 0.3 + 0.5));
+          // Le bandeau reste plafonné à 20 %, avec défilement interne.
+          expect(bandRect.height, lessThanOrEqualTo(size.height * 0.2 + 0.5));
+
+          // Au repos : la zone de défilement principale (hors pied fixe)
+          // mesure >= 40 % de la hauteur de l'écran...
+          expect(scroll.height, greaterThanOrEqualTo(size.height * 0.4));
+          // ... et, sous le bandeau épinglé, il en reste au moins 33 % pour le
+          // contenu qui défile (mise à jour + liste). Le critère de 40 % de la
+          // fiche A n'est atteignable qu'après défilement (ci-dessous) : au
+          // repos, l'en-tête (136 px à x2,0 sur 320x568) + la bannière de mise
+          // à jour (120 px) occupent à eux seuls 256 des 440 px (voir D211).
+          final belowBand = scroll.bottom - bandRect.bottom;
+          expect(belowBand, greaterThanOrEqualTo(size.height * 0.33));
+
           // Défilé jusqu'à ce que l'en-tête soit sorti, le bandeau reste
           // épinglé en haut : la zone de la liste (sous lui, au-dessus du pied)
           // garde au moins 40 % de la hauteur de l'écran.
-          await scrollBy(tester, 150);
+          await scrollBy(tester, 400);
           final pinned = tester.getRect(band);
           expect(pinned.top, lessThan(1));
           final listArea = tester.getRect(footer).top - pinned.bottom;
@@ -3316,27 +3345,46 @@ void main() {
         });
       }
 
-      testWidgets('x3,0 sur 320x568 : bandeau épinglé plafonné à 30 % de la '
-          'hauteur, tout reste atteignable', (tester) async {
+      testWidgets('x3,0 sur 320x568 : 3 alertes + mise à jour, bandeau '
+          'épinglé plafonné à 20 % de la hauteur, aucune cible coupée, liste '
+          'atteignable', (tester) async {
         surface(tester, const Size(320, 568));
         fakeCharacterRepository.charactersToReturn = many(8);
         await addAlert(tester);
+        await addMoreAlerts(tester);
         await pumpWithSync(tester, scale: 3, withUpdate: true);
 
         expect(tester.takeException(), isNull);
-        expect(
-          find.byKey(const Key('characterListSyncBandScroll')),
-          findsOneWidget,
-        );
-        expect(
-          tester
-              .getSize(find.byKey(const Key('characterListSyncBandScroll')))
-              .height,
-          lessThanOrEqualTo(568 * 0.3 + 0.5),
-        );
+        final band = find.byKey(const Key('characterListSyncBandScroll'));
+        expect(band, findsOneWidget);
+        expect(tester.getSize(band).height, lessThanOrEqualTo(568 * 0.2 + 0.5));
+        // Le bandeau (défilement interne) laisse atteindre sa ligne d'action
+        // et sa cible reste entière (>= 44) dans l'écran.
+        await tester.ensureVisible(find.text('Voir les alertes'));
+        await tester.pump();
+        final banner = tester.getRect(find.byType(AlertBanner));
+        expect(banner.height, greaterThanOrEqualTo(44));
+        expect(banner.left, greaterThanOrEqualTo(0));
+        expect(banner.right, lessThanOrEqualTo(320.5));
         // Le dernier personnage reste atteignable en défilant.
         await scrollUntilText(tester, 'Perso 07');
         expect(tester.takeException(), isNull);
+        await finish(tester);
+      });
+
+      testWidgets('toucher le bandeau de la liste ouvre le panneau des '
+          'alertes', (tester) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(3);
+        await addAlert(tester);
+        await pumpWithSync(tester);
+
+        await tester.tap(find.byType(AlertBanner));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        await flushDb(tester);
+        expect(find.text('ALERTES DE SYNCHRO'), findsOneWidget);
+        expect(find.textContaining('PV de Aria'), findsOneWidget);
         await finish(tester);
       });
     });

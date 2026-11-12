@@ -214,23 +214,60 @@ void main() {
     expect(_kind(engine), SyncBannerKind.synced);
   });
 
-  engineTest('règle 2 : une alerte à la fois (la plus ancienne), fermer '
-      'affiche la suivante, compteur « +N »', (tester) async {
+  engineTest('règle 2 : un seul bandeau d\'alertes portant le TOTAL, qui suit '
+      'les écartements jusqu\'à disparaître', (tester) async {
     build();
     engine.setAlerts([_alert(1), _alert(2), _alert(3)]);
-    expect(engine.state.alert!.id, 1);
-    expect(engine.state.moreAlerts, 2);
+    expect(_kind(engine), SyncBannerKind.alert);
+    expect(engine.state.alertCount, 3);
 
     engine.setAlerts([_alert(2), _alert(3)]);
-    expect(engine.state.alert!.id, 2);
-    expect(engine.state.moreAlerts, 1);
+    expect(_kind(engine), SyncBannerKind.alert);
+    expect(engine.state.alertCount, 2);
 
     engine.setAlerts([_alert(3)]);
-    expect(engine.state.alert!.id, 3);
-    expect(engine.state.moreAlerts, 0);
+    expect(engine.state.alertCount, 1);
 
     engine.setAlerts(const []);
     expect(_kind(engine), SyncBannerKind.none);
+    expect(engine.state.alertCount, 0);
+  });
+
+  engineTest('égalité sur le total : une alerte mise à jour sur place (même '
+      'total, contenu différent) n\'émet rien ; un changement de total émet', (
+    tester,
+  ) async {
+    // Avant le panneau des alertes, le bandeau affichait le texte de la
+    // première alerte et l'égalité portait aussi sur son contenu. Il ne porte
+    // plus que le total (le panneau observe sa propre liste) : le contenu
+    // d'une alerte ne doit donc PAS ré-émettre.
+    build();
+    final emitted = <SyncBannerState>[];
+    engine.onChanged = emitted.add;
+    engine.setAlerts([_alert(1)]);
+    expect(emitted.length, 1);
+
+    engine.setAlerts([
+      SyncAlert(
+        id: 1,
+        ownerId: 'owner-1',
+        kind: SyncAlertKind.conflict,
+        characterId: 'c1',
+        characterName: 'Autre nom',
+        dataKind: 'hp',
+        serverValue: const {'currentHp': 1},
+        createdAt: DateTime.utc(2026, 11, 11),
+      ),
+    ]);
+    expect(emitted.length, 1, reason: 'même total : pas de ré-émission');
+
+    engine.setAlerts([_alert(1), _alert(2)]);
+    expect(emitted.length, 2, reason: 'le total change : émission');
+    expect(emitted.last.alertCount, 2);
+    expect(
+      const SyncBannerState(SyncBannerKind.alert, alertCount: 2),
+      isNot(const SyncBannerState(SyncBannerKind.alert, alertCount: 3)),
+    );
   });
 
   engineTest('une alerte ne déclenche pas de « Synchronisé » parasite '

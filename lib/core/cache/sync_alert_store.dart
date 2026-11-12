@@ -158,6 +158,67 @@ class SyncAlertStore {
     )..where((row) => row.ownerId.equals(ownerId) & row.id.equals(id))).go();
   }
 
+  /// Ferme (supprime) toutes les alertes de [ownerId] et rend celles qui ont
+  /// été supprimées (pour [restore] en cas d'annulation). Ne touche jamais aux
+  /// écritures en attente.
+  Future<List<SyncAlert>> dismissAll({required String ownerId}) async {
+    // Transaction : une alerte ajoutée entre la lecture et la suppression ne
+    // doit pas disparaître sans pouvoir être restaurée.
+    return _db.transaction(() async {
+      final removed = await allForOwner(ownerId);
+      await removeAllForOwner(ownerId);
+      return removed;
+    });
+  }
+
+  /// Ré-insère [alert] avec son `id` et son `createdAt` d'origine (annulation
+  /// d'un « Écarter »). La table est `AUTOINCREMENT` : l'`id` d'une ligne
+  /// supprimée n'est jamais réattribué à une autre, la ré-insertion ne peut
+  /// donc pas entrer en collision. Sans effet si l'`id` existe déjà.
+  ///
+  /// Règle de dédoublonnage de `SyncAlertRecorder` : un seul conflit ouvert par
+  /// (compte, personnage, `dataKind`). Si un nouveau conflit a été enregistré
+  /// depuis l'écartement, l'alerte restaurée serait périmée : on ne la
+  /// ré-insère pas. Les abandons ne se dédoublonnent pas, ils sont toujours
+  /// restaurés.
+  Future<void> restore(SyncAlert alert) async {
+    if (alert.kind == SyncAlertKind.conflict) {
+      final open = await findOpenConflict(
+        ownerId: alert.ownerId,
+        characterId: alert.characterId,
+        dataKind: alert.dataKind,
+      );
+      if (open != null && open.id != alert.id) return;
+    }
+    await _db
+        .into(_db.syncAlerts)
+        .insert(
+          SyncAlertsCompanion.insert(
+            id: Value(alert.id),
+            ownerId: alert.ownerId,
+            kind: alert.kind.storageKey,
+            characterId: alert.characterId,
+            characterName: alert.characterName,
+            dataKind: alert.dataKind,
+            serverValue: Value(
+              alert.serverValue == null ? null : jsonEncode(alert.serverValue),
+            ),
+            createdAt: alert.createdAt,
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+  }
+
+  /// [restore] de toutes les [alerts] en une transaction : tout ou rien (une
+  /// erreur n'en laisse pas la moitié restaurée).
+  Future<void> restoreAll(List<SyncAlert> alerts) async {
+    await _db.transaction(() async {
+      for (final alert in alerts) {
+        await restore(alert);
+      }
+    });
+  }
+
   Future<void> removeAllForOwner(String ownerId) async {
     await (_db.delete(
       _db.syncAlerts,

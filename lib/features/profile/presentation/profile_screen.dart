@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +14,7 @@ import '../../../core/widgets/info_banner.dart';
 import '../../../core/widgets/menu_tile.dart';
 import '../../../core/widgets/profile_avatar.dart';
 import '../../../core/widgets/settings_list_card.dart';
+import '../../../core/widgets/sync_alerts_sheet.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../auth/domain/auth_failure.dart';
@@ -132,6 +135,7 @@ class ProfileScreen extends ConsumerWidget {
                         label: l10n.profileMenuPrivacy,
                         onTap: () => context.push('/profile/privacy'),
                       ),
+                      const _SyncAlertsTile(),
                       MenuTile(
                         standalone: false,
                         icon: Icons.help_outline,
@@ -191,6 +195,35 @@ class ProfileScreen extends ConsumerWidget {
         ),
       );
     }
+  }
+}
+
+/// Ligne « Alertes de synchronisation » : ouvre le panneau des alertes
+/// (`showSyncAlertsSheet`, données locales : actif hors ligne). Badge avec le
+/// nombre d'alertes s'il y en a (chiffre dans le texte, jamais la couleur
+/// seule), sous-libellé « Aucune » sinon. Distinct de la ligne « Dernière
+/// synchronisation » du pied de page, qui reste un simple texte d'état.
+class _SyncAlertsTile extends ConsumerWidget {
+  const _SyncAlertsTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final count = ref.watch(syncAlertsProvider).value?.length ?? 0;
+    final hasAlerts = count > 0;
+    return MenuTile(
+      standalone: false,
+      icon: hasAlerts ? Icons.sync_problem : Icons.sync,
+      iconColor: hasAlerts ? AppColors.accentBrick : null,
+      label: l10n.syncAlertsProfileRowLabel,
+      subtitle: hasAlerts ? null : l10n.syncAlertsProfileRowNone,
+      badgeText: hasAlerts ? '$count' : null,
+      // Sans alerte : le libellé et « Aucune » visibles sont lus tels quels.
+      semanticsLabel: hasAlerts
+          ? l10n.syncAlertsProfileRowSemantics(count)
+          : null,
+      onTap: () => unawaited(showSyncAlertsSheet(context)),
+    );
   }
 }
 

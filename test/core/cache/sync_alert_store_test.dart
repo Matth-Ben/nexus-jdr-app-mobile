@@ -111,6 +111,180 @@ void main() {
       expect(await SyncStateStore(second).lastSuccess('owner-1'), isNotNull);
       await second.close();
     });
+
+    test('la table est AUTOINCREMENT : l\'id d\'une alerte supprimée n\'est '
+        'jamais réattribué à une nouvelle', () async {
+      await add('owner-1', 'Aria');
+      await add('owner-1', 'Borin');
+      final last = (await alerts.allForOwner('owner-1')).last;
+      await alerts.dismiss(ownerId: 'owner-1', id: last.id);
+
+      await add('owner-1', 'Cyrus');
+      final cyrus = (await alerts.allForOwner('owner-1')).last;
+      expect(cyrus.id, greaterThan(last.id));
+
+      // Le DDL généré le dit aussi explicitement.
+      final rows = await db
+          .customSelect(
+            "SELECT sql FROM sqlite_master WHERE name = 'sync_alerts'",
+          )
+          .get();
+      expect(rows.single.read<String>('sql'), contains('AUTOINCREMENT'));
+    });
+
+    test('restore : même id, même createdAt, mêmes champs (annulation d\'un '
+        '« Écarter »)', () async {
+      final created = DateTime(2026, 11, 10, 8, 30);
+      await SyncAlertStore(db, now: () => created).add(
+        ownerId: 'owner-1',
+        kind: SyncAlertKind.conflict,
+        characterId: 'c1',
+        characterName: 'Aria',
+        dataKind: 'hp',
+        serverValue: {'currentHp': 3, 'maxHp': 9},
+      );
+      await add('owner-1', 'Borin');
+      final aria = (await alerts.allForOwner('owner-1'))
+          .firstWhere((a) => a.characterName == 'Aria');
+
+      await alerts.dismiss(ownerId: 'owner-1', id: aria.id);
+      // Une nouvelle alerte arrive entre-temps : elle ne reprend pas l'id.
+      await add('owner-1', 'Cyrus');
+      await alerts.restore(aria);
+
+      final back = (await alerts.allForOwner('owner-1'))
+          .firstWhere((a) => a.characterName == 'Aria');
+      expect(back.id, aria.id);
+      expect(back.createdAt, created);
+      expect(back.kind, SyncAlertKind.conflict);
+      expect(back.characterId, 'c1');
+      expect(back.dataKind, 'hp');
+      expect(back.serverValue, {'currentHp': 3, 'maxHp': 9});
+      expect(back.ownerId, 'owner-1');
+      expect(await alerts.allForOwner('owner-1'), hasLength(3));
+    });
+
+    Future<void> addConflict(String owner, String character, String dataKind) =>
+        alerts.add(
+          ownerId: owner,
+          kind: SyncAlertKind.conflict,
+          characterId: character,
+          characterName: character,
+          dataKind: dataKind,
+        );
+
+    test(
+      'restore : un conflit écarté n\'est PAS ré-inséré si un nouveau '
+      'conflit ouvert existe pour le même (compte, personnage, dataKind)',
+      () async {
+        await addConflict('owner-1', 'c1', 'hp');
+        final old = (await alerts.allForOwner('owner-1')).single;
+        await alerts.dismiss(ownerId: 'owner-1', id: old.id);
+        await addConflict('owner-1', 'c1', 'hp');
+
+        await alerts.restore(old);
+
+        final left = await alerts.allForOwner('owner-1');
+        expect(left, hasLength(1));
+        expect(left.single.id, isNot(old.id), reason: 'seule la plus récente');
+      },
+    );
+
+    test('restore : conflit restauré si l\'ouvert concerne un autre '
+        'personnage, un autre dataKind ou un autre compte ; abandon toujours '
+        'restauré', () async {
+      await addConflict('owner-1', 'c1', 'hp');
+      final old = (await alerts.allForOwner('owner-1')).single;
+      await alerts.dismiss(ownerId: 'owner-1', id: old.id);
+      await addConflict('owner-1', 'c2', 'hp');
+      await addConflict('owner-1', 'c1', 'xp');
+      await addConflict('owner-2', 'c1', 'hp');
+      await alerts.restore(old);
+      expect(await alerts.allForOwner('owner-1'), hasLength(3));
+
+      await add('owner-1', 'Aria');
+      final abandon = (await alerts.allForOwner('owner-1')).last;
+      await alerts.dismiss(ownerId: 'owner-1', id: abandon.id);
+      await add('owner-1', 'Aria');
+      await alerts.restore(abandon);
+      expect(await alerts.allForOwner('owner-1'), hasLength(5));
+    });
+
+    test(
+      'restoreAll : tout ou rien (une erreur n\'en laisse pas la moitié)',
+      () async {
+        await add('owner-1', 'Aria');
+        await add('owner-1', 'Borin');
+        final removed = await alerts.dismissAll(ownerId: 'owner-1');
+        final broken = SyncAlert(
+          id: 999,
+          ownerId: 'owner-1',
+          kind: SyncAlertKind.abandon,
+          characterId: 'c',
+          characterName: 'Cassée',
+          dataKind: 'hp',
+          serverValue: {'x': Object()},
+          createdAt: DateTime(2026),
+        );
+        await expectLater(
+          alerts.restoreAll([...removed, broken]),
+          throwsA(anything),
+        );
+        expect(await alerts.allForOwner('owner-1'), isEmpty);
+
+        await alerts.restoreAll(removed);
+        expect(await alerts.allForOwner('owner-1'), hasLength(2));
+      },
+    );
+
+    test('restore : sans doublon si l\'id existe déjà, et une valeur serveur '
+        'absente reste absente', () async {
+      await alerts.add(
+        ownerId: 'owner-1',
+        kind: SyncAlertKind.abandon,
+        characterId: 'c1',
+        characterName: 'Aria',
+        dataKind: 'class_feature',
+      );
+      final only = (await alerts.allForOwner('owner-1')).single;
+      await alerts.restore(only);
+      expect(await alerts.allForOwner('owner-1'), hasLength(1));
+
+      await alerts.dismiss(ownerId: 'owner-1', id: only.id);
+      await alerts.restore(only);
+      expect((await alerts.allForOwner('owner-1')).single.serverValue, isNull);
+    });
+
+    test(
+      'dismissAll : supprime toutes les alertes du compte et les rend, '
+      'sans toucher aux autres comptes ni aux écritures en attente',
+      () async {
+        await add('owner-1', 'Aria');
+        await add('owner-1', 'Borin');
+        await add('owner-2', 'Autre');
+        await queue.enqueue(
+          characterId: 'c1',
+          ownerId: 'owner-1',
+          kind: PendingCharacterWriteKind.hp,
+          targetId: '',
+          payload: {'currentHp': 1, 'temporaryHp': 0},
+        );
+
+        final removed = await alerts.dismissAll(ownerId: 'owner-1');
+        expect(removed.map((a) => a.characterName), ['Aria', 'Borin']);
+        expect(await alerts.allForOwner('owner-1'), isEmpty);
+        expect(await alerts.allForOwner('owner-2'), hasLength(1));
+        expect(await queue.watchPendingCount('owner-1').first, 1);
+
+        for (final alert in removed) {
+          await alerts.restore(alert);
+        }
+        expect(
+          (await alerts.allForOwner('owner-1')).map((a) => a.id),
+          removed.map((a) => a.id),
+        );
+      },
+    );
   });
 
   group('SyncStateStore', () {
