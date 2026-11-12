@@ -106,17 +106,19 @@ void main() {
   });
 
   group('étape 1 : type d\'objet', () {
-    testWidgets('deux types seulement (Arme, Objet magique ou autre), ni '
-        'Armure ni Bouclier, pied réduit à « Annuler »', (tester) async {
+    testWidgets('quatre types (Arme, Armure, Bouclier, Objet magique ou '
+        'autre), pied réduit à « Annuler »', (tester) async {
       await _open(tester);
 
       expect(find.text('TYPE D\'OBJET'), findsOneWidget);
       expect(find.byKey(const Key('customItemKindWeapon')), findsOneWidget);
+      expect(find.byKey(const Key('customItemKindArmor')), findsOneWidget);
+      expect(find.byKey(const Key('customItemKindShield')), findsOneWidget);
       expect(find.byKey(const Key('customItemKindOther')), findsOneWidget);
       expect(find.text('Arme'), findsOneWidget);
+      expect(find.text('Armure'), findsOneWidget);
+      expect(find.text('Bouclier'), findsOneWidget);
       expect(find.text('Objet magique ou autre'), findsOneWidget);
-      expect(find.text('Armure'), findsNothing);
-      expect(find.text('Bouclier'), findsNothing);
       expect(find.text('ANNULER'), findsOneWidget);
       expect(_addButton, findsNothing);
       // Aucun champ de formulaire avant le choix du type.
@@ -128,7 +130,12 @@ void main() {
     ) async {
       await _open(tester);
 
-      for (final key in ['customItemKindWeapon', 'customItemKindOther']) {
+      for (final key in [
+        'customItemKindWeapon',
+        'customItemKindArmor',
+        'customItemKindShield',
+        'customItemKindOther',
+      ]) {
         expect(
           tester.getSize(find.byKey(Key(key))).height,
           greaterThanOrEqualTo(64),

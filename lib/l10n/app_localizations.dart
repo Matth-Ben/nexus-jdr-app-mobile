@@ -7912,6 +7912,166 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Maîtrise non évaluée'**
   String get characterEquippedWeaponsCardProficiencyUnknown;
+
+  /// Tuile « Armure » de l'étape 1 du formulaire d'objet personnalisé, et valeur de la ligne « Type ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Armure'**
+  String get customItemTypeArmorTitle;
+
+  /// Sous-titre de la tuile « Armure » (étape 1).
+  ///
+  /// In fr, this message translates to:
+  /// **'Catégorie, CA de base, bonus magique'**
+  String get customItemTypeArmorSubtitle;
+
+  /// Tuile « Bouclier » de l'étape 1, et valeur de la ligne « Type ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Bouclier'**
+  String get customItemTypeShieldTitle;
+
+  /// Sous-titre de la tuile « Bouclier » (étape 1).
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonus de CA, bonus magique'**
+  String get customItemTypeShieldSubtitle;
+
+  /// Libellé de section de la catégorie d'une armure personnalisée.
+  ///
+  /// In fr, this message translates to:
+  /// **'CATÉGORIE D\'ARMURE'**
+  String get customItemArmorCategorySectionLabel;
+
+  /// Catégorie d'armure « légère » (valeur stockée : legere).
+  ///
+  /// In fr, this message translates to:
+  /// **'Légère'**
+  String get customItemArmorCategoryLight;
+
+  /// Catégorie d'armure « intermédiaire » (valeur stockée : intermediaire).
+  ///
+  /// In fr, this message translates to:
+  /// **'Intermédiaire'**
+  String get customItemArmorCategoryMedium;
+
+  /// Catégorie d'armure « lourde » (valeur stockée : lourde).
+  ///
+  /// In fr, this message translates to:
+  /// **'Lourde'**
+  String get customItemArmorCategoryHeavy;
+
+  /// Libellé de section de la CA de base d'une armure personnalisée.
+  ///
+  /// In fr, this message translates to:
+  /// **'CA DE BASE'**
+  String get customItemArmorClassSectionLabel;
+
+  /// Exemple dans le champ CA de base.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. 14'**
+  String get customItemArmorClassHint;
+
+  /// Légende sous le champ CA de base : une aide, jamais une limite.
+  ///
+  /// In fr, this message translates to:
+  /// **'Légère 11-12, intermédiaire 12-15, lourde 14-18 (indicatif : vous pouvez saisir une autre valeur).'**
+  String get customItemArmorClassLegend;
+
+  /// Erreur inline du champ CA de base d'une armure.
+  ///
+  /// In fr, this message translates to:
+  /// **'Entrez une CA entre 1 et 30.'**
+  String get customItemArmorClassError;
+
+  /// Ligne en lecture seule du bonus de Dextérité selon la catégorie d'armure.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonus de Dextérité : {value}'**
+  String customItemArmorDexLine(String value);
+
+  /// Valeur du bonus de Dextérité d'une armure légère.
+  ///
+  /// In fr, this message translates to:
+  /// **'illimité'**
+  String get customItemArmorDexUnlimited;
+
+  /// Valeur du bonus de Dextérité d'une armure intermédiaire.
+  ///
+  /// In fr, this message translates to:
+  /// **'plafonné à +2'**
+  String get customItemArmorDexCapped;
+
+  /// Valeur du bonus de Dextérité d'une armure lourde.
+  ///
+  /// In fr, this message translates to:
+  /// **'aucun'**
+  String get customItemArmorDexNone;
+
+  /// Libellé de section du bonus de CA d'un bouclier personnalisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'BONUS DE CA'**
+  String get customItemShieldBonusSectionLabel;
+
+  /// Exemple dans le champ bonus de CA du bouclier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. 2'**
+  String get customItemShieldBonusHint;
+
+  /// Légende sous le champ bonus de CA du bouclier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un bouclier standard donne +2 à la CA.'**
+  String get customItemShieldBonusLegend;
+
+  /// Erreur inline du champ bonus de CA du bouclier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Entrez un bonus entre 1 et 5.'**
+  String get customItemShieldBonusError;
+
+  /// Champ requis manquant : la CA de base d'une armure.
+  ///
+  /// In fr, this message translates to:
+  /// **'CA de base'**
+  String get customItemMissingArmorClass;
+
+  /// Champ requis manquant : le bonus de CA d'un bouclier.
+  ///
+  /// In fr, this message translates to:
+  /// **'bonus de CA'**
+  String get customItemMissingShieldBonus;
+
+  /// Sous-titre d'une carte d'armure personnalisée.
+  ///
+  /// In fr, this message translates to:
+  /// **'{category, select, legere{Armure légère} intermediaire{Armure intermédiaire} lourde{Armure lourde} other{Armure}} · CA {armorClass} · x{quantity}'**
+  String inventoryCardSubtitleArmor(
+    String category,
+    int armorClass,
+    int quantity,
+  );
+
+  /// Sous-titre d'une carte de bouclier personnalisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bouclier · +{bonus} CA · x{quantity}'**
+  String inventoryCardSubtitleShield(int bonus, int quantity);
+
+  /// Ligne « Bonus de CA » du panneau Infos d'un bouclier personnalisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonus de CA'**
+  String get itemInfoPanelShieldBonusLabel;
+
+  /// Ligne « Catégorie d'armure » du panneau Infos d'une armure personnalisée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Catégorie d\'armure'**
+  String get itemInfoPanelArmorCategoryLabel;
 }
 
 class _AppLocalizationsDelegate

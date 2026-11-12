@@ -89,6 +89,27 @@ class CharacterInventoryItem {
   bool get isWeapon =>
       category == 'arme' || resolvedCustomKind == CustomItemKinds.weapon;
 
+  /// `true` pour un objet personnalisé de type armure ou bouclier (P7).
+  bool get isCustomArmorOrShield =>
+      isCustom &&
+      (customKind == CustomItemKinds.armor ||
+          customKind == CustomItemKinds.shield);
+
+  /// `true` pour une armure/un bouclier du catalogue ou personnalisé : source
+  /// unique du filtre « Armures ».
+  bool get isArmorOrShield =>
+      category == 'armure' || category == 'bouclier' || isCustomArmorOrShield;
+
+  /// Clé de catégorie d'inventaire ('arme'/'armure'/'bouclier') d'un objet
+  /// personnalisé typé, pour son icône et son libellé ; `null` sinon
+  /// (catalogue : voir [category]).
+  String? get customCategoryKey => switch (customKind) {
+    CustomItemKinds.weapon when isCustom => 'arme',
+    CustomItemKinds.armor when isCustom => 'armure',
+    CustomItemKinds.shield when isCustom => 'bouclier',
+    _ => null,
+  };
+
   /// `items.ac_bonus` — bonus de CA d'un objet magique (Anneau de
   /// protection +1, Armure +2...), `null` sinon. S'applique selon
   /// [acBonusKind], voir `domain/armor_class_calculator.dart`.

@@ -6544,5 +6544,133 @@
   "characterEquippedWeaponsCardProficiencyUnknown": "Maîtrise non évaluée",
   "@characterEquippedWeaponsCardProficiencyUnknown": {
     "description": "Mention discrète sous une arme personnalisée sans catégorie."
+  },
+  "customItemTypeArmorTitle": "Armure",
+  "@customItemTypeArmorTitle": {
+    "description": "Tuile « Armure » de l'étape 1 du formulaire d'objet personnalisé, et valeur de la ligne « Type »."
+  },
+  "customItemTypeArmorSubtitle": "Catégorie, CA de base, bonus magique",
+  "@customItemTypeArmorSubtitle": {
+    "description": "Sous-titre de la tuile « Armure » (étape 1)."
+  },
+  "customItemTypeShieldTitle": "Bouclier",
+  "@customItemTypeShieldTitle": {
+    "description": "Tuile « Bouclier » de l'étape 1, et valeur de la ligne « Type »."
+  },
+  "customItemTypeShieldSubtitle": "Bonus de CA, bonus magique",
+  "@customItemTypeShieldSubtitle": {
+    "description": "Sous-titre de la tuile « Bouclier » (étape 1)."
+  },
+  "customItemArmorCategorySectionLabel": "CATÉGORIE D'ARMURE",
+  "@customItemArmorCategorySectionLabel": {
+    "description": "Libellé de section de la catégorie d'une armure personnalisée."
+  },
+  "customItemArmorCategoryLight": "Légère",
+  "@customItemArmorCategoryLight": {
+    "description": "Catégorie d'armure « légère » (valeur stockée : legere)."
+  },
+  "customItemArmorCategoryMedium": "Intermédiaire",
+  "@customItemArmorCategoryMedium": {
+    "description": "Catégorie d'armure « intermédiaire » (valeur stockée : intermediaire)."
+  },
+  "customItemArmorCategoryHeavy": "Lourde",
+  "@customItemArmorCategoryHeavy": {
+    "description": "Catégorie d'armure « lourde » (valeur stockée : lourde)."
+  },
+  "customItemArmorClassSectionLabel": "CA DE BASE",
+  "@customItemArmorClassSectionLabel": {
+    "description": "Libellé de section de la CA de base d'une armure personnalisée."
+  },
+  "customItemArmorClassHint": "Ex. 14",
+  "@customItemArmorClassHint": {
+    "description": "Exemple dans le champ CA de base."
+  },
+  "customItemArmorClassLegend": "Légère 11-12, intermédiaire 12-15, lourde 14-18 (indicatif : vous pouvez saisir une autre valeur).",
+  "@customItemArmorClassLegend": {
+    "description": "Légende sous le champ CA de base : une aide, jamais une limite."
+  },
+  "customItemArmorClassError": "Entrez une CA entre 1 et 30.",
+  "@customItemArmorClassError": {
+    "description": "Erreur inline du champ CA de base d'une armure."
+  },
+  "customItemArmorDexLine": "Bonus de Dextérité : {value}",
+  "@customItemArmorDexLine": {
+    "description": "Ligne en lecture seule du bonus de Dextérité selon la catégorie d'armure.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "customItemArmorDexUnlimited": "illimité",
+  "@customItemArmorDexUnlimited": {
+    "description": "Valeur du bonus de Dextérité d'une armure légère."
+  },
+  "customItemArmorDexCapped": "plafonné à +2",
+  "@customItemArmorDexCapped": {
+    "description": "Valeur du bonus de Dextérité d'une armure intermédiaire."
+  },
+  "customItemArmorDexNone": "aucun",
+  "@customItemArmorDexNone": {
+    "description": "Valeur du bonus de Dextérité d'une armure lourde."
+  },
+  "customItemShieldBonusSectionLabel": "BONUS DE CA",
+  "@customItemShieldBonusSectionLabel": {
+    "description": "Libellé de section du bonus de CA d'un bouclier personnalisé."
+  },
+  "customItemShieldBonusHint": "Ex. 2",
+  "@customItemShieldBonusHint": {
+    "description": "Exemple dans le champ bonus de CA du bouclier."
+  },
+  "customItemShieldBonusLegend": "Un bouclier standard donne +2 à la CA.",
+  "@customItemShieldBonusLegend": {
+    "description": "Légende sous le champ bonus de CA du bouclier."
+  },
+  "customItemShieldBonusError": "Entrez un bonus entre 1 et 5.",
+  "@customItemShieldBonusError": {
+    "description": "Erreur inline du champ bonus de CA du bouclier."
+  },
+  "customItemMissingArmorClass": "CA de base",
+  "@customItemMissingArmorClass": {
+    "description": "Champ requis manquant : la CA de base d'une armure."
+  },
+  "customItemMissingShieldBonus": "bonus de CA",
+  "@customItemMissingShieldBonus": {
+    "description": "Champ requis manquant : le bonus de CA d'un bouclier."
+  },
+  "inventoryCardSubtitleArmor": "{category, select, legere{Armure légère} intermediaire{Armure intermédiaire} lourde{Armure lourde} other{Armure}} · CA {armorClass} · x{quantity}",
+  "@inventoryCardSubtitleArmor": {
+    "description": "Sous-titre d'une carte d'armure personnalisée.",
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "armorClass": {
+        "type": "int"
+      },
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+  "inventoryCardSubtitleShield": "Bouclier · +{bonus} CA · x{quantity}",
+  "@inventoryCardSubtitleShield": {
+    "description": "Sous-titre d'une carte de bouclier personnalisé.",
+    "placeholders": {
+      "bonus": {
+        "type": "int"
+      },
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+  "itemInfoPanelShieldBonusLabel": "Bonus de CA",
+  "@itemInfoPanelShieldBonusLabel": {
+    "description": "Ligne « Bonus de CA » du panneau Infos d'un bouclier personnalisé."
+  },
+  "itemInfoPanelArmorCategoryLabel": "Catégorie d'armure",
+  "@itemInfoPanelArmorCategoryLabel": {
+    "description": "Ligne « Catégorie d'armure » du panneau Infos d'une armure personnalisée."
   }
 }

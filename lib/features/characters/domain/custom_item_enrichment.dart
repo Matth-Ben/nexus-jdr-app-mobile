@@ -113,10 +113,10 @@ class CustomItemEnrichment {
   /// `custom_weapon_range` : voir [CustomWeaponRanges].
   final String? weaponRange;
 
-  /// `custom_ac_base` : réservé à la PR 3 (armure/bouclier).
+  /// `custom_ac_base` : CA de base d'une armure, bonus de CA d'un bouclier.
   final int? acBase;
 
-  /// `custom_armor_category` : réservé à la PR 3 (armure).
+  /// `custom_armor_category` : catégorie d'une armure (jamais d'un bouclier).
   final String? armorCategory;
 
   /// « Harmoniser maintenant » : **transitoire**, jamais écrit dans une
@@ -169,6 +169,10 @@ class CustomItemEnrichment {
         (acBase == null || armorCategory == null)) {
       return false;
     }
+    // La catégorie d'armure (légère/intermédiaire/lourde) n'existe que pour
+    // une armure : jamais écrite pour un bouclier (sa maîtrise se déduit du
+    // type) ni pour un autre type.
+    if (armorCategory != null && kind != CustomItemKinds.armor) return false;
     if (kind == CustomItemKinds.shield && acBase == null) return false;
     return true;
   }

@@ -4943,4 +4943,101 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get characterEquippedWeaponsCardProficiencyUnknown =>
       'Maîtrise non évaluée';
+
+  @override
+  String get customItemTypeArmorTitle => 'Armure';
+
+  @override
+  String get customItemTypeArmorSubtitle =>
+      'Catégorie, CA de base, bonus magique';
+
+  @override
+  String get customItemTypeShieldTitle => 'Bouclier';
+
+  @override
+  String get customItemTypeShieldSubtitle => 'Bonus de CA, bonus magique';
+
+  @override
+  String get customItemArmorCategorySectionLabel => 'CATÉGORIE D\'ARMURE';
+
+  @override
+  String get customItemArmorCategoryLight => 'Légère';
+
+  @override
+  String get customItemArmorCategoryMedium => 'Intermédiaire';
+
+  @override
+  String get customItemArmorCategoryHeavy => 'Lourde';
+
+  @override
+  String get customItemArmorClassSectionLabel => 'CA DE BASE';
+
+  @override
+  String get customItemArmorClassHint => 'Ex. 14';
+
+  @override
+  String get customItemArmorClassLegend =>
+      'Légère 11-12, intermédiaire 12-15, lourde 14-18 (indicatif : vous pouvez saisir une autre valeur).';
+
+  @override
+  String get customItemArmorClassError => 'Entrez une CA entre 1 et 30.';
+
+  @override
+  String customItemArmorDexLine(String value) {
+    return 'Bonus de Dextérité : $value';
+  }
+
+  @override
+  String get customItemArmorDexUnlimited => 'illimité';
+
+  @override
+  String get customItemArmorDexCapped => 'plafonné à +2';
+
+  @override
+  String get customItemArmorDexNone => 'aucun';
+
+  @override
+  String get customItemShieldBonusSectionLabel => 'BONUS DE CA';
+
+  @override
+  String get customItemShieldBonusHint => 'Ex. 2';
+
+  @override
+  String get customItemShieldBonusLegend =>
+      'Un bouclier standard donne +2 à la CA.';
+
+  @override
+  String get customItemShieldBonusError => 'Entrez un bonus entre 1 et 5.';
+
+  @override
+  String get customItemMissingArmorClass => 'CA de base';
+
+  @override
+  String get customItemMissingShieldBonus => 'bonus de CA';
+
+  @override
+  String inventoryCardSubtitleArmor(
+    String category,
+    int armorClass,
+    int quantity,
+  ) {
+    String _temp0 = intl.Intl.selectLogic(category, {
+      'legere': 'Armure légère',
+      'intermediaire': 'Armure intermédiaire',
+      'lourde': 'Armure lourde',
+      'other': 'Armure',
+    });
+    return '$_temp0 · CA $armorClass · x$quantity';
+  }
+
+  @override
+  String inventoryCardSubtitleShield(int bonus, int quantity) {
+    return 'Bouclier · +$bonus CA · x$quantity';
+  }
+
+  @override
+  String get itemInfoPanelShieldBonusLabel => 'Bonus de CA';
+
+  @override
+  String get itemInfoPanelArmorCategoryLabel => 'Catégorie d\'armure';
 }

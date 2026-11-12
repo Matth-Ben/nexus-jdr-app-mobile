@@ -10,6 +10,7 @@ import '../../characters/domain/character_skill_row.dart';
 import '../../characters/domain/character_spell_entry.dart';
 import '../../characters/domain/character_spell_slot.dart';
 import '../../characters/domain/condition_type.dart';
+import '../../characters/domain/custom_armor_properties.dart';
 import '../../characters/domain/prepared_spells_limit.dart';
 import '../../characters/domain/spell_grant_source.dart';
 import 'shared_character_skill_catalog.dart';
@@ -507,7 +508,17 @@ CharacterInventoryItem _mapInventoryItem(Map<String, dynamic> row) {
     weaponProperties: itemId != null
         ? _mapWeaponProperties(_mapOf(row['weapon_properties']))
         : _mapCustomWeaponProperties(row),
-    armorProperties: _mapArmorProperties(_mapOf(row['armor_properties'])),
+    // Armure/bouclier personnalisé (P7) : mêmes propriétés qu'une armure du
+    // catalogue, pour que la CA de la fiche partagée soit identique.
+    armorProperties: itemId != null
+        ? _mapArmorProperties(_mapOf(row['armor_properties']))
+        : customArmorPropertiesOf(
+            kind: row['custom_kind'] as String?,
+            acBase: row['custom_ac_base'] is num
+                ? (row['custom_ac_base'] as num).toInt()
+                : null,
+            armorCategory: row['custom_armor_category'] as String?,
+          ),
     // Colonnes P7 (lecture seule), clés absentes d'une ancienne réponse
     // tolérées.
     customKind: itemId == null ? row['custom_kind'] as String? : null,
