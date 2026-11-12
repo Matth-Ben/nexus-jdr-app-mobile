@@ -72,8 +72,9 @@ Future<void> _pump(
   bool actionsDisabled = false,
   Locale locale = const Locale('fr'),
 }) async {
-  await tester.binding.setSurfaceSize(const Size(800, 2000));
-  addTearDown(() => tester.binding.setSurfaceSize(null));
+  tester.view.physicalSize = const Size(800, 2000);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     // `ProviderScope` sans override : `CharacterGalleryCard`/
     // `CharacterJournalCard` sont des `ConsumerWidget`, mais ne lisent

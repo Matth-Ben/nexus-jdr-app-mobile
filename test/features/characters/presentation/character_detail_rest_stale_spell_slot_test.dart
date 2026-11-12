@@ -452,8 +452,9 @@ const detail = CharacterDetail(
 
 Future<FakeRepository> pumpDetail(WidgetTester tester) async {
   final repository = FakeRepository();
-  await tester.binding.setSurfaceSize(const Size(800, 2400));
-  addTearDown(() => tester.binding.setSurfaceSize(null));
+  tester.view.physicalSize = const Size(800, 2400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
 
   await tester.pumpWidget(
     ProviderScope(

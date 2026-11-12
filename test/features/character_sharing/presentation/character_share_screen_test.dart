@@ -478,8 +478,9 @@ void main() {
   // confirmation sont autrement hors du viewport 800×600 par défaut — même
   // ajustement que `character_detail_screen_test.dart`.
   Future<void> pumpShareScreen(WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1400));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(buildTestWidget());
   }
 
@@ -602,8 +603,9 @@ void main() {
     fakeCharacterRepository.detailToReturn = _baseDetail.copyWith(
       shareToken: 'existing-token',
     );
-    await tester.binding.setSurfaceSize(const Size(800, 1400));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
     await tester.pumpAndSettle();
 

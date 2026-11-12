@@ -26,8 +26,9 @@ void main() {
         '${surface.width.toInt()}x${surface.height.toInt()} police x$scale : '
         'aucun débordement',
         (tester) async {
-          await tester.binding.setSurfaceSize(surface);
-          addTearDown(() => tester.binding.setSurfaceSize(null));
+          tester.view.physicalSize = surface;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
 
           await tester.pumpWidget(
             MaterialApp(

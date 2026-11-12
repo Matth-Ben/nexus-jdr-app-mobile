@@ -105,8 +105,9 @@ Future<_RewardRepository> _pumpOfflineBag(WidgetTester tester) async {
   final repository = _RewardRepository();
   final connectivity = FakeConnectivityChecker(connected: false);
   addTearDown(connectivity.close);
-  await tester.binding.setSurfaceSize(const Size(800, 2400));
-  addTearDown(() => tester.binding.setSurfaceSize(null));
+  tester.view.physicalSize = const Size(800, 2400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -243,8 +244,9 @@ void main() {
   testWidgets('lecture seule (actionsDisabled) : bouton désactivé', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(800, 2400));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,

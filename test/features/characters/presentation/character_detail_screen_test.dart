@@ -710,8 +710,9 @@ void main() {
     WidgetTester tester, {
     Locale locale = const Locale('fr'),
   }) async {
-    await tester.binding.setSurfaceSize(const Size(800, 2400));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(buildTestWidget(locale: locale));
   }
 
@@ -756,8 +757,9 @@ void main() {
       await db.close();
     });
 
-    await tester.binding.setSurfaceSize(const Size(800, 2400));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       buildTestWidget(
         extraOverrides: [
