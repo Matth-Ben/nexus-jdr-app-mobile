@@ -12,10 +12,12 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/sync_status_banner.dart';
+import '../../../core/widgets/undo_snack_bar.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
 import '../../xml_export/presentation/character_xml_export_action.dart';
+import '../data/character_repository.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
@@ -72,6 +74,39 @@ import 'widgets/rest_sheet.dart';
 import 'widgets/spell_slot_correction_sheet.dart';
 import 'widgets/spell_slot_used_snack_bar.dart';
 import 'character_failure_l10n.dart';
+
+/// « Annuler » après un archivage depuis la fiche (V5-6) :
+/// `setArchived(isArchived: false)` puis invalidation de la fiche et de la
+/// liste. Réussite silencieuse ; hors ligne, le personnage reste archivé
+/// (jamais mis en file) et le message habituel est affiché ; erreur : message
+/// générique existant. N'utilise que des valeurs capturées avant l'`await`
+/// d'origine (la fiche peut être fermée entre-temps).
+Future<void> _undoArchiveFromDetail({
+  required CharacterRepository repository,
+  required ProviderContainer container,
+  required ScaffoldMessengerState messenger,
+  required AppLocalizations l10n,
+  required String characterId,
+}) async {
+  void say(String message) =>
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+  try {
+    final outcome = await repository.setArchived(
+      characterId: characterId,
+      isArchived: false,
+    );
+    if (outcome == WriteOutcome.rejectedOffline) {
+      say(l10n.characterOfflineNotPersistedMessage);
+      return;
+    }
+    container.invalidate(characterDetailProvider(characterId));
+    container.invalidate(charactersProvider);
+  } on CharacterFailure catch (failure) {
+    say(failure.localizedWith(l10n));
+  } catch (_) {
+    say(l10n.characterCardActionSheetUpdateStatusGenericError);
+  }
+}
 
 /// Actions du menu "…" du bandeau bois de l'onglet "Personnage" (recettage
 /// direction-artistique du 13/09) — regroupe "Exporter en XML" (déjà
@@ -2093,13 +2128,18 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     // Capturé avant le premier `await` — voir la doc de
     // [_offlineQueuedMessage].
     final l10n = AppLocalizations.of(context)!;
+    // Capturés avant l'`await` : le SnackBar « Annuler » survit à la fermeture
+    // de la fiche (V5-6, même patron que l'archivage depuis la liste, P18).
+    final repository = ref.read(characterRepositoryProvider);
+    final container = ProviderScope.containerOf(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final characterId = widget.characterId;
+    final archiving = !detail.isArchived;
     try {
-      final outcome = await ref
-          .read(characterRepositoryProvider)
-          .setArchived(
-            characterId: widget.characterId,
-            isArchived: !detail.isArchived,
-          );
+      final outcome = await repository.setArchived(
+        characterId: characterId,
+        isArchived: archiving,
+      );
       if (!mounted) return;
       if (outcome == WriteOutcome.rejectedOffline) {
         // Voir la documentation de `CharacterRepository.setArchived` : même
@@ -2107,7 +2147,33 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
-      ref.invalidate(characterDetailProvider(widget.characterId));
+      ref.invalidate(characterDetailProvider(characterId));
+      if (archiving) {
+        showUndoSnackBar(
+          context,
+          message: l10n.characterListArchivedSnackBarMessage(detail.name),
+          undoLabel: l10n.spellSlotUsedSnackBarUndoLabel,
+          announcement: l10n.characterListArchivedSnackBarAnnouncement(
+            detail.name,
+          ),
+          onUndo: () => unawaited(
+            _undoArchiveFromDetail(
+              repository: repository,
+              container: container,
+              messenger: messenger,
+              l10n: l10n,
+              characterId: characterId,
+            ),
+          ),
+        );
+      } else {
+        // Remplace un éventuel SnackBar « archivé » encore affiché plutôt que
+        // de se mettre en file derrière lui.
+        messenger.hideCurrentSnackBar();
+        _showSnackBar(
+          l10n.characterDetailUnarchivedSnackBarMessage(detail.name),
+        );
+      }
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {

@@ -1442,5 +1442,6 @@
   "syncAlertsBannerSemantics": "{count, plural, =1{1 sync alert. Open the list.} other{{count} sync alerts. Open the list.}}",
   "syncAlertsProfileRowLabel": "Sync alerts",
   "syncAlertsProfileRowNone": "None",
-  "syncAlertsProfileRowSemantics": "{count, plural, =1{Sync alerts: 1 alert. Open the list.} other{Sync alerts: {count} alerts. Open the list.}}"
+  "syncAlertsProfileRowSemantics": "{count, plural, =1{Sync alerts: 1 alert. Open the list.} other{Sync alerts: {count} alerts. Open the list.}}",
+  "characterDetailUnarchivedSnackBarMessage": "{name} unarchived"
 }

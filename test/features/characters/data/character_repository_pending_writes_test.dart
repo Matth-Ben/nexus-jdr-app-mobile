@@ -392,6 +392,57 @@ void main() {
       },
     );
 
+    test('liste hors ligne déclaré + cache : les cartes arrivent sans attendre '
+        'la requête réseau (V5-4)', () async {
+      await repository.fetchCharacters();
+      // Interface coupée, mais la requête réseau reste suspendue (réseau
+      // zombie) : sans court-circuit, la liste attendrait le délai complet.
+      connectivity.connected = false;
+      server.characterReadGate = Completer<void>();
+
+      final list = await repository.fetchCharacters().timeout(
+        const Duration(seconds: 5),
+      );
+
+      expect(list, hasLength(1));
+      expect(list.single.id, _characterId);
+      server.characterReadGate!.complete();
+    });
+
+    test('liste hors ligne déclaré sans cache : repli sur la requête réseau '
+        '(erreur habituelle)', () async {
+      goOffline();
+
+      await expectLater(
+        repository.fetchCharacters(),
+        throwsA(isA<CharacterFailure>()),
+      );
+    });
+
+    test('liste hors ligne : jamais le cache d\'un autre compte', () async {
+      await repository.fetchCharacters();
+      final payload = await cache.get('character_list:$_ownerId');
+      await cache.clear();
+      await cache.put('character_list:owner-2', payload!);
+      goOffline();
+
+      await expectLater(
+        repository.fetchCharacters(),
+        throwsA(isA<CharacterFailure>()),
+      );
+    });
+
+    test('liste hors ligne après purge du cache : rien à afficher', () async {
+      await repository.fetchCharacters();
+      await cache.clear();
+      goOffline();
+
+      await expectLater(
+        repository.fetchCharacters(),
+        throwsA(isA<CharacterFailure>()),
+      );
+    });
+
     test('PV : la fiche relue depuis le cache affiche la valeur mise en '
         'file', () async {
       await openOnlineOnce();
