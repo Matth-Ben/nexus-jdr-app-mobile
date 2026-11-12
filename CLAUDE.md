@@ -93,6 +93,18 @@ pousser la branche — y compris pour une petite modification. Seuls les
 fichiers de configuration et de documentation (ce fichier, `.claude/`,
 `docs/`) restent édités directement.
 
+### Un ticket par tâche (décision du 12/11/2026)
+
+Toute tâche, correction ou évolution, a **son ticket** sur le tableau GitHub Project #7 **avant** de commencer. Le
+ticket porte le contexte nécessaire pour éviter les débordements : demande d'origine (citée, avec la date), contexte,
+décisions déjà prises, périmètre et hors périmètre, critères d'acceptation, dépendances et conflits possibles avec
+d'autres tickets, liens (docs, PR). À la création, le chef de projet relit les tickets ouverts pour repérer les demandes
+qui entrent en conflit et les signale à Matthias avant de lancer le travail. Les tâches qui reviennent à Matthias
+(migrations web à appliquer, comptes de test, vérifications sur appareil, nettoyage) sont des tickets de catégorie
+« Tâche (toi) » avec les **commandes exactes** et ce qu'il doit renvoyer, pour qu'il n'ait pas à relire les messages.
+Les reliquats d'une PR restent dans `docs/dette-technique.md` (lignes D…) ; le ticket est mis à jour (statut, PR) à chaque
+étape.
+
 ### Séquence type pour une fonctionnalité UI
 
 1. `direction-artistique` valide/complète la spec visuelle de l'écran (si pas
