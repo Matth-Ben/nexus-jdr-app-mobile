@@ -21,6 +21,7 @@ import 'providers/character_edit_session_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
+import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/spell_option_info_sheet.dart';
 import 'widgets/step_help_sheet.dart';
@@ -140,15 +141,17 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
               onBack: _goBack,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.spells),
             ),
-            const Expanded(
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.woodMedium),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+            Expanded(
+              child: CreationStatusBody(
+                body: Center(
+                  child: CircularProgressIndicator(color: AppColors.woodMedium),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -160,48 +163,50 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.spells),
             ),
             Expanded(
-              child: _ErrorState(
-                message: error is CharacterCreationFailure
-                    ? error.message
-                    : 'Impossible de charger les sorts disponibles. '
-                          'Réessayez.',
-                onRetry: () {
-                  // Même rationale que `SkillsAndToolsStepScreen._buildContent`
-                  // (voir son commentaire) : invalider les providers feuilles
-                  // plutôt que le seul combiné `spellsStepDataProvider`, qui
-                  // ne rappellerait jamais `fetchClassCatalog`/
-                  // `fetchSpellCatalog` si c'est l'un d'eux qui a échoué —
-                  // `spellsStepDataProvider` se contenterait de relire la
-                  // même instance déjà résolue en erreur de ces providers,
-                  // qu'il `watch`e.
-                  //
-                  // Correction (bug trouvé par qa-testeur, régression
-                  // couverte par `spells_step_screen_test.dart`) :
-                  // `spellCatalogProvider` est une `family` paramétrée par
-                  // `classId` — invalider `classCatalogProvider` seul ne
-                  // suffit pas quand c'est `fetchSpellCatalog` qui a échoué,
-                  // car `spellsStepDataProvider` reste `watch`-dépendant de
-                  // la même instance `spellCatalogProvider(classId: X)`
-                  // déjà en erreur. Le `classId` du brouillon (toujours
-                  // renseigné : cette étape n'est atteinte qu'après avoir
-                  // choisi une classe à l'étape 2/9) suffit à retrouver
-                  // cette instance sans dépendre de `SpellsStepData` (jamais
-                  // résolu ici, puisqu'on est dans la branche `error`).
-                  ref.invalidate(classCatalogProvider);
-                  final classId = ref
-                      .read(characterCreationDraftControllerProvider)
-                      .classId;
-                  if (classId != null) {
-                    ref.invalidate(spellCatalogProvider(classId: classId));
-                  }
-                  ref.invalidate(spellsStepDataProvider);
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+              child: CreationStatusBody(
+                body: _ErrorState(
+                  message: error is CharacterCreationFailure
+                      ? error.message
+                      : 'Impossible de charger les sorts disponibles. '
+                            'Réessayez.',
+                  onRetry: () {
+                    // Même rationale que `SkillsAndToolsStepScreen._buildContent`
+                    // (voir son commentaire) : invalider les providers feuilles
+                    // plutôt que le seul combiné `spellsStepDataProvider`, qui
+                    // ne rappellerait jamais `fetchClassCatalog`/
+                    // `fetchSpellCatalog` si c'est l'un d'eux qui a échoué —
+                    // `spellsStepDataProvider` se contenterait de relire la
+                    // même instance déjà résolue en erreur de ces providers,
+                    // qu'il `watch`e.
+                    //
+                    // Correction (bug trouvé par qa-testeur, régression
+                    // couverte par `spells_step_screen_test.dart`) :
+                    // `spellCatalogProvider` est une `family` paramétrée par
+                    // `classId` — invalider `classCatalogProvider` seul ne
+                    // suffit pas quand c'est `fetchSpellCatalog` qui a échoué,
+                    // car `spellsStepDataProvider` reste `watch`-dépendant de
+                    // la même instance `spellCatalogProvider(classId: X)`
+                    // déjà en erreur. Le `classId` du brouillon (toujours
+                    // renseigné : cette étape n'est atteinte qu'après avoir
+                    // choisi une classe à l'étape 2/9) suffit à retrouver
+                    // cette instance sans dépendre de `SpellsStepData` (jamais
+                    // résolu ici, puisqu'on est dans la branche `error`).
+                    ref.invalidate(classCatalogProvider);
+                    final classId = ref
+                        .read(characterCreationDraftControllerProvider)
+                        .classId;
+                    if (classId != null) {
+                      ref.invalidate(spellCatalogProvider(classId: classId));
+                    }
+                    ref.invalidate(spellsStepDataProvider);
+                  },
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -253,63 +258,57 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
         Expanded(
           child: SafeArea(
             top: false,
-            child: Column(
-              children: [
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      AppSpacing.md,
+            child: CreationStepBody(
+              listPadding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              items: activeTab == _SpellTab.cantrip
+                  ? _spellSection(
+                      title: 'SORTS MINEURS CONNUS',
+                      quota: cantripQuota,
+                      selected: _selectedCantrips,
+                      candidates: cantrips,
+                      onToggle: _toggleCantrip,
+                    )
+                  : _spellSection(
+                      title: 'SORTS DE NIVEAU 1 CONNUS',
+                      quota: levelOneQuota,
+                      selected: _selectedLevelOneSpells,
+                      candidates: levelOneSpells,
+                      onToggle: _toggleLevelOneSpell,
                     ),
-                    children: activeTab == _SpellTab.cantrip
-                        ? _spellSection(
-                            title: 'SORTS MINEURS CONNUS',
-                            quota: cantripQuota,
-                            selected: _selectedCantrips,
-                            candidates: cantrips,
-                            onToggle: _toggleCantrip,
-                          )
-                        : _spellSection(
-                            title: 'SORTS DE NIVEAU 1 CONNUS',
-                            quota: levelOneQuota,
-                            selected: _selectedLevelOneSpells,
-                            candidates: levelOneSpells,
-                            onToggle: _toggleLevelOneSpell,
+              footer: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SecondaryButton(
+                            label: 'Retour',
+                            surface: SecondaryButtonSurface.parchment,
+                            onPressed: _goBack,
                           ),
-                  ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: PrimaryButton(
+                            label: 'Suivant',
+                            onPressed: canProceed ? _submit : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DraftAutosaveFooter(
+                      onAbandon: () => abandonCharacterCreation(context, ref),
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SecondaryButton(
-                              label: 'Retour',
-                              surface: SecondaryButtonSurface.parchment,
-                              onPressed: _goBack,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: PrimaryButton(
-                              label: 'Suivant',
-                              onPressed: canProceed ? _submit : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      DraftAutosaveFooter(
-                        onAbandon: () => abandonCharacterCreation(context, ref),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -396,8 +395,13 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    // `Wrap` : à grande taille de police, le badge passe sous le titre au
+    // lieu de déborder (D192).
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.xs,
       children: [
         Text(
           title,

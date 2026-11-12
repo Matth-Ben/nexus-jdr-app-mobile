@@ -27,6 +27,7 @@ import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
+import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -147,15 +148,17 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.equipment),
             ),
-            const Expanded(
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.woodMedium),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+            Expanded(
+              child: CreationStatusBody(
+                body: Center(
+                  child: CircularProgressIndicator(color: AppColors.woodMedium),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -168,29 +171,31 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
                   showStepHelpSheet(context, CreationStepHelp.equipment),
             ),
             Expanded(
-              child: _ErrorState(
-                message: error is CharacterCreationFailure
-                    ? error.message
-                    : "Impossible de charger l'équipement de départ. "
-                          'Réessayez.',
-                // Invalide les providers *feuilles* plutôt que le seul
-                // `equipmentStepDataProvider` — même bug déjà corrigé sur
-                // `SkillsAndToolsStepScreen`/`SpellsStepScreen` (voir leur
-                // documentation) : invalider seulement le provider combiné
-                // ne force pas un nouvel appel réseau sur celui des deux
-                // catalogues qui a échoué.
-                onRetry: () {
-                  ref.invalidate(backgroundCatalogProvider);
-                  ref.invalidate(itemCatalogProvider);
-                  ref.invalidate(classCatalogProvider);
-                  ref.invalidate(equipmentStepDataProvider);
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+              child: CreationStatusBody(
+                body: _ErrorState(
+                  message: error is CharacterCreationFailure
+                      ? error.message
+                      : "Impossible de charger l'équipement de départ. "
+                            'Réessayez.',
+                  // Invalide les providers *feuilles* plutôt que le seul
+                  // `equipmentStepDataProvider` — même bug déjà corrigé sur
+                  // `SkillsAndToolsStepScreen`/`SpellsStepScreen` (voir leur
+                  // documentation) : invalider seulement le provider combiné
+                  // ne force pas un nouvel appel réseau sur celui des deux
+                  // catalogues qui a échoué.
+                  onRetry: () {
+                    ref.invalidate(backgroundCatalogProvider);
+                    ref.invalidate(itemCatalogProvider);
+                    ref.invalidate(classCatalogProvider);
+                    ref.invalidate(equipmentStepDataProvider);
+                  },
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -231,8 +236,8 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
         Expanded(
           child: SafeArea(
             top: false,
-            child: Column(
-              children: [
+            child: CreationStepBody(
+              top: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
@@ -257,71 +262,67 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
                     onChanged: _selectTab,
                   ),
                 ),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                    ),
-                    children: [
-                      ..._classSection(data.classEquipmentOptions, classOption),
-                      ...isPurchaseTab
-                          ? _shopSection(items)
-                          : _historySection(data.historyEquipment),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    0,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                  ),
-                  child: Column(
-                    children: [
-                      if (isPurchaseTab && isOverBudget)
-                        AlertBanner(
-                          message:
-                              'Budget dépassé de '
-                              '${GoldAmountFormatter.format(-remainingGold)} po',
-                        )
-                      else
-                        _GoldBanner(
-                          label: isPurchaseTab ? 'OR RESTANT' : 'OR DE DÉPART',
-                          amount: isPurchaseTab
-                              ? remainingGold
-                              : startingGold.toDouble(),
-                        ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SecondaryButton(
-                              label: 'Retour',
-                              surface: SecondaryButtonSurface.parchment,
-                              onPressed: _goBack,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: PrimaryButton(
-                              label: 'Suivant',
-                              onPressed: canProceed ? _submit : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      DraftAutosaveFooter(
-                        onAbandon: () => abandonCharacterCreation(context, ref),
-                      ),
-                    ],
-                  ),
-                ),
               ],
+              listPadding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              items: [
+                ..._classSection(data.classEquipmentOptions, classOption),
+                ...isPurchaseTab
+                    ? _shopSection(items)
+                    : _historySection(data.historyEquipment),
+              ],
+              footer: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  0,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                ),
+                child: Column(
+                  children: [
+                    if (isPurchaseTab && isOverBudget)
+                      AlertBanner(
+                        message:
+                            'Budget dépassé de '
+                            '${GoldAmountFormatter.format(-remainingGold)} po',
+                      )
+                    else
+                      _GoldBanner(
+                        label: isPurchaseTab ? 'OR RESTANT' : 'OR DE DÉPART',
+                        amount: isPurchaseTab
+                            ? remainingGold
+                            : startingGold.toDouble(),
+                      ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SecondaryButton(
+                            label: 'Retour',
+                            surface: SecondaryButtonSurface.parchment,
+                            onPressed: _goBack,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: PrimaryButton(
+                            label: 'Suivant',
+                            onPressed: canProceed ? _submit : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DraftAutosaveFooter(
+                      onAbandon: () => abandonCharacterCreation(context, ref),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -524,8 +525,12 @@ class _GoldBanner extends StatelessWidget {
           width: AppBorders.cardEmphasis,
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      // `Wrap` : à grande taille de police, le montant passe sous le libellé
+      // au lieu de déborder (D192).
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: AppSpacing.sm,
         children: [
           Text(
             label,

@@ -24,6 +24,7 @@ import 'providers/character_edit_session_provider.dart';
 import 'providers/lineage_choice_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
+import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -331,15 +332,17 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
               onBack: _goToCharacterList,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.race),
             ),
-            const Expanded(
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.woodMedium),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+            Expanded(
+              child: CreationStatusBody(
+                body: Center(
+                  child: CircularProgressIndicator(color: AppColors.woodMedium),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -351,18 +354,20 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.race),
             ),
             Expanded(
-              child: _ErrorState(
-                message: error is CharacterCreationFailure
-                    ? error.message
-                    : 'Impossible de charger les races disponibles. '
-                          'Réessayez.',
-                onRetry: () => ref.invalidate(raceCatalogProvider),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+              child: CreationStatusBody(
+                body: _ErrorState(
+                  message: error is CharacterCreationFailure
+                      ? error.message
+                      : 'Impossible de charger les races disponibles. '
+                            'Réessayez.',
+                  onRetry: () => ref.invalidate(raceCatalogProvider),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -450,8 +455,8 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
         Expanded(
           child: SafeArea(
             top: false,
-            child: Column(
-              children: [
+            child: CreationStepBody(
+              top: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
@@ -489,106 +494,102 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                       ),
                     ),
                   ),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                    ),
-                    children: [
-                      if (isRaceLocked) ...[
-                        const InfoBanner(
-                          message:
-                              'La race ne peut pas être modifiée après la '
-                              'création du personnage : elle est liée aux '
-                              'sorts innés déjà acquis.',
-                          icon: Icons.lock_outline,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                      ],
-                      if (coreRaces.isEmpty && extensionRaces.isEmpty)
-                        const _EmptySearchState()
-                      else ...[
-                        ..._raceGroupSection(
-                          title: 'RACES DE BASE',
-                          races: coreRaces,
-                          startIndex: 0,
-                        ),
-                        ..._raceGroupSection(
-                          title: "RACES D'EXTENSION",
-                          races: extensionRaces,
-                          startIndex: coreRaces.length,
-                          addSpacingBefore: coreRaces.isNotEmpty,
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.sm),
-                      SelectableOptionTile(
-                        title: 'Race personnalisée',
-                        selected: _isCustomRaceSelected,
-                        // Verrouillée : affiche le nom déjà saisi en lecture
-                        // seule au lieu du `TextField` éditable ci-dessous
-                        // (voir la doc de classe de [RaceStepScreen]).
-                        selectedDetail: isRaceLocked
-                            ? _customRaceController.text
-                            : null,
-                        leading: const AccentIconBadge(
-                          index: -1,
-                          icon: Icons.shield_rounded,
-                          neutralIcon: Icons.edit_note,
-                        ),
-                        onTap: _selectCustomRace,
-                      ),
-                      if (_isCustomRaceSelected && !isRaceLocked) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        if (unavailableRaces.isNotEmpty) ...[
-                          _unavailableRaceSuggestions(unavailableRaces),
-                          const SizedBox(height: AppSpacing.sm),
-                        ],
-                        TextField(
-                          controller: _customRaceController,
-                          decoration: const InputDecoration(
-                            hintText: 'Nom de la race personnalisée',
-                          ),
-                          onChanged: (_) => setState(() {}),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SecondaryButton(
-                              label: 'Retour',
-                              surface: SecondaryButtonSurface.parchment,
-                              onPressed: _goToCharacterList,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: PrimaryButton(
-                              label: 'Suivant',
-                              onPressed: canProceed
-                                  ? () => _submit(catalog)
-                                  : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      DraftAutosaveFooter(
-                        onAbandon: () => abandonCharacterCreation(context, ref),
-                      ),
-                    ],
-                  ),
-                ),
               ],
+              listPadding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              items: [
+                if (isRaceLocked) ...[
+                  const InfoBanner(
+                    message:
+                        'La race ne peut pas être modifiée après la '
+                        'création du personnage : elle est liée aux '
+                        'sorts innés déjà acquis.',
+                    icon: Icons.lock_outline,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+                if (coreRaces.isEmpty && extensionRaces.isEmpty)
+                  const _EmptySearchState()
+                else ...[
+                  ..._raceGroupSection(
+                    title: 'RACES DE BASE',
+                    races: coreRaces,
+                    startIndex: 0,
+                  ),
+                  ..._raceGroupSection(
+                    title: "RACES D'EXTENSION",
+                    races: extensionRaces,
+                    startIndex: coreRaces.length,
+                    addSpacingBefore: coreRaces.isNotEmpty,
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.sm),
+                SelectableOptionTile(
+                  title: 'Race personnalisée',
+                  selected: _isCustomRaceSelected,
+                  // Verrouillée : affiche le nom déjà saisi en lecture
+                  // seule au lieu du `TextField` éditable ci-dessous
+                  // (voir la doc de classe de [RaceStepScreen]).
+                  selectedDetail: isRaceLocked
+                      ? _customRaceController.text
+                      : null,
+                  leading: const AccentIconBadge(
+                    index: -1,
+                    icon: Icons.shield_rounded,
+                    neutralIcon: Icons.edit_note,
+                  ),
+                  onTap: _selectCustomRace,
+                ),
+                if (_isCustomRaceSelected && !isRaceLocked) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  if (unavailableRaces.isNotEmpty) ...[
+                    _unavailableRaceSuggestions(unavailableRaces),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
+                  TextField(
+                    controller: _customRaceController,
+                    decoration: const InputDecoration(
+                      hintText: 'Nom de la race personnalisée',
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
+              ],
+              footer: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SecondaryButton(
+                            label: 'Retour',
+                            surface: SecondaryButtonSurface.parchment,
+                            onPressed: _goToCharacterList,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: PrimaryButton(
+                            label: 'Suivant',
+                            onPressed: canProceed
+                                ? () => _submit(catalog)
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DraftAutosaveFooter(
+                      onAbandon: () => abandonCharacterCreation(context, ref),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

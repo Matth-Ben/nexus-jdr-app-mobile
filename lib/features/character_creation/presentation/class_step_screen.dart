@@ -21,6 +21,7 @@ import 'providers/character_edit_session_provider.dart';
 import 'providers/subclass_choice_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
+import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -177,15 +178,17 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.classStep),
             ),
-            const Expanded(
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.woodMedium),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+            Expanded(
+              child: CreationStatusBody(
+                body: Center(
+                  child: CircularProgressIndicator(color: AppColors.woodMedium),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -198,18 +201,20 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                   showStepHelpSheet(context, CreationStepHelp.classStep),
             ),
             Expanded(
-              child: _ErrorState(
-                message: error is CharacterCreationFailure
-                    ? error.message
-                    : 'Impossible de charger les classes disponibles. '
-                          'Réessayez.',
-                onRetry: () => ref.invalidate(classCatalogProvider),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+              child: CreationStatusBody(
+                body: _ErrorState(
+                  message: error is CharacterCreationFailure
+                      ? error.message
+                      : 'Impossible de charger les classes disponibles. '
+                            'Réessayez.',
+                  onRetry: () => ref.invalidate(classCatalogProvider),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -235,8 +240,8 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
         Expanded(
           child: SafeArea(
             top: false,
-            child: Column(
-              children: [
+            child: CreationStepBody(
+              top: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
@@ -252,77 +257,73 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                     ),
                   ),
                 ),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                    ),
-                    children: [
-                      if (_isClassLocked) ...[
-                        const InfoBanner(
-                          message:
-                              "La classe et la sous-classe ne peuvent être "
-                              "modifiées qu'au niveau 1.",
-                          icon: Icons.lock_outline,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                      ],
-                      for (var i = 0; i < catalog.classes.length; i++) ...[
-                        if (i > 0) const SizedBox(height: AppSpacing.sm),
-                        SelectableOptionTile(
-                          title: catalog.classes[i].name,
-                          subtitle: catalog.classes[i].summaryLine,
-                          onInfo: () => showStepHelpSheet(
-                            context,
-                            StepHelpContent(
-                              title: catalog.classes[i].name,
-                              body: catalog.classes[i].infoText,
-                            ),
-                          ),
-                          selected: _selectedClassId == catalog.classes[i].id,
-                          leading: AccentIconBadge(
-                            index: i,
-                            icon: Icons.auto_awesome,
-                          ),
-                          onTap: () => _selectClass(catalog.classes[i].id),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SecondaryButton(
-                              label: 'Retour',
-                              surface: SecondaryButtonSurface.parchment,
-                              onPressed: _goBack,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: PrimaryButton(
-                              label: 'Suivant',
-                              onPressed: _canProceed ? () => _submit() : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      DraftAutosaveFooter(
-                        onAbandon: () => abandonCharacterCreation(context, ref),
-                      ),
-                    ],
-                  ),
-                ),
               ],
+              listPadding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              items: [
+                if (_isClassLocked) ...[
+                  const InfoBanner(
+                    message:
+                        "La classe et la sous-classe ne peuvent être "
+                        "modifiées qu'au niveau 1.",
+                    icon: Icons.lock_outline,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+                for (var i = 0; i < catalog.classes.length; i++) ...[
+                  if (i > 0) const SizedBox(height: AppSpacing.sm),
+                  SelectableOptionTile(
+                    title: catalog.classes[i].name,
+                    subtitle: catalog.classes[i].summaryLine,
+                    onInfo: () => showStepHelpSheet(
+                      context,
+                      StepHelpContent(
+                        title: catalog.classes[i].name,
+                        body: catalog.classes[i].infoText,
+                      ),
+                    ),
+                    selected: _selectedClassId == catalog.classes[i].id,
+                    leading: AccentIconBadge(
+                      index: i,
+                      icon: Icons.auto_awesome,
+                    ),
+                    onTap: () => _selectClass(catalog.classes[i].id),
+                  ),
+                ],
+              ],
+              footer: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SecondaryButton(
+                            label: 'Retour',
+                            surface: SecondaryButtonSurface.parchment,
+                            onPressed: _goBack,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: PrimaryButton(
+                            label: 'Suivant',
+                            onPressed: _canProceed ? () => _submit() : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DraftAutosaveFooter(
+                      onAbandon: () => abandonCharacterCreation(context, ref),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

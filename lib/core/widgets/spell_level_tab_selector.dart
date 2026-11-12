@@ -61,17 +61,17 @@ class SpellLevelTabSelector<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    // `Wrap` : à grande taille de police, les pilules passent à la ligne au
+    // lieu de déborder (D192).
+    return Wrap(
+      spacing: AppSpacing.sm,
       children: [
-        for (var i = 0; i < options.length; i++) ...[
-          if (i > 0) const SizedBox(width: AppSpacing.sm),
+        for (var i = 0; i < options.length; i++)
           _Pill(
             label: options[i].label,
             selected: options[i].value == value,
             onTap: () => onChanged(options[i].value),
           ),
-        ],
       ],
     );
   }
@@ -108,8 +108,13 @@ class _Pill extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: _tapTargetHeight),
           child: Center(
             child: Container(
-              height: _visualHeight,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              // Hauteur minimale (et non fixe) : le texte agrandi n'est pas
+              // coupé (D192).
+              constraints: const BoxConstraints(minHeight: _visualHeight),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 gradient: selected ? AppColors.primaryButtonGradient : null,

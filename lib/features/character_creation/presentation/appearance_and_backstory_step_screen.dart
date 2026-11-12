@@ -19,6 +19,7 @@ import 'providers/character_creation_providers.dart';
 import 'providers/character_edit_session_provider.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
+import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -292,91 +293,91 @@ class _AppearanceAndBackstoryStepScreenState
     final editSession = ref.watch(characterEditSessionControllerProvider);
     return SafeArea(
       top: false,
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.md,
+      child: CreationStepBody(
+        listPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          AppSpacing.md,
+        ),
+        items: [
+          _PortraitTile(
+            portraitBytes: ref.watch(
+              characterCreationDraftControllerProvider.select(
+                (draft) => draft.portraitBytes,
               ),
-              children: [
-                _PortraitTile(
-                  portraitBytes: ref.watch(
-                    characterCreationDraftControllerProvider.select(
-                      (draft) => draft.portraitBytes,
-                    ),
-                  ),
-                  portraitUrl: editSession == null
-                      ? null
-                      : _currentPortraitUrl(editSession),
-                  onTap: _pickPortrait,
-                ),
+            ),
+            portraitUrl: editSession == null
+                ? null
+                : _currentPortraitUrl(editSession),
+            onTap: _pickPortrait,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const _AlignmentField(),
+          const SizedBox(height: AppSpacing.md),
+          // Champs courts d'identité, deux par ligne.
+          for (var i = 0; i < _shortFieldCount; i += 2) ...[
+            if (i > 0) const SizedBox(height: AppSpacing.md),
+            // Grande police : une seule colonne (deux champs de ~130 dp
+            // côte à côte seraient illisibles, D192).
+            if (creationStepIsCompact(context)) ...[
+              _fieldBlock(i),
+              if (i + 1 < _shortFieldCount) ...[
                 const SizedBox(height: AppSpacing.md),
-                const _AlignmentField(),
-                const SizedBox(height: AppSpacing.md),
-                // Champs courts d'identité, deux par ligne.
-                for (var i = 0; i < _shortFieldCount; i += 2) ...[
-                  if (i > 0) const SizedBox(height: AppSpacing.md),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: _fieldBlock(i)),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: i + 1 < _shortFieldCount
-                            ? _fieldBlock(i + 1)
-                            : const SizedBox.shrink(),
-                      ),
-                    ],
+                _fieldBlock(i + 1),
+              ],
+            ] else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _fieldBlock(i)),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: i + 1 < _shortFieldCount
+                        ? _fieldBlock(i + 1)
+                        : const SizedBox.shrink(),
                   ),
                 ],
-                for (var i = _shortFieldCount; i < _fieldSpecs.length; i++) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  _fieldBlock(i),
-                ],
-                // Marge basse supplémentaire pour que le 9e champ ("Trésor")
-                // ne reste jamais masqué par le clavier une fois focus —
-                // le scroll-to-focus natif de Flutter fait le reste (voir
-                // commentaire de classe : `resizeToAvoidBottomInset` reste au
-                // comportement par défaut, pas de `SingleChildScrollView`
-                // custom ici).
-                const SizedBox(height: AppSpacing.lg),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: SecondaryButton(
-                        label: 'Retour',
-                        surface: SecondaryButtonSurface.parchment,
-                        onPressed: _goBack,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: PrimaryButton(
-                        label: 'Suivant',
-                        onPressed: _submit,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                DraftAutosaveFooter(
-                  onAbandon: () => abandonCharacterCreation(context, ref),
-                ),
-              ],
-            ),
-          ),
+              ),
+          ],
+          for (var i = _shortFieldCount; i < _fieldSpecs.length; i++) ...[
+            const SizedBox(height: AppSpacing.md),
+            _fieldBlock(i),
+          ],
+          // Marge basse supplémentaire pour que le 9e champ ("Trésor")
+          // ne reste jamais masqué par le clavier une fois focus —
+          // le scroll-to-focus natif de Flutter fait le reste (voir
+          // commentaire de classe : `resizeToAvoidBottomInset` reste au
+          // comportement par défaut, pas de `SingleChildScrollView`
+          // custom ici).
+          const SizedBox(height: AppSpacing.lg),
         ],
+        footer: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: SecondaryButton(
+                      label: 'Retour',
+                      surface: SecondaryButtonSurface.parchment,
+                      onPressed: _goBack,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: PrimaryButton(label: 'Suivant', onPressed: _submit),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -478,8 +479,10 @@ class _PortraitTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: SizedBox(
-        height: 72,
+      // Hauteur minimale (et non fixe) : le texte agrandi n'est pas coupé
+      // (D192).
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 72),
         child: Row(
           children: [
             Container(
@@ -578,15 +581,14 @@ class _AlignmentField extends ConsumerWidget {
                 .setAlignment(value),
           ),
           loading: () => const LinearProgressIndicator(),
-          error: (_, _) => Row(
+          error: (_, _) => Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Text(
-                  'Impossible de charger les alignements.',
-                  style: AppTypography.body(
-                    fontSize: 13,
-                    color: AppColors.textMuted,
-                  ),
+              Text(
+                'Impossible de charger les alignements.',
+                style: AppTypography.body(
+                  fontSize: 13,
+                  color: AppColors.textMuted,
                 ),
               ),
               TextButton(

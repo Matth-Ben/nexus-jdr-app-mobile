@@ -53,6 +53,15 @@ abstract final class AppTypography {
   /// hors zone défilante, décision du 10/11/2026. Ne pas généraliser au corps.
   static const double maxVitalsValueScaleFactor = 1.6;
 
+  /// Taille de police système à partir de laquelle les tuiles de choix cessent
+  /// de tronquer leurs libellés (retour à la ligne) et les étapes de
+  /// l'assistant de création passent en mode « tout défile » (D192).
+  static const double largeTextScale = 1.4;
+
+  /// `true` quand la taille de police système atteint [largeTextScale].
+  static bool isLargeText(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(10) / 10 >= largeTextScale;
+
   static TextStyle display({
     required double fontSize,
     Color color = AppColors.textPrimary,

@@ -189,8 +189,14 @@ class CheckableOptionTile extends StatelessWidget {
                           Flexible(
                             child: Text(
                               title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              // Grande police : le titre passe à la ligne au
+                              // lieu d'être coupé par une ellipse (D192).
+                              maxLines: AppTypography.isLargeText(context)
+                                  ? null
+                                  : 1,
+                              overflow: AppTypography.isLargeText(context)
+                                  ? TextOverflow.clip
+                                  : TextOverflow.ellipsis,
                               style: AppTypography.body(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,

@@ -75,6 +75,10 @@ class SelectableOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Grande police (D192) : à x2,0 ou x3,0 sur 320 dp, une ligne coupée par
+    // une ellipse rend l'information illisible ; la tuile s'agrandit à la place.
+    final largeFont = AppTypography.isLargeText(context);
+    final maxLines = largeFont ? null : subtitleMaxLines;
     return Opacity(
       opacity: enabled ? 1 : 0.45,
       child: Material(
@@ -114,8 +118,8 @@ class SelectableOptionTile extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           subtitle!,
-                          maxLines: subtitleMaxLines,
-                          overflow: subtitleMaxLines == null
+                          maxLines: maxLines,
+                          overflow: maxLines == null
                               ? TextOverflow.clip
                               : TextOverflow.ellipsis,
                           style: AppTypography.body(

@@ -51,6 +51,8 @@ import 'package:personnages/features/characters/domain/patron_extended_spells.da
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
+import 'creation_scale_checks.dart';
+
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   RaceCatalog raceCatalogToReturn = const RaceCatalog(races: [], subraces: []);
   ClassCatalog classCatalogToReturn = const ClassCatalog(classes: []);
@@ -1027,5 +1029,34 @@ void main() {
       expect(find.text('Sous-classe'), findsNothing);
       expect(find.text('Elfe · Magicien · Niveau 1'), findsOneWidget);
     });
+  });
+
+  // Grande police (D192) : x2,0 et x3,0 sur 320x568 dp avec les vraies polices.
+  group('grande police : étape Récapitulatif', () {
+    for (final scale in creationScaleFactors) {
+      testWidgets('x$scale sur 320 dp', (tester) async {
+        await useCreationScaledView(tester, scale);
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        for (final step in [
+          'step-2',
+          'step-3',
+          'step-4',
+          'step-5',
+          'step-6',
+          'step-7',
+          'step-8',
+          'step-9',
+        ]) {
+          router.push('/characters/new/$step');
+        }
+        await tester.pumpAndSettle();
+        await expectCreationStepFitsScaled(
+          tester,
+          scale: scale,
+          navLabel: 'CRÉER LE PERSONNAGE',
+        );
+      });
+    }
   });
 }
