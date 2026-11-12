@@ -19,6 +19,80 @@ void main() {
       await db.close();
     });
 
+    test('clear incrémente clearGeneration', () async {
+      final before = cache.clearGeneration;
+
+      await cache.clear();
+      await cache.clear();
+
+      expect(cache.clearGeneration, before + 2);
+    });
+
+    test('putGuarded écrit si la génération est inchangée', () async {
+      final written = await cache.putGuarded('k', {
+        'a': 1,
+      }, generation: cache.clearGeneration);
+
+      expect(written, isTrue);
+      expect(await cache.get('k'), {'a': 1});
+    });
+
+    test('putGuarded n\'écrit pas après une purge, ni si isStillValid ou '
+        'precondition refusent', () async {
+      final generation = cache.clearGeneration;
+      await cache.clear();
+      expect(
+        await cache.putGuarded('k', {'a': 1}, generation: generation),
+        isFalse,
+      );
+
+      final current = cache.clearGeneration;
+      expect(
+        await cache.putGuarded(
+          'k',
+          {'a': 1},
+          generation: current,
+          isStillValid: () => false,
+        ),
+        isFalse,
+      );
+      expect(
+        await cache.putGuarded(
+          'k',
+          {'a': 1},
+          generation: current,
+          precondition: () async => false,
+        ),
+        isFalse,
+      );
+      expect(await cache.get('k'), isNull);
+    });
+
+    test('putGuarded : purge pendant la condition asynchrone -> rien '
+        'n\'est écrit', () async {
+      final generation = cache.clearGeneration;
+      var armed = false;
+      final writing = cache.putGuarded(
+        'k',
+        {'a': 1},
+        generation: generation,
+        precondition: () async {
+          armed = true;
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          return true;
+        },
+      );
+      while (!armed) {
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      final clearing = cache.clear();
+      expect(await writing, isFalse);
+      await clearing;
+
+      expect(await cache.get('k'), isNull);
+    });
+
     test('get retourne null pour une clé jamais mise en cache', () async {
       final result = await cache.get('inconnue');
 
