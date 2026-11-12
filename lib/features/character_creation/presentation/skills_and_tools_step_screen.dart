@@ -23,6 +23,7 @@ import 'providers/character_edit_session_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
+import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -203,15 +204,17 @@ class _SkillsAndToolsStepScreenState
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.skillsAndTools),
             ),
-            const Expanded(
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.woodMedium),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+            Expanded(
+              child: CreationStatusBody(
+                body: Center(
+                  child: CircularProgressIndicator(color: AppColors.woodMedium),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -224,39 +227,41 @@ class _SkillsAndToolsStepScreenState
                   showStepHelpSheet(context, CreationStepHelp.skillsAndTools),
             ),
             Expanded(
-              child: _ErrorState(
-                message: error is CharacterCreationFailure
-                    ? error.message
-                    : 'Impossible de charger les compétences et outils '
-                          'disponibles. Réessayez.',
-                // Invalide les 4 providers *feuilles* plutôt que le seul
-                // `skillsAndToolsStepDataProvider` : bug corrigé en écrivant
-                // les tests de cet écran (reproduit isolément avec un
-                // ProviderContainer avant correction) — invalider seulement
-                // le provider combiné ne force PAS un nouvel appel réseau
-                // sur celui des 4 catalogues qui a échoué, puisque ce
-                // catalogue reste caché dans son état d'erreur (retry
-                // automatique désactivé via `_noRetry`, voir
-                // `providers/character_creation_providers.dart`) : le
-                // combiné se contente de relire ce même Future déjà résolu
-                // en erreur, sans jamais rappeler
-                // `fetchClassCatalog`/`fetchBackgroundCatalog`/
-                // `fetchToolCatalog`/`fetchLanguageCatalog`. Invalider les
-                // feuilles fonctionne : Riverpod recalcule alors bien tout
-                // provider qui les regarde (`ref.watch`), y compris ce
-                // provider combiné.
-                onRetry: () {
-                  ref.invalidate(classCatalogProvider);
-                  ref.invalidate(backgroundCatalogProvider);
-                  ref.invalidate(toolCatalogProvider);
-                  ref.invalidate(languageCatalogProvider);
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+              child: CreationStatusBody(
+                body: _ErrorState(
+                  message: error is CharacterCreationFailure
+                      ? error.message
+                      : 'Impossible de charger les compétences et outils '
+                            'disponibles. Réessayez.',
+                  // Invalide les 4 providers *feuilles* plutôt que le seul
+                  // `skillsAndToolsStepDataProvider` : bug corrigé en écrivant
+                  // les tests de cet écran (reproduit isolément avec un
+                  // ProviderContainer avant correction) — invalider seulement
+                  // le provider combiné ne force PAS un nouvel appel réseau
+                  // sur celui des 4 catalogues qui a échoué, puisque ce
+                  // catalogue reste caché dans son état d'erreur (retry
+                  // automatique désactivé via `_noRetry`, voir
+                  // `providers/character_creation_providers.dart`) : le
+                  // combiné se contente de relire ce même Future déjà résolu
+                  // en erreur, sans jamais rappeler
+                  // `fetchClassCatalog`/`fetchBackgroundCatalog`/
+                  // `fetchToolCatalog`/`fetchLanguageCatalog`. Invalider les
+                  // feuilles fonctionne : Riverpod recalcule alors bien tout
+                  // provider qui les regarde (`ref.watch`), y compris ce
+                  // provider combiné.
+                  onRetry: () {
+                    ref.invalidate(classCatalogProvider);
+                    ref.invalidate(backgroundCatalogProvider);
+                    ref.invalidate(toolCatalogProvider);
+                    ref.invalidate(languageCatalogProvider);
+                  },
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -322,122 +327,112 @@ class _SkillsAndToolsStepScreenState
         Expanded(
           child: SafeArea(
             top: false,
-            child: Column(
-              children: [
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      AppSpacing.md,
+            child: CreationStepBody(
+              listPadding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              items: [
+                // Section 1 : "COMPÉTENCES DE CLASSE" — toujours
+                // affichée.
+                _SectionHeader(
+                  title: 'COMPÉTENCES DE CLASSE',
+                  badge:
+                      '${_selectedClassSkills.length} / '
+                      '${classOption.skillChoices.count} choisies',
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                for (
+                  var i = 0;
+                  i < classOption.skillChoices.choices.length;
+                  i++
+                ) ...[
+                  if (i > 0) const SizedBox(height: AppSpacing.xs),
+                  _skillTile(
+                    classOption.skillChoices.choices[i],
+                    classOption.skillChoices.count,
+                  ),
+                ],
+
+                // Section 2 : "OUTILS (CLASSE)" — si applicable.
+                if (showClassTools) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  ..._classToolSection(classOption, data),
+                ],
+
+                // Section 3 : "OUTILS (HISTORIQUE)" — si applicable,
+                // jamais interactive.
+                if (showBackgroundTools) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  const _SectionHeader(title: 'OUTILS (HISTORIQUE)'),
+                  const SizedBox(height: AppSpacing.sm),
+                  for (
+                    var i = 0;
+                    i < backgroundOption.toolOrLanguageGrantedTools.length;
+                    i++
+                  ) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.xs),
+                    CheckableOptionTile(
+                      title: backgroundOption.toolOrLanguageGrantedTools[i],
+                      checked: true,
+                      enabled: false,
                     ),
-                    children: [
-                      // Section 1 : "COMPÉTENCES DE CLASSE" — toujours
-                      // affichée.
-                      _SectionHeader(
-                        title: 'COMPÉTENCES DE CLASSE',
-                        badge:
-                            '${_selectedClassSkills.length} / '
-                            '${classOption.skillChoices.count} choisies',
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      for (
-                        var i = 0;
-                        i < classOption.skillChoices.choices.length;
-                        i++
-                      ) ...[
-                        if (i > 0) const SizedBox(height: AppSpacing.xs),
-                        _skillTile(
-                          classOption.skillChoices.choices[i],
-                          classOption.skillChoices.count,
+                  ],
+                ],
+
+                // Section 4 : "LANGUES (HISTORIQUE)" — si applicable.
+                if (showLanguages) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  ..._languageSection(backgroundOption, data),
+                ],
+
+                // Section 5 : "COMPÉTENCES (RACE)" — si applicable
+                // (choix interactif et/ou octroi automatique, voir
+                // `SkillsAndToolsStepSelection.isRaceSkillSectionVisible`).
+                if (showRaceSkills) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  ..._raceSkillSection(raceOption!),
+                ],
+
+                // Section 6 : "OUTILS (RACE)" — si applicable.
+                if (showRaceTools) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  ..._raceToolSection(raceOption!),
+                ],
+              ],
+              footer: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SecondaryButton(
+                            label: 'Retour',
+                            surface: SecondaryButtonSurface.parchment,
+                            onPressed: _goBack,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: PrimaryButton(
+                            label: 'Suivant',
+                            onPressed: canProceed
+                                ? () => _submit(classOption)
+                                : null,
+                          ),
                         ),
                       ],
-
-                      // Section 2 : "OUTILS (CLASSE)" — si applicable.
-                      if (showClassTools) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        ..._classToolSection(classOption, data),
-                      ],
-
-                      // Section 3 : "OUTILS (HISTORIQUE)" — si applicable,
-                      // jamais interactive.
-                      if (showBackgroundTools) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        const _SectionHeader(title: 'OUTILS (HISTORIQUE)'),
-                        const SizedBox(height: AppSpacing.sm),
-                        for (
-                          var i = 0;
-                          i <
-                              backgroundOption
-                                  .toolOrLanguageGrantedTools
-                                  .length;
-                          i++
-                        ) ...[
-                          if (i > 0) const SizedBox(height: AppSpacing.xs),
-                          CheckableOptionTile(
-                            title:
-                                backgroundOption.toolOrLanguageGrantedTools[i],
-                            checked: true,
-                            enabled: false,
-                          ),
-                        ],
-                      ],
-
-                      // Section 4 : "LANGUES (HISTORIQUE)" — si applicable.
-                      if (showLanguages) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        ..._languageSection(backgroundOption, data),
-                      ],
-
-                      // Section 5 : "COMPÉTENCES (RACE)" — si applicable
-                      // (choix interactif et/ou octroi automatique, voir
-                      // `SkillsAndToolsStepSelection.isRaceSkillSectionVisible`).
-                      if (showRaceSkills) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        ..._raceSkillSection(raceOption!),
-                      ],
-
-                      // Section 6 : "OUTILS (RACE)" — si applicable.
-                      if (showRaceTools) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        ..._raceToolSection(raceOption!),
-                      ],
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DraftAutosaveFooter(
+                      onAbandon: () => abandonCharacterCreation(context, ref),
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SecondaryButton(
-                              label: 'Retour',
-                              surface: SecondaryButtonSurface.parchment,
-                              onPressed: _goBack,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: PrimaryButton(
-                              label: 'Suivant',
-                              onPressed: canProceed
-                                  ? () => _submit(classOption)
-                                  : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      DraftAutosaveFooter(
-                        onAbandon: () => abandonCharacterCreation(context, ref),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -672,8 +667,13 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    // `Wrap` : à grande taille de police, le badge passe sous le titre au
+    // lieu de déborder (D192).
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.xs,
       children: [
         Text(
           title,

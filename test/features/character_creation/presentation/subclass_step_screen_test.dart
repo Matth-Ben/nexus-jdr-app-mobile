@@ -42,6 +42,8 @@ import 'package:personnages/features/character_creation/presentation/providers/s
 import 'package:personnages/features/character_creation/presentation/providers/subclass_feature_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/subclass_step_screen.dart';
 
+import 'creation_scale_checks.dart';
+
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   ClassCatalog? catalogToReturn;
 
@@ -576,5 +578,16 @@ void main() {
         expect(find.text('Dragon bleu'), findsNothing);
       },
     );
+  });
+
+  // Grande police (D192) : x2,0 et x3,0 sur 320x568 dp avec les vraies polices.
+  group('grande police : étape Sous-classe', () {
+    for (final scale in creationScaleFactors) {
+      testWidgets('x$scale sur 320 dp', (tester) async {
+        await useCreationScaledView(tester, scale);
+        await pumpSubclassStep(tester);
+        await expectCreationStepFitsScaled(tester, scale: scale);
+      });
+    }
   });
 }

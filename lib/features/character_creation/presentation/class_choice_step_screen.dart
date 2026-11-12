@@ -25,6 +25,7 @@ import 'providers/character_creation_providers.dart';
 import 'providers/character_edit_session_provider.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
+import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -272,56 +273,44 @@ class _NamedChoiceBody extends ConsumerWidget {
           canProceed: canProceed,
           onSubmit: onSubmit,
           onAbandon: () => abandonCharacterCreation(context, ref),
-          body: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.md,
-                  AppSpacing.lg,
-                  0,
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Ce choix se fait dès le niveau 1 pour $className.',
-                    style: AppTypography.body(fontSize: 14),
-                  ),
+          top: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                0,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Ce choix se fait dès le niveau 1 pour $className.',
+                  style: AppTypography.body(fontSize: 14),
                 ),
               ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                  ),
-                  children: [
-                    if (selectedValue == null) ...[
-                      Text(
-                        'Choisis une option pour continuer.',
-                        style: AppTypography.body(
-                          fontSize: 12,
-                          color: AppColors.accentBrick,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                    ],
-                    for (var i = 0; i < options.length; i++) ...[
-                      if (i > 0) const SizedBox(height: AppSpacing.sm),
-                      SelectableOptionTile(
-                        title: options[i],
-                        selected: selectedValue == options[i],
-                        leading: AccentIconBadge(index: i, icon: icon),
-                        onTap: () => onSelect(options[i]),
-                      ),
-                    ],
-                  ],
+            ),
+          ],
+          items: [
+            if (selectedValue == null) ...[
+              Text(
+                'Choisis une option pour continuer.',
+                style: AppTypography.body(
+                  fontSize: 12,
+                  color: AppColors.accentBrick,
                 ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            for (var i = 0; i < options.length; i++) ...[
+              if (i > 0) const SizedBox(height: AppSpacing.sm),
+              SelectableOptionTile(
+                title: options[i],
+                selected: selectedValue == options[i],
+                leading: AccentIconBadge(index: i, icon: icon),
+                onTap: () => onSelect(options[i]),
               ),
             ],
-          ),
+          ],
         );
       },
       loading: () => _Scaffold(
@@ -437,70 +426,64 @@ class _ExpertiseBody extends ConsumerWidget {
           canProceed: canProceed,
           onSubmit: onSubmit,
           onAbandon: () => abandonCharacterCreation(context, ref),
-          body: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
+          top: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                0,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Ce choix se fait dès le niveau 1 pour ${classOption.name}.',
+                  style: AppTypography.body(fontSize: 14),
+                ),
+              ),
+            ),
+          ],
+          listPadding: effectiveQuota <= 0
+              ? EdgeInsets.zero
+              : const EdgeInsets.fromLTRB(
                   AppSpacing.lg,
                   AppSpacing.md,
                   AppSpacing.lg,
-                  0,
+                  AppSpacing.md,
                 ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Ce choix se fait dès le niveau 1 pour ${classOption.name}.',
-                    style: AppTypography.body(fontSize: 14),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: effectiveQuota <= 0
-                    ? Padding(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Text(
-                          "Aucune option n'est disponible pour ce choix. Tu "
-                          'peux continuer sans en faire.',
-                          style: AppTypography.body(
-                            fontSize: 13,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      )
-                    : ListView(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.lg,
-                          AppSpacing.md,
-                          AppSpacing.lg,
-                          AppSpacing.md,
-                        ),
-                        children: [
-                          _SectionHeader(
-                            title: 'COMPÉTENCES MAÎTRISÉES',
-                            badge: '$selectedCount / $effectiveQuota choisies',
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          for (
-                            var i = 0;
-                            i < candidateSkillNames.length;
-                            i++
-                          ) ...[
-                            if (i > 0) const SizedBox(height: AppSpacing.xs),
-                            _skillTile(candidateSkillNames[i], skillQuota),
-                          ],
-                          if (thievesToolsName != null) ...[
-                            const SizedBox(height: AppSpacing.xs),
-                            _thievesToolsTile(
-                              thievesToolsName,
-                              effectiveQuota,
-                              selectedCount,
-                            ),
-                          ],
-                        ],
+          items: effectiveQuota <= 0
+              ? [
+                  Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Text(
+                      "Aucune option n'est disponible pour ce choix. Tu "
+                      'peux continuer sans en faire.',
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        color: AppColors.textMuted,
                       ),
-              ),
-            ],
-          ),
+                    ),
+                  ),
+                ]
+              : [
+                  _SectionHeader(
+                    title: 'COMPÉTENCES MAÎTRISÉES',
+                    badge: '$selectedCount / $effectiveQuota choisies',
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  for (var i = 0; i < candidateSkillNames.length; i++) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.xs),
+                    _skillTile(candidateSkillNames[i], skillQuota),
+                  ],
+                  if (thievesToolsName != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    _thievesToolsTile(
+                      thievesToolsName,
+                      effectiveQuota,
+                      selectedCount,
+                    ),
+                  ],
+                ],
         );
       },
       loading: () => _Scaffold(
@@ -563,8 +546,13 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    // `Wrap` : à grande taille de police, le badge passe sous le titre au
+    // lieu de déborder (D192).
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.xs,
       children: [
         Text(
           title,
@@ -622,7 +610,15 @@ class _Scaffold extends StatelessWidget {
     required this.canProceed,
     required this.onSubmit,
     required this.onAbandon,
-    required this.body,
+    this.body,
+    this.top = const [],
+    this.items,
+    this.listPadding = const EdgeInsets.fromLTRB(
+      AppSpacing.lg,
+      AppSpacing.md,
+      AppSpacing.lg,
+      AppSpacing.md,
+    ),
   });
 
   final String title;
@@ -630,10 +626,44 @@ class _Scaffold extends StatelessWidget {
   final bool canProceed;
   final VoidCallback onSubmit;
   final VoidCallback onAbandon;
-  final Widget body;
+
+  /// Corps simple (chargement, erreur) : occupe la hauteur restante.
+  final Widget? body;
+
+  /// Contenu en liste : voir `CreationStepBody` (tout défile en grande police).
+  final List<Widget> top;
+  final List<Widget>? items;
+  final EdgeInsets listPadding;
 
   @override
   Widget build(BuildContext context) {
+    final footer = Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: SecondaryButton(
+                  label: 'Retour',
+                  surface: SecondaryButtonSurface.parchment,
+                  onPressed: onGoBack,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: PrimaryButton(
+                  label: 'Suivant',
+                  onPressed: canProceed ? onSubmit : null,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          DraftAutosaveFooter(onAbandon: onAbandon),
+        ],
+      ),
+    );
     return Column(
       children: [
         _Header(
@@ -651,38 +681,14 @@ class _Scaffold extends StatelessWidget {
         Expanded(
           child: SafeArea(
             top: false,
-            child: Column(
-              children: [
-                Expanded(child: body),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SecondaryButton(
-                              label: 'Retour',
-                              surface: SecondaryButtonSurface.parchment,
-                              onPressed: onGoBack,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: PrimaryButton(
-                              label: 'Suivant',
-                              onPressed: canProceed ? onSubmit : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      DraftAutosaveFooter(onAbandon: onAbandon),
-                    ],
+            child: items == null
+                ? CreationStatusBody(body: body!, footer: footer)
+                : CreationStepBody(
+                    top: top,
+                    items: items!,
+                    listPadding: listPadding,
+                    footer: footer,
                   ),
-                ),
-              ],
-            ),
           ),
         ),
       ],

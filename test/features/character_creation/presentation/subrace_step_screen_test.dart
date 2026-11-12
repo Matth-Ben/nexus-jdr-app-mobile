@@ -33,6 +33,8 @@ import 'package:personnages/features/character_creation/presentation/providers/c
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/subrace_step_screen.dart';
 
+import 'creation_scale_checks.dart';
+
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   RaceCatalog? catalogToReturn;
 
@@ -511,5 +513,22 @@ void main() {
         expect(find.text('Gnome des roches'), findsOneWidget);
       },
     );
+  });
+
+  // Grande police (D192) : x2,0 et x3,0 sur 320x568 dp avec les vraies polices.
+  group('grande police : étape Sous-race', () {
+    for (final scale in creationScaleFactors) {
+      testWidgets('x$scale sur 320 dp', (tester) async {
+        await useCreationScaledView(tester, scale);
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setRace(raceId: 1, subraceId: null);
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/new/subrace');
+        await tester.pumpAndSettle();
+        await expectCreationStepFitsScaled(tester, scale: scale);
+      });
+    }
   });
 }

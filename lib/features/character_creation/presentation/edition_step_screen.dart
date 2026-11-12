@@ -14,6 +14,7 @@ import '../domain/creation_step_help.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
+import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -111,88 +112,81 @@ class _EditionStepScreenState extends ConsumerState<EditionStepScreen> {
           Expanded(
             child: SafeArea(
               top: false,
-              child: Column(
-                children: [
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.lg,
-                        AppSpacing.md,
-                        AppSpacing.lg,
-                        AppSpacing.md,
-                      ),
-                      children: [
-                        // Dans la liste (et non au-dessus) : à grande taille de police,
-                        // le texte d'introduction défile au lieu de laisser sans
-                        // hauteur la liste des éditions (débordement vertical).
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                          child: Text(
-                            "Choisis l'édition des règles D&D 5e pour ce "
-                            'personnage. Ce choix est définitif.',
-                            style: AppTypography.body(fontSize: 14),
-                          ),
-                        ),
-                        SelectableOptionTile(
-                          title: '2014 — Manuel des Joueurs',
-                          subtitle:
-                              "L'édition originale des règles D&D 5e, "
-                              'publiée en 2014.',
-                          selected: _selectedEdition == '2014',
-                          leading: const AccentIconBadge(
-                            index: 0,
-                            icon: Icons.menu_book,
-                          ),
-                          onTap: () => _selectEdition('2014'),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        SelectableOptionTile(
-                          title: '2024 — Manuel des Joueurs revu',
-                          subtitle:
-                              "L'édition révisée des règles D&D 5e, "
-                              'publiée en 2024, avec certains '
-                              'ajustements de règles.',
-                          selected: _selectedEdition == '2024',
-                          leading: const AccentIconBadge(
-                            index: 1,
-                            icon: Icons.menu_book,
-                          ),
-                          onTap: () => _selectEdition('2024'),
-                        ),
-                      ],
+              child: CreationStepBody(
+                listPadding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                ),
+                items: [
+                  // Dans la liste (et non au-dessus) : à grande taille de police,
+                  // le texte d'introduction défile au lieu de laisser sans
+                  // hauteur la liste des éditions (débordement vertical).
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: Text(
+                      "Choisis l'édition des règles D&D 5e pour ce "
+                      'personnage. Ce choix est définitif.',
+                      style: AppTypography.body(fontSize: 14),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: SecondaryButton(
-                                label: 'Retour',
-                                surface: SecondaryButtonSurface.parchment,
-                                onPressed: _goToCharacterList,
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: PrimaryButton(
-                                label: 'Suivant',
-                                onPressed: _submit,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        DraftAutosaveFooter(
-                          onAbandon: () =>
-                              abandonCharacterCreation(context, ref),
-                        ),
-                      ],
+                  SelectableOptionTile(
+                    title: '2014 — Manuel des Joueurs',
+                    subtitle:
+                        "L'édition originale des règles D&D 5e, "
+                        'publiée en 2014.',
+                    selected: _selectedEdition == '2014',
+                    leading: const AccentIconBadge(
+                      index: 0,
+                      icon: Icons.menu_book,
                     ),
+                    onTap: () => _selectEdition('2014'),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  SelectableOptionTile(
+                    title: '2024 — Manuel des Joueurs revu',
+                    subtitle:
+                        "L'édition révisée des règles D&D 5e, "
+                        'publiée en 2024, avec certains '
+                        'ajustements de règles.',
+                    selected: _selectedEdition == '2024',
+                    leading: const AccentIconBadge(
+                      index: 1,
+                      icon: Icons.menu_book,
+                    ),
+                    onTap: () => _selectEdition('2024'),
                   ),
                 ],
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SecondaryButton(
+                              label: 'Retour',
+                              surface: SecondaryButtonSurface.parchment,
+                              onPressed: _goToCharacterList,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: PrimaryButton(
+                              label: 'Suivant',
+                              onPressed: _submit,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      DraftAutosaveFooter(
+                        onAbandon: () => abandonCharacterCreation(context, ref),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

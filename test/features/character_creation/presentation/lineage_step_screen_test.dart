@@ -20,6 +20,8 @@ import 'package:personnages/features/character_creation/presentation/lineage_ste
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/lineage_choice_providers.dart';
 
+import 'creation_scale_checks.dart';
+
 class _FakeLineageChoiceRepository implements LineageChoiceRepository {
   LineageChoiceCatalog catalog = const LineageChoiceCatalog(
     optionsByRaceId: {},
@@ -317,5 +319,22 @@ void main() {
       expect(find.text('Dragon noir (2014)'), findsNothing);
       expect(fakeRepository.requestedEditions, contains('2024'));
     });
+  });
+
+  // Grande police (D192) : x2,0 et x3,0 sur 320x568 dp avec les vraies polices.
+  group('grande police : étape Lignée', () {
+    for (final scale in creationScaleFactors) {
+      testWidgets('x$scale sur 320 dp', (tester) async {
+        await useCreationScaledView(tester, scale);
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setRace(raceId: 9, subraceId: null);
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/new/lineage');
+        await tester.pumpAndSettle();
+        await expectCreationStepFitsScaled(tester, scale: scale);
+      });
+    }
   });
 }

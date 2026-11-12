@@ -23,6 +23,8 @@ import 'package:personnages/features/character_creation/presentation/providers/c
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 import 'package:personnages/l10n/app_localizations.dart';
 
+import 'creation_scale_checks.dart';
+
 // Ordre canonique des 9 champs, voir le commentaire de classe de
 // `AppearanceAndBackstoryStepScreen` — les tests s'appuient sur cet ordre
 // pour retrouver le bon `TextFormField` par index.
@@ -564,5 +566,19 @@ void main() {
         expect(find.text('Abandonner la création ?'), findsOneWidget);
       },
     );
+  });
+
+  // Grande police (D192) : x2,0 et x3,0 sur 320x568 dp avec les vraies polices.
+  group('grande police : étape Apparence et histoire', () {
+    for (final scale in creationScaleFactors) {
+      testWidgets('x$scale sur 320 dp', (tester) async {
+        await useCreationScaledView(tester, scale);
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/new/step-8');
+        await tester.pumpAndSettle();
+        await expectCreationStepFitsScaled(tester, scale: scale);
+      });
+    }
   });
 }

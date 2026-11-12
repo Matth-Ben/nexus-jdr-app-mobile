@@ -34,6 +34,7 @@ import 'providers/subclass_choice_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/character_edit_flow.dart';
 import 'widgets/creation_mode_title.dart';
+import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -374,15 +375,17 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.summary),
             ),
-            const Expanded(
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.woodMedium),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+            Expanded(
+              child: CreationStatusBody(
+                body: Center(
+                  child: CircularProgressIndicator(color: AppColors.woodMedium),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -395,38 +398,40 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
                   showStepHelpSheet(context, CreationStepHelp.summary),
             ),
             Expanded(
-              child: _ErrorState(
-                message: error is CharacterCreationFailure
-                    ? error.message
-                    : 'Impossible de charger le récapitulatif. Réessayez.',
-                // Invalide les providers *feuilles* plutôt que le seul
-                // `summaryStepDataProvider` — même bug déjà corrigé sur les
-                // étapes précédentes (voir leur documentation) : invalider
-                // seulement le provider combiné ne force pas un nouvel appel
-                // réseau sur celui des catalogues qui a échoué.
-                onRetry: () {
-                  ref.invalidate(raceCatalogProvider);
-                  ref.invalidate(classCatalogProvider);
-                  ref.invalidate(backgroundCatalogProvider);
-                  ref.invalidate(skillCatalogProvider);
-                  ref.invalidate(toolCatalogProvider);
-                  ref.invalidate(languageCatalogProvider);
-                  ref.invalidate(itemCatalogProvider);
-                  ref.invalidate(subclassChoiceCatalogProvider);
-                  final classId = ref
-                      .read(characterCreationDraftControllerProvider)
-                      .classId;
-                  if (classId != null) {
-                    ref.invalidate(spellCatalogProvider(classId: classId));
-                  }
-                  ref.invalidate(summaryStepDataProvider);
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+              child: CreationStatusBody(
+                body: _ErrorState(
+                  message: error is CharacterCreationFailure
+                      ? error.message
+                      : 'Impossible de charger le récapitulatif. Réessayez.',
+                  // Invalide les providers *feuilles* plutôt que le seul
+                  // `summaryStepDataProvider` — même bug déjà corrigé sur les
+                  // étapes précédentes (voir leur documentation) : invalider
+                  // seulement le provider combiné ne force pas un nouvel appel
+                  // réseau sur celui des catalogues qui a échoué.
+                  onRetry: () {
+                    ref.invalidate(raceCatalogProvider);
+                    ref.invalidate(classCatalogProvider);
+                    ref.invalidate(backgroundCatalogProvider);
+                    ref.invalidate(skillCatalogProvider);
+                    ref.invalidate(toolCatalogProvider);
+                    ref.invalidate(languageCatalogProvider);
+                    ref.invalidate(itemCatalogProvider);
+                    ref.invalidate(subclassChoiceCatalogProvider);
+                    final classId = ref
+                        .read(characterCreationDraftControllerProvider)
+                        .classId;
+                    if (classId != null) {
+                      ref.invalidate(spellCatalogProvider(classId: classId));
+                    }
+                    ref.invalidate(summaryStepDataProvider);
+                  },
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -549,97 +554,84 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
 
     return SafeArea(
       top: false,
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.md,
-              ),
-              children: [
-                _NameFieldBlock(
-                  controller: _nameController,
-                  enabled: !_isSubmitting,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _HeaderCard(
-                  portraitBytes: draft.portraitBytes,
-                  portraitUrl: editSession == null
-                      ? null
-                      : ref
-                                .watch(
-                                  characterDetailProvider(
-                                    editSession.characterId,
-                                  ),
-                                )
-                                .value
-                                ?.portraitUrl ??
-                            editSession.snapshot.portraitUrl,
-                  name: trimmedName,
-                  subtitle: _formatHeaderSubtitle(draft, data),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                for (var i = 0; i < rows.length; i++) ...[
-                  if (i > 0) const SizedBox(height: AppSpacing.sm),
-                  _SummaryRow(
-                    title: rows[i].title,
-                    value: rows[i].value,
-                    onTap: _isSubmitting
-                        ? null
-                        : () => _editStep(rows[i].stepNumber),
-                  ),
-                ],
-              ],
-            ),
+      child: CreationStepBody(
+        listPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          AppSpacing.md,
+        ),
+        items: [
+          _NameFieldBlock(controller: _nameController, enabled: !_isSubmitting),
+          const SizedBox(height: AppSpacing.md),
+          _HeaderCard(
+            portraitBytes: draft.portraitBytes,
+            portraitUrl: editSession == null
+                ? null
+                : ref
+                          .watch(
+                            characterDetailProvider(editSession.characterId),
+                          )
+                          .value
+                          ?.portraitUrl ??
+                      editSession.snapshot.portraitUrl,
+            name: trimmedName,
+            subtitle: _formatHeaderSubtitle(draft, data),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              0,
-              AppSpacing.lg,
-              AppSpacing.lg,
+          const SizedBox(height: AppSpacing.md),
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0) const SizedBox(height: AppSpacing.sm),
+            _SummaryRow(
+              title: rows[i].title,
+              value: rows[i].value,
+              onTap: _isSubmitting ? null : () => _editStep(rows[i].stepNumber),
             ),
-            child: Column(
-              children: [
-                if (_errorMessage != null) ...[
-                  AlertBanner(message: _errorMessage!),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
-                InkWell(
-                  onTap: _isSubmitting ? null : _goBack,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 44),
-                    child: Center(
-                      child: Text(
-                        '‹ Retour',
-                        style: AppTypography.body(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
-                        ).copyWith(decoration: TextDecoration.underline),
-                      ),
+          ],
+        ],
+        footer: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          child: Column(
+            children: [
+              if (_errorMessage != null) ...[
+                AlertBanner(message: _errorMessage!),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+              InkWell(
+                onTap: _isSubmitting ? null : _goBack,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  child: Center(
+                    child: Text(
+                      '‹ Retour',
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                      ).copyWith(decoration: TextDecoration.underline),
                     ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                PrimaryButton(
-                  label: editSession != null
-                      ? 'Enregistrer les modifications'
-                      : 'Créer le personnage',
-                  isLoading: _isSubmitting,
-                  onPressed: canSubmit ? _submit : null,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                DraftAutosaveFooter(
-                  onAbandon: () => abandonCharacterCreation(context, ref),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              PrimaryButton(
+                label: editSession != null
+                    ? 'Enregistrer les modifications'
+                    : 'Créer le personnage',
+                isLoading: _isSubmitting,
+                onPressed: canSubmit ? _submit : null,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -910,27 +902,54 @@ class _SummaryRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Text(
-                title,
-                style: AppTypography.body(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  value,
-                  textAlign: TextAlign.right,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+              // Grande police (D192) : titre au-dessus de la valeur, sans
+              // troncature (côte à côte, les deux ne tiennent pas sur 320 dp).
+              if (AppTypography.isLargeText(context))
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: AppTypography.body(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        value,
+                        style: AppTypography.body(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else ...[
+                Text(
+                  title,
                   style: AppTypography.body(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.right,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(
                 width: 44,
                 height: 44,

@@ -42,6 +42,8 @@ import 'package:personnages/features/character_creation/presentation/providers/c
 import 'package:personnages/features/character_creation/presentation/providers/subclass_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
+import 'creation_scale_checks.dart';
+
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   ClassCatalog? catalogToReturn;
   Object? catalogErrorToThrow;
@@ -972,5 +974,19 @@ void main() {
         expect(find.text('Étape suivante'), findsOneWidget);
       },
     );
+  });
+
+  // Grande police (D192) : x2,0 et x3,0 sur 320x568 dp avec les vraies polices.
+  group('grande police : étape Classe', () {
+    for (final scale in creationScaleFactors) {
+      testWidgets('x$scale sur 320 dp', (tester) async {
+        fakeRepository.catalogToReturn = const ClassCatalog(
+          classes: [_magicien, _guerrier, _realGuerrier, _realRodeur],
+        );
+        await useCreationScaledView(tester, scale);
+        await pumpClassStep(tester);
+        await expectCreationStepFitsScaled(tester, scale: scale);
+      });
+    }
   });
 }

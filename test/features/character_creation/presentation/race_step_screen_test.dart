@@ -48,6 +48,8 @@ import 'package:personnages/features/character_creation/presentation/providers/l
 import 'package:personnages/features/character_creation/presentation/race_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
+import 'creation_scale_checks.dart';
+
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   RaceCatalog? catalogToReturn;
   Object? catalogErrorToThrow;
@@ -1663,5 +1665,37 @@ void main() {
         );
       },
     );
+  });
+
+  // Grande police (D192) : x2,0 et x3,0 sur 320x568 dp avec les vraies polices.
+  group('grande police : étape Race', () {
+    for (final scale in creationScaleFactors) {
+      testWidgets('x$scale sur 320 dp', (tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfe, _humain, _aasimar, _demiElfe, _demiOrc, _tieffelin],
+          subraces: [_hautElfe],
+        );
+        await useCreationScaledView(tester, scale);
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        await expectCreationStepFitsScaled(tester, scale: scale);
+      });
+
+      // État d'erreur (hors ligne) : message, « Réessayer » et pied de page
+      // restent atteignables en défilant.
+      testWidgets('x$scale sur 320 dp : état erreur', (tester) async {
+        fakeRepository.catalogErrorToThrow = const CharacterCreationFailure(
+          'Impossible de charger les races disponibles. Réessayez.',
+        );
+        await useCreationScaledView(tester, scale);
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        await expectCreationStepFitsScaled(
+          tester,
+          scale: scale,
+          navLabel: 'RÉESSAYER',
+        );
+      });
+    }
   });
 }

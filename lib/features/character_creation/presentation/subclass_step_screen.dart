@@ -21,6 +21,7 @@ import 'providers/subclass_choice_providers.dart';
 import 'providers/subclass_feature_choice_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
+import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 import 'widgets/subclass_choice_block.dart';
@@ -121,15 +122,17 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.classStep),
             ),
-            const Expanded(
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.woodMedium),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+            Expanded(
+              child: CreationStatusBody(
+                body: Center(
+                  child: CircularProgressIndicator(color: AppColors.woodMedium),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -142,18 +145,20 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
                   showStepHelpSheet(context, CreationStepHelp.classStep),
             ),
             Expanded(
-              child: _ErrorState(
-                message: error is CharacterCreationFailure
-                    ? error.message
-                    : 'Impossible de charger les classes disponibles. '
-                          'Réessayez.',
-                onRetry: () => ref.invalidate(classCatalogProvider),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+              child: CreationStatusBody(
+                body: _ErrorState(
+                  message: error is CharacterCreationFailure
+                      ? error.message
+                      : 'Impossible de charger les classes disponibles. '
+                            'Réessayez.',
+                  onRetry: () => ref.invalidate(classCatalogProvider),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -231,8 +236,8 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
         Expanded(
           child: SafeArea(
             top: false,
-            child: Column(
-              children: [
+            child: CreationStepBody(
+              top: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
@@ -248,82 +253,76 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
                     ),
                   ),
                 ),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      AppSpacing.md,
+              ],
+              listPadding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              items: [
+                SubclassChoiceBlock(
+                  classId: classId,
+                  className: className,
+                  catalogAsync: subclassAsync,
+                  selectedSubclassId: _selectedSubclassId,
+                  onSelect: (id) => setState(() {
+                    // Une sous-classe différente efface le second
+                    // choix de niveau 1 (ex. Ancêtre draconique) —
+                    // correctif D99, même rationale que
+                    // `ClassStepScreen._submit` pour `subclassId`.
+                    if (_selectedSubclassId != id) {
+                      _selectedSubclassFeatureOptionName = null;
+                    }
+                    _selectedSubclassId = id;
+                  }),
+                  onRetry: () => ref.invalidate(subclassChoiceCatalogProvider),
+                ),
+                if (selectedSubclassId != null &&
+                    featureChoiceAsync != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  SubclassFeatureChoiceBlock(
+                    subclassId: selectedSubclassId,
+                    catalogAsync: featureChoiceAsync,
+                    selectedOptionName: _selectedSubclassFeatureOptionName,
+                    onSelect: (name) => setState(
+                      () => _selectedSubclassFeatureOptionName = name,
                     ),
-                    children: [
-                      SubclassChoiceBlock(
-                        classId: classId,
-                        className: className,
-                        catalogAsync: subclassAsync,
-                        selectedSubclassId: _selectedSubclassId,
-                        onSelect: (id) => setState(() {
-                          // Une sous-classe différente efface le second
-                          // choix de niveau 1 (ex. Ancêtre draconique) —
-                          // correctif D99, même rationale que
-                          // `ClassStepScreen._submit` pour `subclassId`.
-                          if (_selectedSubclassId != id) {
-                            _selectedSubclassFeatureOptionName = null;
-                          }
-                          _selectedSubclassId = id;
-                        }),
-                        onRetry: () =>
-                            ref.invalidate(subclassChoiceCatalogProvider),
-                      ),
-                      if (selectedSubclassId != null &&
-                          featureChoiceAsync != null) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        SubclassFeatureChoiceBlock(
-                          subclassId: selectedSubclassId,
-                          catalogAsync: featureChoiceAsync,
-                          selectedOptionName:
-                              _selectedSubclassFeatureOptionName,
-                          onSelect: (name) => setState(
-                            () => _selectedSubclassFeatureOptionName = name,
+                    onRetry: () => ref.invalidate(
+                      subclassFeatureChoiceProvider(selectedSubclassId),
+                    ),
+                  ),
+                ],
+              ],
+              footer: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SecondaryButton(
+                            label: 'Retour',
+                            surface: SecondaryButtonSurface.parchment,
+                            onPressed: _goBack,
                           ),
-                          onRetry: () => ref.invalidate(
-                            subclassFeatureChoiceProvider(selectedSubclassId),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: PrimaryButton(
+                            label: 'Suivant',
+                            onPressed: canProceed ? _submit : null,
                           ),
                         ),
                       ],
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DraftAutosaveFooter(
+                      onAbandon: () => abandonCharacterCreation(context, ref),
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SecondaryButton(
-                              label: 'Retour',
-                              surface: SecondaryButtonSurface.parchment,
-                              onPressed: _goBack,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: PrimaryButton(
-                              label: 'Suivant',
-                              onPressed: canProceed ? _submit : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      DraftAutosaveFooter(
-                        onAbandon: () => abandonCharacterCreation(context, ref),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

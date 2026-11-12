@@ -46,6 +46,8 @@ import 'package:personnages/features/character_creation/presentation/providers/c
 import 'package:personnages/features/character_creation/presentation/skills_and_tools_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
+import 'creation_scale_checks.dart';
+
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   ClassCatalog? classCatalogToReturn;
   BackgroundCatalog? backgroundCatalogToReturn;
@@ -1653,5 +1655,26 @@ void main() {
         expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
       },
     );
+  });
+
+  // Grande police (D192) : x2,0 et x3,0 sur 320x568 dp avec les vraies polices.
+  group('grande police : étape Compétences et outils', () {
+    for (final scale in creationScaleFactors) {
+      testWidgets('x$scale sur 320 dp', (tester) async {
+        fakeRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [_barde],
+        );
+        fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+          backgrounds: [_ermite],
+        );
+        selectClassAndBackground(classId: 2, backgroundId: 10);
+        await useCreationScaledView(tester, scale);
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/new/step-5');
+        await tester.pumpAndSettle();
+        await expectCreationStepFitsScaled(tester, scale: scale);
+      });
+    }
   });
 }

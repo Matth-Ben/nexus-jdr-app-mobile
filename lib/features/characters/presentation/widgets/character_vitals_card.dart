@@ -175,6 +175,26 @@ class _VitalsValueText extends StatelessWidget {
   }
 }
 
+/// Ligne « étiquette à gauche, valeur à droite » qui passe à la ligne quand
+/// les deux ne tiennent plus côte à côte (grande police sur 320 dp, D196) : la
+/// valeur descend sous l'étiquette au lieu de déborder. Pas de largeur fixe.
+class _LabelValueRow extends StatelessWidget {
+  const _LabelValueRow({required this.label, required this.value});
+
+  final Widget label;
+  final Widget value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      runSpacing: AppSpacing.xs,
+      children: [label, value],
+    );
+  }
+}
+
 /// Bandeau PV entièrement tappable (demande utilisateur du 15/09 : remplace
 /// le stepper +/- de soin/dégât rapide, retiré, et l'ancien bouton crayon
 /// isolé — l'icône crayon reste affichée comme simple indice visuel
@@ -204,30 +224,34 @@ class _HpSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                DisplayText(
-                  l10n.characterVitalsCardHpLabel,
-                  style: AppTypography.display(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const Spacer(),
-                _VitalsValueText(
-                  '${detail.currentHp} / ${detail.maxHp}',
-                  style: AppTypography.body(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                const Icon(
-                  Icons.edit_outlined,
-                  size: 18,
+            _LabelValueRow(
+              label: DisplayText(
+                l10n.characterVitalsCardHpLabel,
+                style: AppTypography.display(
+                  fontSize: 11,
                   color: AppColors.textSecondary,
                 ),
-              ],
+              ),
+              value: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: _VitalsValueText(
+                      '${detail.currentHp} / ${detail.maxHp}',
+                      style: AppTypography.body(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  const Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: AppSpacing.xs),
             _HpGauge(ratio: detail.hpRatio),
@@ -352,25 +376,22 @@ class _XpSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            DisplayText(
-              l10n.characterVitalsCardXpLabel,
-              style: AppTypography.display(
-                fontSize: 11,
-                color: AppColors.textSecondary,
-              ),
+        _LabelValueRow(
+          label: DisplayText(
+            l10n.characterVitalsCardXpLabel,
+            style: AppTypography.display(
+              fontSize: 11,
+              color: AppColors.textSecondary,
             ),
-            const Spacer(),
-            _VitalsValueText(
-              '${detail.xp} / $threshold',
-              style: AppTypography.body(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textSecondary,
-              ),
+          ),
+          value: _VitalsValueText(
+            '${detail.xp} / $threshold',
+            style: AppTypography.body(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
             ),
-          ],
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
         ClipRRect(
@@ -458,12 +479,15 @@ class _LevelUpAvailableBanner extends StatelessWidget {
                 color: AppColors.accentBrick,
               ),
               const SizedBox(width: AppSpacing.xs),
-              DisplayText(
-                AppLocalizations.of(context)!
-                    .characterVitalsCardLevelUpBanner(targetLevel),
-                style: AppTypography.display(
-                  fontSize: 11,
-                  color: AppColors.textPrimary,
+              Flexible(
+                child: DisplayText(
+                  AppLocalizations.of(context)!
+                      .characterVitalsCardLevelUpBanner(targetLevel),
+                  textAlign: TextAlign.center,
+                  style: AppTypography.display(
+                    fontSize: 11,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ],

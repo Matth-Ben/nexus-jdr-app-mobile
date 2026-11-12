@@ -14,6 +14,7 @@ import 'package:personnages/features/character_creation/presentation/edition_ste
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 
 import '../../../core/widgets/display_scale_helpers.dart';
+import 'creation_scale_checks.dart';
 
 void main() {
   late ProviderContainer container;
@@ -159,6 +160,18 @@ void main() {
           expect(expectDisplayTextSane(tester), greaterThan(0));
         });
       }
+    }
+  });
+
+  // Grande police (D192) : x2,0 et x3,0 sur 320x568 dp avec les vraies polices.
+  group('grande police : étape Édition', () {
+    for (final scale in creationScaleFactors) {
+      testWidgets('x$scale sur 320 dp', (tester) async {
+        await useCreationScaledView(tester, scale);
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        await expectCreationStepFitsScaled(tester, scale: scale);
+      });
     }
   });
 }

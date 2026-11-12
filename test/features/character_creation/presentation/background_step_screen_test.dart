@@ -39,6 +39,8 @@ import 'package:personnages/features/character_creation/presentation/providers/c
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
+import 'creation_scale_checks.dart';
+
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   BackgroundCatalog? catalogToReturn;
   Object? catalogErrorToThrow;
@@ -690,5 +692,22 @@ void main() {
         expect(find.text('Abandonner la création ?'), findsOneWidget);
       },
     );
+  });
+
+  // Grande police (D192) : x2,0 et x3,0 sur 320x568 dp avec les vraies polices.
+  group('grande police : étape Historique', () {
+    for (final scale in creationScaleFactors) {
+      testWidgets('x$scale sur 320 dp', (tester) async {
+        fakeRepository.catalogToReturn = const BackgroundCatalog(
+          backgrounds: [_ermite, _soldat, _troisCompetences],
+        );
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setBackground(backgroundId: 1);
+        await useCreationScaledView(tester, scale);
+        await pumpBackgroundStep(tester);
+        await expectCreationStepFitsScaled(tester, scale: scale);
+      });
+    }
   });
 }

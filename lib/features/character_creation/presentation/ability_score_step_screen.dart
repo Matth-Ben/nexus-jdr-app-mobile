@@ -26,6 +26,7 @@ import 'providers/character_creation_providers.dart';
 import 'providers/character_edit_session_provider.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
+import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/racial_bonus_choice_card.dart';
 import 'widgets/step_help_sheet.dart';
@@ -290,15 +291,17 @@ class _AbilityScoreStepScreenState
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.abilityScore),
             ),
-            const Expanded(
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.woodMedium),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+            Expanded(
+              child: CreationStatusBody(
+                body: Center(
+                  child: CircularProgressIndicator(color: AppColors.woodMedium),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -311,17 +314,19 @@ class _AbilityScoreStepScreenState
                   showStepHelpSheet(context, CreationStepHelp.abilityScore),
             ),
             Expanded(
-              child: _ErrorState(
-                message: error is CharacterCreationFailure
-                    ? error.message
-                    : 'Impossible de charger les bonus raciaux. Réessayez.',
-                onRetry: () => ref.invalidate(raceCatalogProvider),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+              child: CreationStatusBody(
+                body: _ErrorState(
+                  message: error is CharacterCreationFailure
+                      ? error.message
+                      : 'Impossible de charger les bonus raciaux. Réessayez.',
+                  onRetry: () => ref.invalidate(raceCatalogProvider),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -399,8 +404,8 @@ class _AbilityScoreStepScreenState
         Expanded(
           child: SafeArea(
             top: false,
-            child: Column(
-              children: [
+            child: CreationStepBody(
+              top: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
@@ -464,96 +469,83 @@ class _AbilityScoreStepScreenState
                           ],
                         ),
                 ),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                    ),
-                    children: [
-                      for (
-                        var i = 0;
-                        i < abilityScoreDefinitions.length;
-                        i++
-                      ) ...[
-                        if (i > 0) const SizedBox(height: AppSpacing.sm),
-                        _AbilityRow(
-                          definition: abilityScoreDefinitions[i],
-                          score: _scores[abilityScoreDefinitions[i].key]!,
-                          modifier: _editSession != null
-                              ? AbilityScoreRules.abilityModifier(
-                                  _scores[abilityScoreDefinitions[i].key]!,
-                                )
-                              : AbilityScoreModifierCalculator.modifierFor(
-                                  baseScore:
-                                      _scores[abilityScoreDefinitions[i].key]!,
-                                  racialBonus:
-                                      _fixedRacialBonusFor(
-                                        abilityScoreDefinitions[i].key,
-                                        catalog,
-                                      ) +
-                                      (_racialChoices[abilityScoreDefinitions[i]
-                                              .key] ??
-                                          0),
-                                ),
-                          canIncrement: _canIncrement(
-                            abilityScoreDefinitions[i].key,
-                          ),
-                          canDecrement: _canDecrement(
-                            abilityScoreDefinitions[i].key,
-                          ),
-                          onIncrement: () =>
-                              _increment(abilityScoreDefinitions[i].key),
-                          onDecrement: () =>
-                              _decrement(abilityScoreDefinitions[i].key),
-                        ),
-                      ],
-                      if (racialChoiceSpec != null) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        RacialBonusChoiceCard(
-                          spec: racialChoiceSpec,
-                          choices: _racialChoices,
-                          onChanged: (choices) =>
-                              setState(() => _racialChoices = choices),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SecondaryButton(
-                              label: 'Retour',
-                              surface: SecondaryButtonSurface.parchment,
-                              onPressed: _goBack,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: PrimaryButton(
-                              label: 'Suivant',
-                              // Bloqué tant que les bonus raciaux au choix
-                              // ne sont pas entièrement répartis.
-                              onPressed: racialChoicesComplete ? _submit : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      DraftAutosaveFooter(
-                        onAbandon: () => abandonCharacterCreation(context, ref),
-                      ),
-                    ],
-                  ),
-                ),
               ],
+              listPadding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              items: [
+                for (var i = 0; i < abilityScoreDefinitions.length; i++) ...[
+                  if (i > 0) const SizedBox(height: AppSpacing.sm),
+                  _AbilityRow(
+                    definition: abilityScoreDefinitions[i],
+                    score: _scores[abilityScoreDefinitions[i].key]!,
+                    modifier: _editSession != null
+                        ? AbilityScoreRules.abilityModifier(
+                            _scores[abilityScoreDefinitions[i].key]!,
+                          )
+                        : AbilityScoreModifierCalculator.modifierFor(
+                            baseScore: _scores[abilityScoreDefinitions[i].key]!,
+                            racialBonus:
+                                _fixedRacialBonusFor(
+                                  abilityScoreDefinitions[i].key,
+                                  catalog,
+                                ) +
+                                (_racialChoices[abilityScoreDefinitions[i]
+                                        .key] ??
+                                    0),
+                          ),
+                    canIncrement: _canIncrement(abilityScoreDefinitions[i].key),
+                    canDecrement: _canDecrement(abilityScoreDefinitions[i].key),
+                    onIncrement: () =>
+                        _increment(abilityScoreDefinitions[i].key),
+                    onDecrement: () =>
+                        _decrement(abilityScoreDefinitions[i].key),
+                  ),
+                ],
+                if (racialChoiceSpec != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  RacialBonusChoiceCard(
+                    spec: racialChoiceSpec,
+                    choices: _racialChoices,
+                    onChanged: (choices) =>
+                        setState(() => _racialChoices = choices),
+                  ),
+                ],
+              ],
+              footer: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SecondaryButton(
+                            label: 'Retour',
+                            surface: SecondaryButtonSurface.parchment,
+                            onPressed: _goBack,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: PrimaryButton(
+                            label: 'Suivant',
+                            // Bloqué tant que les bonus raciaux au choix
+                            // ne sont pas entièrement répartis.
+                            onPressed: racialChoicesComplete ? _submit : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DraftAutosaveFooter(
+                      onAbandon: () => abandonCharacterCreation(context, ref),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

@@ -20,6 +20,7 @@ import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
+import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -151,15 +152,17 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
               onBack: _goBack,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.race),
             ),
-            const Expanded(
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.woodMedium),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+            Expanded(
+              child: CreationStatusBody(
+                body: Center(
+                  child: CircularProgressIndicator(color: AppColors.woodMedium),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -171,18 +174,20 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.race),
             ),
             Expanded(
-              child: _ErrorState(
-                message: error is CharacterCreationFailure
-                    ? error.message
-                    : 'Impossible de charger les races disponibles. '
-                          'Réessayez.',
-                onRetry: () => ref.invalidate(raceCatalogProvider),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: DraftAutosaveFooter(
-                onAbandon: () => abandonCharacterCreation(context, ref),
+              child: CreationStatusBody(
+                body: _ErrorState(
+                  message: error is CharacterCreationFailure
+                      ? error.message
+                      : 'Impossible de charger les races disponibles. '
+                            'Réessayez.',
+                  onRetry: () => ref.invalidate(raceCatalogProvider),
+                ),
+                footer: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: DraftAutosaveFooter(
+                    onAbandon: () => abandonCharacterCreation(context, ref),
+                  ),
+                ),
               ),
             ),
           ],
@@ -220,8 +225,8 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
         Expanded(
           child: SafeArea(
             top: false,
-            child: Column(
-              children: [
+            child: CreationStepBody(
+              top: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
@@ -237,68 +242,64 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
                     ),
                   ),
                 ),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      AppSpacing.md,
+              ],
+              listPadding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              items: [
+                for (var i = 0; i < subraces.length; i++) ...[
+                  if (i > 0) const SizedBox(height: AppSpacing.sm),
+                  SelectableOptionTile(
+                    title: subraces[i].name,
+                    subtitle: subraces[i].summaryLine,
+                    onInfo: () => showStepHelpSheet(
+                      context,
+                      StepHelpContent(
+                        title: subraces[i].name,
+                        body: subraces[i].infoText,
+                      ),
                     ),
-                    children: [
-                      for (var i = 0; i < subraces.length; i++) ...[
-                        if (i > 0) const SizedBox(height: AppSpacing.sm),
-                        SelectableOptionTile(
-                          title: subraces[i].name,
-                          subtitle: subraces[i].summaryLine,
-                          onInfo: () => showStepHelpSheet(
-                            context,
-                            StepHelpContent(
-                              title: subraces[i].name,
-                              body: subraces[i].infoText,
-                            ),
+                    selected: _selectedSubraceId == subraces[i].id,
+                    leading: AccentIconBadge(
+                      index: i,
+                      icon: Icons.shield_rounded,
+                    ),
+                    onTap: () => _selectSubrace(subraces[i].id),
+                  ),
+                ],
+              ],
+              footer: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SecondaryButton(
+                            label: 'Retour',
+                            surface: SecondaryButtonSurface.parchment,
+                            onPressed: _goBack,
                           ),
-                          selected: _selectedSubraceId == subraces[i].id,
-                          leading: AccentIconBadge(
-                            index: i,
-                            icon: Icons.shield_rounded,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: PrimaryButton(
+                            label: 'Suivant',
+                            onPressed: canProceed ? _submit : null,
                           ),
-                          onTap: () => _selectSubrace(subraces[i].id),
                         ),
                       ],
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DraftAutosaveFooter(
+                      onAbandon: () => abandonCharacterCreation(context, ref),
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SecondaryButton(
-                              label: 'Retour',
-                              surface: SecondaryButtonSurface.parchment,
-                              onPressed: _goBack,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: PrimaryButton(
-                              label: 'Suivant',
-                              onPressed: canProceed ? _submit : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      DraftAutosaveFooter(
-                        onAbandon: () => abandonCharacterCreation(context, ref),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
