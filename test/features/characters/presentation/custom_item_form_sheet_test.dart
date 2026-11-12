@@ -787,11 +787,30 @@ void main() {
             find.byKey(const Key('customItemMagicBonusTile_3')),
             findsOneWidget,
           );
-          await tester.tap(
-            find.byKey(const Key('customItemRequiresAttunementSwitch')),
+          final requires = find.byKey(
+            const Key('customItemRequiresAttunementSwitch'),
           );
+          await tester.ensureVisible(requires);
+          await tester.tap(requires);
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
+          // L'interrupteur a bien basculé : sa valeur et le second
+          // interrupteur (plafond atteint, attunedCount 3) en témoignent.
+          expect(
+            tester
+                .widget<SwitchListTile>(
+                  find.descendant(
+                    of: requires,
+                    matching: find.byType(SwitchListTile),
+                  ),
+                )
+                .value,
+            isTrue,
+          );
+          expect(
+            find.byKey(const Key('customItemAttuneNowSwitch')),
+            findsOneWidget,
+          );
 
           // Pied en colonne : « Ajouter » au-dessus de « Annuler ».
           final add = locale.languageCode == 'fr' ? 'AJOUTER' : 'ADD';

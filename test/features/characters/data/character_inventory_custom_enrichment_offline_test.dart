@@ -222,6 +222,13 @@ void main() {
         kind: CustomItemKinds.weapon,
         weaponRange: 'portee',
       ),
+      'catégorie d\'arme sur un objet « autre »': const CustomItemEnrichment(
+        kind: CustomItemKinds.other,
+        weaponCategory: CustomWeaponCategories.martial,
+      ),
+      'portée d\'arme sans type': const CustomItemEnrichment(
+        weaponRange: CustomWeaponRanges.melee,
+      ),
       'armure sans CA': const CustomItemEnrichment(
         kind: CustomItemKinds.armor,
         armorCategory: CustomArmorCategories.light,
@@ -367,6 +374,11 @@ void main() {
       'harmonisation non booléenne': {'customRequiresAttunement': 'oui'},
       'catégorie d\'arme inconnue': {'customWeaponCategory': 'exotique'},
       'portée inconnue': {'customWeaponRange': 'portee'},
+      'catégorie d\'arme sur un objet « autre »': {
+        'customKind': 'autre',
+        'customWeaponCategory': 'guerre',
+      },
+      'portée d\'arme sans type': {'customWeaponRange': 'melee'},
       'CA hors bornes': {'customKind': 'bouclier', 'customAcBase': 31},
       'catégorie d\'armure inconnue': {'customArmorCategory': 'mithril'},
       'armure sans CA ni catégorie': {'customKind': 'armure'},

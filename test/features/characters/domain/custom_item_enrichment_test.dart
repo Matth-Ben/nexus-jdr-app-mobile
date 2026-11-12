@@ -101,6 +101,41 @@ void main() {
       );
     });
 
+    test('catégorie et portée de l arme : réservées au type arme', () {
+      for (final kind in [
+        CustomItemKinds.other,
+        CustomItemKinds.shield,
+        null,
+      ]) {
+        expect(
+          CustomItemEnrichment(
+            kind: kind,
+            acBase: kind == CustomItemKinds.shield ? 2 : null,
+            weaponCategory: CustomWeaponCategories.common,
+          ).isValid,
+          isFalse,
+          reason: 'catégorie, type $kind',
+        );
+        expect(
+          CustomItemEnrichment(
+            kind: kind,
+            acBase: kind == CustomItemKinds.shield ? 2 : null,
+            weaponRange: CustomWeaponRanges.melee,
+          ).isValid,
+          isFalse,
+          reason: 'portée, type $kind',
+        );
+      }
+      expect(
+        const CustomItemEnrichment(
+          kind: CustomItemKinds.weapon,
+          weaponCategory: CustomWeaponCategories.martial,
+          weaponRange: CustomWeaponRanges.ranged,
+        ).isValid,
+        isTrue,
+      );
+    });
+
     test('CA de base 0..30 ; armure => CA + catégorie ; bouclier => CA', () {
       expect(const CustomItemEnrichment(acBase: 31).isValid, isFalse);
       expect(const CustomItemEnrichment(acBase: -1).isValid, isFalse);

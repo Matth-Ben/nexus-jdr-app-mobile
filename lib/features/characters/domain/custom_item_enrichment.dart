@@ -137,7 +137,9 @@ class CustomItemEnrichment {
 
   /// Validité (mêmes règles que les `CHECK` de la table) : valeurs dans leurs
   /// ensembles/bornes, bonus magique seulement pour arme/armure/bouclier,
-  /// armure => CA de base + catégorie, bouclier => CA de base.
+  /// catégorie/portée d'arme seulement pour une arme, armure => CA de base +
+  /// catégorie, bouclier => CA de base. (`only_if_custom` : un objet du
+  /// catalogue est refusé par `parseInventoryItemPayload`.)
   bool get isValid {
     if (kind != null && !CustomItemKinds.all.contains(kind)) return false;
     if (!isValidCustomMagicBonus(magicBonus)) return false;
@@ -155,6 +157,12 @@ class CustomItemEnrichment {
     if (acBase != null && !isValidCustomAcBase(acBase)) return false;
     if (armorCategory != null &&
         !CustomArmorCategories.all.contains(armorCategory)) {
+      return false;
+    }
+    // Contrainte `character_inventory_custom_weapon_fields_kind` : catégorie et
+    // portée d'arme réservées au type « arme » (un type nul est refusé).
+    if ((weaponCategory != null || weaponRange != null) &&
+        kind != CustomItemKinds.weapon) {
       return false;
     }
     if (kind == CustomItemKinds.armor &&
