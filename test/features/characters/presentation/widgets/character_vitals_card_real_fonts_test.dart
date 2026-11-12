@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/theme/app_spacing.dart';
 import 'package:personnages/core/theme/app_theme.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/condition_type.dart';
@@ -47,8 +48,9 @@ Future<void> _pump(
   double scale,
   CharacterDetail detail, {
   Locale locale = const Locale('fr'),
+  Size size = const Size(320, 568),
 }) async {
-  tester.view.physicalSize = const Size(320, 568);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -111,5 +113,40 @@ void main() {
         },
       );
     }
+  }
+
+  for (final locale in [const Locale('fr'), const Locale('en')]) {
+    testWidgets(
+      'x1,0 ${locale.languageCode} sur 360 dp : étiquette à gauche, valeur '
+      'alignée à droite, jamais collées',
+      (tester) async {
+        await _pump(
+          tester,
+          1,
+          _detail(currentHp: 12, maxHp: 12, temporaryHp: 0, xp: 0),
+          locale: locale,
+          size: const Size(360, 640),
+        );
+        expect(tester.takeException(), isNull);
+        final fr = locale.languageCode == 'fr';
+        final pairs = [
+          (fr ? 'POINTS DE VIE' : 'HIT POINTS', '12 / 12'),
+          (fr ? 'EXPÉRIENCE' : 'EXPERIENCE', '0 / 300'),
+        ];
+        final card = tester.getRect(find.byType(CharacterVitalsCard));
+        for (final (label, value) in pairs) {
+          final labelRect = tester.getRect(find.text(label));
+          final valueRect = tester.getRect(find.text(value));
+          expect(
+            valueRect.left - labelRect.right,
+            greaterThanOrEqualTo(AppSpacing.sm),
+            reason: '$label / $value collés',
+          );
+          expect(valueRect.top, lessThan(labelRect.bottom));
+          // Valeur alignée à droite (l'icône crayon des PV peut la suivre).
+          expect(card.right - valueRect.right, lessThan(48), reason: value);
+        }
+      },
+    );
   }
 }
