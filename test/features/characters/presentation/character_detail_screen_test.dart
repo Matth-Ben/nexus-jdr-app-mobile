@@ -1509,6 +1509,135 @@ void main() {
         find.text('Impossible de mettre à jour le statut.'),
         findsOneWidget,
       );
+      // L'échec ne montre jamais le retour de succès (V5-6).
+      expect(find.textContaining('archivé'), findsNothing);
+      expect(find.text('ANNULER'), findsNothing);
+    });
+
+    group('retour visible (V5-6)', () {
+      Future<void> archiveFromMenu(WidgetTester tester) async {
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await openCharacterHeaderMenu(tester);
+        await tester.tap(find.text('Archiver ce personnage'));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('archiver : SnackBar « {nom} archivé » avec « Annuler »', (
+        tester,
+      ) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await archiveFromMenu(tester);
+
+        expect(find.text('Halltesse Ambrelune archivé'), findsOneWidget);
+        expect(find.text('ANNULER'), findsOneWidget);
+      });
+
+      testWidgets('annuler : setArchived(false), fiche relue, réussite '
+          'silencieuse', (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        await archiveFromMenu(tester);
+        final fetchesBefore = fakeRepository.fetchDetailCallCount;
+
+        await tester.tap(find.text('ANNULER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.setArchivedCallCount, 2);
+        expect(fakeRepository.lastSetArchivedValue, isFalse);
+        expect(fakeRepository.fetchDetailCallCount, greaterThan(fetchesBefore));
+        expect(find.text('Halltesse Ambrelune archivé'), findsNothing);
+      });
+
+      testWidgets('annuler hors ligne : message habituel, reste archivé', (
+        tester,
+      ) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        await archiveFromMenu(tester);
+        fakeRepository.setArchivedOutcomeToReturn =
+            WriteOutcome.rejectedOffline;
+        final fetchesBefore = fakeRepository.fetchDetailCallCount;
+
+        await tester.tap(find.text('ANNULER'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            "Hors ligne : cette action n'a pas pu être enregistrée. "
+            'Réessayez une fois reconnecté.',
+          ),
+          findsOneWidget,
+        );
+        expect(fakeRepository.fetchDetailCallCount, fetchesBefore);
+      });
+
+      testWidgets('annuler en échec : message d\'erreur', (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        await archiveFromMenu(tester);
+        fakeRepository.setArchivedErrorToThrow = const CharacterFailure(
+          'Impossible de mettre à jour le statut.',
+        );
+
+        await tester.tap(find.text('ANNULER'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Impossible de mettre à jour le statut.'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('désarchiver : SnackBar simple « {nom} désarchivé », sans '
+          'Annuler', (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(isArchived: true);
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await openCharacterHeaderMenu(tester);
+
+        await tester.tap(find.text('Désarchiver'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Halltesse Ambrelune désarchivé'), findsOneWidget);
+        expect(find.text('ANNULER'), findsNothing);
+      });
+
+      testWidgets('archiver hors ligne : aucun retour de succès', (
+        tester,
+      ) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.setArchivedOutcomeToReturn =
+            WriteOutcome.rejectedOffline;
+
+        await archiveFromMenu(tester);
+
+        expect(find.text('Halltesse Ambrelune archivé'), findsNothing);
+        expect(find.text('ANNULER'), findsNothing);
+      });
+
+      testWidgets('anglais : archivé/annuler/désarchivé', (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        await pumpDetail(tester, locale: const Locale('en'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('More options'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Archive this character'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Halltesse Ambrelune archived'), findsOneWidget);
+        expect(find.text('UNDO'), findsOneWidget);
+
+        fakeRepository.detailToReturn = _baseDetail.copyWith(isArchived: true);
+        ProviderScope.containerOf(
+          tester.element(find.byType(CharacterDetailScreen)),
+        ).invalidate(characterDetailProvider('1'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('More options'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Unarchive'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Halltesse Ambrelune unarchived'), findsOneWidget);
+      });
     });
   });
 
