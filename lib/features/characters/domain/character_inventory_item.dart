@@ -1,3 +1,4 @@
+import 'custom_item_enrichment.dart';
 import 'weapon_slot.dart';
 
 /// Une ligne `character_inventory` résolue pour l'onglet "Inventaire" —
@@ -80,6 +81,13 @@ class CharacterInventoryItem {
     if (!isCustom) return null;
     return customKind ?? (weaponProperties?.damageDice != null ? 'arme' : null);
   }
+
+  /// `true` pour une arme du catalogue (`category == 'arme'`) ou un objet
+  /// personnalisé de type arme ([resolvedCustomKind], y compris un ancien
+  /// objet à dé de dégâts sans type) : source unique de classement « Armes »,
+  /// d'équipement par set et de calcul d'attaque/dégâts (P7 PR 2b).
+  bool get isWeapon =>
+      category == 'arme' || resolvedCustomKind == CustomItemKinds.weapon;
 
   /// `items.ac_bonus` — bonus de CA d'un objet magique (Anneau de
   /// protection +1, Armure +2...), `null` sinon. S'applique selon

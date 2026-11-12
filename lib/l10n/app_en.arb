@@ -1495,5 +1495,19 @@
   "itemInfoPanelAttunementAttunedValue": "Required · attuned",
   "itemInfoPanelAttunementPendingValue": "Required · not attuned",
   "itemInfoPanelMagicBonusInactiveLegend": "Magic bonus inactive until the item is attuned.",
-  "itemInfoPanelWeaponCategoryLabel": "Weapon category"
+  "itemInfoPanelWeaponCategoryLabel": "Weapon category",
+  "itemInfoPanelAttackValueWithMagic": "{bonus} (incl. +{magic} magic)",
+  "@itemInfoPanelAttackValueWithMagic": {
+    "placeholders": {
+      "bonus": {
+        "type": "String"
+      },
+      "magic": {
+        "type": "int"
+      }
+    }
+  },
+  "itemInfoPanelProficiencyUnknownLegend": "Proficiency not evaluated: the weapon category is not set, so no proficiency bonus is added.",
+  "itemInfoPanelRangeUnspecifiedLegend": "Range not specified: the Strength modifier is used.",
+  "characterEquippedWeaponsCardProficiencyUnknown": "Proficiency not evaluated"
 }

@@ -7888,6 +7888,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Catégorie d\'arme'**
   String get itemInfoPanelWeaponCategoryLabel;
+
+  /// Valeur de la ligne Attaque d'une arme à bonus magique actif.
+  ///
+  /// In fr, this message translates to:
+  /// **'{bonus} (dont +{magic} magique)'**
+  String itemInfoPanelAttackValueWithMagic(String bonus, int magic);
+
+  /// Légende quand la catégorie d'une arme personnalisée est absente.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maîtrise non évaluée : la catégorie de l\'arme n\'est pas renseignée, aucun bonus de maîtrise n\'est ajouté.'**
+  String get itemInfoPanelProficiencyUnknownLegend;
+
+  /// Légende quand la portée d'une arme personnalisée est absente (corps à corps par défaut).
+  ///
+  /// In fr, this message translates to:
+  /// **'Portée non précisée : le modificateur de Force est utilisé.'**
+  String get itemInfoPanelRangeUnspecifiedLegend;
+
+  /// Mention discrète sous une arme personnalisée sans catégorie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maîtrise non évaluée'**
+  String get characterEquippedWeaponsCardProficiencyUnknown;
 }
 
 class _AppLocalizationsDelegate

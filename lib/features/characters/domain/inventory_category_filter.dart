@@ -22,7 +22,8 @@ enum InventoryCategoryFilter {
 
   final String label;
 
-  /// `items.category == 'arme'` pour [weapons] ; `category` ∈
+  /// [CharacterInventoryItem.isWeapon] (`items.category == 'arme'` ou objet
+  /// personnalisé de type arme) pour [weapons] ; `category` ∈
   /// {'armure', 'bouclier'} pour [armor] ;
   /// `CharacterInventoryItem.consumable` pour [consumables] ; ce qui ne
   /// correspond à aucun des trois précédents pour [misc] (`outil`,
@@ -36,12 +37,12 @@ enum InventoryCategoryFilter {
   /// (bascule à choix unique).
   bool matches(CharacterInventoryItem item) => switch (this) {
     InventoryCategoryFilter.all => true,
-    InventoryCategoryFilter.weapons => item.category == 'arme',
+    InventoryCategoryFilter.weapons => item.isWeapon,
     InventoryCategoryFilter.armor =>
       item.category == 'armure' || item.category == 'bouclier',
     InventoryCategoryFilter.consumables => item.consumable,
     InventoryCategoryFilter.misc =>
-      item.category != 'arme' &&
+      !item.isWeapon &&
           item.category != 'armure' &&
           item.category != 'bouclier' &&
           !item.consumable,

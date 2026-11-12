@@ -21,7 +21,7 @@ import 'item_info_panel.dart';
 /// `CharacterPactWeaponCard`/les autres cartes de ce dossier.
 ///
 /// L'appelant filtre en amont [weapons] depuis `CharacterDetail.inventory`
-/// (`item.category == 'arme' && item.equipped`) : cette carte se contente
+/// (`item.isWeapon && item.equipped`) : cette carte se contente
 /// d'afficher la liste déjà résolue, sans logique d'écriture (équiper/
 /// déséquiper/harmoniser reste une action de l'onglet "Inventaire"
 /// uniquement).
@@ -222,21 +222,14 @@ class _Weapon extends StatelessWidget {
                 )
         : null;
 
-    final attackBonus = damageDice != null
-        ? WeaponAttackCalculator.attackBonus(
-            weaponName: item.name,
-            weaponProperties: properties,
-            abilityScores: abilityScores,
-            proficiencyTokens: weaponProficiencyNames,
-            proficiencyBonus: proficiencyBonus,
-          )
-        : null;
-    final damageModifier = damageDice != null
-        ? WeaponAttackCalculator.abilityModifierFor(
-            weaponProperties: properties,
-            abilityScores: abilityScores,
-          )
-        : null;
+    final stats = WeaponAttackCalculator.statsFor(
+      item: item,
+      abilityScores: abilityScores,
+      proficiencyTokens: weaponProficiencyNames,
+      proficiencyBonus: proficiencyBonus,
+    );
+    final attackBonus = stats?.attackBonus;
+    final damageModifier = stats?.damageModifier;
     final damage = damageDice != null && damageType != null
         ? '$damageDice'
               '${damageModifier == null || damageModifier == 0 ? '' : SignedModifierFormatter.format(damageModifier)} '
@@ -281,6 +274,7 @@ class _Weapon extends StatelessWidget {
             readOnly: true,
             weaponAttackBonus: attackBonus,
             weaponDamageModifier: damageModifier,
+            weaponStats: stats,
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
@@ -346,6 +340,14 @@ class _Weapon extends StatelessWidget {
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textPrimary,
+                          ),
+                        ),
+                      if (stats?.proficiency == WeaponProficiencyStatus.unknown)
+                        Text(
+                          l10n.characterEquippedWeaponsCardProficiencyUnknown,
+                          style: AppTypography.body(
+                            fontSize: 11,
+                            color: AppColors.textMuted,
                           ),
                         ),
                     ],

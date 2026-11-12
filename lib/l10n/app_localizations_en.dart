@@ -4887,4 +4887,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get itemInfoPanelWeaponCategoryLabel => 'Weapon category';
+
+  @override
+  String itemInfoPanelAttackValueWithMagic(String bonus, int magic) {
+    return '$bonus (incl. +$magic magic)';
+  }
+
+  @override
+  String get itemInfoPanelProficiencyUnknownLegend =>
+      'Proficiency not evaluated: the weapon category is not set, so no proficiency bonus is added.';
+
+  @override
+  String get itemInfoPanelRangeUnspecifiedLegend =>
+      'Range not specified: the Strength modifier is used.';
+
+  @override
+  String get characterEquippedWeaponsCardProficiencyUnknown =>
+      'Proficiency not evaluated';
 }
