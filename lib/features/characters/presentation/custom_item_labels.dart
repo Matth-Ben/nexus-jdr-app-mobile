@@ -38,6 +38,26 @@ String customWeaponRangeLabel(AppLocalizations l10n, String value) =>
 
 String customKindLabel(AppLocalizations l10n, String value) => switch (value) {
   CustomItemKinds.weapon => l10n.customItemTypeWeaponTitle,
+  CustomItemKinds.armor => l10n.customItemTypeArmorTitle,
+  CustomItemKinds.shield => l10n.customItemTypeShieldTitle,
   CustomItemKinds.other => l10n.customItemTypeOtherTitle,
   _ => value,
 };
+
+String customArmorCategoryLabel(AppLocalizations l10n, String value) =>
+    switch (value) {
+      CustomArmorCategories.light => l10n.customItemArmorCategoryLight,
+      CustomArmorCategories.medium => l10n.customItemArmorCategoryMedium,
+      CustomArmorCategories.heavy => l10n.customItemArmorCategoryHeavy,
+      _ => value,
+    };
+
+/// Libellé de la ligne en lecture seule « Bonus de Dextérité » d'une armure
+/// personnalisée, selon sa catégorie.
+String customArmorDexBonusLabel(AppLocalizations l10n, String category) =>
+    switch (category) {
+      CustomArmorCategories.light => l10n.customItemArmorDexUnlimited,
+      CustomArmorCategories.medium => l10n.customItemArmorDexCapped,
+      CustomArmorCategories.heavy => l10n.customItemArmorDexNone,
+      _ => category,
+    };

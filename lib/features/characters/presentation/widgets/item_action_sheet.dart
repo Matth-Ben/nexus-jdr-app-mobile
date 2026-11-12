@@ -12,7 +12,6 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/armor_proficiency_rules.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
-import '../../domain/custom_item_enrichment.dart';
 import '../../domain/inventory_category_rules.dart';
 import '../../domain/weapon_attack_calculator.dart';
 import '../../domain/weapon_slot.dart';
@@ -72,7 +71,7 @@ const Set<String> equippableInventoryCategories = {
 /// d'actions (jamais par le bouton bascule du panneau « Infos », voir
 /// `item_info_panel.dart`).
 bool isEquippableItem(CharacterInventoryItem item) => item.isCustom
-    ? item.isWeapon
+    ? item.isWeapon || item.isCustomArmorOrShield
     : item.category != 'arme' &&
           (equippableInventoryCategories.contains(item.category) ||
               item.armorProperties != null ||
@@ -217,9 +216,7 @@ class _ItemActionSheetContent extends StatelessWidget {
     final atAttunementCap =
         !item.isAttuned && attunedCount >= CharacterDetail.attunementCap;
     final subtitle = l10n.itemActionSheetSubtitle(
-      InventoryCategoryRules.labelFor(
-        item.customKind == CustomItemKinds.weapon ? 'arme' : item.category,
-      ),
+      InventoryCategoryRules.labelFor(item.customCategoryKey ?? item.category),
       item.quantity,
     );
 

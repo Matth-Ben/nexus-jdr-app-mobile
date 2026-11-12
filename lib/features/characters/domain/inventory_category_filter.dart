@@ -38,14 +38,10 @@ enum InventoryCategoryFilter {
   bool matches(CharacterInventoryItem item) => switch (this) {
     InventoryCategoryFilter.all => true,
     InventoryCategoryFilter.weapons => item.isWeapon,
-    InventoryCategoryFilter.armor =>
-      item.category == 'armure' || item.category == 'bouclier',
+    InventoryCategoryFilter.armor => item.isArmorOrShield,
     InventoryCategoryFilter.consumables => item.consumable,
     InventoryCategoryFilter.misc =>
-      !item.isWeapon &&
-          item.category != 'armure' &&
-          item.category != 'bouclier' &&
-          !item.consumable,
+      !item.isWeapon && !item.isArmorOrShield && !item.consumable,
   };
 
   static List<CharacterInventoryItem> apply(

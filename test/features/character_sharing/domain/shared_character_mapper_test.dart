@@ -324,7 +324,58 @@ void main() {
       expect(item.requiresAttunement, isTrue);
       expect(item.unitWeight, 3.5);
       expect(item.totalWeight, 7);
-      expect(item.armorProperties, isNull);
+      // P7 PR 3 : un bouclier personnalisé porte ses `armorProperties`
+      // (emplacement bouclier, CA = bonus), comme côté fiche du propriétaire.
+      expect(item.armorProperties, isNotNull);
+      expect(item.armorProperties!.slot, 'bouclier');
+      expect(item.armorProperties!.acBase, 2);
+      expect(item.armorProperties!.acDexBonus, 'aucun');
+    });
+
+    test('P7 PR 3 : armure personnalisée partagée -> mêmes armorProperties '
+        'que la fiche du propriétaire', () {
+      final detail = mapSharedCharacterJson({
+        'character': {'id': 'char-1', 'name': 'Test'},
+        'inventory': [
+          {
+            'id': 'inv-6',
+            'item_id': null,
+            'custom_name': 'Maille runique',
+            'quantity': 1,
+            'equipped': true,
+            'custom_kind': 'armure',
+            'custom_magic_bonus': 1,
+            'custom_ac_base': 14,
+            'custom_armor_category': 'intermediaire',
+          },
+        ],
+      });
+
+      final item = detail.inventory.single;
+      expect(item.armorProperties!.acBase, 14);
+      expect(item.armorProperties!.acDexBonus, 'max_2');
+      expect(item.armorProperties!.slot, 'armure');
+      expect(item.magicBonus, 1);
+    });
+
+    test('P7 PR 3 : armure personnalisée sans catégorie -> pas '
+        'd\'armorProperties (jamais devinée)', () {
+      final detail = mapSharedCharacterJson({
+        'character': {'id': 'char-1', 'name': 'Test'},
+        'inventory': [
+          {
+            'id': 'inv-7',
+            'item_id': null,
+            'custom_name': 'Incomplète',
+            'quantity': 1,
+            'equipped': true,
+            'custom_kind': 'armure',
+            'custom_ac_base': 14,
+          },
+        ],
+      });
+
+      expect(detail.inventory.single.armorProperties, isNull);
     });
 
     test('P7 : fiche partagée ancienne réponse (sans clés enrichies) reste '

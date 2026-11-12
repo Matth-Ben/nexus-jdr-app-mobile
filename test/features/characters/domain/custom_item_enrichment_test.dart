@@ -357,6 +357,104 @@ void main() {
     });
   });
 
+  group('armure et bouclier (P7 PR 3)', () {
+    test('contraintes de production : armure => CA + catégorie ; bouclier => '
+        'CA ; catégorie d\'armure jamais pour un bouclier', () {
+      expect(
+        const CustomItemEnrichment(
+          kind: CustomItemKinds.armor,
+          acBase: 14,
+          armorCategory: CustomArmorCategories.medium,
+        ).isValid,
+        isTrue,
+      );
+      expect(
+        const CustomItemEnrichment(
+          kind: CustomItemKinds.armor,
+          acBase: 14,
+        ).isValid,
+        isFalse,
+      );
+      expect(
+        const CustomItemEnrichment(
+          kind: CustomItemKinds.armor,
+          armorCategory: CustomArmorCategories.light,
+        ).isValid,
+        isFalse,
+      );
+      expect(
+        const CustomItemEnrichment(
+          kind: CustomItemKinds.shield,
+          acBase: 2,
+        ).isValid,
+        isTrue,
+      );
+      expect(
+        const CustomItemEnrichment(kind: CustomItemKinds.shield).isValid,
+        isFalse,
+      );
+      expect(
+        const CustomItemEnrichment(
+          kind: CustomItemKinds.shield,
+          acBase: 2,
+          armorCategory: CustomArmorCategories.heavy,
+        ).isValid,
+        isFalse,
+      );
+      expect(
+        const CustomItemEnrichment(
+          kind: CustomItemKinds.other,
+          armorCategory: CustomArmorCategories.heavy,
+        ).isValid,
+        isFalse,
+      );
+    });
+
+    test('colonnes écrites : CA et catégorie d\'une armure ; bonus seul '
+        'pour un bouclier', () {
+      expect(
+        const CustomItemEnrichment(
+          kind: CustomItemKinds.armor,
+          acBase: 16,
+          armorCategory: CustomArmorCategories.heavy,
+          magicBonus: 1,
+        ).toInsertColumns(),
+        {
+          'custom_kind': 'armure',
+          'custom_magic_bonus': 1,
+          'custom_ac_base': 16,
+          'custom_armor_category': 'lourde',
+        },
+      );
+      expect(
+        const CustomItemEnrichment(
+          kind: CustomItemKinds.shield,
+          acBase: 2,
+        ).toInsertColumns(),
+        {'custom_kind': 'bouclier', 'custom_ac_base': 2},
+      );
+    });
+
+    test('analyse d\'un payload de file : armure valide, bouclier avec '
+        'catégorie refusé', () {
+      final ok = parseCustomItemEnrichment({
+        'customKind': 'armure',
+        'customAcBase': 12,
+        'customArmorCategory': 'legere',
+      });
+      expect(ok.isValid, isTrue);
+      expect(ok.value!.acBase, 12);
+      expect(
+        parseCustomItemEnrichment({
+          'customKind': 'bouclier',
+          'customAcBase': 2,
+          'customArmorCategory': 'legere',
+        }).isValid,
+        isFalse,
+      );
+    });
+  });
+
   group('saisie du poids (virgule ou point)', () {
     test('vide : non renseigné ; valide : arrondi à 2 décimales', () {
       expect(parseCustomItemWeightInput(''), isNull);

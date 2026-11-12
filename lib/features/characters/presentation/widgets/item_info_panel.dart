@@ -14,6 +14,7 @@ import '../../../character_creation/domain/gold_amount_formatter.dart';
 import '../../domain/armor_proficiency_rules.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
+import '../../domain/custom_item_enrichment.dart';
 import '../../domain/inventory_armor_dex_bonus_formatter.dart';
 import '../../domain/inventory_rarity_formatter.dart';
 import '../../domain/signed_modifier_formatter.dart';
@@ -234,7 +235,33 @@ class _ItemInfoPanelContent extends StatelessWidget {
                   ),
           ),
       ],
-      if (armor != null) ...[
+      if (armor != null && item.isCustom) ...[
+        // Armure/bouclier personnalisé (P7) : ni Force requise ni désavantage
+        // en Discrétion (non renseignés, jamais affichés « Non »).
+        if (item.customKind == CustomItemKinds.shield)
+          _ItemInfoRow(
+            label: l10n.itemInfoPanelShieldBonusLabel,
+            value: '+${armor.acBase}',
+          )
+        else ...[
+          if (item.customArmorCategory case final category?)
+            _ItemInfoRow(
+              label: l10n.itemInfoPanelArmorCategoryLabel,
+              value: customArmorCategoryLabel(l10n, category),
+            ),
+          _ItemInfoRow(
+            label: l10n.itemInfoPanelArmorClassLabel,
+            value: '${armor.acBase}',
+          ),
+          _ItemInfoRow(
+            label: l10n.itemInfoPanelDexBonusLabel,
+            value: customArmorDexBonusLabel(
+              l10n,
+              item.customArmorCategory ?? '',
+            ),
+          ),
+        ],
+      ] else if (armor != null) ...[
         _ItemInfoRow(
           label: l10n.itemInfoPanelArmorClassLabel,
           value: '${armor.acBase}',

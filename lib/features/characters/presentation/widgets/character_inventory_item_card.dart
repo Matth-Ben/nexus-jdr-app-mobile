@@ -56,6 +56,9 @@ class CharacterInventoryItemCard extends StatelessWidget {
     // Arme personnalisée enrichie (P7) : « Arme · tranchant · x1 ». Tout autre
     // objet (catalogue, objet simple, ancien objet) garde « {catégorie} · x1 ».
     final customDamageType = item.weaponProperties?.damageType;
+    // Armure/bouclier personnalisé : « Armure intermédiaire · CA 15 · x1 »,
+    // « Bouclier · +2 CA · x1 » (seulement si la CA est renseignée).
+    final customArmor = item.armorProperties;
     final subtitle = item.customKind == CustomItemKinds.weapon
         ? customDamageType != null
               ? l10n.inventoryCardSubtitleWeaponWithType(
@@ -63,8 +66,21 @@ class CharacterInventoryItemCard extends StatelessWidget {
                   item.quantity,
                 )
               : l10n.inventoryCardSubtitleWeapon(item.quantity)
+        : item.isCustomArmorOrShield && customArmor != null
+        ? item.customKind == CustomItemKinds.shield
+              ? l10n.inventoryCardSubtitleShield(
+                  customArmor.acBase,
+                  item.quantity,
+                )
+              : l10n.inventoryCardSubtitleArmor(
+                  item.customArmorCategory ?? '',
+                  customArmor.acBase,
+                  item.quantity,
+                )
         : l10n.characterInventoryItemCardSubtitle(
-            InventoryCategoryRules.labelFor(item.category),
+            InventoryCategoryRules.labelFor(
+              item.customCategoryKey ?? item.category,
+            ),
             item.quantity,
           );
     final attunementPending = item.requiresAttunement && !item.isAttuned;

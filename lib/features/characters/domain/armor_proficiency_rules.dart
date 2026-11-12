@@ -132,7 +132,8 @@ class _SubclassGrant {
 ///
 /// Principes :
 /// - **Ne jamais deviner** : un objet dont la catégorie d'armure n'est pas
-///   fiable (aucune ligne `armor_properties`, objet personnalisé, `Armure +N`
+///   fiable (aucune ligne `armor_properties`, objet personnalisé sans type
+///   armure/bouclier ou sans catégorie renseignée, `Armure +N`
 ///   générique, robe de l'archimage, anneaux/capes/bracelets de protection,
 ///   objets non armure) donne [ArmorProficiency.unknown].
 /// - Catégorie d'un objet : d'abord l'emplacement (`armor_properties.slot ??
@@ -214,7 +215,11 @@ abstract final class ArmorProficiencyRules {
       _gearOf(item) == _Gear.shield;
 
   static _Gear? _gearOf(CharacterInventoryItem item) {
-    if (item.isCustom) return null;
+    // Objet personnalisé (P7) : évalué seulement s'il est typé armure/bouclier
+    // ET que ses `armorProperties` (construites depuis la catégorie d'armure/
+    // le type bouclier renseignés) existent ; sans catégorie, `armorProperties`
+    // est nul et le verdict reste `unknown` (jamais deviné).
+    if (item.isCustom && !item.isCustomArmorOrShield) return null;
     final armor = item.armorProperties;
     final slot = armor?.slot ?? item.category;
     if (slot == 'bouclier') return _Gear.shield;

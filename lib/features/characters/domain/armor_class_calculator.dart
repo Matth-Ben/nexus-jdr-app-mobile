@@ -44,6 +44,13 @@ import 'character_inventory_item.dart';
 ///   `bonus + Dex` sans armure). Un objet équipé qui requiert une
 ///   harmonisation ne donne ce bonus que s'il est harmonisé.
 ///
+/// Armures et boucliers personnalisés (P7, `custom_kind` armure/bouclier) : le
+/// mapper leur construit des `armorProperties` (voir
+/// `custom_armor_properties.dart`), ils suivent donc le même chemin que le
+/// catalogue ; en plus, leur bonus magique (`magicBonus`, 0 pour le catalogue)
+/// s'ajoute seulement s'ils sont équipés et harmonisés quand l'harmonisation
+/// est requise — leur CA de base, elle, compte toujours.
+///
 /// Non couvert (hors périmètre, "reste un simple affichage", même principe
 /// que le statut "mort" qui ne simule pas les règles complètes) : pénalité
 /// de vitesse/désavantage Discrétion d'une armure trop lourde pour la Force
@@ -73,18 +80,27 @@ abstract final class ArmorClassCalculator {
         AbilityScoreRules.abilityModifier(abilityScores[key] ?? 10);
     final dexModifier = modifier('dex');
 
-    final equippedArmor = _firstEquippedWithArmorProperties(
+    final equippedArmorItem = _firstEquippedWithArmorProperties(
       inventory,
       slot: 'armure',
     );
-    final equippedShield = _firstEquippedWithArmorProperties(
+    final equippedShieldItem = _firstEquippedWithArmorProperties(
       inventory,
       slot: 'bouclier',
     );
+    final equippedArmor = equippedArmorItem?.armorProperties;
+    final equippedShield = equippedShieldItem?.armorProperties;
     final shieldBonus = equippedShield?.acBase ?? 0;
 
+    // Bonus magique d'une armure/d'un bouclier personnalisé (P7), seulement
+    // s'il est équipé et harmonisé quand l'harmonisation est requise (la base,
+    // elle, compte toujours). Toujours 0 pour le catalogue (`magicBonus` = 0,
+    // son bonus passe par `ac_bonus`) : jamais de double compte.
+    final armorMagicBonus = _magicBonusOf(equippedArmorItem);
+    final shieldMagicBonus = _magicBonusOf(equippedShieldItem);
+
     // Bonus des objets magiques équipés (et harmonisés si nécessaire).
-    var itemBonus = 0;
+    var itemBonus = armorMagicBonus + shieldMagicBonus;
     final magicUnarmoredBases = <int>[];
     for (final item in inventory) {
       final bonus = item.acBonus;
@@ -136,7 +152,10 @@ abstract final class ArmorClassCalculator {
   static bool _grantsMagicBonus(CharacterInventoryItem item) =>
       item.equipped && (!item.requiresAttunement || item.isAttuned);
 
-  static CharacterInventoryArmorProperties? _firstEquippedWithArmorProperties(
+  static int _magicBonusOf(CharacterInventoryItem? item) =>
+      item != null && _grantsMagicBonus(item) ? item.magicBonus : 0;
+
+  static CharacterInventoryItem? _firstEquippedWithArmorProperties(
     List<CharacterInventoryItem> inventory, {
     required String slot,
   }) {
@@ -144,7 +163,7 @@ abstract final class ArmorClassCalculator {
       if (item.equipped &&
           item.armorProperties != null &&
           _slotOf(item) == slot) {
-        return item.armorProperties;
+        return item;
       }
     }
     return null;

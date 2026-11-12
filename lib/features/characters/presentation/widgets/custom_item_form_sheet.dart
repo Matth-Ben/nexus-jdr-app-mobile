@@ -61,9 +61,28 @@ double? parseCustomItemWeightInput(String raw) {
   return (value * 100).round() / 100;
 }
 
+/// CA de base proposée par catégorie d'armure tant que le joueur n'a pas saisi
+/// la sienne (bas de la fourchette indicative : légère 11-12, intermédiaire
+/// 12-15, lourde 14-18 ; une aide, jamais une limite).
+const Map<String, int> customItemArmorDefaultAc = {
+  CustomArmorCategories.light: 11,
+  CustomArmorCategories.medium: 14,
+  CustomArmorCategories.heavy: 16,
+};
+
+/// Bornes de saisie (identiques à la validation de la feuille) : CA de base
+/// d'une armure 1..30, bonus de CA d'un bouclier 1..5 (défaut +2).
+const int customItemArmorAcMin = 1;
+const int customItemShieldBonusMin = 1;
+const int customItemShieldBonusMax = 5;
+const int customItemShieldDefaultBonus = 2;
+
+/// Entier saisi, `null` si vide ou illisible.
+int? parseCustomItemIntInput(String raw) => int.tryParse(raw.trim());
+
 /// Feuille « Objet personnalisé » en deux temps (P7) : étape 1 « TYPE
-/// D'OBJET » (Arme ou Objet magique/autre), étape 2 adaptée au type. Armure et
-/// Bouclier arrivent avec la PR 3.
+/// D'OBJET » (Arme, Armure, Bouclier ou Objet magique/autre), étape 2 adaptée
+/// au type.
 ///
 /// [attunedCount] : nombre d'objets harmonisés du personnage (si connu) pour
 /// « Harmoniser maintenant » ; `null` masque cet interrupteur.
@@ -93,9 +112,20 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _propertiesController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
+  final TextEditingController _armorClassController = TextEditingController(
+    text: '${customItemArmorDefaultAc[CustomArmorCategories.light]}',
+  );
+  final TextEditingController _shieldBonusController = TextEditingController(
+    text: '$customItemShieldDefaultBonus',
+  );
 
   /// `null` : étape 1 (choix du type).
   String? _kind;
+  String _armorCategory = CustomArmorCategories.light;
+
+  /// `true` dès que le joueur a modifié la CA à la main : un changement de
+  /// catégorie ne la remplace alors plus.
+  bool _armorClassEdited = false;
   int _diceCount = 1;
   int _diceSides = 6;
   String? _damageType;
@@ -111,10 +141,18 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
     super.initState();
     _nameController.addListener(_handleChanged);
     _weightController.addListener(_handleChanged);
+    _armorClassController.addListener(_handleChanged);
+    _shieldBonusController.addListener(_handleChanged);
   }
 
   @override
   void dispose() {
+    _armorClassController
+      ..removeListener(_handleChanged)
+      ..dispose();
+    _shieldBonusController
+      ..removeListener(_handleChanged)
+      ..dispose();
     _nameController
       ..removeListener(_handleChanged)
       ..dispose();
@@ -131,6 +169,27 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
   }
 
   bool get _isWeapon => _kind == CustomItemKinds.weapon;
+
+  bool get _isArmor => _kind == CustomItemKinds.armor;
+
+  bool get _isShield => _kind == CustomItemKinds.shield;
+
+  /// Types qui acceptent un bonus magique (arme, armure, bouclier).
+  bool get _hasMagicBonus => _isWeapon || _isArmor || _isShield;
+
+  int? get _armorClass => parseCustomItemIntInput(_armorClassController.text);
+
+  int? get _shieldBonus => parseCustomItemIntInput(_shieldBonusController.text);
+
+  bool get _armorClassValid =>
+      _armorClass != null &&
+      _armorClass! >= customItemArmorAcMin &&
+      _armorClass! <= customAcBaseMax;
+
+  bool get _shieldBonusValid =>
+      _shieldBonus != null &&
+      _shieldBonus! >= customItemShieldBonusMin &&
+      _shieldBonus! <= customItemShieldBonusMax;
 
   String get _trimmedName => _nameController.text.trim();
 
@@ -149,6 +208,8 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
   List<String> _missing(AppLocalizations l10n) => [
     if (_trimmedName.isEmpty) l10n.customItemMissingName,
     if (_isWeapon && _damageType == null) l10n.customItemMissingDamageType,
+    if (_isArmor && !_armorClassValid) l10n.customItemMissingArmorClass,
+    if (_isShield && !_shieldBonusValid) l10n.customItemMissingShieldBonus,
   ];
 
   bool get _canSubmit =>
@@ -156,15 +217,16 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
       _trimmedName.isNotEmpty &&
       !_nameTooLong &&
       !_weightInvalid &&
-      (!_isWeapon || _damageType != null);
+      (!_isWeapon || _damageType != null) &&
+      (!_isArmor || _armorClassValid) &&
+      (!_isShield || _shieldBonusValid);
 
   bool get _hasAdvancedValue =>
       _weightController.text.trim().isNotEmpty ||
       _requiresAttunement ||
-      (_isWeapon &&
-          (_magicBonus > 0 ||
-              _propertiesController.text.trim().isNotEmpty ||
-              _descriptionController.text.trim().isNotEmpty));
+      (_hasMagicBonus &&
+          (_magicBonus > 0 || _descriptionController.text.trim().isNotEmpty)) ||
+      (_isWeapon && _propertiesController.text.trim().isNotEmpty);
 
   List<String> _parseProperties(String raw) => raw
       .split(',')
@@ -190,11 +252,19 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
             : const [],
         enrichment: CustomItemEnrichment(
           kind: _kind,
-          magicBonus: _isWeapon ? _magicBonus : 0,
+          magicBonus: _hasMagicBonus ? _magicBonus : 0,
           weight: weight,
           requiresAttunement: _requiresAttunement,
           weaponCategory: _isWeapon ? _weaponCategory : null,
           weaponRange: _isWeapon ? _weaponRange : null,
+          acBase: _isArmor
+              ? _armorClass
+              : _isShield
+              ? _shieldBonus
+              : null,
+          // Jamais de catégorie d'armure pour un bouclier (la maîtrise se
+          // déduit du type).
+          armorCategory: _isArmor ? _armorCategory : null,
           attuneNow: attuneNow,
         ),
       ),
@@ -311,6 +381,24 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
         ),
         const SizedBox(height: AppSpacing.sm),
         _KindTile(
+          key: const Key('customItemKindArmor'),
+          icon: InventoryCategoryRules.iconFor('armure'),
+          color: InventoryCategoryRules.colorFor('armure'),
+          title: l10n.customItemTypeArmorTitle,
+          subtitle: l10n.customItemTypeArmorSubtitle,
+          onTap: () => setState(() => _kind = CustomItemKinds.armor),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _KindTile(
+          key: const Key('customItemKindShield'),
+          icon: InventoryCategoryRules.iconFor('bouclier'),
+          color: InventoryCategoryRules.colorFor('bouclier'),
+          title: l10n.customItemTypeShieldTitle,
+          subtitle: l10n.customItemTypeShieldSubtitle,
+          onTap: () => setState(() => _kind = CustomItemKinds.shield),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _KindTile(
           key: const Key('customItemKindOther'),
           icon: InventoryCategoryRules.iconFor('objet_magique'),
           color: InventoryCategoryRules.colorFor('objet_magique'),
@@ -397,6 +485,10 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
         const SizedBox(height: AppSpacing.md),
         if (_isWeapon)
           ..._weaponFields(l10n, stacked)
+        else if (_isArmor)
+          ..._armorFields(l10n, stacked)
+        else if (_isShield)
+          ..._shieldFields(l10n)
         else
           ..._otherFields(l10n),
         AdvancedSection(
@@ -409,11 +501,12 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (_isWeapon) ..._weaponAdvancedFields(l10n, stacked),
+                if (_hasMagicBonus) ..._magicBonusFields(l10n, stacked),
+                if (_isWeapon) ..._weaponPropertiesFields(l10n),
                 ..._weightField(l10n),
                 const SizedBox(height: AppSpacing.md),
                 ..._attunementFields(l10n),
-                if (_isWeapon) ...[
+                if (_hasMagicBonus) ...[
                   const SizedBox(height: AppSpacing.md),
                   ..._descriptionField(l10n),
                 ],
@@ -529,7 +622,88 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
     const SizedBox(height: AppSpacing.md),
   ];
 
-  List<Widget> _weaponAdvancedFields(AppLocalizations l10n, bool stacked) => [
+  List<Widget> _armorFields(AppLocalizations l10n, bool stacked) {
+    final acInvalid =
+        _armorClassController.text.trim().isNotEmpty && !_armorClassValid;
+    return [
+      _label(l10n.customItemArmorCategorySectionLabel),
+      _ChoiceSelector<String>(
+        keyPrefix: 'customItemArmorCategory',
+        stacked: stacked,
+        options: [
+          (
+            CustomArmorCategories.light,
+            customArmorCategoryLabel(l10n, CustomArmorCategories.light),
+          ),
+          (
+            CustomArmorCategories.medium,
+            customArmorCategoryLabel(l10n, CustomArmorCategories.medium),
+          ),
+          (
+            CustomArmorCategories.heavy,
+            customArmorCategoryLabel(l10n, CustomArmorCategories.heavy),
+          ),
+        ],
+        value: _armorCategory,
+        onChanged: (value) {
+          // La CA proposée suit la catégorie tant que le joueur n'y a pas
+          // touché (affectation hors `setState` : le contrôleur notifie).
+          if (!_armorClassEdited) {
+            _armorClassController.text = '${customItemArmorDefaultAc[value]}';
+          }
+          setState(() => _armorCategory = value);
+        },
+      ),
+      const SizedBox(height: AppSpacing.md),
+      _label(l10n.customItemArmorClassSectionLabel),
+      TextFormField(
+        key: const Key('customItemArmorClassField'),
+        controller: _armorClassController,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        onChanged: (_) => _armorClassEdited = true,
+        decoration: InputDecoration(
+          hintText: l10n.customItemArmorClassHint,
+          errorText: acInvalid ? l10n.customItemArmorClassError : null,
+        ),
+      ),
+      _caption(l10n.customItemArmorClassLegend),
+      const SizedBox(height: AppSpacing.sm),
+      Semantics(
+        liveRegion: true,
+        child: Text(
+          l10n.customItemArmorDexLine(
+            customArmorDexBonusLabel(l10n, _armorCategory),
+          ),
+          key: const Key('customItemArmorDexLine'),
+          style: AppTypography.body(fontSize: 13, fontWeight: FontWeight.w700),
+        ),
+      ),
+      const SizedBox(height: AppSpacing.md),
+    ];
+  }
+
+  List<Widget> _shieldFields(AppLocalizations l10n) {
+    final invalid =
+        _shieldBonusController.text.trim().isNotEmpty && !_shieldBonusValid;
+    return [
+      _label(l10n.customItemShieldBonusSectionLabel),
+      TextFormField(
+        key: const Key('customItemShieldBonusField'),
+        controller: _shieldBonusController,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        decoration: InputDecoration(
+          hintText: l10n.customItemShieldBonusHint,
+          errorText: invalid ? l10n.customItemShieldBonusError : null,
+        ),
+      ),
+      _caption(l10n.customItemShieldBonusLegend),
+      const SizedBox(height: AppSpacing.md),
+    ];
+  }
+
+  List<Widget> _magicBonusFields(AppLocalizations l10n, bool stacked) => [
     _label(l10n.customItemMagicBonusSectionLabel),
     _ChoiceSelector<int>(
       keyPrefix: 'customItemMagicBonus',
@@ -543,6 +717,9 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
       onChanged: (value) => setState(() => _magicBonus = value),
     ),
     const SizedBox(height: AppSpacing.md),
+  ];
+
+  List<Widget> _weaponPropertiesFields(AppLocalizations l10n) => [
     _label(l10n.addItemFlowCustomPropertiesSectionLabel),
     TextFormField(
       key: const Key('customItemPropertiesField'),

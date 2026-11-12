@@ -1,4 +1,5 @@
 import '../domain/character_inventory_item.dart';
+import '../domain/custom_armor_properties.dart';
 import '../domain/weapon_slot.dart';
 
 /// Fonctions de mapping pures entre les lignes brutes `character_inventory`
@@ -250,7 +251,15 @@ abstract final class CharacterInventoryRowMapper {
           weaponProperties: itemId != null
               ? parseWeaponProperties(itemRow)
               : parseCustomWeaponProperties(row),
-          armorProperties: parseArmorProperties(itemRow),
+          // Armure/bouclier personnalisé (P7) : mêmes propriétés qu'une armure
+          // du catalogue, pour un calcul de CA unique.
+          armorProperties: itemId != null
+              ? parseArmorProperties(itemRow)
+              : customArmorPropertiesOf(
+                  kind: row['custom_kind'] as String?,
+                  acBase: _asIntOrNull(row['custom_ac_base']),
+                  armorCategory: row['custom_armor_category'] as String?,
+                ),
           weaponSlot: WeaponSlot.fromValue(row['weapon_slot'] as String?),
           acBonus: (itemRow?['ac_bonus'] as num?)?.toInt(),
           acBonusKind: itemRow?['ac_bonus_kind'] as String?,

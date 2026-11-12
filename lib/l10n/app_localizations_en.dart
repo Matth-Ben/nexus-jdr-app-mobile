@@ -4904,4 +4904,99 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get characterEquippedWeaponsCardProficiencyUnknown =>
       'Proficiency not evaluated';
+
+  @override
+  String get customItemTypeArmorTitle => 'Armor';
+
+  @override
+  String get customItemTypeArmorSubtitle => 'Category, base AC, magic bonus';
+
+  @override
+  String get customItemTypeShieldTitle => 'Shield';
+
+  @override
+  String get customItemTypeShieldSubtitle => 'AC bonus, magic bonus';
+
+  @override
+  String get customItemArmorCategorySectionLabel => 'ARMOR CATEGORY';
+
+  @override
+  String get customItemArmorCategoryLight => 'Light';
+
+  @override
+  String get customItemArmorCategoryMedium => 'Medium';
+
+  @override
+  String get customItemArmorCategoryHeavy => 'Heavy';
+
+  @override
+  String get customItemArmorClassSectionLabel => 'BASE AC';
+
+  @override
+  String get customItemArmorClassHint => 'E.g. 14';
+
+  @override
+  String get customItemArmorClassLegend =>
+      'Light 11-12, medium 12-15, heavy 14-18 (a guide only: you can enter another value).';
+
+  @override
+  String get customItemArmorClassError => 'Enter an AC between 1 and 30.';
+
+  @override
+  String customItemArmorDexLine(String value) {
+    return 'Dexterity bonus: $value';
+  }
+
+  @override
+  String get customItemArmorDexUnlimited => 'unlimited';
+
+  @override
+  String get customItemArmorDexCapped => 'capped at +2';
+
+  @override
+  String get customItemArmorDexNone => 'none';
+
+  @override
+  String get customItemShieldBonusSectionLabel => 'AC BONUS';
+
+  @override
+  String get customItemShieldBonusHint => 'E.g. 2';
+
+  @override
+  String get customItemShieldBonusLegend => 'A standard shield gives +2 AC.';
+
+  @override
+  String get customItemShieldBonusError => 'Enter a bonus between 1 and 5.';
+
+  @override
+  String get customItemMissingArmorClass => 'base AC';
+
+  @override
+  String get customItemMissingShieldBonus => 'AC bonus';
+
+  @override
+  String inventoryCardSubtitleArmor(
+    String category,
+    int armorClass,
+    int quantity,
+  ) {
+    String _temp0 = intl.Intl.selectLogic(category, {
+      'legere': 'Light armor',
+      'intermediaire': 'Medium armor',
+      'lourde': 'Heavy armor',
+      'other': 'Armor',
+    });
+    return '$_temp0 · AC $armorClass · x$quantity';
+  }
+
+  @override
+  String inventoryCardSubtitleShield(int bonus, int quantity) {
+    return 'Shield · +$bonus AC · x$quantity';
+  }
+
+  @override
+  String get itemInfoPanelShieldBonusLabel => 'AC bonus';
+
+  @override
+  String get itemInfoPanelArmorCategoryLabel => 'Armor category';
 }
