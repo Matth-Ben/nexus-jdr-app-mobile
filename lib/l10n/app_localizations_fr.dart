@@ -4537,4 +4537,8 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get characterListSortLastOpenedSubtitle =>
       'Les plus récents d\'abord, au sein de chaque groupe';
+
+  @override
+  String get characterSpellsTabBodyUnsupportedCasterMessage =>
+      'Les sorts de ce personnage ne sont pas gérés par l\'app.';
 }

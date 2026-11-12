@@ -7282,6 +7282,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Les plus récents d\'abord, au sein de chaque groupe'**
   String get characterListSortLastOpenedSubtitle;
+
+  /// Message de `_NonCasterEmptyState` pour un tiers-lanceur non géré (Chevalier occulte, Escroc arcanique) : le personnage lance des sorts, mais l'app n'en gère ni les emplacements ni la liste (V2-5).
+  ///
+  /// In fr, this message translates to:
+  /// **'Les sorts de ce personnage ne sont pas gérés par l\'app.'**
+  String get characterSpellsTabBodyUnsupportedCasterMessage;
 }
 
 class _AppLocalizationsDelegate

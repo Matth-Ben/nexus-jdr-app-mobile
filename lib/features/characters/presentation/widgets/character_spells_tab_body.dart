@@ -18,6 +18,7 @@ import '../../domain/spell_name_filter.dart';
 import '../../domain/spell_preparation_filter.dart';
 import '../../domain/spell_status_formatter.dart';
 import '../../domain/spells_by_level_grouper.dart';
+import '../../domain/unsupported_caster_subclasses.dart';
 import '../providers/spell_preparation_filter_preference_provider.dart';
 import 'character_class_features_card.dart';
 import 'character_spells_section.dart';
@@ -265,7 +266,11 @@ class _CharacterSpellsTabBodyState
         return ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
-            const _NonCasterEmptyState(),
+            _NonCasterEmptyState(
+              unsupportedCaster: UnsupportedCasterSubclasses.anyMatches(
+                detail.classes,
+              ),
+            ),
             if (showLimitedUseCard) ...[
               const SizedBox(height: AppSpacing.md),
               CharacterClassFeaturesCard(
@@ -563,9 +568,13 @@ class _EmptySpellsState extends StatelessWidget {
 
 /// État d'un personnage sans emplacements de sorts (ex. Barbare, Guerrier) :
 /// une phrase simple, les compteurs d'aptitudes (carte "Ressources") étant
-/// affichés en dessous par l'appelant.
+/// affichés en dessous par l'appelant. Pour un tiers-lanceur que l'app ne
+/// gère pas (Chevalier occulte, Escroc arcanique — V2-5), le message dit la
+/// limite au lieu d'affirmer à tort que le personnage ne lance pas de sorts.
 class _NonCasterEmptyState extends StatelessWidget {
-  const _NonCasterEmptyState();
+  const _NonCasterEmptyState({required this.unsupportedCaster});
+
+  final bool unsupportedCaster;
 
   @override
   Widget build(BuildContext context) {
@@ -581,7 +590,9 @@ class _NonCasterEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            l10n.characterSpellsTabBodyNonCasterMessage,
+            unsupportedCaster
+                ? l10n.characterSpellsTabBodyUnsupportedCasterMessage
+                : l10n.characterSpellsTabBodyNonCasterMessage,
             textAlign: TextAlign.center,
             style: AppTypography.body(color: AppColors.textMuted),
           ),
