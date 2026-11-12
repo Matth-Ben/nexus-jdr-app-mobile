@@ -442,9 +442,17 @@ class _AppBootstrapState extends ConsumerState<AppBootstrap> {
           loading: _splashApp,
           data: (versionResult) {
             if (versionResult.status == AppVersionStatus.updateRequired) {
+              // Textes localisés (D141) : même configuration de langue que
+              // `NexusJdrApp` (préférence explicite, sinon langue du
+              // téléphone, repli français) — cet écran bloquant vit dans son
+              // propre `MaterialApp`, hors de celui de l'app.
               return MaterialApp(
                 theme: AppTheme.light,
                 debugShowCheckedModeBanner: false,
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                localeResolutionCallback: resolveAppLocale,
+                locale: ref.watch(localePreferenceControllerProvider),
                 home: ForceUpdateScreen(
                   installedVersion: versionResult.installedVersion,
                   minimumVersion: versionResult.minimumVersion,
@@ -596,16 +604,7 @@ class NexusJdrApp extends ConsumerWidget {
       // langue ni FR ni EN, alors que le français est la langue de repli
       // voulue (décision déjà actée, voir le chantier). Callback explicite
       // plutôt que de supposer ce comportement par défaut.
-      localeResolutionCallback: (deviceLocale, supportedLocales) {
-        if (deviceLocale != null) {
-          for (final supported in supportedLocales) {
-            if (supported.languageCode == deviceLocale.languageCode) {
-              return supported;
-            }
-          }
-        }
-        return const Locale('fr');
-      },
+      localeResolutionCallback: resolveAppLocale,
       // `null` laisse `localeResolutionCallback` ci-dessus résoudre la
       // langue selon l'appareil ; une valeur explicite (`setLocale` dans
       // `LocalePreferenceController`) force cette langue indépendamment du
@@ -613,4 +612,25 @@ class NexusJdrApp extends ConsumerWidget {
       locale: ref.watch(localePreferenceControllerProvider),
     );
   }
+}
+
+/// Résolution de la langue de l'app : langue du téléphone si FR ou EN, sinon
+/// français. `AppLocalizations.supportedLocales` est généré par ordre
+/// alphabétique (`[en, fr]`) : l'algorithme par défaut de Flutter replierait
+/// donc sur l'anglais pour une langue ni FR ni EN, alors que le français est
+/// la langue de repli voulue. Partagé par `NexusJdrApp` et l'écran de mise à
+/// jour obligatoire (`MaterialApp` distinct).
+@visibleForTesting
+Locale resolveAppLocale(
+  Locale? deviceLocale,
+  Iterable<Locale> supportedLocales,
+) {
+  if (deviceLocale != null) {
+    for (final supported in supportedLocales) {
+      if (supported.languageCode == deviceLocale.languageCode) {
+        return supported;
+      }
+    }
+  }
+  return const Locale('fr');
 }

@@ -7288,6 +7288,150 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Les sorts de ce personnage ne sont pas gérés par l\'app.'**
   String get characterSpellsTabBodyUnsupportedCasterMessage;
+
+  /// Message de `UpdateSuggestedBanner` (bandeau de mise à jour suggérée de la liste des personnages).
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle version disponible'**
+  String get updateBannerMessage;
+
+  /// Lien d'action de `UpdateSuggestedBanner` : ouvre la fiche de l'application sur le store.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mettre à jour'**
+  String get updateBannerAction;
+
+  /// Info-bulle/sémantique du bouton qui referme `UpdateSuggestedBanner` pour la version proposée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer'**
+  String get updateBannerDismissTooltip;
+
+  /// Première ligne du titre de `ForceUpdateScreen` (écran bloquant).
+  ///
+  /// In fr, this message translates to:
+  /// **'MISE À JOUR'**
+  String get forceUpdateTitleLine1;
+
+  /// Seconde ligne du titre de `ForceUpdateScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'REQUISE'**
+  String get forceUpdateTitleLine2;
+
+  /// Texte explicatif de `ForceUpdateScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette version de Nexus JDR n\'est plus prise en charge. Mets à jour l\'application pour continuer à gérer tes personnages en toute sécurité.'**
+  String get forceUpdateBody;
+
+  /// Libellé du bouton primaire de `ForceUpdateScreen` (ouvre le store).
+  ///
+  /// In fr, this message translates to:
+  /// **'↓ Mettre à jour'**
+  String get forceUpdateButton;
+
+  /// Ligne de versions en bas de `ForceUpdateScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Version installée : {installed} · minimum requis : {minimum}'**
+  String forceUpdateVersionLine(String installed, String minimum);
+
+  /// SnackBar affiché par `openAppStorePage` quand la fiche store ne peut pas être ouverte.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ouvrir la fiche de l\'application. Réessayez.'**
+  String get updateStoreOpenError;
+
+  /// `CharacterErrorCode.loadFailed` et repli des états d'erreur « charger vos personnages » (D141, D195 f).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger vos personnages. Réessayez.'**
+  String get characterLoadFailedErrorMessage;
+
+  /// `CharacterErrorCode.characterNotFound` / `CharacterCreationErrorCode.characterNotFound` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Personnage introuvable.'**
+  String get characterNotFoundErrorMessage;
+
+  /// `CharacterErrorCode.itemNotFound` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet introuvable.'**
+  String get characterItemNotFoundErrorMessage;
+
+  /// `CharacterErrorCode.invalidQuantity` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'La quantité doit être au moins 1.'**
+  String get characterInvalidQuantityErrorMessage;
+
+  /// `CharacterErrorCode.noteAlreadyDeleted` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette note a déjà été supprimée.'**
+  String get characterNoteAlreadyDeletedErrorMessage;
+
+  /// `CharacterErrorCode.characterNotOwned` : régénération du lien de partage refusée (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce personnage est introuvable ou ne vous appartient plus.'**
+  String get characterNotOwnedErrorMessage;
+
+  /// `CharacterErrorCode.sessionExpired` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Session expirée. Reconnectez-vous.'**
+  String get characterSessionExpiredErrorMessage;
+
+  /// `GroupErrorCode.accessDenied` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous n\'avez pas accès à ce groupe.'**
+  String get groupAccessDeniedErrorMessage;
+
+  /// `GroupErrorCode.groupNotFound` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Groupe introuvable.'**
+  String get groupNotFoundErrorMessage;
+
+  /// `GroupErrorCode.sessionExpired` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Session expirée. Reconnectez-vous pour continuer.'**
+  String get groupSessionExpiredErrorMessage;
+
+  /// `GroupErrorCode.inviteCodeGenerationFailed` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de générer un nouveau code. Réessayez.'**
+  String get groupInviteCodeGenerationFailedErrorMessage;
+
+  /// `CharacterCreationErrorCode.accessDenied` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous n\'avez pas accès à cette action.'**
+  String get creationAccessDeniedErrorMessage;
+
+  /// `CharacterCreationErrorCode.sessionExpiredCreate` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Session expirée. Reconnectez-vous pour créer un personnage.'**
+  String get creationSessionExpiredCreateErrorMessage;
+
+  /// `CharacterCreationErrorCode.sessionExpiredEdit` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Session expirée. Reconnectez-vous puis réessayez.'**
+  String get creationSessionExpiredEditErrorMessage;
+
+  /// `CharacterCreationErrorCode.sessionExpiredImport` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Session expirée. Reconnectez-vous pour importer un personnage.'**
+  String get creationSessionExpiredImportErrorMessage;
 }
 
 class _AppLocalizationsDelegate

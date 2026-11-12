@@ -17,6 +17,7 @@ import '../../domain/character_summary.dart';
 import '../../domain/write_outcome.dart';
 import '../providers/character_providers.dart';
 import 'character_delete_confirmation.dart';
+import '../character_failure_l10n.dart';
 
 /// Ouvre la sheet "Actions de personnage" (clic long sur une carte de
 /// `character_list_screen.dart`, hors mode sélection) — même gabarit A que
@@ -70,28 +71,6 @@ void _showSnackBar(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
 
-/// Résout le texte final d'une [CharacterFailure] à afficher à l'écran.
-///
-/// Voir la doc de classe d'[CharacterErrorCode] (`domain/character_failure.dart`)
-/// pour le choix architectural : [CharacterFailure.code] est résolu ici via
-/// [AppLocalizations] pour les codes connus, [CharacterFailure.message]
-/// (déjà construit par `data/character_error_mapper.dart`, ou fourni
-/// directement par `CharacterRepository`/les tests) reste utilisé tel quel
-/// pour [CharacterErrorCode.generic].
-String _resolveCharacterFailureMessage(
-  AppLocalizations l10n,
-  CharacterFailure failure,
-) {
-  switch (failure.code) {
-    case CharacterErrorCode.accessDenied:
-      return l10n.characterAccessDeniedErrorMessage;
-    case CharacterErrorCode.network:
-      return l10n.characterNetworkErrorMessage;
-    case CharacterErrorCode.generic:
-      return failure.message;
-  }
-}
-
 /// Bascule `characters.is_archived` — même contrat que
 /// `character_detail_screen.dart::_toggleArchived`.
 ///
@@ -142,7 +121,7 @@ Future<void> _toggleArchived(
       );
     }
   } on CharacterFailure catch (failure) {
-    _showSnackBar(context, _resolveCharacterFailureMessage(l10n, failure));
+    _showSnackBar(context, failure.localizedWith(l10n));
   } catch (_) {
     _showSnackBar(
       context,
@@ -175,7 +154,7 @@ Future<void> _undoArchive({
     }
     container.invalidate(charactersProvider);
   } on CharacterFailure catch (failure) {
-    say(_resolveCharacterFailureMessage(l10n, failure));
+    say(failure.localizedWith(l10n));
   } catch (_) {
     say(l10n.characterCardActionSheetUpdateStatusGenericError);
   }
@@ -200,7 +179,7 @@ Future<void> _toggleDead(
     }
     ref.invalidate(charactersProvider);
   } on CharacterFailure catch (failure) {
-    _showSnackBar(context, _resolveCharacterFailureMessage(l10n, failure));
+    _showSnackBar(context, failure.localizedWith(l10n));
   } catch (_) {
     _showSnackBar(
       context,
@@ -236,7 +215,7 @@ Future<void> _delete(
     }
     ref.invalidate(charactersProvider);
   } on CharacterFailure catch (failure) {
-    _showSnackBar(context, _resolveCharacterFailureMessage(l10n, failure));
+    _showSnackBar(context, failure.localizedWith(l10n));
   } catch (_) {
     _showSnackBar(context, l10n.characterCardActionSheetDeleteGenericError);
   }

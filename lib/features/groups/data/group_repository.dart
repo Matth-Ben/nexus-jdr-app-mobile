@@ -456,7 +456,10 @@ class SupabaseGroupRepository implements GroupRepository {
           .eq('id', groupId)
           .maybeSingle();
       if (groupRow == null) {
-        throw const GroupFailure('Groupe introuvable.');
+        throw const GroupFailure(
+          'Groupe introuvable.',
+          code: GroupErrorCode.groupNotFound,
+        );
       }
 
       final memberRows = await _client
@@ -571,6 +574,7 @@ class SupabaseGroupRepository implements GroupRepository {
     }
     throw const GroupFailure(
       'Impossible de générer un nouveau code. Réessayez.',
+      code: GroupErrorCode.inviteCodeGenerationFailed,
     );
   }
 
@@ -961,6 +965,7 @@ class SupabaseGroupRepository implements GroupRepository {
     if (ownerId == null) {
       throw const GroupFailure(
         'Session expirée. Reconnectez-vous pour continuer.',
+        code: GroupErrorCode.sessionExpired,
       );
     }
     return ownerId;

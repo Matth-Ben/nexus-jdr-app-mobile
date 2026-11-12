@@ -25,6 +25,7 @@ import '../../characters/presentation/widgets/character_stat_pills_row.dart';
 import '../../characters/presentation/widgets/character_story_tab_body.dart';
 import '../../characters/presentation/widgets/condition_chips.dart';
 import 'providers/character_sharing_providers.dart';
+import '../../characters/presentation/character_failure_l10n.dart';
 
 /// Écran "Vue en lecture seule" d'un personnage partagé, route `/p/:token`
 /// (point d'entrée du deep link `nexus-jdr.app/p/{token}`) — voir
@@ -122,7 +123,7 @@ class _SharedCharacterViewScreenState
               ),
               error: (error, stackTrace) => _ErrorState(
                 message: error is CharacterFailure
-                    ? error.message
+                    ? error.localized(context)
                     : 'Impossible de charger ce personnage. Réessayez.',
                 onRetry: _retry,
               ),

@@ -26,6 +26,7 @@ import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 import 'widgets/subclass_choice_block.dart';
 import 'widgets/subclass_feature_choice_block.dart';
+import 'character_creation_failure_l10n.dart';
 
 /// Étape 2/9 "Sous-classe" de l'assistant de création de personnage, second
 /// écran de l'étape "Classe" — atteinte uniquement depuis `ClassStepScreen`
@@ -148,7 +149,7 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
               child: CreationStatusBody(
                 body: _ErrorState(
                   message: error is CharacterCreationFailure
-                      ? error.message
+                      ? error.localized(context)
                       : 'Impossible de charger les classes disponibles. '
                             'Réessayez.',
                   onRetry: () => ref.invalidate(classCatalogProvider),

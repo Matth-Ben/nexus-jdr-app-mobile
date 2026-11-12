@@ -17,6 +17,8 @@ import '../domain/story_invite_failure.dart';
 import 'join_routes.dart';
 import 'providers/join_story_providers.dart';
 import 'widgets/join_step_header.dart';
+import '../../characters/presentation/character_failure_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Étape 3/4 du flux "Rejoindre une histoire" : choix du personnage à
 /// rattacher — un tap sur une carte sélectionne directement et enchaîne
@@ -139,9 +141,9 @@ class _JoinCharacterStepScreenState
                     ),
                     error: (error, stackTrace) => _ErrorState(
                       message: error is CharacterFailure
-                          ? error.message
-                          : 'Impossible de charger vos personnages. '
-                                'Réessayez.',
+                          ? error.localized(context)
+                          : AppLocalizations.of(context)!
+                                .characterLoadFailedErrorMessage,
                       onRetry: () => ref.invalidate(charactersProvider),
                     ),
                   ),

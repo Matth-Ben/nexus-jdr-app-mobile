@@ -6037,5 +6037,111 @@
   "characterSpellsTabBodyUnsupportedCasterMessage": "Les sorts de ce personnage ne sont pas gérés par l'app.",
   "@characterSpellsTabBodyUnsupportedCasterMessage": {
     "description": "Message de `_NonCasterEmptyState` pour un tiers-lanceur non géré (Chevalier occulte, Escroc arcanique) : le personnage lance des sorts, mais l'app n'en gère ni les emplacements ni la liste (V2-5)."
+  },
+  "updateBannerMessage": "Nouvelle version disponible",
+  "@updateBannerMessage": {
+    "description": "Message de `UpdateSuggestedBanner` (bandeau de mise à jour suggérée de la liste des personnages)."
+  },
+  "updateBannerAction": "Mettre à jour",
+  "@updateBannerAction": {
+    "description": "Lien d'action de `UpdateSuggestedBanner` : ouvre la fiche de l'application sur le store."
+  },
+  "updateBannerDismissTooltip": "Fermer",
+  "@updateBannerDismissTooltip": {
+    "description": "Info-bulle/sémantique du bouton qui referme `UpdateSuggestedBanner` pour la version proposée."
+  },
+  "forceUpdateTitleLine1": "MISE À JOUR",
+  "@forceUpdateTitleLine1": {
+    "description": "Première ligne du titre de `ForceUpdateScreen` (écran bloquant)."
+  },
+  "forceUpdateTitleLine2": "REQUISE",
+  "@forceUpdateTitleLine2": {
+    "description": "Seconde ligne du titre de `ForceUpdateScreen`."
+  },
+  "forceUpdateBody": "Cette version de Nexus JDR n'est plus prise en charge. Mets à jour l'application pour continuer à gérer tes personnages en toute sécurité.",
+  "@forceUpdateBody": {
+    "description": "Texte explicatif de `ForceUpdateScreen`."
+  },
+  "forceUpdateButton": "↓ Mettre à jour",
+  "@forceUpdateButton": {
+    "description": "Libellé du bouton primaire de `ForceUpdateScreen` (ouvre le store)."
+  },
+  "forceUpdateVersionLine": "Version installée : {installed} · minimum requis : {minimum}",
+  "@forceUpdateVersionLine": {
+    "description": "Ligne de versions en bas de `ForceUpdateScreen`.",
+    "placeholders": {
+      "installed": {
+        "type": "String",
+        "example": "0.1.0"
+      },
+      "minimum": {
+        "type": "String",
+        "example": "0.3.0"
+      }
+    }
+  },
+  "updateStoreOpenError": "Impossible d'ouvrir la fiche de l'application. Réessayez.",
+  "@updateStoreOpenError": {
+    "description": "SnackBar affiché par `openAppStorePage` quand la fiche store ne peut pas être ouverte."
+  },
+  "characterLoadFailedErrorMessage": "Impossible de charger vos personnages. Réessayez.",
+  "@characterLoadFailedErrorMessage": {
+    "description": "`CharacterErrorCode.loadFailed` et repli des états d'erreur « charger vos personnages » (D141, D195 f)."
+  },
+  "characterNotFoundErrorMessage": "Personnage introuvable.",
+  "@characterNotFoundErrorMessage": {
+    "description": "`CharacterErrorCode.characterNotFound` / `CharacterCreationErrorCode.characterNotFound` (D141)."
+  },
+  "characterItemNotFoundErrorMessage": "Objet introuvable.",
+  "@characterItemNotFoundErrorMessage": {
+    "description": "`CharacterErrorCode.itemNotFound` (D141)."
+  },
+  "characterInvalidQuantityErrorMessage": "La quantité doit être au moins 1.",
+  "@characterInvalidQuantityErrorMessage": {
+    "description": "`CharacterErrorCode.invalidQuantity` (D141)."
+  },
+  "characterNoteAlreadyDeletedErrorMessage": "Cette note a déjà été supprimée.",
+  "@characterNoteAlreadyDeletedErrorMessage": {
+    "description": "`CharacterErrorCode.noteAlreadyDeleted` (D141)."
+  },
+  "characterNotOwnedErrorMessage": "Ce personnage est introuvable ou ne vous appartient plus.",
+  "@characterNotOwnedErrorMessage": {
+    "description": "`CharacterErrorCode.characterNotOwned` : régénération du lien de partage refusée (D141)."
+  },
+  "characterSessionExpiredErrorMessage": "Session expirée. Reconnectez-vous.",
+  "@characterSessionExpiredErrorMessage": {
+    "description": "`CharacterErrorCode.sessionExpired` (D141)."
+  },
+  "groupAccessDeniedErrorMessage": "Vous n'avez pas accès à ce groupe.",
+  "@groupAccessDeniedErrorMessage": {
+    "description": "`GroupErrorCode.accessDenied` (D141)."
+  },
+  "groupNotFoundErrorMessage": "Groupe introuvable.",
+  "@groupNotFoundErrorMessage": {
+    "description": "`GroupErrorCode.groupNotFound` (D141)."
+  },
+  "groupSessionExpiredErrorMessage": "Session expirée. Reconnectez-vous pour continuer.",
+  "@groupSessionExpiredErrorMessage": {
+    "description": "`GroupErrorCode.sessionExpired` (D141)."
+  },
+  "groupInviteCodeGenerationFailedErrorMessage": "Impossible de générer un nouveau code. Réessayez.",
+  "@groupInviteCodeGenerationFailedErrorMessage": {
+    "description": "`GroupErrorCode.inviteCodeGenerationFailed` (D141)."
+  },
+  "creationAccessDeniedErrorMessage": "Vous n'avez pas accès à cette action.",
+  "@creationAccessDeniedErrorMessage": {
+    "description": "`CharacterCreationErrorCode.accessDenied` (D141)."
+  },
+  "creationSessionExpiredCreateErrorMessage": "Session expirée. Reconnectez-vous pour créer un personnage.",
+  "@creationSessionExpiredCreateErrorMessage": {
+    "description": "`CharacterCreationErrorCode.sessionExpiredCreate` (D141)."
+  },
+  "creationSessionExpiredEditErrorMessage": "Session expirée. Reconnectez-vous puis réessayez.",
+  "@creationSessionExpiredEditErrorMessage": {
+    "description": "`CharacterCreationErrorCode.sessionExpiredEdit` (D141)."
+  },
+  "creationSessionExpiredImportErrorMessage": "Session expirée. Reconnectez-vous pour importer un personnage.",
+  "@creationSessionExpiredImportErrorMessage": {
+    "description": "`CharacterCreationErrorCode.sessionExpiredImport` (D141)."
   }
 }

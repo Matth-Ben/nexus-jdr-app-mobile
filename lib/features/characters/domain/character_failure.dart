@@ -33,6 +33,29 @@ enum CharacterErrorCode {
   /// `data/character_error_mapper.dart::mapUnknownCharacterError`.
   network,
 
+  /// `PostgrestException` sans message exploitable : repli « Impossible de
+  /// charger vos personnages », voir `mapCharacterError`.
+  loadFailed,
+
+  /// Personnage absent ou supprimé entre-temps.
+  characterNotFound,
+
+  /// Objet d'inventaire absent ou supprimé entre-temps.
+  itemNotFound,
+
+  /// Quantité d'objet inférieure à 1.
+  invalidQuantity,
+
+  /// Note de journal déjà supprimée.
+  noteAlreadyDeleted,
+
+  /// Personnage introuvable ou n'appartenant plus à l'utilisateur
+  /// (régénération du lien de partage, erreur applicative `P0002`).
+  characterNotOwned,
+
+  /// Aucune session Supabase active.
+  sessionExpired,
+
   /// Tout le reste : code Postgrest non mappé explicitement, ou erreur sans
   /// code exploitable, ou `CharacterFailure` construite directement par un
   /// appelant qui ne précise pas [code]. [CharacterFailure.message] reste

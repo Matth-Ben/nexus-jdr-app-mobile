@@ -15,6 +15,7 @@ import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../domain/group_failure.dart';
 import '../../domain/group_note_entry.dart';
 import '../providers/group_providers.dart';
+import '../group_failure_l10n.dart';
 
 /// Ouvre la sheet "Ajouter une note"/"Modifier la note" de l'onglet "Notes"
 /// de l'écran "Groupe" (`group_notes_tab_body.dart`) — [entry] `null` pour un
@@ -121,7 +122,7 @@ class _GroupNoteEntryEditSheetContentState
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = failure.message;
+        _errorMessage = failure.localized(context);
       });
     } catch (_) {
       if (!mounted) return;

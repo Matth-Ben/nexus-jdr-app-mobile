@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:personnages/features/app_update/data/app_version_repository.dart';
 import 'package:personnages/features/app_update/presentation/providers/app_version_providers.dart';
 import 'package:personnages/features/app_update/presentation/widgets/update_suggested_banner.dart';
@@ -65,6 +66,9 @@ void main() {
           ),
         ],
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('fr'),
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context)
                 .copyWith(textScaler: TextScaler.linear(scale)),

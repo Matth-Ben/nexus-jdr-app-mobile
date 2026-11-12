@@ -24,6 +24,7 @@ CharacterCreationFailure mapCharacterCreationError(
   if (error.code == '42501') {
     return const CharacterCreationFailure(
       "Vous n'avez pas accès à cette action.",
+      code: CharacterCreationErrorCode.accessDenied,
     );
   }
 
@@ -35,4 +36,7 @@ CharacterCreationFailure mapCharacterCreationError(
 /// Message générique pour toute erreur qui n'est pas une [PostgrestException]
 /// (ex. absence de réseau).
 CharacterCreationFailure mapUnknownCharacterCreationError() =>
-    const CharacterCreationFailure(_networkErrorMessage);
+    const CharacterCreationFailure(
+      _networkErrorMessage,
+      code: CharacterCreationErrorCode.network,
+    );

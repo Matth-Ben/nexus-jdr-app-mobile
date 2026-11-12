@@ -26,6 +26,7 @@ import '../domain/xml_import_alert_summary.dart';
 import '../domain/xml_import_save_data_resolver.dart';
 import '../domain/xml_race_resolver.dart';
 import 'providers/xml_import_providers.dart';
+import '../../character_creation/presentation/character_creation_failure_l10n.dart';
 
 /// Écran de vérification/récapitulatif de l'import XML aidedd.org
 /// (`docs/cahier-des-charges/03-import-xml-aidedd.md`, points 5/6 du
@@ -173,7 +174,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
         Expanded(
           child: _NetworkErrorState(
             message: error is CharacterCreationFailure
-                ? error.message
+                ? error.localized(context)
                 : 'Impossible de charger les données de référence. '
                       'Réessayez.',
             onRetry: () => ref.invalidate(_provider),
@@ -436,7 +437,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _saveErrorMessage = failure.message;
+        _saveErrorMessage = failure.localized(context);
       });
     } catch (_) {
       if (!mounted) return;

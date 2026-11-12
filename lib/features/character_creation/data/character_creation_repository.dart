@@ -1095,6 +1095,7 @@ class SupabaseCharacterCreationRepository
     if (ownerId == null) {
       throw const CharacterCreationFailure(
         'Session expirée. Reconnectez-vous pour créer un personnage.',
+        code: CharacterCreationErrorCode.sessionExpiredCreate,
       );
     }
 

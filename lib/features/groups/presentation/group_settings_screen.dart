@@ -16,6 +16,7 @@ import 'providers/group_providers.dart';
 import 'widgets/group_confirmation_dialog.dart';
 import 'widgets/group_dissolve_sheet.dart';
 import 'widgets/group_invite_code_chip.dart';
+import 'group_failure_l10n.dart';
 
 const String _genericRenameErrorMessage =
     "Impossible d'enregistrer les modifications. Réessayez.";
@@ -126,7 +127,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = failure.message;
+        _errorMessage = failure.localized(context);
       });
     } catch (_) {
       if (!mounted) return;
@@ -162,7 +163,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
       if (!mounted) return;
       _showSnackBar('Code régénéré.');
     } on GroupFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localized(context));
     } catch (_) {
       _showSnackBar('Impossible de régénérer le code. Réessayez.');
     }
@@ -201,7 +202,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
               ),
               error: (error, stackTrace) => _ErrorState(
                 message: error is GroupFailure
-                    ? error.message
+                    ? error.localized(context)
                     : 'Impossible de charger ce groupe. Réessayez.',
                 onRetry: () =>
                     ref.invalidate(groupDetailProvider(widget.groupId)),

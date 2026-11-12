@@ -70,6 +70,7 @@ class SupabaseCharacterSharingRepository implements CharacterSharingRepository {
         return Future.error(
           const CharacterFailure(
             'Ce personnage est introuvable ou ne vous appartient plus.',
+            code: CharacterErrorCode.characterNotOwned,
           ),
         );
       }
@@ -89,7 +90,10 @@ class SupabaseCharacterSharingRepository implements CharacterSharingRepository {
     // dépôt — même convention que `SupabaseCharacterRepository.setDead`.
     final ownerId = _client.auth.currentUser?.id;
     if (ownerId == null) {
-      throw const CharacterFailure('Session expirée. Reconnectez-vous.');
+      throw const CharacterFailure(
+        'Session expirée. Reconnectez-vous.',
+        code: CharacterErrorCode.sessionExpired,
+      );
     }
 
     try {

@@ -25,9 +25,13 @@ CharacterFailure mapCharacterError(PostgrestException error) {
     );
   }
 
-  return CharacterFailure(
-    error.message.isNotEmpty ? error.message : _genericErrorMessage,
-  );
+  if (error.message.isEmpty) {
+    return const CharacterFailure(
+      _genericErrorMessage,
+      code: CharacterErrorCode.loadFailed,
+    );
+  }
+  return CharacterFailure(error.message);
 }
 
 /// Message générique pour toute erreur qui n'est pas une [PostgrestException]

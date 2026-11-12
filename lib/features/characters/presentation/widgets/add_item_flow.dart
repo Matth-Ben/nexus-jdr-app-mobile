@@ -20,6 +20,7 @@ import '../../domain/inventory_catalog_item.dart';
 import '../../domain/inventory_category_rules.dart';
 import '../../domain/weight_formatter.dart';
 import '../providers/character_providers.dart';
+import '../character_failure_l10n.dart';
 
 /// Choix de la sheet d'entrée "+ Ajouter un objet" (tuile en bas de l'onglet
 /// "Inventaire", ou tuile "+ Ajouter un objet" de la sheet "Ajouter une
@@ -366,7 +367,7 @@ class _ItemCatalogPickerContentState
                         )
                       : ErrorRetryState(
                           message: error is CharacterFailure
-                              ? error.message
+                              ? error.localized(context)
                               : l10n.addItemFlowCatalogLoadErrorMessage,
                           onRetry: () =>
                               ref.invalidate(inventoryCatalogProvider),

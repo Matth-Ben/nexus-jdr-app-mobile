@@ -16,6 +16,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_failure.dart';
 import '../providers/character_detail_provider.dart';
 import '../providers/character_providers.dart';
+import '../character_failure_l10n.dart';
 
 /// Écran de recadrage de portrait, poussé après le choix d'une image
 /// (caméra/galerie/URL) par `portrait_upload_sheet.dart`. Plein écran (pas un
@@ -100,7 +101,7 @@ class _PortraitCropScreenState extends ConsumerState<PortraitCropScreen> {
       if (!mounted) return;
       setState(() {
         _isUploading = false;
-        _errorMessage = failure.message;
+        _errorMessage = failure.localized(context);
       });
     } catch (_) {
       if (!mounted) return;

@@ -17,6 +17,9 @@ import '../../characters/presentation/providers/character_providers.dart';
 import '../../characters/presentation/widgets/character_card.dart';
 import '../domain/group_failure.dart';
 import 'providers/group_providers.dart';
+import '../../characters/presentation/character_failure_l10n.dart';
+import 'group_failure_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Écran "Créer un groupe", route `/groups/new` —
 /// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.
@@ -163,9 +166,9 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
                         ),
                         error: (error, stackTrace) => _ErrorState(
                           message: error is CharacterFailure
-                              ? error.message
-                              : 'Impossible de charger vos personnages. '
-                                    'Réessayez.',
+                              ? error.localized(context)
+                              : AppLocalizations.of(context)!
+                                    .characterLoadFailedErrorMessage,
                           onRetry: () => ref.invalidate(charactersProvider),
                         ),
                       ),
@@ -211,7 +214,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = failure.message;
+        _errorMessage = failure.localized(context);
       });
     } catch (_) {
       if (!mounted) return;

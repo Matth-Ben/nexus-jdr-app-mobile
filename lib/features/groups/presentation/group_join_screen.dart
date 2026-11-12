@@ -16,6 +16,8 @@ import '../../characters/domain/character_summary.dart';
 import '../../characters/presentation/providers/character_providers.dart';
 import '../domain/group_invite_failure.dart';
 import 'providers/group_providers.dart';
+import '../../characters/presentation/character_failure_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Longueur brute (sans le tiret de présentation) d'un code d'invitation de
 /// groupe — voir `domain/group_invite_code_generator.dart::_length`.
@@ -208,9 +210,9 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
                         ),
                         error: (error, stackTrace) => _CharacterTileError(
                           message: error is CharacterFailure
-                              ? error.message
-                              : 'Impossible de charger vos personnages. '
-                                    'Réessayez.',
+                              ? error.localized(context)
+                              : AppLocalizations.of(context)!
+                                    .characterLoadFailedErrorMessage,
                           onRetry: () => ref.invalidate(charactersProvider),
                         ),
                       ),

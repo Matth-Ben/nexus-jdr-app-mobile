@@ -4502,4 +4502,92 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get characterSpellsTabBodyUnsupportedCasterMessage =>
       'This character\'s spells aren\'t supported in the app.';
+
+  @override
+  String get updateBannerMessage => 'A new version is available';
+
+  @override
+  String get updateBannerAction => 'Update';
+
+  @override
+  String get updateBannerDismissTooltip => 'Dismiss';
+
+  @override
+  String get forceUpdateTitleLine1 => 'UPDATE';
+
+  @override
+  String get forceUpdateTitleLine2 => 'REQUIRED';
+
+  @override
+  String get forceUpdateBody =>
+      'This version of Nexus JDR is no longer supported. Update the app to keep managing your characters safely.';
+
+  @override
+  String get forceUpdateButton => '↓ Update';
+
+  @override
+  String forceUpdateVersionLine(String installed, String minimum) {
+    return 'Installed version: $installed · minimum required: $minimum';
+  }
+
+  @override
+  String get updateStoreOpenError =>
+      'Couldn\'t open the app\'s store page. Try again.';
+
+  @override
+  String get characterLoadFailedErrorMessage =>
+      'Couldn\'t load your characters. Try again.';
+
+  @override
+  String get characterNotFoundErrorMessage => 'Character not found.';
+
+  @override
+  String get characterItemNotFoundErrorMessage => 'Item not found.';
+
+  @override
+  String get characterInvalidQuantityErrorMessage =>
+      'Quantity must be at least 1.';
+
+  @override
+  String get characterNoteAlreadyDeletedErrorMessage =>
+      'This note was already deleted.';
+
+  @override
+  String get characterNotOwnedErrorMessage =>
+      'This character can\'t be found or no longer belongs to you.';
+
+  @override
+  String get characterSessionExpiredErrorMessage =>
+      'Session expired. Please sign in again.';
+
+  @override
+  String get groupAccessDeniedErrorMessage =>
+      'You don\'t have access to this group.';
+
+  @override
+  String get groupNotFoundErrorMessage => 'Group not found.';
+
+  @override
+  String get groupSessionExpiredErrorMessage =>
+      'Session expired. Sign in again to continue.';
+
+  @override
+  String get groupInviteCodeGenerationFailedErrorMessage =>
+      'Couldn\'t generate a new code. Try again.';
+
+  @override
+  String get creationAccessDeniedErrorMessage =>
+      'You don\'t have access to this action.';
+
+  @override
+  String get creationSessionExpiredCreateErrorMessage =>
+      'Session expired. Sign in again to create a character.';
+
+  @override
+  String get creationSessionExpiredEditErrorMessage =>
+      'Session expired. Sign in again and try again.';
+
+  @override
+  String get creationSessionExpiredImportErrorMessage =>
+      'Session expired. Sign in again to import a character.';
 }

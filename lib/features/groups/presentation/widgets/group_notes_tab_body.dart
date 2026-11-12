@@ -13,6 +13,7 @@ import '../../domain/group_failure.dart';
 import '../../domain/group_note_entry.dart';
 import '../providers/group_providers.dart';
 import 'group_note_entry_edit_sheet.dart';
+import '../group_failure_l10n.dart';
 
 /// Contenu de l'onglet "Notes" de l'écran "Groupe" (demande utilisateur du
 /// 16/09/2026, hors cahier des charges — carnet personnel pendant la partie,
@@ -110,7 +111,7 @@ class GroupNotesTabBody extends ConsumerWidget {
     } on GroupFailure catch (failure) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(failure.message)));
+          .showSnackBar(SnackBar(content: Text(failure.localized(context))));
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

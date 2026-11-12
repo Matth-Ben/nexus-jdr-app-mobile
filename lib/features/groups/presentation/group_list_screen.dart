@@ -18,6 +18,7 @@ import '../domain/group_summary.dart';
 import 'providers/group_providers.dart';
 import 'widgets/group_status_badge.dart';
 import 'widgets/member_color_chips_row.dart';
+import 'group_failure_l10n.dart';
 
 /// Écran "Groupes", route `/groups` — point d'entrée UNIQUE du bouton
 /// "groupes" de `character_list_screen.dart` (`_GroupsButton`), quel que
@@ -111,7 +112,7 @@ class _GroupListScreenState extends ConsumerState<GroupListScreen>
                 ),
                 error: (error, stackTrace) => _ErrorState(
                   message: error is GroupFailure
-                      ? error.message
+                      ? error.localized(context)
                       : 'Impossible de charger vos groupes. Réessayez.',
                   onRetry: () => ref.invalidate(myGroupsProvider),
                 ),

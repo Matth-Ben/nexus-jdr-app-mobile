@@ -13,6 +13,7 @@ import '../../domain/character_journal_entry.dart';
 import '../../domain/write_outcome.dart';
 import '../providers/character_detail_provider.dart';
 import '../providers/character_providers.dart';
+import '../character_failure_l10n.dart';
 
 /// Ouvre la sheet "Ajouter une note"/"Modifier la note" du journal de
 /// campagne (carte "Journal de campagne" de l'onglet "Histoire",
@@ -123,7 +124,7 @@ class _JournalEntryEditSheetContentState
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = failure.message;
+        _errorMessage = failure.localized(context);
       });
     } catch (_) {
       if (!mounted) return;

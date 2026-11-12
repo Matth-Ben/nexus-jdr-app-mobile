@@ -14,6 +14,7 @@ import '../../domain/character_failure.dart';
 import '../../domain/write_outcome.dart';
 import '../providers/character_detail_provider.dart';
 import '../providers/character_providers.dart';
+import '../character_failure_l10n.dart';
 
 /// Ouvre la sheet "Modifier l'histoire" (icône crayon du bandeau bois de
 /// l'onglet "Histoire", et bouton de son état vide — voir
@@ -247,7 +248,7 @@ class _CharacterStoryEditSheetContentState
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = failure.message;
+        _errorMessage = failure.localized(context);
       });
     } catch (error) {
       debugPrint('CharacterStoryEditSheet._submit: erreur inattendue: $error');

@@ -37,6 +37,7 @@ import 'widgets/creation_mode_title.dart';
 import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
+import 'character_creation_failure_l10n.dart';
 
 /// Étape 10/10 de l'assistant de création de personnage : récapitulatif
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
@@ -285,7 +286,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _errorMessage = failure.message;
+        _errorMessage = failure.localized(context);
       });
     } catch (_) {
       if (!mounted) return;
@@ -339,7 +340,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _errorMessage = failure.message;
+        _errorMessage = failure.localized(context);
       });
     } catch (_) {
       if (!mounted) return;
@@ -401,7 +402,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
               child: CreationStatusBody(
                 body: _ErrorState(
                   message: error is CharacterCreationFailure
-                      ? error.message
+                      ? error.localized(context)
                       : 'Impossible de charger le récapitulatif. Réessayez.',
                   // Invalide les providers *feuilles* plutôt que le seul
                   // `summaryStepDataProvider` — même bug déjà corrigé sur les
