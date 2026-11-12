@@ -5,8 +5,11 @@
 // `overrideWithValue`, pour ne jamais toucher à `Supabase.instance.client`.
 
 import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,6 +56,10 @@ import 'package:personnages/core/router/route_observer_provider.dart';
 import 'package:personnages/core/sync/sync_status_providers.dart';
 import 'package:personnages/core/widgets/alert_banner.dart';
 import 'package:personnages/core/widgets/info_banner.dart';
+import 'package:personnages/core/widgets/primary_button.dart';
+import 'package:personnages/core/widgets/secondary_button.dart';
+import 'package:personnages/core/widgets/sync_status_banner.dart';
+import 'package:personnages/features/characters/presentation/widgets/character_selection_action_bar.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/selectable_option_tile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -582,6 +589,12 @@ Future<void> _scrollFilterSheetTo(WidgetTester tester, Finder finder) =>
       const Offset(0, -100),
     );
 
+Future<void> _loadFont(String family, String path) async {
+  final loader = FontLoader(family)
+    ..addFont(Future.value(ByteData.sublistView(File(path).readAsBytesSync())));
+  await loader.load();
+}
+
 void main() {
   // `packageInfoProvider` (lu par `appVersionCheckProvider`, dépendance de
   // `UpdateSuggestedBanner`) : mockée une fois pour tout le fichier, même
@@ -938,6 +951,32 @@ void main() {
     // masquerait le symptôme sans garantir que le contenu reste
     // consultable.
     expect(find.textContaining('AUCUN AVENTURIER'), findsOneWidget);
+    // Refonte du 12/11/2026 : l'état vide n'a plus de défilement propre (F06),
+    // c'est le `CustomScrollView` unique de l'écran qui le fait défiler.
+    expect(
+      find.ancestor(
+        of: find.textContaining('AUCUN AVENTURIER'),
+        matching: find.byType(SingleChildScrollView),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.ancestor(
+        of: find.textContaining('AUCUN AVENTURIER'),
+        matching: find.byType(Scrollable),
+      ),
+      findsOneWidget,
+    );
+    final scrollable = tester.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    // Hauteur trop juste : le contenu dépasse et le défilement l'atteint.
+    expect(scrollable.position.maxScrollExtent, greaterThan(0));
   });
 
   testWidgets('état vide "aucun personnage" : médaillon en bordure pointillée '
@@ -2755,124 +2794,763 @@ void main() {
         });
       }
     }
+  });
 
-    // Plafond du bloc d en-tête : seulement quand il est nécessaire, pour ne
-    // pas créer deux zones de défilement indépendantes dans les cas courants.
-    Finder headerScroll() => find.ancestor(
-      of: find.byType(TextField),
-      matching: find.byType(SingleChildScrollView),
+  // Refonte du 12/11/2026 : tout défile ensemble dans UN `CustomScrollView`
+  // (titre, bandeaux, recherche, cartes) ; restent fixes le bandeau de synchro
+  // (épinglé), la recherche (épinglée sauf police > x1,3 ou hauteur réduite) et
+  // le pied Créer/Importer. Polices réelles : les largeurs de mots de la police
+  // de test (un em par glyphe) fausseraient les contrôles de débordement.
+  group('un seul défilement (refonte de la liste, 12/11/2026)', () {
+    setUpAll(() async {
+      await _loadFont(
+        'WorkSans',
+        'assets/fonts/WorkSans-VariableFont_wght.ttf',
+      );
+      await _loadFont('PressStart2P', 'assets/fonts/PressStart2P-Regular.ttf');
+    });
+
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    final updateSuggested = _FakeAppVersionRepository(
+      const AppVersionRow(
+        minimumSupportedVersion: '0.1.0',
+        latestVersion: '0.5.0',
+      ),
     );
 
-    const twoCharacters = [
-      CharacterSummary(
-        id: '1',
-        name: 'Halltesse Ambrelune',
-        raceName: 'Elfe',
-        className: 'Magicienne',
-        level: 5,
-        xp: 7000,
-      ),
-      CharacterSummary(
-        id: '2',
-        name: 'Borgan Pierrefort',
-        raceName: 'Nain',
-        className: 'Guerrier',
-        level: 3,
-        xp: 1200,
-      ),
+    List<CharacterSummary> many(int count) => [
+      for (var i = 0; i < count; i++)
+        CharacterSummary(
+          id: 'id$i',
+          name: 'Perso ${i.toString().padLeft(2, '0')}',
+          raceName: 'Elfe',
+          className: 'Magicienne',
+          level: 3,
+          xp: 1200,
+        ),
     ];
 
-    for (final scale in <double>[1.0, 1.3]) {
-      testWidgets('x$scale sur 360x640 : bloc d en-tête non plafonné, aucun '
-          'défilement imbriqué', (tester) async {
-        fakeCharacterRepository.charactersToReturn = twoCharacters;
-        tester.view.physicalSize = const Size(360, 640);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.reset);
-
-        await tester.pumpWidget(buildTestWidget(textScale: scale));
-        await tester.pumpAndSettle();
-
-        expect(tester.takeException(), isNull);
-        expect(headerScroll(), findsNothing);
-      });
+    void surface(WidgetTester tester, Size size) {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
     }
 
-    for (final surface in const [Size(360, 640), Size(320, 568)]) {
-      testWidgets('x2.0 sur ${surface.width.toInt()}x${surface.height.toInt()} '
-          ': aucune exception, bloc d en-tête défilant', (tester) async {
-        fakeCharacterRepository.charactersToReturn = twoCharacters;
-        tester.view.physicalSize = surface;
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.reset);
-
-        await tester.pumpWidget(
-          buildTestWidget(
-            textScale: 2,
-            appVersionRepository: _FakeAppVersionRepository(
-              const AppVersionRow(
-                minimumSupportedVersion: '0.1.0',
-                latestVersion: '0.5.0',
-              ),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        expect(tester.takeException(), isNull);
-        expect(headerScroll(), findsOneWidget);
-      });
+    Future<void> pumpList(
+      WidgetTester tester, {
+      double scale = 1.0,
+      AppVersionRepository? versions,
+      Locale locale = const Locale('fr'),
+    }) async {
+      await tester.pumpWidget(
+        buildTestWidget(
+          textScale: scale,
+          appVersionRepository: versions,
+          locale: locale,
+        ),
+      );
+      await tester.pumpAndSettle();
     }
 
-    for (final scale in <double>[1.0, 1.3]) {
-      testWidgets('clavier ouvert (x$scale, 360x640) : aucun débordement, la '
-          'recherche garde le focus', (tester) async {
-        fakeCharacterRepository.charactersToReturn = twoCharacters;
-        tester.view.physicalSize = const Size(360, 640);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.reset);
+    Finder mainScrollable() => find
+        .descendant(
+          of: find.byType(CustomScrollView),
+          matching: find.byType(Scrollable),
+        )
+        .first;
 
-        await tester.pumpWidget(
-          buildTestWidget(
-            textScale: scale,
-            appVersionRepository: _FakeAppVersionRepository(
-              const AppVersionRow(
-                minimumSupportedVersion: '0.1.0',
-                latestVersion: '0.5.0',
-              ),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(find.byType(TextField));
-        await tester.pumpAndSettle();
+    double offset(WidgetTester tester) =>
+        tester.state<ScrollableState>(mainScrollable()).position.pixels;
 
-        tester.view.viewInsets = const FakeViewPadding(bottom: 300 * 3);
-        addTearDown(tester.view.resetViewInsets);
-        await tester.pumpAndSettle();
-        // Le clavier réduit la hauteur sous le seuil : le bloc bascule dans le
-        // conteneur plafonné.
-        expect(headerScroll(), findsOneWidget);
+    /// Glisse depuis le bas de la zone de défilement (jamais depuis le
+    /// bandeau de synchro plafonné, qui défile en interne).
+    Future<void> scrollBy(WidgetTester tester, double dy) async {
+      final rect = tester.getRect(find.byType(CustomScrollView));
+      await tester.dragFrom(
+        Offset(rect.center.dx, rect.bottom - 20),
+        Offset(0, -dy),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> scrollUntilText(WidgetTester tester, String text) async {
+      for (var i = 0; i < 80 && find.text(text).evaluate().isEmpty; i++) {
+        await scrollBy(tester, 120);
+      }
+      expect(find.text(text), findsOneWidget);
+    }
+
+    Finder searchField() => find.byType(TextField, skipOffstage: false);
+    Finder footerCreate() => find.byType(PrimaryButton);
+    Finder footerImport() => find.byType(SecondaryButton);
+
+    /// Nombre de `Scrollable` verticaux hors champ de texte (le `TextField`
+    /// embarque son propre `Scrollable` interne).
+    int scrollableCount() => find
+        .byType(Scrollable)
+        .evaluate()
+        .where((e) => e.findAncestorWidgetOfExactType<TextField>() == null)
+        .length;
+
+    void expectWithinScreen(WidgetTester tester, Finder finder, Size size) {
+      final rect = tester.getRect(finder.first);
+      expect(rect.left, greaterThanOrEqualTo(-0.5), reason: '$finder');
+      expect(
+        rect.right,
+        lessThanOrEqualTo(size.width + 0.5),
+        reason: '$finder',
+      );
+    }
+
+    group('structure', () {
+      for (final scale in <double>[1.0, 1.3]) {
+        testWidgets('x$scale sur 360x640 : un seul Scrollable, aucun pied '
+            'défilant', (tester) async {
+          surface(tester, const Size(360, 640));
+          fakeCharacterRepository.charactersToReturn = many(12);
+          await pumpList(tester, scale: scale, versions: updateSuggested);
+
+          expect(tester.takeException(), isNull);
+          expect(find.byType(CustomScrollView), findsOneWidget);
+          expect(scrollableCount(), 1);
+          expect(
+            find.byKey(const Key('characterListFooterScroll')),
+            findsNothing,
+          );
+          expect(
+            find.byKey(const Key('characterListSyncBandScroll')),
+            findsNothing,
+          );
+        });
+      }
+
+      testWidgets('x2,0 : le seul défilement en plus est le pied plafonné', (
+        tester,
+      ) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(12);
+        await pumpList(tester, scale: 2, versions: updateSuggested);
 
         expect(tester.takeException(), isNull);
+        expect(find.byType(CustomScrollView), findsOneWidget);
         expect(
-          find.descendant(
-            of: find.byType(TextField),
-            matching: find.byType(EditableText),
-          ),
+          find.byKey(const Key('characterListFooterScroll')),
           findsOneWidget,
         );
+        expect(scrollableCount(), 2);
+      });
+    });
+
+    group('recherche', () {
+      testWidgets('épinglée en usage normal : reste en haut après défilement', (
+        tester,
+      ) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(30);
+        await pumpList(tester, versions: updateSuggested);
+
+        final before = tester.getTopLeft(searchField()).dy;
+        await scrollBy(tester, 900);
+
+        expect(offset(tester), greaterThan(500));
+        // Le titre et le bandeau de mise à jour ont quitté l'écran, la
+        // recherche reste visible, plus haut qu'avant.
         expect(
           tester
-              .state<EditableTextState>(find.byType(EditableText))
+              .getBottomLeft(find.text('TES AVENTURIERS', skipOffstage: false))
+              .dy,
+          lessThan(1),
+        );
+        final after = tester.getTopLeft(searchField()).dy;
+        expect(after, lessThan(before));
+        expect(after, lessThan(80));
+        expect(tester.getBottomLeft(searchField()).dy, greaterThan(0));
+        // Et elle reste utilisable : un tap l'atteint.
+        await tester.tap(searchField());
+        await tester.pump();
+        expect(
+          tester
+              .state<EditableTextState>(
+                find.byType(EditableText, skipOffstage: false),
+              )
               .widget
               .focusNode
               .hasFocus,
           isTrue,
         );
       });
-    }
+
+      testWidgets('non épinglée au-delà de x1,3 : elle défile avec le reste', (
+        tester,
+      ) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(30);
+        await pumpList(tester, scale: 1.5);
+
+        expect(tester.getTopLeft(searchField()).dy, greaterThan(0));
+        await scrollBy(tester, 900);
+
+        expect(tester.getBottomLeft(searchField()).dy, lessThan(1));
+        // De retour en haut, elle réapparaît.
+        await scrollBy(tester, -2000);
+        expect(offset(tester), 0);
+        expect(tester.getTopLeft(searchField()).dy, greaterThan(0));
+      });
+
+      testWidgets('x1,3 reste épinglée (seuil strictement supérieur à 1,3)', (
+        tester,
+      ) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(30);
+        await pumpList(tester, scale: 1.3);
+        await scrollBy(tester, 900);
+
+        expect(tester.getBottomLeft(searchField()).dy, greaterThan(0));
+        expect(tester.getTopLeft(searchField()).dy, lessThan(100));
+      });
+
+      testWidgets('police agrandie : la saisie garde le focus et le texte '
+          'quand le champ sort de l\'écran en défilant', (tester) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(30);
+        await pumpList(tester, scale: 1.5);
+
+        await tester.tap(searchField());
+        await tester.pumpAndSettle();
+        await tester.enterText(searchField(), 'Perso');
+        await tester.pumpAndSettle();
+        await scrollBy(tester, 1200);
+
+        expect(tester.getBottomLeft(searchField()).dy, lessThan(1));
+        final editable = tester.state<EditableTextState>(
+          find.byType(EditableText, skipOffstage: false),
+        );
+        expect(editable.widget.focusNode.hasFocus, isTrue);
+        expect(editable.widget.controller.text, 'Perso');
+      });
+
+      testWidgets('usage normal : la saisie garde le focus pendant un '
+          'défilement', (tester) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(30);
+        await pumpList(tester);
+
+        await tester.tap(searchField());
+        await tester.pumpAndSettle();
+        await tester.enterText(searchField(), 'Perso');
+        await tester.pumpAndSettle();
+        await scrollBy(tester, 600);
+
+        final editable = tester.state<EditableTextState>(
+          find.byType(EditableText, skipOffstage: false),
+        );
+        expect(editable.widget.focusNode.hasFocus, isTrue);
+        expect(editable.widget.controller.text, 'Perso');
+      });
+
+      testWidgets(
+        'ensureVisible + tap (parcours des scénarios integration_test) '
+        ': la carte reste atteignable sous la recherche épinglée',
+        (tester) async {
+          surface(tester, const Size(360, 640));
+          fakeCharacterRepository.charactersToReturn = many(30);
+          await pumpList(tester);
+
+          await scrollUntilText(tester, 'Perso 20');
+          await tester.ensureVisible(find.text('Perso 20'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Perso 20'));
+          await tester.pumpAndSettle();
+
+          expect(find.text('Fiche personnage id20'), findsOneWidget);
+        },
+      );
+
+      testWidgets('changement de tri : pas de saut de défilement', (
+        tester,
+      ) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(30);
+        await pumpList(tester);
+        await scrollBy(tester, 500);
+        final before = offset(tester);
+        expect(before, greaterThan(300));
+
+        await tester.tap(_filterButton());
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Nom (A → Z)'));
+        await tester.tap(find.text('APPLIQUER'));
+        await tester.pumpAndSettle();
+
+        expect(offset(tester), before);
+      });
+    });
+
+    group('bandeaux', () {
+      late AppDatabase db;
+      late FakeConnectivityChecker connectivity;
+
+      setUp(() {
+        db = AppDatabase(NativeDatabase.memory());
+        connectivity = FakeConnectivityChecker();
+      });
+
+      tearDown(() async {
+        await connectivity.close();
+        await db.close();
+      });
+
+      List<Override> syncOverrides() => [
+        appDatabaseProvider.overrideWithValue(db),
+        syncOwnerIdProvider.overrideWithValue('owner-1'),
+        connectivityCheckerProvider.overrideWithValue(connectivity),
+      ];
+
+      Future<void> flushDb(WidgetTester tester) async {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+        await tester.pump();
+      }
+
+      Future<void> addAlert(WidgetTester tester) => tester.runAsync(
+        () => SyncAlertStore(db).add(
+          ownerId: 'owner-1',
+          kind: SyncAlertKind.abandon,
+          characterId: 'c1',
+          characterName: 'Aria',
+          dataKind: 'hp',
+          serverValue: {'currentHp': 7, 'maxHp': 12},
+        ),
+      );
+
+      Future<void> finish(WidgetTester tester) async {
+        await tester.pumpWidget(const SizedBox());
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+        await tester.pump(const Duration(seconds: 10));
+      }
+
+      Future<void> pumpWithSync(
+        WidgetTester tester, {
+        double scale = 1.0,
+        bool withUpdate = false,
+      }) async {
+        await tester.pumpWidget(
+          buildTestWidget(
+            textScale: scale,
+            extraOverrides: syncOverrides(),
+            appVersionRepository: withUpdate ? updateSuggested : null,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await flushDb(tester);
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      testWidgets('synchro épinglé : toujours en haut après défilement, alors '
+          'que le bandeau de mise à jour part avec le reste', (tester) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(30);
+        await addAlert(tester);
+        await pumpWithSync(tester, withUpdate: true);
+
+        expect(find.byType(AlertBanner), findsOneWidget);
+        await scrollBy(tester, 1200);
+
+        expect(offset(tester), greaterThan(800));
+        final alertTop = tester.getTopLeft(find.byType(AlertBanner)).dy;
+        expect(alertTop, greaterThanOrEqualTo(0));
+        expect(alertTop, lessThan(60));
+        expect(
+          tester
+              .getBottomLeft(
+                find.text('Nouvelle version disponible', skipOffstage: false),
+              )
+              .dy,
+          lessThan(1),
+        );
+        // La recherche est épinglée juste dessous.
+        expect(
+          tester.getTopLeft(searchField()).dy,
+          greaterThanOrEqualTo(
+            tester.getBottomLeft(find.byType(AlertBanner)).dy,
+          ),
+        );
+        await finish(tester);
+      });
+
+      testWidgets('rien à dire : aucun bandeau et aucune hauteur réservée en '
+          'haut après défilement', (tester) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(30);
+        await pumpWithSync(tester);
+
+        expect(find.byType(AlertBanner), findsNothing);
+        expect(find.byType(InfoBanner), findsNothing);
+        expect(
+          tester
+              .getSize(find.byType(SyncStatusBanner, skipOffstage: false))
+              .height,
+          0,
+        );
+        await scrollBy(tester, 1200);
+        // La recherche est collée en haut, rien d'épinglé au-dessus.
+        expect(tester.getTopLeft(searchField()).dy, lessThan(30));
+        await finish(tester);
+      });
+
+      testWidgets('x3,0 sur 320x568 : bandeau épinglé plafonné à 30 % de la '
+          'hauteur, tout reste atteignable', (tester) async {
+        surface(tester, const Size(320, 568));
+        fakeCharacterRepository.charactersToReturn = many(8);
+        await addAlert(tester);
+        await pumpWithSync(tester, scale: 3, withUpdate: true);
+
+        expect(tester.takeException(), isNull);
+        expect(
+          find.byKey(const Key('characterListSyncBandScroll')),
+          findsOneWidget,
+        );
+        expect(
+          tester
+              .getSize(find.byKey(const Key('characterListSyncBandScroll')))
+              .height,
+          lessThanOrEqualTo(568 * 0.3 + 0.5),
+        );
+        // Le dernier personnage reste atteignable en défilant.
+        await scrollUntilText(tester, 'Perso 07');
+        expect(tester.takeException(), isNull);
+        await finish(tester);
+      });
+    });
+
+    group('états centrés dans l\'espace restant', () {
+      /// Écart vertical entre le centre de [content] et le centre de la zone
+      /// située entre la recherche et le pied.
+      double offCenter(WidgetTester tester, Rect content) {
+        final top = tester.getBottomLeft(searchField()).dy;
+        final bottom = tester.getTopLeft(footerCreate()).dy;
+        return (content.center.dy - (top + bottom) / 2).abs();
+      }
+
+      testWidgets('chargement', (tester) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.completer = Completer();
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pump();
+
+        final rect = tester.getRect(find.byType(CircularProgressIndicator));
+        expect(offCenter(tester, rect), lessThan(12));
+        expect(scrollableCount(), 1);
+      });
+
+      testWidgets('aucun personnage', (tester) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = const [];
+        await pumpList(tester);
+
+        final column = find
+            .ancestor(
+              of: find.textContaining('AUCUN AVENTURIER'),
+              matching: find.byType(Column),
+            )
+            .first;
+        expect(offCenter(tester, tester.getRect(column)), lessThan(12));
+        expect(scrollableCount(), 1);
+        expect(offset(tester), 0);
+      });
+
+      testWidgets('aucun résultat', (tester) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(3);
+        await pumpList(tester);
+        await tester.enterText(searchField(), 'zzzz');
+        await tester.pumpAndSettle();
+
+        final column = find
+            .ancestor(
+              of: find.textContaining('AUCUN RÉSULTAT'),
+              matching: find.byType(Column),
+            )
+            .first;
+        expect(offCenter(tester, tester.getRect(column)), lessThan(12));
+        expect(scrollableCount(), 1);
+        expect(offset(tester), 0);
+      });
+
+      testWidgets('aucun personnage, x2,0 sur 320x568 : contenu entier '
+          'atteignable par le défilement unique', (tester) async {
+        surface(tester, const Size(320, 568));
+        fakeCharacterRepository.charactersToReturn = const [];
+        await pumpList(tester, scale: 2, versions: updateSuggested);
+
+        expect(tester.takeException(), isNull);
+        await tester.dragUntilVisible(
+          find.text(
+            AppLocalizations.of(tester.element(find.byType(Scaffold).first))!
+                .characterListEmptyBody,
+          ),
+          find.byType(CustomScrollView),
+          const Offset(0, -100),
+        );
+        expect(tester.takeException(), isNull);
+        expect(
+          find.ancestor(
+            of: find.textContaining('AUCUN AVENTURIER'),
+            matching: find.byType(SingleChildScrollView),
+          ),
+          findsNothing,
+        );
+      });
+    });
+
+    group('pied fixe', () {
+      testWidgets('usage normal : côte à côte, immobile pendant le '
+          'défilement', (tester) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(30);
+        await pumpList(tester);
+
+        final create = tester.getRect(footerCreate());
+        final import = tester.getRect(footerImport());
+        expect(create.top, import.top);
+        expect(create.right, lessThan(import.left));
+        expect(create.bottom, lessThanOrEqualTo(640));
+
+        await scrollBy(tester, 900);
+        expect(tester.getRect(footerCreate()), create);
+        expect(tester.getRect(footerImport()), import);
+      });
+
+      testWidgets('au-delà de x1,3 : boutons en colonne pleine largeur', (
+        tester,
+      ) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(30);
+        await pumpList(tester, scale: 1.5);
+
+        final create = tester.getRect(footerCreate());
+        final import = tester.getRect(footerImport());
+        expect(create.left, import.left);
+        expect(create.width, import.width);
+        expect(create.width, greaterThan(360 - 2 * 22 - 1));
+        expect(create.bottom, lessThanOrEqualTo(import.top));
+        expect(import.bottom, lessThanOrEqualTo(640));
+      });
+
+      for (final size in const [Size(360, 640), Size(320, 568)]) {
+        testWidgets('x3,0 sur ${size.width.toInt()}x${size.height.toInt()} : '
+            'plafonné à 35 %, défilant en interne, boutons atteignables', (
+          tester,
+        ) async {
+          surface(tester, size);
+          fakeCharacterRepository.charactersToReturn = many(12);
+          await pumpList(tester, scale: 3, versions: updateSuggested);
+
+          expect(tester.takeException(), isNull);
+          final footer = find.byKey(const Key('characterListFooterScroll'));
+          expect(footer, findsOneWidget);
+          expect(
+            tester.getSize(footer).height,
+            lessThanOrEqualTo(size.height * 0.35 + 0.5),
+          );
+          // Le pied est toujours visible : son bas est dans l'écran.
+          expect(tester.getRect(footer).bottom, lessThanOrEqualTo(size.height));
+          // Les deux boutons sont atteignables (défilement interne du pied).
+          await tester.ensureVisible(footerImport());
+          await tester.pumpAndSettle();
+          expect(
+            tester.getRect(footerImport()).bottom,
+            lessThanOrEqualTo(size.height),
+          );
+          await tester.ensureVisible(footerCreate());
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          // La liste garde de la place : le haut du contenu reste visible.
+          expect(tester.getRect(footer).top, greaterThan(size.height * 0.6));
+        });
+      }
+    });
+
+    group('mode sélection', () {
+      testWidgets('barre d\'actions fixe en pied, recherche pleine largeur '
+          'épinglée', (tester) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(30);
+        await pumpList(tester);
+
+        await tester.tap(find.byIcon(Icons.checklist));
+        await tester.pumpAndSettle();
+
+        final bar = find.byType(CharacterSelectionActionBar);
+        expect(bar, findsOneWidget);
+        expect(footerCreate(), findsNothing);
+        expect(find.byIcon(Icons.filter_list), findsNothing);
+        final barRect = tester.getRect(bar);
+        expect(barRect.bottom, lessThanOrEqualTo(640));
+
+        await scrollBy(tester, 900);
+        expect(tester.getRect(bar), barRect);
+        expect(tester.getTopLeft(searchField()).dy, lessThan(80));
+
+        // Cocher une carte fonctionne toujours après défilement.
+        await tester.tap(find.byType(CharacterCard).hitTestable().first);
+        await tester.pumpAndSettle();
+        expect(find.text('1 personnage sélectionné'), findsOneWidget);
+      });
+    });
+
+    group('en-tête (D174)', () {
+      for (final locale in const [Locale('fr'), Locale('en')]) {
+        for (final scale in <double>[1.0, 2.0, 3.0]) {
+          final width = scale == 1.0 ? 360.0 : 320.0;
+          testWidgets(
+            '${locale.languageCode} x$scale sur ${width.toInt()} dp : '
+            'aucun débordement horizontal, boutons 44x44 dans l\'écran',
+            (tester) async {
+              surface(tester, Size(width, 568));
+              fakeCharacterRepository.charactersToReturn = many(2);
+              await pumpList(tester, scale: scale, locale: locale);
+
+              expect(tester.takeException(), isNull);
+              final title = find.text(
+                locale.languageCode == 'fr'
+                    ? 'TES AVENTURIERS'
+                    : 'YOUR ADVENTURERS',
+              );
+              final tapBox = find.byWidgetPredicate(
+                (w) =>
+                    w is Container &&
+                    w.constraints ==
+                        const BoxConstraints.tightFor(width: 44, height: 44),
+              );
+              final groups = find.byIcon(Icons.groups_outlined);
+              final profile = find.byIcon(Icons.person_outline);
+              final titleRect = tester.getRect(title);
+              final groupsRect = tester.getRect(
+                find.ancestor(of: groups, matching: tapBox),
+              );
+              final profileRect = tester.getRect(
+                find.ancestor(of: profile, matching: tapBox),
+              );
+              expect(groupsRect.size, const Size(44, 44));
+              expect(profileRect.size, const Size(44, 44));
+              for (final r in [titleRect, groupsRect, profileRect]) {
+                expect(r.left, greaterThanOrEqualTo(0));
+                expect(r.right, lessThanOrEqualTo(width + 0.5));
+              }
+              // Ni chevauchement, ni mot coupé : soit le titre est à gauche des
+              // boutons, soit il est entièrement au-dessus.
+              final buttonsLeft = groupsRect.left;
+              final sideBySide = titleRect.right <= buttonsLeft + 0.5;
+              final stacked = titleRect.bottom <= groupsRect.top + 0.5;
+              expect(sideBySide || stacked, isTrue);
+              // Le paragraphe est assez large pour son plus long mot (aucun mot
+              // coupé en pleine largeur).
+              final paragraph = tester.renderObject<RenderParagraph>(title);
+              var longest = 0.0;
+              for (final word
+                  in (paragraph.text as TextSpan).toPlainText().split(' ')) {
+                final painter = TextPainter(
+                  text: TextSpan(text: word, style: paragraph.text.style),
+                  textDirection: TextDirection.ltr,
+                  textScaler: paragraph.textScaler,
+                )..layout();
+                longest = math.max(longest, painter.width);
+                painter.dispose();
+              }
+              expect(paragraph.size.width, greaterThanOrEqualTo(longest - 0.5));
+              if (scale == 1.0) expect(sideBySide, isTrue);
+            },
+          );
+        }
+      }
+    });
+
+    group('toutes tailles', () {
+      for (final scale in <double>[1.3, 2.0, 3.0]) {
+        testWidgets('x$scale sur 320x568 (vraies polices) : rien ne déborde, '
+            'tout est atteignable', (tester) async {
+          surface(tester, const Size(320, 568));
+          fakeCharacterRepository.charactersToReturn = many(6);
+          await pumpList(tester, scale: scale, versions: updateSuggested);
+
+          expect(tester.takeException(), isNull);
+          expect(find.text('Mettre à jour'), findsOneWidget);
+          expect(
+            tester.getRect(footerCreate()).right,
+            lessThanOrEqualTo(320.5),
+          );
+          for (final finder in [
+            searchField(),
+            footerCreate(),
+            footerImport(),
+          ]) {
+            expectWithinScreen(tester, finder, const Size(320, 568));
+          }
+          await scrollUntilText(tester, 'Perso 05');
+          expect(tester.takeException(), isNull);
+        });
+      }
+
+      testWidgets('état vide x3,0 sur 320x568 : aucune exception', (
+        tester,
+      ) async {
+        surface(tester, const Size(320, 568));
+        fakeCharacterRepository.charactersToReturn = const [];
+        await pumpList(tester, scale: 3, versions: updateSuggested);
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    testWidgets('clavier ouvert (x1,0 et x1,3) : le champ garde le focus '
+        'malgré le passage d\'épinglé à défilant', (tester) async {
+      for (final scale in <double>[1.0, 1.3]) {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(6);
+        await pumpList(tester, scale: scale, versions: updateSuggested);
+        await tester.tap(searchField());
+        await tester.pumpAndSettle();
+
+        tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+        addTearDown(tester.view.resetViewInsets);
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        final editable = tester.state<EditableTextState>(
+          find.byType(EditableText, skipOffstage: false),
+        );
+        expect(editable.widget.focusNode.hasFocus, isTrue);
+        tester.view.resetViewInsets();
+        await tester.pumpWidget(const SizedBox());
+      }
+    });
+
+    testWidgets('tablette 768x1024 : contenu limité à 600 dp et centré, '
+        'boutons du pied côte à côte', (tester) async {
+      surface(tester, const Size(768, 1024));
+      fakeCharacterRepository.charactersToReturn = many(4);
+      await pumpList(tester);
+
+      final card = tester.getRect(find.byType(CharacterCard).first);
+      expect(card.width, closeTo(600, 1));
+      expect(card.center.dx, closeTo(384, 1));
+      final create = tester.getRect(footerCreate());
+      final import = tester.getRect(footerImport());
+      expect(create.top, import.top);
+      expect(create.left, closeTo(84, 1));
+      expect(import.right, closeTo(684, 1));
+      final search = tester.getRect(searchField());
+      expect(search.left, closeTo(84, 1));
+      // La barre de défilement vit au bord de l'écran : le défilement occupe
+      // toute la largeur.
+      expect(tester.getSize(find.byType(CustomScrollView)).width, 768);
+    });
   });
+
   group('P18 — annuler l\'archivage', () {
     const halltesse = CharacterSummary(
       id: '1',
