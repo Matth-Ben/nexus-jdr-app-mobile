@@ -524,7 +524,7 @@ void main() {
       expect(more, 1);
     });
 
-    testWidgets('V3-5 : sans onTapMore ni onEdit, « +N » n'est pas un bouton', (
+    testWidgets('V3-5 : sans onTapMore ni onEdit, « +N » n’est pas un bouton', (
       tester,
     ) async {
       final handle = tester.ensureSemantics();
