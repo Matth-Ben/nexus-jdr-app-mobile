@@ -63,6 +63,12 @@ void main() {
         'Session expirée. Reconnectez-vous.',
         'Session expired. Please sign in again.',
       ),
+      CharacterErrorCode.detailNotCachedOffline: (
+        "Cette fiche n'a jamais été ouverte sur cet appareil. Elle sera "
+            'disponible hors ligne après une première ouverture en ligne.',
+        'This sheet has never been opened on this device. It will be '
+            'available offline after you open it once while online.',
+      ),
     };
 
     test('chaque code (hors generic) a un texte FR et EN attendu', () {

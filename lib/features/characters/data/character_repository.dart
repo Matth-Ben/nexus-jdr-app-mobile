@@ -1614,6 +1614,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // Scopée par ownerId — voir la documentation de classe ("Cache
     // hors-ligne de la liste des personnages").
     final cacheKey = CharacterListCache.keyFor(ownerId: ownerId);
+    final cacheGeneration = _cache.clearGeneration;
 
     try {
       final characterRows = await _client
@@ -1672,8 +1673,17 @@ class SupabaseCharacterRepository implements CharacterRepository {
         CharacterListCache.subclassNamesKey: subclassNames,
         CharacterListCache.classFeatureNamesKey: classFeatureNames,
       };
-      await _writeCacheBestEffort(cacheKey, payload);
-      unawaited(_syncState?.markSuccess(ownerId));
+      // Jamais d'écriture si le compte a changé ou si le cache a été purgé
+      // pendant les requêtes ci-dessus (D31, voir fetchCharacterDetail).
+      final stillSameSession = await _writeAccountCacheGuarded(
+        cacheKey,
+        payload,
+        ownerId: ownerId,
+        generation: cacheGeneration,
+      );
+      if (stillSameSession) {
+        unawaited(_syncState?.markSuccess(ownerId));
+      }
       return _mapCharacterListPayload(payload);
     } on CharacterFailure {
       rethrow;
@@ -1723,8 +1733,56 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }
 
   @override
-  Future<CharacterDetail> fetchCharacterDetail(String characterId) async {
+  Future<CharacterDetail> fetchCharacterDetail(String characterId) =>
+      _loadCharacterDetail(characterId);
+
+  /// Préchargement en arrière-plan de la fiche (V5-5, voir
+  /// `CharacterDetailPrefetcher`) : même lecture que [fetchCharacterDetail],
+  /// mais le cache n'est écrit que si, au moment de l'écriture, aucune
+  /// écriture n'est en attente pour ce personnage et si personne d'autre (ex.
+  /// ouverture manuelle de la fiche) n'a écrit le cache depuis le départ.
+  /// Sinon, le cache — base de la détection de modification concurrente
+  /// (F19/D178) — serait remplacé par un état serveur d'avant l'écriture.
+  Future<void> prefetchCharacterDetail(String characterId) async {
+    // Tronqué à la seconde : `cachedAt` est stocké à la seconde par drift.
+    final now = DateTime.now();
+    final startedAt = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute,
+      now.second,
+    );
+    await _loadCharacterDetail(
+      characterId,
+      mayWriteCache: (ownerId) async {
+        try {
+          final pending = await _pendingWrites.forCharacter(
+            ownerId: ownerId,
+            characterId: characterId,
+          );
+          if (pending.isNotEmpty) return false;
+          final cachedAt = await _cache.cachedAt(
+            CharacterDetailCache.keyFor(
+              ownerId: ownerId,
+              characterId: characterId,
+            ),
+          );
+          return cachedAt == null || cachedAt.isBefore(startedAt);
+        } catch (_) {
+          return false;
+        }
+      },
+    );
+  }
+
+  Future<CharacterDetail> _loadCharacterDetail(
+    String characterId, {
+    Future<bool> Function(String ownerId)? mayWriteCache,
+  }) async {
     final ownerId = _requireOwnerId();
+    final cacheGeneration = _cache.clearGeneration;
     // Scopée par ownerId — voir la documentation de classe
     // ("Isolation par utilisateur").
     final cacheKey = CharacterDetailCache.keyFor(
@@ -1839,8 +1897,23 @@ class SupabaseCharacterRepository implements CharacterRepository {
       final payload = await _buildCharacterDetailPayload(row);
       // Le cache garde l'état serveur brut : les écritures en attente ne
       // sont superposées qu'au résultat renvoyé (voir [_withPendingWrites]).
-      await _writeCacheBestEffort(cacheKey, payload);
-      unawaited(_syncState?.markSuccess(ownerId));
+      //
+      // Jamais d'écriture si le compte a changé ou si le cache a été purgé
+      // (déconnexion, suppression de compte, D31) pendant les 10 à 23
+      // requêtes ci-dessus : la fiche complète du compte parti survivrait
+      // sinon à la purge.
+      final stillSameSession = await _writeAccountCacheGuarded(
+        cacheKey,
+        payload,
+        ownerId: ownerId,
+        generation: cacheGeneration,
+        precondition: mayWriteCache == null
+            ? null
+            : () => mayWriteCache(ownerId),
+      );
+      if (stillSameSession) {
+        unawaited(_syncState?.markSuccess(ownerId));
+      }
       return await _withPendingWrites(
         _mapCharacterDetailPayload(payload),
         ownerId: ownerId,
@@ -1873,7 +1946,27 @@ class SupabaseCharacterRepository implements CharacterRepository {
           characterId: characterId,
         );
       }
+      // Hors ligne et rien en cache (V5-5) : « Impossible de contacter le
+      // serveur » serait trompeur, le bandeau hors ligne étant déjà affiché.
+      if (!await _hasConnectionSafe()) {
+        throw const CharacterFailure(
+          "Cette fiche n'a jamais été ouverte sur cet appareil. Elle sera "
+          'disponible hors ligne après une première ouverture en ligne.',
+          code: CharacterErrorCode.detailNotCachedOffline,
+        );
+      }
       throw mapUnknownCharacterError();
+    }
+  }
+
+  /// [ConnectivityChecker.hasConnection] sans jamais lever : une erreur du
+  /// canal de plateforme est traitée comme « en ligne » (jamais un faux
+  /// hors-ligne).
+  Future<bool> _hasConnectionSafe() async {
+    try {
+      return await _connectivityChecker.hasConnection();
+    } catch (_) {
+      return true;
     }
   }
 
@@ -8942,6 +9035,36 @@ class SupabaseCharacterRepository implements CharacterRepository {
   String? _resolveStoryCoverUrl(String? path) {
     if (path == null || path.isEmpty) return null;
     return _client.storage.from(_storyCoversBucket).getPublicUrl(path);
+  }
+
+  /// Écriture best-effort d'une entrée de cache **liée au compte** [ownerId]
+  /// (liste, fiche) — voir [ReferenceDataCache.putGuarded] : jamais d'écriture
+  /// si le cache a été purgé depuis [generation] ou si le compte connecté n'est
+  /// plus [ownerId] (D31). Retourne `true` si la session est restée la même
+  /// jusqu'à la fin (que l'écriture ait eu lieu ou ait été refusée par
+  /// [precondition]).
+  Future<bool> _writeAccountCacheGuarded(
+    String key,
+    Map<String, dynamic> payload, {
+    required String ownerId,
+    required int generation,
+    Future<bool> Function()? precondition,
+  }) async {
+    bool sameSession() =>
+        _client.auth.currentUser?.id == ownerId &&
+        _cache.clearGeneration == generation;
+    try {
+      await _cache.putGuarded(
+        key,
+        payload,
+        generation: generation,
+        isStillValid: () => _client.auth.currentUser?.id == ownerId,
+        precondition: precondition,
+      );
+    } catch (_) {
+      // Best-effort : voir [_writeCacheBestEffort].
+    }
+    return sameSession();
   }
 
   /// Écrit [payload] dans [_cache] sous [key]. Best-effort : une écriture

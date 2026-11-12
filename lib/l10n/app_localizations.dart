@@ -7439,6 +7439,12 @@ abstract class AppLocalizations {
   /// **'Aucun état actif.'**
   String get memberConditionsSheetEmpty;
 
+  /// `CharacterErrorCode.detailNotCachedOffline` (`domain/character_failure.dart`) — fiche ouverte hors ligne sans copie en cache (V5-5), à garder cohérent avec `SupabaseCharacterRepository.fetchCharacterDetail`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette fiche n\'a jamais été ouverte sur cet appareil. Elle sera disponible hors ligne après une première ouverture en ligne.'**
+  String get characterDetailNotCachedOfflineMessage;
+
   /// Titre de la feuille listant les alertes de synchronisation.
   ///
   /// In fr, this message translates to:

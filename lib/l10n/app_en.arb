@@ -1421,6 +1421,7 @@
   "memberConditionsSheetTitle": "{name}'s conditions",
   "conditionsMoreChipHint": "Opens the list of conditions",
   "memberConditionsSheetEmpty": "No active condition.",
+  "characterDetailNotCachedOfflineMessage": "This sheet has never been opened on this device. It will be available offline after you open it once while online.",
   "syncAlertsSheetTitle": "SYNC ALERTS",
   "syncAlertsSheetIntro": "These messages report changes made offline that were overwritten or abandoned.",
   "syncAlertsDismissAll": "DISMISS ALL",

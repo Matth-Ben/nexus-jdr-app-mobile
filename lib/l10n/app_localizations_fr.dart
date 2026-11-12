@@ -4628,6 +4628,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get memberConditionsSheetEmpty => 'Aucun état actif.';
 
   @override
+  String get characterDetailNotCachedOfflineMessage =>
+      'Cette fiche n\'a jamais été ouverte sur cet appareil. Elle sera disponible hors ligne après une première ouverture en ligne.';
+
+  @override
   String get syncAlertsSheetTitle => 'ALERTES DE SYNCHRO';
 
   @override
