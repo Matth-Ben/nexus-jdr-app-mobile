@@ -58,6 +58,7 @@ import 'providers/character_providers.dart';
 import 'providers/level_up_provider.dart';
 import 'widgets/feat_info_panel.dart';
 import 'widgets/level_up_header.dart';
+import 'character_failure_l10n.dart';
 
 enum _HpMethod { roll, average }
 
@@ -1596,7 +1597,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       if (!mounted) return;
       setState(() {
         _isApplying = false;
-        _applyError = failure.message;
+        _applyError = failure.localized(context);
       });
     } catch (_) {
       if (!mounted) return;
@@ -1638,7 +1639,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
               Expanded(
                 child: _ErrorState(
                   message: error is CharacterFailure
-                      ? error.message
+                      ? error.localized(context)
                       : _l10n.levelUpScreenGenericLoadError,
                   // Invalide `characterDetailProvider` *aussi*, pas
                   // seulement `levelUpStepDataProvider` — même bug déjà

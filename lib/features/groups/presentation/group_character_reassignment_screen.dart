@@ -20,6 +20,9 @@ import '../domain/group_character_reassignment_failure.dart';
 import '../domain/group_failure.dart';
 import 'providers/group_providers.dart';
 import 'widgets/group_confirmation_dialog.dart';
+import '../../characters/presentation/character_failure_l10n.dart';
+import 'group_failure_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 const String _genericReassignmentErrorMessage =
     'Impossible de mettre à jour le groupe. Réessayez.';
@@ -93,7 +96,7 @@ class _GroupCharacterReassignmentScreenState
       context.go('/groups');
     } on GroupFailure catch (failure) {
       if (!mounted) return;
-      setState(() => _bannerMessage = failure.message);
+      setState(() => _bannerMessage = failure.localized(context));
     } catch (_) {
       if (!mounted) return;
       setState(
@@ -262,8 +265,8 @@ class _GroupCharacterReassignmentScreenState
       ),
       error: (error, stackTrace) => _CharacterSectionError(
         message: error is CharacterFailure
-            ? error.message
-            : 'Impossible de charger vos personnages. Réessayez.',
+            ? error.localized(context)
+            : AppLocalizations.of(context)!.characterLoadFailedErrorMessage,
         onRetry: () => ref.invalidate(charactersProvider),
       ),
     );

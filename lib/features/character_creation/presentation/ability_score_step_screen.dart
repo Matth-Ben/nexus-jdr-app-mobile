@@ -30,6 +30,7 @@ import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/racial_bonus_choice_card.dart';
 import 'widgets/step_help_sheet.dart';
+import 'character_creation_failure_l10n.dart';
 
 /// Étape 5/10 de l'assistant de création de personnage : scores de
 /// caractéristiques (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`
@@ -317,7 +318,7 @@ class _AbilityScoreStepScreenState
               child: CreationStatusBody(
                 body: _ErrorState(
                   message: error is CharacterCreationFailure
-                      ? error.message
+                      ? error.localized(context)
                       : 'Impossible de charger les bonus raciaux. Réessayez.',
                   onRetry: () => ref.invalidate(raceCatalogProvider),
                 ),

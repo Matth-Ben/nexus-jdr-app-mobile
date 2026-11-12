@@ -1830,7 +1830,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .maybeSingle();
 
       if (row == null) {
-        throw const CharacterFailure('Personnage introuvable.');
+        throw const CharacterFailure(
+          'Personnage introuvable.',
+          code: CharacterErrorCode.characterNotFound,
+        );
       }
 
       final payload = await _buildCharacterDetailPayload(row);
@@ -3453,7 +3456,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
           );
           final effective = plan.write;
           if (effective == null) {
-            throw const CharacterFailure('Cette note a déjà été supprimée.');
+            throw const CharacterFailure(
+              'Cette note a déjà été supprimée.',
+              code: CharacterErrorCode.noteAlreadyDeleted,
+            );
           }
 
           Future<WriteOutcome> queue() async {
@@ -3692,7 +3698,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
               .eq('owner_id', ownerId)
               .maybeSingle();
           if (characterRow == null) {
-            throw const CharacterFailure('Personnage introuvable.');
+            throw const CharacterFailure(
+              'Personnage introuvable.',
+              code: CharacterErrorCode.characterNotFound,
+            );
           }
 
           final supersededWrite = await _pendingWriteBeforeOnlineWrite(
@@ -4174,7 +4183,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
               .eq('owner_id', ownerId)
               .maybeSingle();
           if (characterRow == null) {
-            throw const CharacterFailure('Personnage introuvable.');
+            throw const CharacterFailure(
+              'Personnage introuvable.',
+              code: CharacterErrorCode.characterNotFound,
+            );
           }
 
           final supersededWrite = await _pendingWriteBeforeOnlineWrite(
@@ -4259,7 +4271,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
               .eq('owner_id', ownerId)
               .maybeSingle();
           if (characterRow == null) {
-            throw const CharacterFailure('Personnage introuvable.');
+            throw const CharacterFailure(
+              'Personnage introuvable.',
+              code: CharacterErrorCode.characterNotFound,
+            );
           }
 
           final supersededWrite = await _pendingWriteBeforeOnlineWrite(
@@ -4355,7 +4370,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
 
           Future<WriteOutcome> queue() async {
             if (!isValidInventoryItemTargetId(inventoryId)) {
-              throw const CharacterFailure('Objet introuvable.');
+              throw const CharacterFailure(
+                'Objet introuvable.',
+                code: CharacterErrorCode.itemNotFound,
+              );
             }
             await _pendingWrites.enqueue(
               characterId: characterId,
@@ -4548,7 +4566,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
             // Un identifiant illisible serait supprimé au rejeu : jamais
             // accepté puis perdu en silence.
             if (!isValidInventoryItemTargetId(inventoryId)) {
-              throw const CharacterFailure('Objet introuvable.');
+              throw const CharacterFailure(
+                'Objet introuvable.',
+                code: CharacterErrorCode.itemNotFound,
+              );
             }
             await _pendingWrites.enqueue(
               characterId: characterId,
@@ -4729,10 +4750,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // Mêmes bornes à l'enfilage et au rejeu : jamais accepté puis supprimé en
     // silence de la file.
     if (!isValidInventoryItemId(itemId)) {
-      throw const CharacterFailure('Objet introuvable.');
+      throw const CharacterFailure(
+        'Objet introuvable.',
+        code: CharacterErrorCode.itemNotFound,
+      );
     }
     if (!isValidInventoryQuantity(quantity)) {
-      throw const CharacterFailure('La quantité doit être au moins 1.');
+      throw const CharacterFailure(
+        'La quantité doit être au moins 1.',
+        code: CharacterErrorCode.invalidQuantity,
+      );
     }
     // T5b-2 : UUID de ligne généré côté client (même rôle que pour un objet
     // personnalisé) : `INSERT` idempotent, en ligne comme au rejeu. Une ligne
@@ -4762,7 +4789,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
       );
     }
     if (!isValidInventoryQuantity(quantity)) {
-      throw const CharacterFailure('La quantité doit être au moins 1.');
+      throw const CharacterFailure(
+        'La quantité doit être au moins 1.',
+        code: CharacterErrorCode.invalidQuantity,
+      );
     }
     String? nonEmpty(String? value) =>
         value == null || value.isEmpty ? null : value;
@@ -4835,7 +4865,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
     for (final item in items) {
       final itemId = item.itemId;
       if (itemId != null && !isValidInventoryItemId(itemId)) {
-        throw const CharacterFailure('Objet introuvable.');
+        throw const CharacterFailure(
+          'Objet introuvable.',
+          code: CharacterErrorCode.itemNotFound,
+        );
       }
       if (itemId == null && !isValidInventoryCustomName(item.customName)) {
         throw const CharacterFailure(
@@ -4843,7 +4876,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
         );
       }
       if (!isValidInventoryQuantity(item.quantity)) {
-        throw const CharacterFailure('La quantité doit être au moins 1.');
+        throw const CharacterFailure(
+          'La quantité doit être au moins 1.',
+          code: CharacterErrorCode.invalidQuantity,
+        );
       }
       adds.add(
         PendingInventoryAdd(
@@ -5947,7 +5983,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .eq('owner_id', ownerId)
           .maybeSingle();
       if (characterRow == null) {
-        throw const CharacterFailure('Personnage introuvable.');
+        throw const CharacterFailure(
+          'Personnage introuvable.',
+          code: CharacterErrorCode.characterNotFound,
+        );
       }
       final newMaxHp = (characterRow['max_hp'] as num).toInt() + hpGain;
       final newCurrentHp = (characterRow['current_hp'] as num).toInt() + hpGain;
@@ -6911,7 +6950,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
         .eq('owner_id', ownerId)
         .maybeSingle();
     if (ownerCheck == null) {
-      throw const CharacterFailure('Personnage introuvable.');
+      throw const CharacterFailure(
+        'Personnage introuvable.',
+        code: CharacterErrorCode.characterNotFound,
+      );
     }
 
     // Toutes les classes du personnage (multiclassage inclus) — utilisées
@@ -7035,7 +7077,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .eq('owner_id', ownerId)
           .maybeSingle();
       if (characterRow == null) {
-        throw const CharacterFailure('Personnage introuvable.');
+        throw const CharacterFailure(
+          'Personnage introuvable.',
+          code: CharacterErrorCode.characterNotFound,
+        );
       }
       final maxHp = (characterRow['max_hp'] as num).toInt();
 
@@ -7096,7 +7141,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
             .eq('owner_id', ownerId)
             .maybeSingle();
         if (characterRow == null) {
-          throw const CharacterFailure('Personnage introuvable.');
+          throw const CharacterFailure(
+            'Personnage introuvable.',
+            code: CharacterErrorCode.characterNotFound,
+          );
         }
         final currentHp = (characterRow['current_hp'] as num).toInt();
         final maxHp = (characterRow['max_hp'] as num).toInt();

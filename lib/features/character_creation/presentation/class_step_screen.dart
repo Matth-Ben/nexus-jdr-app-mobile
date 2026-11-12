@@ -24,6 +24,7 @@ import 'widgets/creation_mode_title.dart';
 import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
+import 'character_creation_failure_l10n.dart';
 
 /// Étape 3/10 de l'assistant de création de personnage : choix de la classe
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
@@ -204,7 +205,7 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
               child: CreationStatusBody(
                 body: _ErrorState(
                   message: error is CharacterCreationFailure
-                      ? error.message
+                      ? error.localized(context)
                       : 'Impossible de charger les classes disponibles. '
                             'Réessayez.',
                   onRetry: () => ref.invalidate(classCatalogProvider),

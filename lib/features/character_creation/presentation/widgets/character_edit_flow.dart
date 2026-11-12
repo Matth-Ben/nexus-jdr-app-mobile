@@ -10,6 +10,7 @@ import '../providers/character_creation_draft_provider.dart';
 import '../providers/character_creation_providers.dart';
 import '../providers/character_creation_return_route_provider.dart';
 import '../providers/character_edit_session_provider.dart';
+import '../character_creation_failure_l10n.dart';
 
 /// Lance la modification d'un personnage existant (entrée « Modifier » du
 /// menu ⋮ de la fiche) : charge le personnage et les catalogues nécessaires,
@@ -90,7 +91,7 @@ Future<void> startCharacterEdit(
       SnackBar(
         content: Text(
           error is CharacterCreationFailure
-              ? error.message
+              ? error.localized(context)
               : 'Impossible de charger le personnage à modifier. Réessayez.',
         ),
       ),

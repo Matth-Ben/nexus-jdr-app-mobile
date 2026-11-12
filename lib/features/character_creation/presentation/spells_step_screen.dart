@@ -25,6 +25,7 @@ import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/spell_option_info_sheet.dart';
 import 'widgets/step_help_sheet.dart';
+import 'character_creation_failure_l10n.dart';
 
 /// Étape 7/10 de l'assistant de création de personnage : sorts
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
@@ -166,7 +167,7 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
               child: CreationStatusBody(
                 body: _ErrorState(
                   message: error is CharacterCreationFailure
-                      ? error.message
+                      ? error.localized(context)
                       : 'Impossible de charger les sorts disponibles. '
                             'Réessayez.',
                   onRetry: () {

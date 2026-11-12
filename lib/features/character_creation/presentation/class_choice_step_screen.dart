@@ -28,6 +28,7 @@ import 'widgets/creation_mode_title.dart';
 import 'widgets/creation_step_body.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
+import 'character_creation_failure_l10n.dart';
 
 /// Second écran de l'étape 2/9 "Classe" (Guerrier/Rôdeur) OU second écran de
 /// l'étape 5/9 "Compétences et outils" (Roublard) de l'assistant de
@@ -331,7 +332,7 @@ class _NamedChoiceBody extends ConsumerWidget {
         onAbandon: () => abandonCharacterCreation(context, ref),
         body: _ErrorState(
           message: error is CharacterCreationFailure
-              ? error.message
+              ? error.localized(context)
               : 'Impossible de charger les classes disponibles. Réessayez.',
           onRetry: () => ref.invalidate(classCatalogProvider),
         ),
@@ -504,7 +505,7 @@ class _ExpertiseBody extends ConsumerWidget {
         onAbandon: () => abandonCharacterCreation(context, ref),
         body: _ErrorState(
           message: error is CharacterCreationFailure
-              ? error.message
+              ? error.localized(context)
               : 'Impossible de charger les compétences disponibles. '
                     'Réessayez.',
           onRetry: () => ref.invalidate(skillsAndToolsStepDataProvider),

@@ -71,6 +71,7 @@ import 'widgets/prepare_spells_sheet.dart';
 import 'widgets/rest_sheet.dart';
 import 'widgets/spell_slot_correction_sheet.dart';
 import 'widgets/spell_slot_used_snack_bar.dart';
+import 'character_failure_l10n.dart';
 
 /// Actions du menu "…" du bandeau bois de l'onglet "Personnage" (recettage
 /// direction-artistique du 13/09) — regroupe "Exporter en XML" (déjà
@@ -294,7 +295,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       ref.invalidate(characterDetailProvider(widget.characterId));
     } on CharacterFailure catch (failure) {
       revert();
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       revert();
       _showSnackBar(l10n.spellSlotCorrectionErrorMessage);
@@ -746,7 +747,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       if (mounted && _restGeneration == myRestGeneration) {
         setState(() => _localHpState = previousLocal);
       }
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _hpQueued = previousHpQueued;
       if (mounted && _restGeneration == myRestGeneration) {
@@ -805,7 +806,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           );
     } on CharacterFailure catch (failure) {
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       ref.invalidate(characterDetailProvider(widget.characterId));
       _showSnackBar(l10n.characterDetailHpSyncErrorMessage);
@@ -950,7 +951,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           ),
         );
       }
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       if (mounted && _restGeneration == myRestGeneration) {
         setState(
@@ -1034,7 +1035,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       if (mounted && _restGeneration == myRestGeneration) {
         setState(() => _localPactSlotUsed = previousOverride);
       }
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       if (mounted && _restGeneration == myRestGeneration) {
         setState(() => _localPactSlotUsed = previousOverride);
@@ -1169,7 +1170,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       );
     } on CharacterFailure catch (failure) {
       revertOverride();
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       revertOverride();
       _showSnackBar(l10n.characterDetailCastSpellErrorMessage);
@@ -1215,7 +1216,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           );
     } on CharacterFailure catch (failure) {
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       ref.invalidate(characterDetailProvider(widget.characterId));
       _showSnackBar(l10n.characterDetailInnateSpellSyncErrorMessage);
@@ -1233,6 +1234,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// [_reassertCurrentHpState] pour les PV.
   Future<void> _reassertSpellSlotState(int slotLevel) async {
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     final latest = ref.read(characterDetailProvider(widget.characterId)).value;
     if (latest == null) return;
     final effective = _effectiveDetail(latest);
@@ -1256,7 +1258,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           );
     } on CharacterFailure catch (failure) {
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       ref.invalidate(characterDetailProvider(widget.characterId));
       _showSnackBar(
@@ -1275,6 +1277,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// depuis [_castPactSpell]). Même principe que [_reassertSpellSlotState].
   Future<void> _reassertPactSlotState() async {
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     final latest = ref.read(characterDetailProvider(widget.characterId)).value;
     if (latest == null) return;
     final effective = _effectiveDetail(latest);
@@ -1293,7 +1296,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           );
     } on CharacterFailure catch (failure) {
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       ref.invalidate(characterDetailProvider(widget.characterId));
       _showSnackBar(
@@ -1385,7 +1388,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           ),
         );
       }
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       if (mounted && _restGeneration == myRestGeneration) {
         setState(
@@ -1439,7 +1442,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           );
     } on CharacterFailure catch (failure) {
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       ref.invalidate(characterDetailProvider(widget.characterId));
       _showSnackBar(l10n.characterDetailFeatureSyncErrorMessage);
@@ -1485,7 +1488,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             : '${item.name} utilisé.',
       );
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar("Impossible d'utiliser cet objet. Réessayez.");
     } finally {
@@ -1521,7 +1524,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             : l10n.characterDetailItemUnequippedMessage(item.name),
       );
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar('Impossible de mettre à jour cet objet. Réessayez.');
     } finally {
@@ -1559,7 +1562,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             : '${item.name} n\'est plus harmonisé.',
       );
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar('Impossible de mettre à jour cet objet. Réessayez.');
     } finally {
@@ -1594,7 +1597,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             : '${item.name} retiré de l\'inventaire.',
       );
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar('Impossible de retirer cet objet. Réessayez.');
     } finally {
@@ -1629,7 +1632,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _showSnackBar(_offlineQueuedMessage(l10n));
       }
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar("Impossible d'ajuster la monnaie. Réessayez.");
     } finally {
@@ -1665,7 +1668,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _showSnackBar(_offlineQueuedMessage(l10n));
       }
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar('Impossible de changer les pièces. Réessayez.');
     } finally {
@@ -1701,7 +1704,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             : '${item.name} ajouté à l\'inventaire.',
       );
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar("Impossible d'ajouter cet objet. Réessayez.");
     } finally {
@@ -1747,7 +1750,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             : '$customName ajouté à l\'inventaire.',
       );
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar("Impossible d'ajouter cet objet. Réessayez.");
     } finally {
@@ -1807,7 +1810,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       );
     } on CharacterFailure catch (failure) {
       await _refreshCharacterDetail();
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       await _refreshCharacterDetail();
       _showSnackBar("Impossible d'ajouter la récompense. Réessayez.");
@@ -1882,7 +1885,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       );
     } on CharacterFailure catch (failure) {
       await _refreshCharacterDetail();
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       await _refreshCharacterDetail();
       _showSnackBar("Impossible d'équiper cette arme. Réessayez.");
@@ -1919,7 +1922,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       await _refreshCharacterDetail();
       _showSnackBar("Forme de l'arme de pacte : ${picked.name}.");
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar("Impossible de changer la forme de l'arme. Réessayez.");
     } finally {
@@ -2045,7 +2048,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _openLevelUp(detail.totalLevel + 1);
       }
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar(l10n.characterDetailXpAddErrorMessage);
     }
@@ -2075,7 +2078,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar(l10n.characterCardActionSheetUpdateStatusGenericError);
     }
@@ -2106,7 +2109,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar(l10n.characterCardActionSheetUpdateStatusGenericError);
     }
@@ -2144,7 +2147,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       }
       _goBack();
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar(l10n.characterCardActionSheetDeleteGenericError);
     }
@@ -2172,7 +2175,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _showSnackBar(_offlineQueuedMessage(l10n));
       }
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar(l10n.characterCardActionSheetUpdateStatusGenericError);
     }
@@ -2207,7 +2210,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     } on CharacterFailure catch (failure) {
       error = failure.code == CharacterErrorCode.accessDenied
           ? l10n.conditionsAccessDeniedMessage
-          : failure.message;
+          : failure.localizedWith(l10n);
     } catch (_) {
       error = l10n.conditionsSheetGenericError;
     }
@@ -2245,7 +2248,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _showSnackBar(_offlineQueuedMessage(l10n));
       }
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar(l10n.characterDetailArmorClassAdjustErrorMessage);
     }
@@ -2276,7 +2279,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _showSnackBar(_offlineQueuedMessage(l10n));
       }
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar(l10n.characterCardActionSheetUpdateStatusGenericError);
     }
@@ -2485,7 +2488,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           }
         });
       }
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localizedWith(l10n));
       return false;
     } catch (_) {
       if (touchesHp && mounted && _restGeneration == myRestGeneration) {
@@ -2939,7 +2942,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
               ),
               error: (error, stackTrace) => _ErrorState(
                 message: error is CharacterFailure
-                    ? error.message
+                    ? error.localized(context)
                     : l10n.characterDetailLoadErrorMessage,
                 onRetry: () =>
                     ref.invalidate(characterDetailProvider(widget.characterId)),

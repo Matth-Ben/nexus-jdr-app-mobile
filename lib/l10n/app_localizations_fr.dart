@@ -4572,4 +4572,61 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get updateStoreOpenError =>
       'Impossible d\'ouvrir la fiche de l\'application. Réessayez.';
+
+  @override
+  String get characterLoadFailedErrorMessage =>
+      'Impossible de charger vos personnages. Réessayez.';
+
+  @override
+  String get characterNotFoundErrorMessage => 'Personnage introuvable.';
+
+  @override
+  String get characterItemNotFoundErrorMessage => 'Objet introuvable.';
+
+  @override
+  String get characterInvalidQuantityErrorMessage =>
+      'La quantité doit être au moins 1.';
+
+  @override
+  String get characterNoteAlreadyDeletedErrorMessage =>
+      'Cette note a déjà été supprimée.';
+
+  @override
+  String get characterNotOwnedErrorMessage =>
+      'Ce personnage est introuvable ou ne vous appartient plus.';
+
+  @override
+  String get characterSessionExpiredErrorMessage =>
+      'Session expirée. Reconnectez-vous.';
+
+  @override
+  String get groupAccessDeniedErrorMessage =>
+      'Vous n\'avez pas accès à ce groupe.';
+
+  @override
+  String get groupNotFoundErrorMessage => 'Groupe introuvable.';
+
+  @override
+  String get groupSessionExpiredErrorMessage =>
+      'Session expirée. Reconnectez-vous pour continuer.';
+
+  @override
+  String get groupInviteCodeGenerationFailedErrorMessage =>
+      'Impossible de générer un nouveau code. Réessayez.';
+
+  @override
+  String get creationAccessDeniedErrorMessage =>
+      'Vous n\'avez pas accès à cette action.';
+
+  @override
+  String get creationSessionExpiredCreateErrorMessage =>
+      'Session expirée. Reconnectez-vous pour créer un personnage.';
+
+  @override
+  String get creationSessionExpiredEditErrorMessage =>
+      'Session expirée. Reconnectez-vous puis réessayez.';
+
+  @override
+  String get creationSessionExpiredImportErrorMessage =>
+      'Session expirée. Reconnectez-vous pour importer un personnage.';
 }

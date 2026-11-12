@@ -53,6 +53,7 @@ class SupabaseXmlImportRepository implements XmlImportRepository {
     if (ownerId == null) {
       throw const CharacterCreationFailure(
         'Session expirée. Reconnectez-vous pour importer un personnage.',
+        code: CharacterCreationErrorCode.sessionExpiredImport,
       );
     }
 

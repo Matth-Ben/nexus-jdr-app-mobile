@@ -19,6 +19,7 @@ import '../../characters/domain/character_failure.dart';
 import '../../characters/domain/character_identity_formatter.dart';
 import '../../characters/presentation/providers/character_detail_provider.dart';
 import 'providers/character_sharing_providers.dart';
+import '../../characters/presentation/character_failure_l10n.dart';
 
 /// Domaine public du lien de partage — voir
 /// `docs/cahier-des-charges/12-partage-et-groupes.md` section 5.3 pour le
@@ -101,7 +102,7 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
             : l10n.characterShareEnabledMessage,
       );
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localized(context));
     } catch (_) {
       if (!mounted) return;
       _showSnackBar(AppLocalizations.of(context)!.characterShareGenericError);
@@ -161,7 +162,7 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
         AppLocalizations.of(context)!.characterShareDisabledMessage,
       );
     } on CharacterFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localized(context));
     } catch (_) {
       if (!mounted) return;
       _showSnackBar(AppLocalizations.of(context)!.characterShareGenericError);
@@ -201,7 +202,7 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
               ),
               error: (error, stackTrace) => _ErrorState(
                 message: error is CharacterFailure
-                    ? error.message
+                    ? error.localized(context)
                     : l10n.characterShareLoadError,
                 onRetry: () =>
                     ref.invalidate(characterDetailProvider(widget.characterId)),

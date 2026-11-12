@@ -41,6 +41,7 @@ class SupabaseCharacterEditRepository implements CharacterEditRepository {
     if (ownerId == null) {
       throw const CharacterCreationFailure(
         'Session expirée. Reconnectez-vous puis réessayez.',
+        code: CharacterCreationErrorCode.sessionExpiredEdit,
       );
     }
     return ownerId;
@@ -70,7 +71,10 @@ class SupabaseCharacterEditRepository implements CharacterEditRepository {
           .eq('owner_id', ownerId)
           .maybeSingle();
       if (row == null) {
-        throw const CharacterCreationFailure('Personnage introuvable.');
+        throw const CharacterCreationFailure(
+          'Personnage introuvable.',
+          code: CharacterCreationErrorCode.characterNotFound,
+        );
       }
       // Résolution SÉPARÉE de `class_features` (choice_type/class_id/
       // subclass_id) pour les lignes `character_class_options` de niveau 1

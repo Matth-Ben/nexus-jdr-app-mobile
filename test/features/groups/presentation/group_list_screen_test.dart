@@ -14,6 +14,7 @@ import 'package:personnages/core/widgets/dashed_border_painter.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
+import 'package:personnages/features/groups/data/group_error_mapper.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/created_group.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
@@ -26,6 +27,7 @@ import 'package:personnages/features/groups/domain/group_treasure_item.dart';
 import 'package:personnages/features/groups/domain/joined_group.dart';
 import 'package:personnages/features/groups/presentation/group_list_screen.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/widgets/display_scale_helpers.dart';
@@ -208,6 +210,7 @@ User _fakeUser() {
 Widget _buildTestWidget(
   _FakeGroupRepository groupRepository, {
   RouteObserver<PageRoute<dynamic>>? routeObserver,
+  Locale? locale,
 }) {
   final observer = routeObserver ?? RouteObserver<PageRoute<dynamic>>();
   return ProviderScope(
@@ -218,6 +221,11 @@ Widget _buildTestWidget(
     ],
     child: MaterialApp.router(
       routerConfig: _buildTestRouter(observers: [observer]),
+      localizationsDelegates: locale == null
+          ? null
+          : AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
     ),
   );
 }
@@ -458,6 +466,37 @@ void main() {
 
     expect(fakeGroupRepository.fetchCallCount, 2);
     expect(find.text("AUCUN GROUPE POUR L'INSTANT"), findsOneWidget);
+  });
+
+  testWidgets('échec réseau : le message suit la langue (EN, puis FR) — D141', (
+    tester,
+  ) async {
+    fakeGroupRepository.errorToThrow = mapUnknownGroupError();
+
+    await tester.pumpWidget(
+      _buildTestWidget(fakeGroupRepository, locale: const Locale('en')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        "Couldn't reach the server. Check your internet connection and try "
+        'again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Impossible de contacter'), findsNothing);
+
+    await tester.pumpWidget(
+      _buildTestWidget(fakeGroupRepository, locale: const Locale('fr')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Impossible de contacter le serveur. Vérifiez votre connexion '
+        'internet et réessayez.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('état d\'erreur : tokens "on-wood" (écran "scène") plutôt que '

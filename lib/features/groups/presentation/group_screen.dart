@@ -25,6 +25,7 @@ import 'widgets/group_members_tab_body.dart';
 import 'widgets/group_notes_tab_body.dart';
 import 'widgets/group_tab_bar.dart';
 import 'widgets/group_treasure_tab_body.dart';
+import 'group_failure_l10n.dart';
 
 /// Écran "Groupe", route `/groups/:id` —
 /// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2, revu par
@@ -97,7 +98,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       context.go('/');
       _showSnackBar('Tu as quitté le groupe.');
     } on GroupFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localized(context));
     } catch (_) {
       _showSnackBar('Impossible de quitter le groupe. Réessayez.');
     }
@@ -120,7 +121,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       if (!mounted) return;
       _showSnackBar('${member.name} a été exclu du groupe.');
     } on GroupFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localized(context));
     } catch (_) {
       _showSnackBar("Impossible d'exclure ce membre. Réessayez.");
     }
@@ -243,7 +244,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       if (!mounted) return;
       _showSnackBar('Objet ajouté à ton inventaire.');
     } on GroupFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localized(context));
     } catch (_) {
       _showSnackBar('Impossible de réclamer cet objet. Réessayez.');
     } finally {
@@ -303,7 +304,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       if (!mounted) return;
       _showSnackBar('Butin mis à jour.');
     } on GroupFailure catch (failure) {
-      _showSnackBar(failure.message);
+      _showSnackBar(failure.localized(context));
     } catch (_) {
       _showSnackBar('Impossible de mettre à jour le butin. Réessayez.');
     } finally {
@@ -374,7 +375,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
               ),
               error: (error, stackTrace) => _ErrorState(
                 message: error is GroupFailure
-                    ? error.message
+                    ? error.localized(context)
                     : 'Impossible de charger ce groupe. Réessayez.',
                 onRetry: () =>
                     ref.invalidate(groupDetailProvider(widget.groupId)),
@@ -417,7 +418,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       ),
       error: (error, stackTrace) => _ErrorState(
         message: error is GroupFailure
-            ? error.message
+            ? error.localized(context)
             : 'Impossible de charger le butin commun. Réessayez.',
         onRetry: () => ref.invalidate(groupTreasureProvider(widget.groupId)),
       ),
@@ -443,7 +444,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       ),
       error: (error, stackTrace) => _ErrorState(
         message: error is GroupFailure
-            ? error.message
+            ? error.localized(context)
             : 'Impossible de charger tes notes. Réessayez.',
         onRetry: () => ref.invalidate(groupNoteEntriesProvider(widget.groupId)),
       ),
