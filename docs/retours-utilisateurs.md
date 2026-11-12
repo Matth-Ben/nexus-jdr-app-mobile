@@ -421,3 +421,41 @@ panneau repliable listant toutes les alertes avec « tout écarter », V5-2/V5-8
 explicite (indiquer sur la liste quelles fiches sont en cache, ou précharger les fiches au premier chargement de
 la liste, V5-5). Contenu du catalogue encore en français en anglais (« Humain · Guerrier ») : chantier i18n du
 contenu déjà tracé.
+
+
+## Proposition : système de combat du groupe (comité de revue du 12/11/2026)
+
+Proposition de Matthias, à la suite de la question « notion de combat » du chantier rituels (P3b) : un état de combat porté
+par le groupe, piloté par le MJ. Décisions déjà prises par Matthias : le MJ seul pilote ; les monstres sont un nom + une
+initiative, sans PV ; pas de mode combat dans un groupe sans MJ dans l'app ; priorité avant la suite des rituels.
+V1 : lancer/terminer, compteur de round, initiatives (joueurs + monstres du MJ), liste triée avec tour en cours, bandeau
+sur la fiche. V2 : tour suivant, notification « à toi de jouer », mise en attente/retrait. V3 : liens avec rituels,
+chronos de sorts (durées en rounds comptées en rounds réels), concentration, états à durée en rounds.
+
+Avis croisés (tous consultatifs, aucun ne tranche) :
+- **regles-dnd** : aucune règle d'égalité par défaut (le MJ tranche) ; la « mise en attente » n'est pas une règle 2014
+  (seul « Se tenir prêt » existe : à étiqueter comme outil de table) ; surprise = drapeau décidé par le MJ ; un effet
+  « 1 round » se compte depuis le tour du **lanceur**, pas le compteur global (stocker round + participant ancre) ;
+  concentration : DD = max(10, moitié des dégâts), rappel seulement, jamais automatique.
+- **direction-artistique** : pas de 4e onglet permanent ; bandeau « Combat en cours · round N » dans l'écran Groupe qui
+  ouvre un écran dédié ; bouton MJ « Lancer un combat » dans Membres ; tour en cours = bordure épaisse + fond + libellé ;
+  bandeau fin et neutre sur la fiche ; saisie d'initiative avec « Lancer un d20 » (lanceur 3D) ; option « ×N » monstres ;
+  hors ligne = lecture seule avec « dernier état connu à HH:MM » ; effort V1 M, V2 S, V3 M ; **aucune maquette n'existe**
+  dans `09-maquettes-captures.md` (spec visuelle à produire avant le développement).
+- **dev-backend-supabase** : il existe deux notions de membres non reliées (Histoire : MJ = `stories.user_id`, joueurs
+  sans ligne membre ; groupe mobile : `groups` + `group_members` + `is_group_member()` + Realtime déjà publié) ; recommande
+  de porter le combat par le **groupe** (`combats`, `combat_participants`, un seul combat actif par groupe par index
+  partiel) ; un joueur n'écrit son initiative que par RPC `set_my_initiative` (la RLS ne limite pas les colonnes) ;
+  `current_participant_id` plutôt qu'un index de tour ; DELETE non filtrables en Realtime (re-fetch obligatoire) ;
+  notification « à toi de jouer » faisable (edge function `send-push-notification` existante, mais secret FCM à
+  vérifier en production) ; effort backend M (L si variante Histoire) ; migrations en PR sur le dépôt web.
+- **dev-flutter** : faisable, V1 de taille M ; feature `combat/` séparée ; « notification de changement puis re-fetch » ;
+  retrait d'un monstre en soft-delete ; pas de Realtime en arrière-plan ; cache en mémoire avec horodatage ; nouvelle
+  dépendance `flutter_local_notifications` + `timezone` à mutualiser avec P3b ; le combat consomme le service de timers
+  (P3b ne dépend pas du combat) ; découpage PR0 backend, PR1 domaine, PR2 écran, PR3 initiative + bandeau, V2 PR4-6.
+- **qa-testeur** : testable si les critères d'acceptation sont ajoutés au cahier des charges avant le développement ;
+  règles d'égalité et d'édition d'initiative à fixer ; « tour en cours » porté par l'état serveur ; hors ligne en lecture
+  seule sans file ; seulement 2 comptes QA (un 3e nécessaire pour tester proprement tour suivant et notification).
+
+Décision de Matthias : à consigner ici après les choix soumis le 12/11/2026 (groupe ou Histoire, emplacement UI, règles
+d'égalité et d'édition, périmètre V1).
