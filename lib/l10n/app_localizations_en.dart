@@ -4601,4 +4601,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memberConditionsSheetEmpty => 'No active condition.';
+
+  @override
+  String get characterDetailNotCachedOfflineMessage =>
+      'This sheet has never been opened on this device. It will be available offline after you open it once while online.';
 }

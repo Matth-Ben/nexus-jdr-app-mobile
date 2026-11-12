@@ -25,13 +25,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:personnages/core/cache/app_database.dart';
+import 'package:personnages/core/cache/pending_character_write_queue.dart'
+    as queue_lib;
 import 'package:personnages/core/cache/pending_character_write_queue.dart';
 import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/features/characters/data/character_detail_cache.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/data/pending_character_write_syncer.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
+import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/condition_type.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_detail_provider.dart';
@@ -135,10 +139,258 @@ void main() {
 
       await expectLater(
         repository.fetchCharacterDetail(_characterId),
-        throwsA(anything),
+        throwsA(
+          isA<CharacterFailure>().having(
+            (failure) => failure.code,
+            'code',
+            CharacterErrorCode.detailNotCachedOffline,
+          ),
+        ),
       );
       expect(server.requests, isNotEmpty);
     });
+
+    test('en ligne sans cache et serveur injoignable : message réseau '
+        'habituel (pas le message « jamais ouverte »)', () async {
+      server.network = _Network.down;
+
+      await expectLater(
+        repository.fetchCharacterDetail(_characterId),
+        throwsA(
+          isA<CharacterFailure>().having(
+            (failure) => failure.code,
+            'code',
+            CharacterErrorCode.network,
+          ),
+        ),
+      );
+    });
+
+    // RGPD B1 (D31) : une lecture en vol ne ré-écrit jamais le cache d'un
+    // compte parti.
+    test('déconnexion pendant la lecture : aucune écriture de cache après la '
+        'purge', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final inFlight = repository.fetchCharacterDetail(_characterId);
+      await pumpEventQueue();
+
+      await client.auth.signOut(scope: SignOutScope.local);
+      await cache.clear();
+      gate.complete();
+      try {
+        await inFlight;
+      } catch (_) {}
+
+      expect(await cache.get(_cacheKey), isNull);
+    });
+
+    test('déconnexion sans purge encore passée : aucune écriture non plus '
+        '(garde sur la session)', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final inFlight = repository.fetchCharacterDetail(_characterId);
+      await pumpEventQueue();
+
+      await client.auth.signOut(scope: SignOutScope.local);
+      gate.complete();
+      try {
+        await inFlight;
+      } catch (_) {}
+
+      expect(await cache.get(_cacheKey), isNull);
+    });
+
+    test('changement de compte pendant la lecture : rien n\'est écrit sous '
+        'l\'ancien compte', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final inFlight = repository.fetchCharacterDetail(_characterId);
+      await pumpEventQueue();
+
+      await client.auth.recoverSession(
+        jsonEncode({
+          'access_token': 'fake-access-token-owner-2',
+          'token_type': 'bearer',
+          'user': {'id': 'owner-2'},
+        }),
+      );
+      gate.complete();
+      try {
+        await inFlight;
+      } catch (_) {}
+
+      expect(await cache.get(_cacheKey), isNull);
+      expect(await cache.get('character_detail:owner-2:$_characterId'), isNull);
+    });
+
+    test('suppression de compte (purge sans déconnexion locale) pendant la '
+        'lecture : aucune écriture de cache', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final inFlight = repository.fetchCharacterDetail(_characterId);
+      await pumpEventQueue();
+
+      // `deleteAccount` purge le cache alors que la session locale existe
+      // encore.
+      await cache.clear();
+      gate.complete();
+      await inFlight;
+
+      expect(await cache.get(_cacheKey), isNull);
+    });
+
+    test('préchargement : une écriture mise en file PENDANT la lecture '
+        'empêche l\'écriture du cache', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final inFlight = repository.prefetchCharacterDetail(_characterId);
+      await pumpEventQueue();
+
+      await pendingWrites.enqueue(
+        characterId: _characterId,
+        ownerId: _ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        targetId: '',
+        payload: {'currentHp': 4, 'temporaryHp': 0},
+      );
+      gate.complete();
+      await inFlight;
+
+      expect(await cache.get(_cacheKey), isNull);
+    });
+
+    test('préchargement sans écriture en attente : le cache est écrit '
+        '(témoin)', () async {
+      await repository.prefetchCharacterDetail(_characterId);
+
+      expect(await cache.get(_cacheKey), isNotNull);
+    });
+
+    test('préchargement : un cache écrit entre-temps (ouverture manuelle) '
+        'n\'est pas remplacé par une réponse plus ancienne', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final prefetching = repository.prefetchCharacterDetail(_characterId);
+      await pumpEventQueue();
+
+      // Réponse du préchargement figée à 10 PV ; l'ouverture manuelle lit 8.
+      server.characterRow['current_hp'] = 8;
+      await repository.fetchCharacterDetail(_characterId);
+      gate.complete();
+      await prefetching;
+
+      final hp = await CharacterDetailCache(cache)
+          .readHp(ownerId: _ownerId, characterId: _characterId);
+      expect(hp?.currentHp, 8);
+    });
+
+    // B1-bis : la purge peut passer PENDANT la lecture locale qui précède
+    // l'écriture du cache du préchargement.
+    Future<(SupabaseCharacterRepository, _GatedQueue)> gatedRepository() async {
+      final queue = _GatedQueue(db);
+      return (
+        SupabaseCharacterRepository(client, cache, queue, connectivity),
+        queue,
+      );
+    }
+
+    Future<void> untilReached(_GatedQueue queue) async {
+      for (var i = 0; i < 2000 && !queue.reached; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(queue.reached, isTrue);
+    }
+
+    test('purge (suppression de compte) PENDANT la condition d\'écriture du '
+        'préchargement : rien n\'est écrit', () async {
+      final (repo, queue) = await gatedRepository();
+      queue.armed = true;
+      final prefetching = repo.prefetchCharacterDetail(_characterId);
+      await untilReached(queue);
+
+      // `clear()` attend la fin de la transaction d'écriture : ne pas
+      // l'attendre avant de libérer la condition.
+      final clearing = cache.clear();
+      queue.gate.complete();
+      await prefetching;
+      await clearing;
+
+      expect(await cache.get(_cacheKey), isNull);
+    });
+
+    test('déconnexion PENDANT la condition d\'écriture du préchargement : '
+        'rien n\'est écrit', () async {
+      final (repo, queue) = await gatedRepository();
+      queue.armed = true;
+      final prefetching = repo.prefetchCharacterDetail(_characterId);
+      await untilReached(queue);
+
+      await client.auth.signOut(scope: SignOutScope.local);
+      queue.gate.complete();
+      await prefetching;
+
+      expect(await cache.get(_cacheKey), isNull);
+    });
+
+    test('changement de compte PENDANT la condition d\'écriture du '
+        'préchargement : rien n\'est écrit', () async {
+      final (repo, queue) = await gatedRepository();
+      queue.armed = true;
+      final prefetching = repo.prefetchCharacterDetail(_characterId);
+      await untilReached(queue);
+
+      await client.auth.recoverSession(
+        jsonEncode({
+          'access_token': 'fake-access-token-owner-2',
+          'token_type': 'bearer',
+          'user': {'id': 'owner-2'},
+        }),
+      );
+      queue.gate.complete();
+      await prefetching;
+
+      expect(await cache.get(_cacheKey), isNull);
+    });
+
+    test('liste en vol pendant une déconnexion : le cache de la liste reste '
+        'vide', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final inFlight = repository.fetchCharacters();
+      await pumpEventQueue();
+
+      await client.auth.signOut(scope: SignOutScope.local);
+      gate.complete();
+      try {
+        await inFlight;
+      } catch (_) {}
+
+      expect(await cache.get('character_list:$_ownerId'), isNull);
+    });
+
+    test('liste en vol pendant une purge (suppression de compte) : le cache '
+        'de la liste reste vide', () async {
+      final gate = Completer<void>();
+      server.characterReadGate = gate;
+      final inFlight = repository.fetchCharacters();
+      await pumpEventQueue();
+
+      await cache.clear();
+      gate.complete();
+      await inFlight;
+
+      expect(await cache.get('character_list:$_ownerId'), isNull);
+    });
+
+    test(
+      'liste : le cache est écrit sans purge ni déconnexion (témoin)',
+      () async {
+        await repository.fetchCharacters();
+
+        expect(await cache.get('character_list:$_ownerId'), isNotNull);
+      },
+    );
 
     test('PV : la fiche relue depuis le cache affiche la valeur mise en '
         'file', () async {
@@ -1813,6 +2065,29 @@ class _FakeServer {
       request: request,
       headers: {'content-type': 'application/json; charset=utf-8'},
     );
+  }
+}
+
+/// File dont `forCharacter` (lue par la condition d'écriture du cache du
+/// préchargement) attend [gate] une fois [armed] : permet de purger le cache
+/// PENDANT cette lecture.
+class _GatedQueue extends PendingCharacterWriteQueue {
+  _GatedQueue(super.db);
+
+  bool armed = false;
+  bool reached = false;
+  final Completer<void> gate = Completer<void>();
+
+  @override
+  Future<List<queue_lib.PendingCharacterWrite>> forCharacter({
+    required String ownerId,
+    required String characterId,
+  }) async {
+    if (armed) {
+      reached = true;
+      await gate.future;
+    }
+    return super.forCharacter(ownerId: ownerId, characterId: characterId);
   }
 }
 

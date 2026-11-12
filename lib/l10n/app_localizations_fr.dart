@@ -4640,4 +4640,8 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get memberConditionsSheetEmpty => 'Aucun état actif.';
+
+  @override
+  String get characterDetailNotCachedOfflineMessage =>
+      'Cette fiche n\'a jamais été ouverte sur cet appareil. Elle sera disponible hors ligne après une première ouverture en ligne.';
 }

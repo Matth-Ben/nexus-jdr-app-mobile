@@ -3571,6 +3571,50 @@ void main() {
       expect(find.text('ALL 18 SKILLS'), findsOneWidget);
     });
 
+    testWidgets('fiche jamais ouverte, hors ligne : message honnête en '
+        'anglais (et non « Couldn\'t reach the server »), RETRY conservé', (
+      tester,
+    ) async {
+      fakeRepository.detailErrorToThrow = const CharacterFailure(
+        'fr',
+        code: CharacterErrorCode.detailNotCachedOffline,
+      );
+
+      await pumpDetail(tester, locale: const Locale('en'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'This sheet has never been opened on this device. It will be '
+          'available offline after you open it once while online.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining("Couldn't reach"), findsNothing);
+      expect(find.text('RETRY'), findsOneWidget);
+    });
+
+    testWidgets('fiche jamais ouverte, hors ligne : message honnête en '
+        'français, RÉESSAYER conservé', (tester) async {
+      fakeRepository.detailErrorToThrow = const CharacterFailure(
+        'fr',
+        code: CharacterErrorCode.detailNotCachedOffline,
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          "Cette fiche n'a jamais été ouverte sur cet appareil. Elle sera "
+          'disponible hors ligne après une première ouverture en ligne.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('contacter le serveur'), findsNothing);
+      expect(find.text('RÉESSAYER'), findsOneWidget);
+    });
+
     testWidgets('état d\'erreur générique en anglais', (tester) async {
       fakeRepository.detailErrorToThrow = Exception('boom');
 

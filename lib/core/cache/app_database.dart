@@ -177,6 +177,12 @@ class AppDatabase extends _$AppDatabase {
   /// [_openConnection]).
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
+  /// Compteur incrémenté à chaque purge du cache (`ReferenceDataCache.clear`,
+  /// déconnexion / suppression de compte, D31). Permet à une lecture réseau en
+  /// vol de savoir qu'une purge a eu lieu depuis son départ et de ne pas
+  /// ré-écrire dans le cache des données du compte purgé.
+  int cacheClearGeneration = 0;
+
   @override
   int get schemaVersion => 6;
 

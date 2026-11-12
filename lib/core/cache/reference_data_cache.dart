@@ -35,6 +35,42 @@ class ReferenceDataCache {
         );
   }
 
+  /// Upsert conditionnel pour les données **liées à un compte** (fiche, liste) :
+  /// dans UNE transaction, n'écrit que si aucune purge ([clear]) n'a eu lieu
+  /// depuis que l'appelant a lu [generation] ([clearGeneration]), si
+  /// [isStillValid] (ex. même compte connecté) est vrai et si [precondition]
+  /// (lectures asynchrones locales) l'accepte — les deux premières conditions
+  /// étant re-vérifiées après [precondition], sans `await` entre cette
+  /// vérification et l'écriture. Une purge concurrente ([clear]) attend la fin
+  /// de la transaction : son `DELETE` passe donc après l'écriture éventuelle.
+  /// Retourne `true` si l'entrée a été écrite.
+  Future<bool> putGuarded(
+    String key,
+    Object rawPayload, {
+    required int generation,
+    bool Function()? isStillValid,
+    Future<bool> Function()? precondition,
+  }) {
+    bool allowed() =>
+        _db.cacheClearGeneration == generation &&
+        (isStillValid?.call() ?? true);
+    return _db.transaction(() async {
+      if (!allowed()) return false;
+      if (precondition != null && !await precondition()) return false;
+      if (!allowed()) return false;
+      await _db
+          .into(_db.cachedReferenceEntries)
+          .insertOnConflictUpdate(
+            CachedReferenceEntriesCompanion.insert(
+              key: key,
+              payload: jsonEncode(rawPayload),
+              cachedAt: DateTime.now(),
+            ),
+          );
+      return true;
+    });
+  }
+
   /// `null` si [key] n'a jamais été mise en cache. Retourne l'entrée quel
   /// que soit son âge (contrairement à [getFresh]) — utilisé par la
   /// stratégie "réseau d'abord, cache en secours" de
@@ -65,6 +101,23 @@ class ReferenceDataCache {
       return null;
     }
     return jsonDecode(row.payload);
+  }
+
+  /// Nombre de purges ([clear]) faites depuis l'ouverture de la base — à
+  /// capturer au départ d'une lecture réseau et à comparer avant d'écrire.
+  int get clearGeneration => _db.cacheClearGeneration;
+
+  /// Date de dernière écriture complète ([put]) de [key], `null` si [key] n'a
+  /// jamais été mise en cache. Ne décode pas le payload (contrairement à
+  /// [getFresh]) : sert à décider si une entrée volumineuse (fiche
+  /// personnage) mérite d'être retéléchargée.
+  Future<DateTime?> cachedAt(String key) async {
+    final table = _db.cachedReferenceEntries;
+    final query = _db.selectOnly(table)
+      ..addColumns([table.cachedAt])
+      ..where(table.key.equals(key));
+    final row = await query.getSingleOrNull();
+    return row?.read(table.cachedAt);
   }
 
   /// Remplace le payload de [key] par `transform(payload actuel)`, en une
@@ -112,6 +165,8 @@ class ReferenceDataCache {
   /// au-delà d'un re-fetch réseau au prochain accès, ce cache n'ayant pas de
   /// notion d'historique ni d'expiration (voir [put]).
   Future<void> clear() async {
+    // Avant la suppression : toute écriture en vol voit déjà la purge.
+    _db.cacheClearGeneration++;
     await _db.delete(_db.cachedReferenceEntries).go();
   }
 
