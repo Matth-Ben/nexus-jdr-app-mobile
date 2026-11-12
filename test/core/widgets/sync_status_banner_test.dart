@@ -128,10 +128,14 @@ void main() {
     await tester.pump(const Duration(seconds: 10));
   }
 
-  /// Ferme l'alerte affichée (laisse d'abord finir le fondu d'apparition).
-  Future<void> dismissTop(WidgetTester tester) async {
+  /// Écarte la plus ancienne alerte, comme le fait le panneau (suppression de
+  /// la ligne d'alerte, rien d'autre) ; le bandeau, lui, n'a plus de ✕.
+  Future<void> dismissOldest(WidgetTester tester) async {
     await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.byIcon(Icons.close));
+    final all = await tester.runAsync(() => alerts.allForOwner(_owner));
+    await tester.runAsync(
+      () => alerts.dismiss(ownerId: _owner, id: all!.first.id),
+    );
     await flushDb(tester);
     await tester.pump(const Duration(milliseconds: 300));
   }
@@ -162,29 +166,31 @@ void main() {
     });
   });
 
-  group('alertes persistées (règles 2, 10, 11, 13)', () {
-    testWidgets('abandon de PV : texte FR avec valeur serveur, bouton de '
-        'fermeture >= 44 dp, région live, jamais de police display', (
-      tester,
-    ) async {
+  group('alertes persistées (règles 2, 10, 11, 13) : bandeau de comptage', () {
+    testWidgets('1 alerte : « 1 alerte de synchronisation » + « Voir les '
+        'alertes », cible >= 44 dp, pas de ✕, pas de texte d\'alerte, jamais '
+        'de police display', (tester) async {
       await tester.pumpWidget(app(characterId: 'c1'));
       await addAlert(tester);
 
-      expect(
-        find.text(
-          'Modification non enregistrée : la dernière valeur connue des PV de '
-          'Aria est 7/12.',
-        ),
-        findsOneWidget,
-      );
       expect(find.byType(AlertBanner), findsOneWidget);
-      expect(liveRegions(), findsOneWidget);
+      expect(find.text('1 alerte de synchronisation'), findsOneWidget);
+      expect(find.text('Voir les alertes'), findsOneWidget);
+      // Plus de ✕ : seul le tap vers le panneau.
+      expect(find.byIcon(Icons.close), findsNothing);
+      expect(find.byType(IconButton), findsNothing);
+      expect(find.byTooltip('Fermer'), findsNothing);
+      // Ni le message de l'alerte ni « (+N autres) » dans le bandeau.
+      expect(find.textContaining('Aria'), findsNothing);
+      expect(find.textContaining('(+'), findsNothing);
 
-      final close = find.byTooltip('Fermer');
-      expect(close, findsOneWidget);
-      final size = tester.getSize(close);
-      expect(size.width, greaterThanOrEqualTo(44));
+      final size = tester.getSize(find.byType(AlertBanner));
       expect(size.height, greaterThanOrEqualTo(44));
+      expect(
+        tester.getSize(find.byType(InkWell)).height,
+        greaterThanOrEqualTo(44),
+        reason: 'tout le bandeau est la zone de tap',
+      );
 
       for (final text in tester.widgetList<Text>(
         find.descendant(
@@ -201,111 +207,125 @@ void main() {
       await finish(tester);
     });
 
-    testWidgets('anglais : texte EN', (tester) async {
-      await tester.pumpWidget(app(locale: const Locale('en')));
-      await addAlert(tester);
-      expect(
-        find.text('Change not saved: the last known HP of Aria are 7/12.'),
-        findsOneWidget,
-      );
-      expect(find.byTooltip('Dismiss'), findsOneWidget);
-      await finish(tester);
-    });
-
-    testWidgets('déclinaisons : emplacements, XP, repli, conflit', (
-      tester,
-    ) async {
-      await tester.pumpWidget(app());
-      await addAlert(
-        tester,
-        dataKind: 'spell_slot',
-        value: const {'level': 3, 'remaining': 1, 'max': 3},
-      );
-      expect(
-        find.text(
-          'Modification non enregistrée : la dernière valeur connue des '
-          'emplacements de niveau 3 de Aria est 1/3.',
-        ),
-        findsOneWidget,
-      );
-      await dismissTop(tester);
-      await flushDb(tester);
-
-      await addAlert(tester, dataKind: 'xp', value: const {'xp': 900});
-      expect(
-        find.text(
-          "Modification non enregistrée : la dernière valeur connue de l'XP "
-          'de Aria est 900.',
-        ),
-        findsOneWidget,
-      );
-      await dismissTop(tester);
-      await flushDb(tester);
-
-      await addAlert(tester, dataKind: 'class_feature', value: null);
-      expect(
-        find.text(
-          "Une modification de Aria n'a pas pu être enregistrée. La fiche "
-          'affiche la valeur du serveur.',
-        ),
-        findsOneWidget,
-      );
-      await dismissTop(tester);
-      await flushDb(tester);
-
-      await addAlert(tester, kind: SyncAlertKind.conflict);
-      expect(
-        find.text(
-          'Aria a été modifié sur un autre appareil. Ta modification hors ligne '
-          'a été appliquée par-dessus.',
-        ),
-        findsOneWidget,
-      );
-      await finish(tester);
-    });
-
-    testWidgets('une alerte à la fois : la plus ancienne, suffixe « (+N '
-        'autres) », fermer affiche la suivante puis plus rien', (tester) async {
+    testWidgets('N alertes : le libellé porte le TOTAL (pluriel) et suit '
+        'les ajouts', (tester) async {
       await tester.pumpWidget(app());
       await addAlert(tester, name: 'Aria');
       await addAlert(tester, name: 'Borin');
       await addAlert(tester, name: 'Cyrus');
-
-      expect(find.textContaining('Aria'), findsOneWidget);
+      expect(find.text('3 alertes de synchronisation'), findsOneWidget);
       expect(find.textContaining('Borin'), findsNothing);
-      expect(find.textContaining('(+2 autres)'), findsOneWidget);
 
-      await dismissTop(tester);
-      await flushDb(tester);
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.textContaining('Borin'), findsOneWidget);
-      expect(find.textContaining('(+1 autre)'), findsOneWidget);
-
-      await dismissTop(tester);
-      await flushDb(tester);
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.textContaining('Cyrus'), findsOneWidget);
-      expect(find.textContaining('(+'), findsNothing);
-
-      await dismissTop(tester);
-      await flushDb(tester);
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(AlertBanner), findsNothing);
-      expect(await tester.runAsync(() => alerts.allForOwner(_owner)), isEmpty);
+      await addAlert(tester, name: 'Dora');
+      expect(find.text('4 alertes de synchronisation'), findsOneWidget);
       await finish(tester);
     });
 
-    testWidgets('la fermeture supprime la ligne en base (et rien d\'autre)', (
+    testWidgets('anglais : « 1 sync alert » / « 2 sync alerts » + « View '
+        'alerts »', (tester) async {
+      await tester.pumpWidget(app(locale: const Locale('en')));
+      await addAlert(tester);
+      expect(find.text('1 sync alert'), findsOneWidget);
+      expect(find.text('View alerts'), findsOneWidget);
+      expect(find.byTooltip('Dismiss'), findsNothing);
+      await addAlert(tester, name: 'Borin');
+      expect(find.text('2 sync alerts'), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('un tap sur le bandeau ouvre le panneau des alertes', (
+      tester,
+    ) async {
+      await tester.pumpWidget(app());
+      await addAlert(tester);
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.tap(find.byType(AlertBanner));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await flushDb(tester);
+
+      expect(find.text('ALERTES DE SYNCHRO'), findsOneWidget);
+      expect(find.textContaining('PV de Aria'), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('sémantique : un nœud bouton « {N} alertes de '
+        'synchronisation. Ouvrir la liste. », texte visible exclu', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(app());
+      await addAlert(tester);
+      await addAlert(tester, name: 'Borin');
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final node = find.bySemanticsLabel(
+        '2 alertes de synchronisation. Ouvrir la liste.',
+      );
+      expect(node, findsOneWidget);
+      expect(
+        tester.getSemantics(node),
+        containsSemantics(
+          label: '2 alertes de synchronisation. Ouvrir la liste.',
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
+      // Le texte visible n'est pas lu en plus.
+      expect(find.bySemanticsLabel('Voir les alertes'), findsNothing);
+      await finish(tester);
+      semantics.dispose();
+    });
+
+    testWidgets('région live : active à l\'APPARITION seulement, pas à chaque '
+        'changement de N', (tester) async {
+      await tester.pumpWidget(app());
+      await addAlert(tester);
+      expect(liveRegions(), findsOneWidget, reason: 'apparition');
+
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(liveRegions(), findsNothing, reason: 'retirée après l\'annonce');
+
+      await addAlert(tester, name: 'Borin');
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('2 alertes de synchronisation'), findsOneWidget);
+      expect(liveRegions(), findsNothing, reason: 'N change : pas d\'annonce');
+      await finish(tester);
+    });
+
+    testWidgets('région live : de nouveau active quand le bandeau réapparaît '
+        'après avoir disparu', (tester) async {
+      await tester.pumpWidget(app());
+      await addAlert(tester);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(liveRegions(), findsNothing);
+
+      await dismissOldest(tester);
+      expect(find.byType(AlertBanner), findsNothing);
+
+      await addAlert(tester, name: 'Borin');
+      expect(liveRegions(), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('écarter les alertes (depuis le panneau, ici directement en '
+        'base) fait suivre le total puis disparaître le bandeau', (
       tester,
     ) async {
       await tester.pumpWidget(app());
       await addAlert(tester, name: 'Aria');
       await addAlert(tester, name: 'Borin');
-      await dismissTop(tester);
-      await flushDb(tester);
+      await addAlert(tester, name: 'Cyrus');
+      expect(find.text('3 alertes de synchronisation'), findsOneWidget);
 
-      final left = await tester.runAsync(() => alerts.allForOwner(_owner));
-      expect(left!.map((a) => a.characterName), ['Borin']);
+      await dismissOldest(tester);
+      expect(find.text('2 alertes de synchronisation'), findsOneWidget);
+      await dismissOldest(tester);
+      expect(find.text('1 alerte de synchronisation'), findsOneWidget);
+      await dismissOldest(tester);
+      expect(find.byType(AlertBanner), findsNothing);
+      expect(await tester.runAsync(() => alerts.allForOwner(_owner)), isEmpty);
       await finish(tester);
     });
 
@@ -346,9 +366,8 @@ void main() {
       },
     );
 
-    testWidgets('long texte à 360 dp et police x2,0 : aucun débordement', (
-      tester,
-    ) async {
+    testWidgets('360 dp et police x2,0, FR puis EN : aucun débordement, tout '
+        'le texte visible, cible >= 44 dp', (tester) async {
       tester.view.physicalSize = const Size(360, 800);
       tester.view.devicePixelRatio = 1;
       tester.platformDispatcher.textScaleFactorTestValue = 2;
@@ -358,103 +377,29 @@ void main() {
       await tester.pumpWidget(app());
       await addAlert(tester, name: 'Halltesse Ambrelune de Vaucluse');
       await addAlert(tester, name: 'Autre', kind: SyncAlertKind.conflict);
+      await addAlert(tester, name: 'Troisième');
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(AlertBanner), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      await finish(tester);
-    });
-
-    // V3-8 : un nom de 32 caractères ne doit pas gonfler le bandeau (5 lignes,
-    // ~150 dp) ; abrégé à l'écran, complet pour la sémantique.
-    for (final kind in SyncAlertKind.values) {
-      testWidgets('nom de 32 caractères (${kind.name}) à 411 dp, police x1,3 : '
-          'nom abrégé à l’écran, complet en sémantique', (tester) async {
-        const longName = 'Ambrelune de Vaucluse-Halltesse!';
-        expect(longName.length, 32);
-        tester.view.physicalSize = const Size(411, 800);
-        tester.view.devicePixelRatio = 1;
-        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
-        addTearDown(tester.view.reset);
-        addTearDown(tester.platformDispatcher.clearAllTestValues);
-        final semantics = tester.ensureSemantics();
-
-        await tester.pumpWidget(app());
-        await addAlert(
-          tester,
-          name: longName,
-          kind: kind,
-          value: kind == SyncAlertKind.conflict
-              ? const {
-                  'currentHp': 7,
-                  'temporaryHp': 0,
-                  'queuedCurrentHp': 5,
-                  'queuedTemporaryHp': 0,
-                  'maxHp': 12,
-                }
-              : const {'currentHp': 7, 'maxHp': 12},
-        );
-        await tester.pump(const Duration(milliseconds: 300));
-
-        expect(find.byType(AlertBanner), findsOneWidget);
-        expect(find.textContaining(longName), findsNothing);
-        expect(
-          find.textContaining('Ambrelune de Vaucluse-Ha…'),
-          findsOneWidget,
-        );
-        expect(
-          find.bySemanticsLabel(RegExp(RegExp.escape(longName))),
-          findsOneWidget,
-        );
-        expect(tester.takeException(), isNull);
-        await finish(tester);
-        semantics.dispose();
-      });
-    }
-
-    testWidgets('conflit T8 (objet) à 360 dp, police x2,0, EN : texte complet '
-        'sans troncature, une seule région live, bouton >= 44 dp', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(360, 800);
-      tester.view.devicePixelRatio = 1;
-      tester.platformDispatcher.textScaleFactorTestValue = 2;
-      addTearDown(tester.view.reset);
-      addTearDown(tester.platformDispatcher.clearAllTestValues);
-
-      await tester.pumpWidget(app(locale: const Locale('en')));
-      await addAlert(
-        tester,
-        kind: SyncAlertKind.conflict,
-        dataKind: 'inventory_item',
-        value: const {
-          'items': [
-            {'id': 'l1', 'name': 'Potion of healing', 'server': 5, 'queued': 4},
-          ],
-        },
-      );
-      await tester.pump(const Duration(milliseconds: 300));
-
-      final message = find.text(
-        'Aria: the quantity of “Potion of healing” was changed on another '
-        'device (server: 5). Your offline change (4) replaced it.',
-      );
-      expect(message, findsOneWidget);
-      expect(tester.widget<Text>(message).maxLines, isNull);
+      expect(find.text('3 alertes de synchronisation'), findsOneWidget);
+      expect(find.text('Voir les alertes'), findsOneWidget);
       expect(
-        tester.widget<Text>(message).overflow,
-        isNot(TextOverflow.ellipsis),
+        tester.getSize(find.byType(AlertBanner)).height,
+        greaterThanOrEqualTo(44),
       );
-      expect(liveRegions(), findsOneWidget);
-      final size = tester.getSize(find.byTooltip('Dismiss'));
-      expect(size.width, greaterThanOrEqualTo(44));
-      expect(size.height, greaterThanOrEqualTo(44));
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(app(locale: const Locale('en')));
+      await flushDb(tester);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('3 sync alerts'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await finish(tester);
     });
 
-    testWidgets('mise à jour de l\'alerte (même id) : le texte change sans '
-        'ré-annonce, fermer la supprime', (tester) async {
+    testWidgets('alerte mise à jour sur place (même id) : le bandeau ne '
+        'change pas et n\'est pas ré-annoncé', (tester) async {
       await tester.pumpWidget(app());
       await addAlert(
         tester,
@@ -466,7 +411,8 @@ void main() {
           'queued': {'currentHp': 5, 'temporaryHp': 0},
         },
       );
-      expect(find.textContaining('(serveur : 12/30)'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('1 alerte de synchronisation'), findsOneWidget);
       final id = (await tester.runAsync(() => alerts.allForOwner(_owner)))!
           .single
           .id;
@@ -484,13 +430,11 @@ void main() {
         ),
       );
       await flushDb(tester);
-
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.textContaining('hors ligne (8/30)'), findsOneWidget);
+
+      expect(find.text('1 alerte de synchronisation'), findsOneWidget);
       expect(find.byType(AlertBanner), findsOneWidget);
-      expect(liveRegions(), findsOneWidget);
-      await dismissTop(tester);
-      expect(find.byType(AlertBanner), findsNothing);
+      expect(liveRegions(), findsNothing);
       await finish(tester);
     });
   });

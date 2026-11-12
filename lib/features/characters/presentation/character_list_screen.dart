@@ -63,8 +63,10 @@ const double _readingWidth = 600;
 const double _footerMaxHeightFraction = 0.35;
 
 /// Part de la hauteur disponible que le bandeau de synchro épinglé ne dépasse
-/// jamais à police agrandie (défilement interne au-delà).
-const double _syncBandMaxHeightFraction = 0.3;
+/// jamais à police agrandie (défilement interne au-delà). 0,2 depuis le
+/// panneau des alertes : le bandeau ne porte plus qu'un libellé court et un
+/// lien (plus le texte de la première alerte), il tient dans ce plafond.
+const double _syncBandMaxHeightFraction = 0.2;
 
 /// `true` quand la police système est agrandie au-delà de [_largeTextScale].
 bool _isLargeText(BuildContext context) =>

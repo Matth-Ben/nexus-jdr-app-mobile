@@ -7,7 +7,7 @@ enum SyncBannerKind {
   /// Rien (usage normal : en ligne, rien en attente, aucune alerte).
   none,
 
-  /// Alerte persistée (abandon/conflit) : [SyncBannerState.alert].
+  /// Alertes persistées (abandon/conflit) : [SyncBannerState.alertCount].
   alert,
 
   /// Synchronisation en cours (visible seulement après 1 s continue).
@@ -27,8 +27,7 @@ class SyncBannerState {
   const SyncBannerState(
     this.kind, {
     this.pendingCount = 0,
-    this.alert,
-    this.moreAlerts = 0,
+    this.alertCount = 0,
   });
 
   static const SyncBannerState none = SyncBannerState(SyncBannerKind.none);
@@ -38,36 +37,25 @@ class SyncBannerState {
   /// Renseigné pour [SyncBannerKind.offline] et [SyncBannerKind.pending].
   final int pendingCount;
 
-  /// Renseignée pour [SyncBannerKind.alert] : la plus ancienne alerte.
-  final SyncAlert? alert;
-
-  /// Nombre d'autres alertes en attente derrière [alert] (suffixe « +N »).
-  final int moreAlerts;
+  /// Renseigné pour [SyncBannerKind.alert] : nombre total d'alertes. Le bandeau
+  /// n'affiche que ce total (le contenu des alertes vit dans le panneau, qui
+  /// observe sa propre liste) : l'égalité porte donc sur lui seul, une alerte
+  /// de conflit mise à jour sur place ne ré-émet rien.
+  final int alertCount;
 
   @override
   bool operator ==(Object other) =>
       other is SyncBannerState &&
       other.kind == kind &&
       other.pendingCount == pendingCount &&
-      other.alert?.id == alert?.id &&
-      other._alertContent == _alertContent &&
-      other.moreAlerts == moreAlerts;
+      other.alertCount == alertCount;
 
   @override
-  int get hashCode =>
-      Object.hash(kind, pendingCount, alert?.id, _alertContent, moreAlerts);
-
-  /// Contenu affichable de l'alerte : une alerte de conflit **mise à jour sur
-  /// place** (T8, dédoublonnage : même `id`, valeur différente) doit être
-  /// ré-émise, sinon le bandeau garderait l'ancien texte. L'`id` seul ne
-  /// suffit donc plus à l'égalité.
-  String? get _alertContent =>
-      alert == null ? null : '${alert!.characterName}|${alert!.serverValue}';
+  int get hashCode => Object.hash(kind, pendingCount, alertCount);
 
   @override
   String toString() =>
-      'SyncBannerState($kind, n=$pendingCount, alert=${alert?.id}, '
-      'more=$moreAlerts)';
+      'SyncBannerState($kind, n=$pendingCount, alerts=$alertCount)';
 }
 
 /// Machine à états du bandeau de synchro : agrège les entrées brutes
@@ -222,11 +210,7 @@ class SyncBannerEngine {
       _syncedTimer?.cancel();
       _syncedActive = false;
       _episode = false;
-      return SyncBannerState(
-        SyncBannerKind.alert,
-        alert: _alerts.first,
-        moreAlerts: _alerts.length - 1,
-      );
+      return SyncBannerState(SyncBannerKind.alert, alertCount: _alerts.length);
     }
     if (_syncingShown) {
       return const SyncBannerState(SyncBannerKind.syncing);

@@ -1,14 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../cache/cache_providers.dart';
 import '../cache/sync_alert_store.dart';
 import '../sync/sync_alert_payload.dart';
 import '../sync/sync_banner_engine.dart';
 import '../sync/sync_status_providers.dart';
 import 'alert_banner.dart';
 import 'info_banner.dart';
+import 'sync_alerts_sheet.dart';
 
 /// Bandeau de synchro hors-ligne (T2 du chantier hors-ligne) : **un seul**
 /// état visible à la fois, silencieux en usage normal. Réutilise
@@ -22,6 +24,9 @@ import 'info_banner.dart';
 /// [visiblePadding] : marges autour du bandeau **uniquement quand il est
 /// visible** (le placement diffère entre la fiche et la liste, voir leurs
 /// écrans) ; rien n'est réservé quand il est masqué.
+///
+/// Alertes persistées : un seul bandeau « {N} alerte(s) de synchronisation »
+/// qui ouvre le panneau (`showSyncAlertsSheet`), voir [_AlertSummaryBanner].
 ///
 /// Accessibilité : région live seulement pour l'alerte (apparition), le
 /// passage hors-ligne (libellé fixe, sans compteur : un changement de N
@@ -44,25 +49,9 @@ class SyncStatusBanner extends ConsumerWidget {
 
     final Widget? banner = switch (state.kind) {
       SyncBannerKind.none => null,
-      SyncBannerKind.alert => Semantics(
-        liveRegion: true,
-        container: true,
-        child: AlertBanner(
-          message:
-              syncAlertMessage(l10n, state.alert!) +
-              (state.moreAlerts > 0
-                  ? l10n.syncAlertMoreSuffix(state.moreAlerts)
-                  : ''),
-          // Le nom est tronqué à l'écran (V3-8), jamais pour un lecteur
-          // d'écran : la sémantique garde le nom complet.
-          semanticsMessage:
-              syncAlertMessage(l10n, state.alert!, truncateName: false) +
-              (state.moreAlerts > 0
-                  ? l10n.syncAlertMoreSuffix(state.moreAlerts)
-                  : ''),
-          dismissTooltip: l10n.syncBannerDismissTooltip,
-          onDismiss: () => _dismiss(ref, state.alert!),
-        ),
+      SyncBannerKind.alert => _AlertSummaryBanner(
+        count: state.alertCount,
+        onTap: () => unawaited(showSyncAlertsSheet(context)),
       ),
       SyncBannerKind.syncing => InfoBanner(
         icon: Icons.sync,
@@ -97,24 +86,66 @@ class SyncStatusBanner extends ConsumerWidget {
       alignment: Alignment.topCenter,
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
-        // Clé par nature d'état (et alerte), jamais par compteur : un
-        // changement de N met le texte à jour sur place, sans fondu.
+        // Clé par nature d'état, jamais par compteur : un changement de N met
+        // le texte à jour sur place, sans fondu (ni nouvelle annonce).
         child: banner == null
             ? const SizedBox(key: ValueKey('none'), width: double.infinity)
             : Padding(
-                key: ValueKey('${state.kind}-${state.alert?.id}'),
+                key: ValueKey(state.kind),
                 padding: visiblePadding,
                 child: banner,
               ),
       ),
     );
   }
+}
 
-  Future<void> _dismiss(WidgetRef ref, SyncAlert alert) async {
-    final ownerId = ref.read(syncOwnerIdProvider) ?? alert.ownerId;
-    await ref
-        .read(syncAlertStoreProvider)
-        .dismiss(ownerId: ownerId, id: alert.id);
+/// Bandeau « {N} alerte(s) de synchronisation · Voir les alertes » : entier
+/// tappable, ouvre le panneau des alertes. Pas de bouton de fermeture : on
+/// écarte les alertes depuis le panneau.
+///
+/// Sémantique : un seul nœud bouton « {N} alertes de synchronisation. Ouvrir
+/// la liste. » (texte visible exclu). La région live n'est active qu'à
+/// l'**apparition** du bandeau (premier rendu de cet état) : le widget la
+/// retire dès l'image suivante, un changement de N ensuite met le libellé à
+/// jour sans nouvelle annonce.
+class _AlertSummaryBanner extends StatefulWidget {
+  const _AlertSummaryBanner({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  State<_AlertSummaryBanner> createState() => _AlertSummaryBannerState();
+}
+
+class _AlertSummaryBannerState extends State<_AlertSummaryBanner> {
+  bool _live = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _live = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Semantics(
+      container: true,
+      button: true,
+      liveRegion: _live,
+      label: l10n.syncAlertsBannerSemantics(widget.count),
+      onTap: widget.onTap,
+      excludeSemantics: true,
+      child: AlertBanner(
+        message: l10n.syncAlertsBannerCount(widget.count),
+        actionLabel: l10n.syncAlertsBannerAction,
+        onTap: widget.onTap,
+      ),
+    );
   }
 }
 

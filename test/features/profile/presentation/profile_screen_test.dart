@@ -24,8 +24,11 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/core/cache/sync_alert_store.dart';
+import 'package:personnages/core/sync/sync_alerts_panel_providers.dart';
 import 'package:personnages/core/sync/sync_clock_provider.dart';
 import 'package:personnages/core/sync/sync_status_providers.dart';
+import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/theme/app_typography.dart';
 import 'package:personnages/core/widgets/menu_tile.dart';
 import 'package:personnages/core/widgets/profile_avatar.dart';
@@ -396,7 +399,7 @@ void main() {
   });
 
   testWidgets(
-    'affiche les 5 lignes de menu (regroupées dans un SettingsListCard) avec '
+    'affiche les 6 lignes de menu (regroupées dans un SettingsListCard) avec '
     'leurs icônes dédiées, sans "Signaler un bug" — "Langue" en 2e position, '
     'entre "Notifications" et "Confidentialité et données"',
     (tester) async {
@@ -407,6 +410,7 @@ void main() {
         'Notifications',
         'Langue',
         'Confidentialité et données',
+        'Alertes de synchronisation',
         'Aide et support',
       ]) {
         expect(find.text(label), findsOneWidget);
@@ -417,8 +421,9 @@ void main() {
       expect(find.byIcon(Icons.language), findsOneWidget);
       expect(find.byIcon(Icons.privacy_tip_outlined), findsOneWidget);
       expect(find.byIcon(Icons.help_outline), findsOneWidget);
+      expect(find.byIcon(Icons.sync), findsOneWidget);
       expect(find.byIcon(Icons.bug_report_outlined), findsNothing);
-      expect(find.byIcon(Icons.chevron_right), findsNWidgets(5));
+      expect(find.byIcon(Icons.chevron_right), findsNWidgets(6));
       expect(find.byType(SettingsListCard), findsOneWidget);
 
       // "Langue" est bien entre "Notifications" et "Confidentialité et
@@ -433,6 +438,7 @@ void main() {
         'Notifications',
         'Langue',
         'Confidentialité et données',
+        'Alertes de synchronisation',
         'Aide et support',
       ]);
     },
@@ -552,6 +558,9 @@ void main() {
     (tester) async {
       await pumpProfile(tester, user: _fakeUser());
 
+      // Le hub compte une ligne de plus (alertes de synchro) : « Aide et
+      // support » peut dépasser le viewport de test, on la rend visible.
+      await tester.ensureVisible(find.text('Aide et support'));
       await tester.tap(find.text('Aide et support'));
       await tester.pumpAndSettle();
 
@@ -623,6 +632,126 @@ void main() {
 
     await tester.ensureVisible(find.text('Nexus JDR — Personnages · v1.0.0'));
     expect(find.text('Nexus JDR — Personnages · v1.0.0'), findsOneWidget);
+  });
+
+  group('alertes de synchronisation (fiche A)', () {
+    final now = DateTime(2026, 11, 12, 12);
+
+    SyncAlert alert(int id, String name, {SyncAlertKind? kind}) => SyncAlert(
+      id: id,
+      ownerId: 'fake-user-id',
+      kind: kind ?? SyncAlertKind.abandon,
+      characterId: 'c$id',
+      characterName: name,
+      dataKind: 'hp',
+      serverValue: const {'currentHp': 7, 'maxHp': 12},
+      createdAt: now.subtract(Duration(minutes: id)),
+    );
+
+    List<Override> overrides(List<SyncAlert> alerts) => [
+      syncClockProvider.overrideWithValue(() => now),
+      syncAlertsProvider.overrideWith((ref) => Stream.value(alerts)),
+      sortedSyncAlertsProvider.overrideWith((ref) => Stream.value(alerts)),
+    ];
+
+    Future<void> pump(
+      WidgetTester tester,
+      List<SyncAlert> alerts, {
+      Locale locale = const Locale('fr'),
+    }) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        buildTestWidget(
+          user: _fakeUser(),
+          locale: locale,
+          extraOverrides: overrides(alerts),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ouvrir le profil'));
+      await tester.pumpAndSettle();
+    }
+
+    Finder row(String label) =>
+        find.ancestor(of: find.text(label), matching: find.byType(MenuTile));
+
+    testWidgets('aucune alerte : icône sync, sous-libellé « Aucune », pas de '
+        'badge ; le tap ouvre le panneau vide', (tester) async {
+      await pump(tester, const []);
+
+      expect(row('Alertes de synchronisation'), findsOneWidget);
+      expect(find.text('Aucune'), findsOneWidget);
+      final tile = tester.widget<MenuTile>(row('Alertes de synchronisation'));
+      expect(tile.icon, Icons.sync);
+      expect(tile.badgeText, isNull);
+      expect(
+        tester.getSize(row('Alertes de synchronisation')).height,
+        greaterThanOrEqualTo(44),
+      );
+
+      await tester.tap(find.text('Alertes de synchronisation'));
+      await tester.pumpAndSettle();
+      expect(find.text('ALERTES DE SYNCHRO'), findsOneWidget);
+      expect(find.text('Aucune alerte de synchronisation.'), findsOneWidget);
+    });
+
+    testWidgets('2 alertes : badge « 2 » brick (chiffre dans le texte), icône '
+        'sync_problem brick, le tap ouvre le panneau avec les alertes', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await pump(tester, [alert(1, 'Aria'), alert(2, 'Borin')]);
+
+      final tile = tester.widget<MenuTile>(row('Alertes de synchronisation'));
+      expect(tile.badgeText, '2');
+      expect(tile.icon, Icons.sync_problem);
+      expect(tile.iconColor, AppColors.accentBrick);
+      expect(find.text('Aucune'), findsNothing);
+      expect(
+        find.descendant(
+          of: row('Alertes de synchronisation'),
+          matching: find.text('2'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(
+          'Alertes de synchronisation : 2 alertes. Ouvrir la liste.',
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Alertes de synchronisation'));
+      await tester.pumpAndSettle();
+      expect(find.text('ALERTES DE SYNCHRO'), findsOneWidget);
+      expect(find.textContaining('PV de Aria'), findsOneWidget);
+      expect(find.textContaining('PV de Borin'), findsOneWidget);
+      semantics.dispose();
+    });
+
+    testWidgets('1 alerte, anglais : « Sync alerts », badge « 1 »', (
+      tester,
+    ) async {
+      await pump(tester, [alert(1, 'Aria')], locale: const Locale('en'));
+      expect(find.text('Sync alerts'), findsOneWidget);
+      expect(tester.widget<MenuTile>(row('Sync alerts')).badgeText, '1');
+      await tester.tap(find.text('Sync alerts'));
+      await tester.pumpAndSettle();
+      expect(find.text('SYNC ALERTS'), findsOneWidget);
+    });
+
+    testWidgets('la ligne « Dernière synchronisation » du pied de page reste '
+        'un simple texte d\'état', (tester) async {
+      await pump(tester, [alert(1, 'Aria')]);
+      final footer = find.text('Dernière synchronisation : jamais');
+      expect(footer, findsOneWidget);
+      expect(
+        find.ancestor(of: footer, matching: find.byType(InkWell)),
+        findsNothing,
+      );
+    });
   });
 
   group('locale anglaise', () {

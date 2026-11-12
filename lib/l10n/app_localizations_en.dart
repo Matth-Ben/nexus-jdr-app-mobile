@@ -3877,9 +3877,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncBannerOfflineSemantics => 'Offline';
 
   @override
-  String get syncBannerDismissTooltip => 'Dismiss';
-
-  @override
   String get syncAlertUnknownCharacter => 'this character';
 
   @override
@@ -3972,17 +3969,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String syncAlertConflictFallback(String name) {
     return '$name was changed on another device. Your offline change was applied on top.';
-  }
-
-  @override
-  String syncAlertMoreSuffix(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: ' (+$count more)',
-      one: ' (+1 more)',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -4601,4 +4587,118 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memberConditionsSheetEmpty => 'No active condition.';
+
+  @override
+  String get syncAlertsSheetTitle => 'SYNC ALERTS';
+
+  @override
+  String get syncAlertsSheetIntro =>
+      'These messages report changes made offline that were overwritten or abandoned.';
+
+  @override
+  String get syncAlertsDismissAll => 'DISMISS ALL';
+
+  @override
+  String get syncAlertsDismiss => 'Dismiss';
+
+  @override
+  String syncAlertsDismissSemantics(String name) {
+    return 'Dismiss alert: $name';
+  }
+
+  @override
+  String get syncAlertsDismissedSnack => 'Alert dismissed';
+
+  @override
+  String syncAlertsDismissedAllSnack(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count alerts dismissed',
+      one: '1 alert dismissed',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncAlertsDismissedAnnouncement =>
+      'Alert dismissed. Undo available.';
+
+  @override
+  String syncAlertsDismissedAllAnnouncement(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count alerts dismissed. Undo available.',
+      one: '1 alert dismissed. Undo available.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncAlertsEmptyTitle => 'No sync alerts.';
+
+  @override
+  String get syncAlertsEmptyBody =>
+      'Conflicts and unsent changes will appear here.';
+
+  @override
+  String get syncAlertsLoadError => 'Couldn\'t display the alerts.';
+
+  @override
+  String get syncAlertsKindConflict => 'Concurrent change';
+
+  @override
+  String get syncAlertsKindAbandon => 'Change not sent';
+
+  @override
+  String syncAlertsSince(String when) {
+    return 'since $when';
+  }
+
+  @override
+  String get syncAlertsOrphan =>
+      'This character is no longer in your list (deleted or no longer accessible). This alert no longer applies.';
+
+  @override
+  String syncAlertsBannerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sync alerts',
+      one: '1 sync alert',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncAlertsBannerAction => 'View alerts';
+
+  @override
+  String syncAlertsBannerSemantics(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sync alerts. Open the list.',
+      one: '1 sync alert. Open the list.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncAlertsProfileRowLabel => 'Sync alerts';
+
+  @override
+  String get syncAlertsProfileRowNone => 'None';
+
+  @override
+  String syncAlertsProfileRowSemantics(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Sync alerts: $count alerts. Open the list.',
+      one: 'Sync alerts: 1 alert. Open the list.',
+    );
+    return '$_temp0';
+  }
 }

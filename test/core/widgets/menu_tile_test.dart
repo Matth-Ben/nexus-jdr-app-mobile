@@ -102,4 +102,55 @@ void main() {
     expect(find.byIcon(Icons.north_east), findsOneWidget);
     expect(find.byIcon(Icons.chevron_right), findsNothing);
   });
+
+  testWidgets('sous-libellé, badge chiffré et libellé d\'accessibilité '
+      'unique (ligne « Alertes de synchronisation »)', (tester) async {
+    final semantics = tester.ensureSemantics();
+    var taps = 0;
+    await tester.pumpWidget(
+      _wrap(
+        MenuTile(
+          standalone: false,
+          icon: Icons.sync_problem,
+          iconColor: const Color(0xFFA13D2B),
+          label: 'Alertes',
+          subtitle: 'Aucune',
+          badgeText: '3',
+          semanticsLabel: '3 alertes. Ouvrir la liste.',
+          onTap: () => taps++,
+        ),
+      ),
+    );
+
+    expect(find.text('Aucune'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
+    expect(
+      tester.widget<Icon>(find.byIcon(Icons.sync_problem)).color,
+      const Color(0xFFA13D2B),
+    );
+    expect(
+      find.bySemanticsLabel('3 alertes. Ouvrir la liste.'),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel('Alertes'), findsNothing);
+    expect(
+      tester.getSize(find.byType(InkWell)).height,
+      greaterThanOrEqualTo(44),
+    );
+
+    await tester.tap(find.text('Alertes'));
+    expect(taps, 1);
+    semantics.dispose();
+  });
+
+  testWidgets('sans sous-libellé ni badge : rendu historique inchangé', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(MenuTile(icon: Icons.language, label: 'Langue', onTap: () {})),
+    );
+    expect(find.byType(DecoratedBox), findsWidgets);
+    expect(find.text('Langue'), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+  });
 }

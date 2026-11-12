@@ -6372,12 +6372,6 @@ abstract class AppLocalizations {
   /// **'Hors ligne'**
   String get syncBannerOfflineSemantics;
 
-  /// Info-bulle/libellé d'accessibilité du bouton de fermeture d'une alerte de synchro.
-  ///
-  /// In fr, this message translates to:
-  /// **'Fermer'**
-  String get syncBannerDismissTooltip;
-
   /// Repli du nom de personnage dans une alerte de synchro quand le nom n'a pas pu être retrouvé.
   ///
   /// In fr, this message translates to:
@@ -6495,12 +6489,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{name} a été modifié sur un autre appareil. Ta modification hors ligne a été appliquée par-dessus.'**
   String syncAlertConflictFallback(String name);
-
-  /// Suffixe ajouté à une alerte de synchro quand d'autres alertes attendent derrière elle.
-  ///
-  /// In fr, this message translates to:
-  /// **'{count, plural, =1{ (+1 autre)} other{ (+{count} autres)}}'**
-  String syncAlertMoreSuffix(int count);
 
   /// Titre du dialogue du retour Android depuis la liste racine quand des écritures sont en attente.
   ///
@@ -7450,6 +7438,138 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Aucun état actif.'**
   String get memberConditionsSheetEmpty;
+
+  /// Titre de la feuille listant les alertes de synchronisation.
+  ///
+  /// In fr, this message translates to:
+  /// **'ALERTES DE SYNCHRO'**
+  String get syncAlertsSheetTitle;
+
+  /// Texte d'introduction de la feuille des alertes de synchronisation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ces messages signalent des modifications faites hors ligne qui ont été écrasées ou abandonnées.'**
+  String get syncAlertsSheetIntro;
+
+  /// Bouton qui écarte toutes les alertes de synchronisation (affiché à partir de 2 alertes).
+  ///
+  /// In fr, this message translates to:
+  /// **'TOUT ÉCARTER'**
+  String get syncAlertsDismissAll;
+
+  /// Bouton qui écarte une alerte de synchronisation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écarter'**
+  String get syncAlertsDismiss;
+
+  /// Libellé d'accessibilité du bouton « Écarter » d'une alerte (nom du personnage complet).
+  ///
+  /// In fr, this message translates to:
+  /// **'Écarter l\'alerte : {name}'**
+  String syncAlertsDismissSemantics(String name);
+
+  /// Message du SnackBar après avoir écarté une alerte.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alerte écartée'**
+  String get syncAlertsDismissedSnack;
+
+  /// Message du SnackBar après « Tout écarter ».
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 alerte écartée} other{{count} alertes écartées}}'**
+  String syncAlertsDismissedAllSnack(int count);
+
+  /// Annonce d'accessibilité après avoir écarté une alerte.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alerte écartée. Annuler disponible.'**
+  String get syncAlertsDismissedAnnouncement;
+
+  /// Annonce d'accessibilité après « Tout écarter ».
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 alerte écartée. Annuler disponible.} other{{count} alertes écartées. Annuler disponible.}}'**
+  String syncAlertsDismissedAllAnnouncement(int count);
+
+  /// Titre de l'état vide de la feuille des alertes de synchronisation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune alerte de synchronisation.'**
+  String get syncAlertsEmptyTitle;
+
+  /// Texte de l'état vide de la feuille des alertes de synchronisation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les conflits et les modifications non envoyées apparaîtront ici.'**
+  String get syncAlertsEmptyBody;
+
+  /// Erreur de lecture de la liste locale des alertes de synchronisation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'afficher les alertes.'**
+  String get syncAlertsLoadError;
+
+  /// Type d'alerte : conflit entre une modification hors ligne et le serveur.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modification concurrente'**
+  String get syncAlertsKindConflict;
+
+  /// Type d'alerte : modification hors ligne abandonnée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modification non envoyée'**
+  String get syncAlertsKindAbandon;
+
+  /// Date relative d'une alerte de conflit (date du premier conflit conservée).
+  ///
+  /// In fr, this message translates to:
+  /// **'depuis {when}'**
+  String syncAlertsSince(String when);
+
+  /// Ligne d'une alerte dont le personnage n'est plus dans la liste chargée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce personnage n\'est plus dans ta liste (supprimé ou devenu inaccessible). Cette alerte n\'a plus d\'objet.'**
+  String get syncAlertsOrphan;
+
+  /// Libellé du bandeau de synchro quand des alertes existent.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 alerte de synchronisation} other{{count} alertes de synchronisation}}'**
+  String syncAlertsBannerCount(int count);
+
+  /// Seconde ligne du bandeau d'alertes de synchronisation (ouvre la feuille).
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir les alertes'**
+  String get syncAlertsBannerAction;
+
+  /// Libellé d'accessibilité (région live à l'apparition) du bandeau d'alertes.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 alerte de synchronisation. Ouvrir la liste.} other{{count} alertes de synchronisation. Ouvrir la liste.}}'**
+  String syncAlertsBannerSemantics(int count);
+
+  /// Ligne du Profil qui ouvre la feuille des alertes de synchronisation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alertes de synchronisation'**
+  String get syncAlertsProfileRowLabel;
+
+  /// Sous-libellé de la ligne du Profil quand il n'y a aucune alerte.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune'**
+  String get syncAlertsProfileRowNone;
+
+  /// Libellé d'accessibilité de la ligne du Profil quand il y a des alertes.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Alertes de synchronisation : 1 alerte. Ouvrir la liste.} other{Alertes de synchronisation : {count} alertes. Ouvrir la liste.}}'**
+  String syncAlertsProfileRowSemantics(int count);
 }
 
 class _AppLocalizationsDelegate

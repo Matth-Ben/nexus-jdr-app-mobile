@@ -5187,10 +5187,6 @@
   "@syncBannerOfflineSemantics": {
     "description": "Libellé d'accessibilité fixe (sans compteur, pour ne pas être ré-annoncé à chaque changement) de la région live du bandeau hors ligne."
   },
-  "syncBannerDismissTooltip": "Fermer",
-  "@syncBannerDismissTooltip": {
-    "description": "Info-bulle/libellé d'accessibilité du bouton de fermeture d'une alerte de synchro."
-  },
   "syncAlertUnknownCharacter": "ce personnage",
   "@syncAlertUnknownCharacter": {
     "description": "Repli du nom de personnage dans une alerte de synchro quand le nom n'a pas pu être retrouvé."
@@ -5307,15 +5303,6 @@
     "description": "Alerte de conflit de repli (valeur serveur inconnue).",
     "placeholders": {
       "name": {"type": "String"}
-    }
-  },
-  "syncAlertMoreSuffix": "{count, plural, =1{ (+1 autre)} other{ (+{count} autres)}}",
-  "@syncAlertMoreSuffix": {
-    "description": "Suffixe ajouté à une alerte de synchro quand d'autres alertes attendent derrière elle.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
     }
   },
   "syncExitDialogTitle": "Quitter l'app ?",
@@ -6160,5 +6147,128 @@
   "memberConditionsSheetEmpty": "Aucun état actif.",
   "@memberConditionsSheetEmpty": {
     "description": "État vide de la feuille des états d'un membre (V3-5)."
+  },
+  "syncAlertsSheetTitle": "ALERTES DE SYNCHRO",
+  "@syncAlertsSheetTitle": {
+    "description": "Titre de la feuille listant les alertes de synchronisation."
+  },
+  "syncAlertsSheetIntro": "Ces messages signalent des modifications faites hors ligne qui ont été écrasées ou abandonnées.",
+  "@syncAlertsSheetIntro": {
+    "description": "Texte d'introduction de la feuille des alertes de synchronisation."
+  },
+  "syncAlertsDismissAll": "TOUT ÉCARTER",
+  "@syncAlertsDismissAll": {
+    "description": "Bouton qui écarte toutes les alertes de synchronisation (affiché à partir de 2 alertes)."
+  },
+  "syncAlertsDismiss": "Écarter",
+  "@syncAlertsDismiss": {
+    "description": "Bouton qui écarte une alerte de synchronisation."
+  },
+  "syncAlertsDismissSemantics": "Écarter l'alerte : {name}",
+  "@syncAlertsDismissSemantics": {
+    "description": "Libellé d'accessibilité du bouton « Écarter » d'une alerte (nom du personnage complet).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "syncAlertsDismissedSnack": "Alerte écartée",
+  "@syncAlertsDismissedSnack": {
+    "description": "Message du SnackBar après avoir écarté une alerte."
+  },
+  "syncAlertsDismissedAllSnack": "{count, plural, =1{1 alerte écartée} other{{count} alertes écartées}}",
+  "@syncAlertsDismissedAllSnack": {
+    "description": "Message du SnackBar après « Tout écarter ».",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncAlertsDismissedAnnouncement": "Alerte écartée. Annuler disponible.",
+  "@syncAlertsDismissedAnnouncement": {
+    "description": "Annonce d'accessibilité après avoir écarté une alerte."
+  },
+  "syncAlertsDismissedAllAnnouncement": "{count, plural, =1{1 alerte écartée. Annuler disponible.} other{{count} alertes écartées. Annuler disponible.}}",
+  "@syncAlertsDismissedAllAnnouncement": {
+    "description": "Annonce d'accessibilité après « Tout écarter ».",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncAlertsEmptyTitle": "Aucune alerte de synchronisation.",
+  "@syncAlertsEmptyTitle": {
+    "description": "Titre de l'état vide de la feuille des alertes de synchronisation."
+  },
+  "syncAlertsEmptyBody": "Les conflits et les modifications non envoyées apparaîtront ici.",
+  "@syncAlertsEmptyBody": {
+    "description": "Texte de l'état vide de la feuille des alertes de synchronisation."
+  },
+  "syncAlertsLoadError": "Impossible d'afficher les alertes.",
+  "@syncAlertsLoadError": {
+    "description": "Erreur de lecture de la liste locale des alertes de synchronisation."
+  },
+  "syncAlertsKindConflict": "Modification concurrente",
+  "@syncAlertsKindConflict": {
+    "description": "Type d'alerte : conflit entre une modification hors ligne et le serveur."
+  },
+  "syncAlertsKindAbandon": "Modification non envoyée",
+  "@syncAlertsKindAbandon": {
+    "description": "Type d'alerte : modification hors ligne abandonnée."
+  },
+  "syncAlertsSince": "depuis {when}",
+  "@syncAlertsSince": {
+    "description": "Date relative d'une alerte de conflit (date du premier conflit conservée).",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "syncAlertsOrphan": "Ce personnage n'est plus dans ta liste (supprimé ou devenu inaccessible). Cette alerte n'a plus d'objet.",
+  "@syncAlertsOrphan": {
+    "description": "Ligne d'une alerte dont le personnage n'est plus dans la liste chargée."
+  },
+  "syncAlertsBannerCount": "{count, plural, =1{1 alerte de synchronisation} other{{count} alertes de synchronisation}}",
+  "@syncAlertsBannerCount": {
+    "description": "Libellé du bandeau de synchro quand des alertes existent.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncAlertsBannerAction": "Voir les alertes",
+  "@syncAlertsBannerAction": {
+    "description": "Seconde ligne du bandeau d'alertes de synchronisation (ouvre la feuille)."
+  },
+  "syncAlertsBannerSemantics": "{count, plural, =1{1 alerte de synchronisation. Ouvrir la liste.} other{{count} alertes de synchronisation. Ouvrir la liste.}}",
+  "@syncAlertsBannerSemantics": {
+    "description": "Libellé d'accessibilité (région live à l'apparition) du bandeau d'alertes.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncAlertsProfileRowLabel": "Alertes de synchronisation",
+  "@syncAlertsProfileRowLabel": {
+    "description": "Ligne du Profil qui ouvre la feuille des alertes de synchronisation."
+  },
+  "syncAlertsProfileRowNone": "Aucune",
+  "@syncAlertsProfileRowNone": {
+    "description": "Sous-libellé de la ligne du Profil quand il n'y a aucune alerte."
+  },
+  "syncAlertsProfileRowSemantics": "{count, plural, =1{Alertes de synchronisation : 1 alerte. Ouvrir la liste.} other{Alertes de synchronisation : {count} alertes. Ouvrir la liste.}}",
+  "@syncAlertsProfileRowSemantics": {
+    "description": "Libellé d'accessibilité de la ligne du Profil quand il y a des alertes.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

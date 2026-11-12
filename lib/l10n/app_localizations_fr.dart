@@ -3915,9 +3915,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get syncBannerOfflineSemantics => 'Hors ligne';
 
   @override
-  String get syncBannerDismissTooltip => 'Fermer';
-
-  @override
   String get syncAlertUnknownCharacter => 'ce personnage';
 
   @override
@@ -4010,17 +4007,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String syncAlertConflictFallback(String name) {
     return '$name a été modifié sur un autre appareil. Ta modification hors ligne a été appliquée par-dessus.';
-  }
-
-  @override
-  String syncAlertMoreSuffix(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: ' (+$count autres)',
-      one: ' (+1 autre)',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -4640,4 +4626,118 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get memberConditionsSheetEmpty => 'Aucun état actif.';
+
+  @override
+  String get syncAlertsSheetTitle => 'ALERTES DE SYNCHRO';
+
+  @override
+  String get syncAlertsSheetIntro =>
+      'Ces messages signalent des modifications faites hors ligne qui ont été écrasées ou abandonnées.';
+
+  @override
+  String get syncAlertsDismissAll => 'TOUT ÉCARTER';
+
+  @override
+  String get syncAlertsDismiss => 'Écarter';
+
+  @override
+  String syncAlertsDismissSemantics(String name) {
+    return 'Écarter l\'alerte : $name';
+  }
+
+  @override
+  String get syncAlertsDismissedSnack => 'Alerte écartée';
+
+  @override
+  String syncAlertsDismissedAllSnack(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count alertes écartées',
+      one: '1 alerte écartée',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncAlertsDismissedAnnouncement =>
+      'Alerte écartée. Annuler disponible.';
+
+  @override
+  String syncAlertsDismissedAllAnnouncement(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count alertes écartées. Annuler disponible.',
+      one: '1 alerte écartée. Annuler disponible.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncAlertsEmptyTitle => 'Aucune alerte de synchronisation.';
+
+  @override
+  String get syncAlertsEmptyBody =>
+      'Les conflits et les modifications non envoyées apparaîtront ici.';
+
+  @override
+  String get syncAlertsLoadError => 'Impossible d\'afficher les alertes.';
+
+  @override
+  String get syncAlertsKindConflict => 'Modification concurrente';
+
+  @override
+  String get syncAlertsKindAbandon => 'Modification non envoyée';
+
+  @override
+  String syncAlertsSince(String when) {
+    return 'depuis $when';
+  }
+
+  @override
+  String get syncAlertsOrphan =>
+      'Ce personnage n\'est plus dans ta liste (supprimé ou devenu inaccessible). Cette alerte n\'a plus d\'objet.';
+
+  @override
+  String syncAlertsBannerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count alertes de synchronisation',
+      one: '1 alerte de synchronisation',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncAlertsBannerAction => 'Voir les alertes';
+
+  @override
+  String syncAlertsBannerSemantics(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count alertes de synchronisation. Ouvrir la liste.',
+      one: '1 alerte de synchronisation. Ouvrir la liste.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncAlertsProfileRowLabel => 'Alertes de synchronisation';
+
+  @override
+  String get syncAlertsProfileRowNone => 'Aucune';
+
+  @override
+  String syncAlertsProfileRowSemantics(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Alertes de synchronisation : $count alertes. Ouvrir la liste.',
+      one: 'Alertes de synchronisation : 1 alerte. Ouvrir la liste.',
+    );
+    return '$_temp0';
+  }
 }
