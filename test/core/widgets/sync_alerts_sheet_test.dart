@@ -9,7 +9,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -684,7 +683,7 @@ void main() {
         tester.getSemantics(
           find.bySemanticsLabel("Écarter l'alerte : $longName"),
         ),
-        containsSemantics(isButton: true, hasTapAction: true),
+        isSemantics(isButton: true, hasTapAction: true),
       );
       // Le nœud de la carte rassemble type, date et message complet.
       final card = find.bySemanticsLabel(

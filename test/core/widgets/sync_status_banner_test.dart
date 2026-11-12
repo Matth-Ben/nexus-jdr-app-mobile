@@ -266,7 +266,7 @@ void main() {
       expect(node, findsOneWidget);
       expect(
         tester.getSemantics(node),
-        containsSemantics(
+        isSemantics(
           label: '2 alertes de synchronisation. Ouvrir la liste.',
           isButton: true,
           hasTapAction: true,
