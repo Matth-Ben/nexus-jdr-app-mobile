@@ -37,6 +37,7 @@ import 'package:personnages/features/characters/domain/character_detail_class_ro
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_skill_row.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
+import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/features/characters/domain/patron_extended_spells.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
@@ -706,6 +707,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     String? damageDice,
     String? damageType,
     List<String> properties = const [],
+    CustomItemEnrichment? enrichment,
   }) {
     throw UnimplementedError();
   }

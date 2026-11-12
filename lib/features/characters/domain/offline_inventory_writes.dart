@@ -1,4 +1,5 @@
 import '../../../core/utils/uuid_v4.dart';
+import 'custom_item_enrichment.dart';
 import 'offline_state_writes.dart';
 import 'weapon_slot.dart';
 
@@ -59,6 +60,7 @@ class InventoryItemWrite {
     this.customDamageDice,
     this.customDamageType,
     this.customProperties = const [],
+    this.enrichment,
     this.state,
   }) : assert(
          itemId != null || customName != null,
@@ -77,6 +79,7 @@ class InventoryItemWrite {
       customDamageDice = null,
       customDamageType = null,
       customProperties = const [],
+      enrichment = null,
       state = null;
 
   /// Usage d'un objet : quantité absolue [quantity] (>= 0), [base] = quantité
@@ -89,6 +92,7 @@ class InventoryItemWrite {
       customDamageDice = null,
       customDamageType = null,
       customProperties = const [],
+      enrichment = null,
       state = null;
 
   final InventoryItemOp op;
@@ -106,6 +110,10 @@ class InventoryItemWrite {
   final String? customDamageDice;
   final String? customDamageType;
   final List<String> customProperties;
+
+  /// Colonnes `custom_*` enrichies (P7) d'un objet personnalisé ; `null` pour
+  /// un objet du catalogue et pour un ancien ajout (forme simple).
+  final CustomItemEnrichment? enrichment;
 
   /// État initial (équipé / set d'arme / harmonisé) fusionné dans l'ajout ;
   /// `null` si aucun réglage n'a été fait depuis l'ajout.
@@ -132,6 +140,7 @@ class InventoryItemWrite {
       InventoryItemPayloadKeys.customDamageType: ?customDamageType,
       if (customProperties.isNotEmpty)
         InventoryItemPayloadKeys.customProperties: customProperties,
+      ...?enrichment?.toPayload(),
       ..._statePayload(),
     };
   }
@@ -175,6 +184,7 @@ class InventoryItemWrite {
     'custom_damage_dice': ?customDamageDice,
     'custom_damage_type': ?customDamageType,
     if (customProperties.isNotEmpty) 'custom_properties': customProperties,
+    ...?enrichment?.toInsertColumns(),
     ..._stateColumns(),
   };
 
@@ -221,6 +231,7 @@ class InventoryItemWrite {
     'custom_damage_dice': customDamageDice,
     'custom_damage_type': customDamageType,
     'custom_properties': customProperties.isEmpty ? null : customProperties,
+    ...?enrichment?.toRowColumns(),
     'items': ?itemRow,
   };
 }
@@ -333,6 +344,11 @@ InventoryItemWrite? parseInventoryItemPayload(Object? raw) {
     weaponSlot = WeaponSlot.fromValue(rawSlot);
     if (weaponSlot == null || equipped == false) return null;
   }
+  // Enrichissement P7 : clés optionnelles ; réservées à un objet personnalisé
+  // (les colonnes `custom_*` sont nulles pour un objet du catalogue).
+  final parsedEnrichment = parseCustomItemEnrichment(raw);
+  if (!parsedEnrichment.isValid) return null;
+  if (itemId != null && parsedEnrichment.value != null) return null;
   final hasState = equipped != null || attuned != null || weaponSlot != null;
   return InventoryItemWrite.add(
     itemId: itemId,
@@ -342,6 +358,7 @@ InventoryItemWrite? parseInventoryItemPayload(Object? raw) {
     customDamageDice: dice,
     customDamageType: type,
     customProperties: properties,
+    enrichment: parsedEnrichment.value,
     state: hasState
         ? InventoryStatePatch(
             equipped: equipped as bool?,
@@ -372,6 +389,7 @@ InventoryItemWrite mergeStateIntoPendingAdd(
     customDamageDice: pendingAdd.customDamageDice,
     customDamageType: pendingAdd.customDamageType,
     customProperties: pendingAdd.customProperties,
+    enrichment: pendingAdd.enrichment,
     state: merged,
   );
 }
@@ -468,6 +486,7 @@ InventoryUsePlan planInventoryUse({
         customDamageDice: pending.customDamageDice,
         customDamageType: pending.customDamageType,
         customProperties: pending.customProperties,
+        enrichment: pending.enrichment,
         state: pending.state,
       ),
       mergedIntoPendingAdd: true,

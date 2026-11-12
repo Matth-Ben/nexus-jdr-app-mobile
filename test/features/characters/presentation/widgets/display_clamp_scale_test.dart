@@ -105,6 +105,7 @@ Widget _inventoryTab(CharacterDetail detail) => CharacterInventoryTabBody(
     damageDice,
     damageType,
     properties = const [],
+    enrichment,
   }) {},
   onEquipWeaponToSlot: (_, _) {},
 );

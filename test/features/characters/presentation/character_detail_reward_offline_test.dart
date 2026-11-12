@@ -270,6 +270,7 @@ void main() {
               damageDice,
               damageType,
               properties = const [],
+              enrichment,
             }) {},
             onEquipWeaponToSlot: (_, _) {},
           ),

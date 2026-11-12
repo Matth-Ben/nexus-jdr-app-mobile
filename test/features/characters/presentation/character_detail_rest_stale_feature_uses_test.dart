@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/l10n/app_localizations.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
@@ -403,6 +404,7 @@ class FakeRepository implements CharacterRepository {
     String? damageDice,
     String? damageType,
     List<String> properties = const [],
+    CustomItemEnrichment? enrichment,
   }) {
     throw UnimplementedError();
   }
