@@ -174,32 +174,21 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
   /// factorisé pour [_openItemActions] et [_openItemInfo], qui en ont tous
   /// deux besoin pour l'afficher dans leur panneau respectif. `(null, null)`
   /// pour tout objet qui n'est pas une arme à dé de dégâts connu.
-  (int?, int?) _weaponAttackStats(CharacterInventoryItem item) {
-    if (item.category != 'arme' || item.weaponProperties?.damageDice == null) {
-      return (null, null);
-    }
-    final proficiencyBonus = ProficiencyBonusRules.forTotalLevel(
-      widget.detail.totalLevel,
-    );
-    final attackBonus = WeaponAttackCalculator.attackBonus(
-      weaponName: item.name,
-      weaponProperties: item.weaponProperties!.properties,
-      abilityScores: widget.detail.abilityScores,
-      proficiencyTokens: widget.detail.weaponProficiencyNames,
-      proficiencyBonus: proficiencyBonus,
-    );
-    final damageModifier = WeaponAttackCalculator.abilityModifierFor(
-      weaponProperties: item.weaponProperties!.properties,
-      abilityScores: widget.detail.abilityScores,
-    );
-    return (attackBonus, damageModifier);
-  }
+  WeaponAttackStats? _weaponAttackStats(CharacterInventoryItem item) =>
+      WeaponAttackCalculator.statsFor(
+        item: item,
+        abilityScores: widget.detail.abilityScores,
+        proficiencyTokens: widget.detail.weaponProficiencyNames,
+        proficiencyBonus: ProficiencyBonusRules.forTotalLevel(
+          widget.detail.totalLevel,
+        ),
+      );
 
   Future<void> _openItemActions(
     BuildContext context,
     CharacterInventoryItem item,
   ) {
-    final (attackBonus, damageModifier) = _weaponAttackStats(item);
+    final stats = _weaponAttackStats(item);
 
     return showItemActionSheet(
       context,
@@ -210,11 +199,12 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
       onRemoveItem: widget.onRemoveItem,
       attunedCount: widget.detail.attunedItemCount,
       equippedWeapons: widget.detail.inventory
-          .where((item) => item.category == 'arme' && item.equipped)
+          .where((item) => item.isWeapon && item.equipped)
           .toList(),
       onEquipWeaponToSlot: widget.onEquipWeaponToSlot,
-      weaponAttackBonus: attackBonus,
-      weaponDamageModifier: damageModifier,
+      weaponAttackBonus: stats?.attackBonus,
+      weaponDamageModifier: stats?.damageModifier,
+      weaponStats: stats,
       notProficient: _isNotProficient(item),
     );
   }
@@ -229,7 +219,7 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
     BuildContext context,
     CharacterInventoryItem item,
   ) {
-    final (attackBonus, damageModifier) = _weaponAttackStats(item);
+    final stats = _weaponAttackStats(item);
 
     return showItemInfoPanel(
       context,
@@ -239,8 +229,9 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
       onToggleAttuned: (_) {},
       attunedCount: widget.detail.attunedItemCount,
       readOnly: true,
-      weaponAttackBonus: attackBonus,
-      weaponDamageModifier: damageModifier,
+      weaponAttackBonus: stats?.attackBonus,
+      weaponDamageModifier: stats?.damageModifier,
+      weaponStats: stats,
       notProficient: _isNotProficient(item),
     );
   }

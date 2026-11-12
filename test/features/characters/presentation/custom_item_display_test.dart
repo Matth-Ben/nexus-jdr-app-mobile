@@ -523,7 +523,8 @@ void main() {
 
       expect(find.text('Harmoniser cet objet'), findsOneWidget);
       expect(find.text('Arme · x1'), findsOneWidget);
-      expect(find.text('Équiper'), findsNothing);
+      // P7 PR 2b : une arme personnalisée est désormais équipable (par set).
+      expect(find.text('Équiper'), findsOneWidget);
 
       await tester.tap(find.text('Harmoniser cet objet'));
       await tester.pumpAndSettle();

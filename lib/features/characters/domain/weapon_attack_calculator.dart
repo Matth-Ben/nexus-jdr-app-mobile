@@ -1,4 +1,6 @@
 import '../../character_creation/domain/ability_score_rules.dart';
+import 'character_inventory_item.dart';
+import 'custom_item_enrichment.dart';
 import 'pact_weapon_rules.dart';
 import 'weapon_proficiency_category_rules.dart';
 
@@ -19,10 +21,20 @@ import 'weapon_proficiency_category_rules.dart';
 ///   arme de corps à corps sans « finesse » (y compris « lancer »/thrown, ex.
 ///   javeline, hachette).
 ///
+/// Armes personnalisées (P7 PR 2b, [statsFor]) : en plus de ce qui précède,
+/// le bonus magique (`custom_magic_bonus`, 0..3) s'ajoute à l'attaque ET aux
+/// dégâts (jamais la maîtrise aux dégâts), suspendu si l'objet requiert
+/// l'harmonisation sans l'être ; la caractéristique suit `custom_weapon_range`
+/// (Force au corps à corps ET quand la portée n'est pas précisée, Dextérité à
+/// distance) sauf propriété « munitions » (Dextérité) ou « finesse » (la
+/// meilleure des deux) ; la maîtrise se déduit de `custom_weapon_category`
+/// seule (jamais du nom, texte libre) et reste **non évaluée** si elle n'est
+/// pas renseignée.
+///
 /// Non couvert (aucune donnée disponible côté catalogue, `items.rarity`
-/// toujours vide, vérifié) : bonus d'enchantement d'une arme magique (+1/+2)
-/// — uniquement le modificateur de caractéristique standard est calculable
-/// aujourd'hui.
+/// toujours vide, vérifié) : bonus d'enchantement d'une arme magique du
+/// **catalogue** (+1/+2) — uniquement le modificateur de caractéristique
+/// standard est calculable pour elles aujourd'hui.
 abstract final class WeaponAttackCalculator {
   /// `true` si le personnage est compétent avec l'arme [weaponName], d'après
   /// [proficiencyTokens] (`CharacterDetail.weaponProficiencyNames` : tokens
@@ -73,6 +85,95 @@ abstract final class WeaponAttackCalculator {
     return false;
   }
 
+  /// Maîtrise d'une arme **personnalisée** d'après sa catégorie
+  /// ([weaponCategory] : `courante`/`guerre`, `null` = non renseignée). Mêmes
+  /// jetons de catégorie que [isProficient] ('courantes' -> courante,
+  /// 'martiales' -> de guerre) ; `unknown` si la catégorie est absente
+  /// (jamais devinée). Le nom de l'objet n'est pas comparé (texte libre).
+  static WeaponProficiencyStatus customProficiency({
+    required String? weaponCategory,
+    required List<String> proficiencyTokens,
+    List<String> weaponProperties = const <String>[],
+  }) {
+    if (weaponProperties.any(
+      (property) => PactWeaponRules.normalize(property) == 'naturelle',
+    )) {
+      return WeaponProficiencyStatus.proficient;
+    }
+    final expectedToken = switch (weaponCategory) {
+      CustomWeaponCategories.common => 'courantes',
+      CustomWeaponCategories.martial => 'martiales',
+      _ => null,
+    };
+    if (expectedToken == null) return WeaponProficiencyStatus.unknown;
+    final proficient = proficiencyTokens.any(
+      (token) => PactWeaponRules.normalize(token) == expectedToken,
+    );
+    return proficient
+        ? WeaponProficiencyStatus.proficient
+        : WeaponProficiencyStatus.notProficient;
+  }
+
+  /// Attaque et dégâts complets de [item] (arme du catalogue ou objet
+  /// personnalisé de type arme, voir [CharacterInventoryItem.isWeapon]), ou
+  /// `null` si ce n'est pas une arme à dé de dégâts connu. Pour une arme du
+  /// catalogue : strictement [attackBonus]/[abilityModifierFor] (aucun bonus
+  /// magique, voir la documentation de classe).
+  static WeaponAttackStats? statsFor({
+    required CharacterInventoryItem item,
+    required Map<String, int> abilityScores,
+    required List<String> proficiencyTokens,
+    required int proficiencyBonus,
+  }) {
+    final weapon = item.weaponProperties;
+    if (!item.isWeapon || weapon?.damageDice == null) return null;
+    final properties = weapon!.properties;
+
+    if (!item.isCustom) {
+      return WeaponAttackStats(
+        attackBonus: attackBonus(
+          weaponName: item.name,
+          weaponProperties: properties,
+          abilityScores: abilityScores,
+          proficiencyTokens: proficiencyTokens,
+          proficiencyBonus: proficiencyBonus,
+        ),
+        damageModifier: abilityModifierFor(
+          weaponProperties: properties,
+          abilityScores: abilityScores,
+        ),
+        proficiency: WeaponProficiencyStatus.proficient,
+      );
+    }
+
+    final abilityModifier = abilityModifierFor(
+      weaponProperties: properties,
+      abilityScores: abilityScores,
+      weaponRange: item.customWeaponRange,
+    );
+    final proficiency = customProficiency(
+      weaponCategory: item.customWeaponCategory,
+      proficiencyTokens: proficiencyTokens,
+      weaponProperties: properties,
+    );
+    final magic = item.isMagicBonusSuspended ? 0 : item.magicBonus;
+    return WeaponAttackStats(
+      attackBonus:
+          abilityModifier +
+          (proficiency == WeaponProficiencyStatus.proficient
+              ? proficiencyBonus
+              : 0) +
+          magic,
+      damageModifier: abilityModifier + magic,
+      magicBonus: magic,
+      magicBonusSuspended: item.isMagicBonusSuspended,
+      proficiency: proficiency,
+      rangeUnspecified:
+          item.customWeaponRange == null &&
+          _primaryAbilityKey(properties, null) == 'str',
+    );
+  }
+
   /// Modificateur de caractéristique applicable à une arme dont les
   /// propriétés sont [weaponProperties] — voir [_primaryAbilityKey]. Score
   /// par défaut de 10 (modificateur nul) si absent de [abilityScores], même
@@ -82,6 +183,7 @@ abstract final class WeaponAttackCalculator {
   static int abilityModifierFor({
     required List<String> weaponProperties,
     required Map<String, int> abilityScores,
+    String? weaponRange,
   }) {
     final strMod = AbilityScoreRules.abilityModifier(
       abilityScores['str'] ?? 10,
@@ -90,7 +192,7 @@ abstract final class WeaponAttackCalculator {
       abilityScores['dex'] ?? 10,
     );
 
-    return switch (_primaryAbilityKey(weaponProperties)) {
+    return switch (_primaryAbilityKey(weaponProperties, weaponRange)) {
       'dex' => dexMod,
       'best' => strMod > dexMod ? strMod : dexMod,
       _ => strMod,
@@ -125,13 +227,20 @@ abstract final class WeaponAttackCalculator {
   /// arme à distance (propriété commençant par « munitions »), `'best'` pour
   /// une arme de corps à corps « finesse » (le meilleur de Force/Dextérité),
   /// `'str'` sinon (y compris « lancer »/thrown sans « finesse »).
-  static String _primaryAbilityKey(List<String> weaponProperties) {
+  ///
+  /// [weaponRange] (`custom_weapon_range`, armes personnalisées seulement) ne
+  /// départage que le « sinon » : `distance` -> `'dex'`, `melee`/`null` ->
+  /// `'str'` (les propriétés restent prioritaires).
+  static String _primaryAbilityKey(
+    List<String> weaponProperties,
+    String? weaponRange,
+  ) {
     final normalized = weaponProperties.map(PactWeaponRules.normalize);
     if (normalized.any((property) => property.startsWith('munitions'))) {
       return 'dex';
     }
     if (normalized.contains('finesse')) return 'best';
-    return 'str';
+    return weaponRange == CustomWeaponRanges.ranged ? 'dex' : 'str';
   }
 
   /// Singularise légèrement une chaîne déjà normalisée ([PactWeaponRules
@@ -149,4 +258,38 @@ abstract final class WeaponAttackCalculator {
         )
         .join(' ');
   }
+}
+
+/// Maîtrise d'une arme : [unknown] = catégorie d'une arme personnalisée non
+/// renseignée (aucun bonus de maîtrise ajouté, légende « maîtrise non
+/// évaluée »).
+enum WeaponProficiencyStatus { proficient, notProficient, unknown }
+
+/// Résultat de [WeaponAttackCalculator.statsFor].
+class WeaponAttackStats {
+  const WeaponAttackStats({
+    required this.attackBonus,
+    required this.damageModifier,
+    this.magicBonus = 0,
+    this.magicBonusSuspended = false,
+    this.proficiency = WeaponProficiencyStatus.proficient,
+    this.rangeUnspecified = false,
+  });
+
+  /// Bonus d'attaque complet (caractéristique + maîtrise + bonus magique actif).
+  final int attackBonus;
+
+  /// Modificateur de dégâts (caractéristique + bonus magique actif).
+  final int damageModifier;
+
+  /// Bonus magique **appliqué** (0 s'il est suspendu).
+  final int magicBonus;
+
+  /// Bonus magique présent mais suspendu (harmonisation requise, non faite).
+  final bool magicBonusSuspended;
+
+  final WeaponProficiencyStatus proficiency;
+
+  /// Portée d'une arme personnalisée non précisée : Force par défaut.
+  final bool rangeUnspecified;
 }

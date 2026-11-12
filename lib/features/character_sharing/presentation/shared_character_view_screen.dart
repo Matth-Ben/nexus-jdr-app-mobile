@@ -236,7 +236,7 @@ class _CharacterTabBody extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         CharacterEquippedWeaponsCard(
           weapons: detail.inventory
-              .where((i) => i.category == 'arme' && i.equipped)
+              .where((i) => i.isWeapon && i.equipped)
               .toList(),
           abilityScores: detail.abilityScores,
           proficiencyBonus: ProficiencyBonusRules.forTotalLevel(

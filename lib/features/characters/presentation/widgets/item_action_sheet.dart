@@ -14,6 +14,7 @@ import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/custom_item_enrichment.dart';
 import '../../domain/inventory_category_rules.dart';
+import '../../domain/weapon_attack_calculator.dart';
 import '../../domain/weapon_slot.dart';
 import 'item_info_panel.dart';
 import 'weapon_slot_picker_sheet.dart';
@@ -65,12 +66,17 @@ const Set<String> equippableInventoryCategories = {
 /// passe par les sets d'armes) : armure/bouclier, ou objet magique qui
 /// agit sur la CA une fois porté (armure ou bouclier magique, anneau/cape
 /// de protection, Armure +N... — voir `domain/armor_class_calculator.dart`).
-bool isEquippableItem(CharacterInventoryItem item) =>
-    !item.isCustom &&
-    item.category != 'arme' &&
-    (equippableInventoryCategories.contains(item.category) ||
-        item.armorProperties != null ||
-        item.acBonus != null);
+///
+/// Un objet personnalisé de type arme ([CharacterInventoryItem.isWeapon], P7)
+/// est équipable comme une arme du catalogue : par set, via la sheet
+/// d'actions (jamais par le bouton bascule du panneau « Infos », voir
+/// `item_info_panel.dart`).
+bool isEquippableItem(CharacterInventoryItem item) => item.isCustom
+    ? item.isWeapon
+    : item.category != 'arme' &&
+          (equippableInventoryCategories.contains(item.category) ||
+              item.armorProperties != null ||
+              item.acBonus != null);
 
 /// Ouvre la sheet "Actions d'objet" (tap sur une carte de l'onglet
 /// "Inventaire", `character_inventory_item_card.dart`) — même gabarit A que
@@ -112,6 +118,7 @@ Future<void> showItemActionSheet(
   required EquipWeaponToSlotCallback onEquipWeaponToSlot,
   int? weaponAttackBonus,
   int? weaponDamageModifier,
+  WeaponAttackStats? weaponStats,
   bool notProficient = false,
 }) async {
   final action = await showModalBottomSheet<_ItemSheetAction>(
@@ -137,6 +144,7 @@ Future<void> showItemActionSheet(
         attunedCount: attunedCount,
         weaponAttackBonus: weaponAttackBonus,
         weaponDamageModifier: weaponDamageModifier,
+        weaponStats: weaponStats,
         notProficient: notProficient,
       );
     case _ItemSheetAction.use:
@@ -202,7 +210,7 @@ class _ItemActionSheetContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isWeapon = !item.isCustom && item.category == 'arme';
+    final isWeapon = item.isWeapon;
     final equippable = !isWeapon && isEquippableItem(item);
     final usable = !item.isCustom && item.consumable;
     final attunable = item.requiresAttunement;

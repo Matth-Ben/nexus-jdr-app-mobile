@@ -18,10 +18,14 @@ abstract final class WeaponSlotRules {
   static const int slotCapacity = 2;
 
   /// `true` si une des [properties] (normalisée via [PactWeaponRules
-  /// .normalize]) vaut exactement « à deux mains ».
-  static bool isTwoHanded(List<String> properties) => properties.any(
-    (property) => PactWeaponRules.normalize(property) == 'a deux mains',
-  );
+  /// .normalize], sans accents ni casse) vaut exactement « à deux mains » ou,
+  /// pour le texte libre d'une arme personnalisée (`custom_properties`),
+  /// « deux mains ». Aucune autre variante n'est devinée.
+  static bool isTwoHanded(List<String> properties) =>
+      properties.any((property) {
+        final normalized = PactWeaponRules.normalize(property);
+        return normalized == 'a deux mains' || normalized == 'deux mains';
+      });
 
   /// Coût en "mains" (voir [slotCapacity]) d'une arme depuis ses
   /// [weaponProperties] — `2` pour une arme à deux mains, `1` sinon (y
@@ -47,7 +51,7 @@ abstract final class WeaponSlotRules {
   }) {
     final inSlot = [
       for (final item in inventory)
-        if (item.category == 'arme' &&
+        if (item.isWeapon &&
             item.equipped &&
             item.weaponSlot == slot &&
             item.id != candidate.id)

@@ -6520,5 +6520,29 @@
   "itemInfoPanelWeaponCategoryLabel": "Catégorie d'arme",
   "@itemInfoPanelWeaponCategoryLabel": {
     "description": "Ligne « Catégorie d'arme » du panneau Infos d'une arme personnalisée."
+  },
+  "itemInfoPanelAttackValueWithMagic": "{bonus} (dont +{magic} magique)",
+  "@itemInfoPanelAttackValueWithMagic": {
+    "description": "Valeur de la ligne Attaque d'une arme à bonus magique actif.",
+    "placeholders": {
+      "bonus": {
+        "type": "String"
+      },
+      "magic": {
+        "type": "int"
+      }
+    }
+  },
+  "itemInfoPanelProficiencyUnknownLegend": "Maîtrise non évaluée : la catégorie de l'arme n'est pas renseignée, aucun bonus de maîtrise n'est ajouté.",
+  "@itemInfoPanelProficiencyUnknownLegend": {
+    "description": "Légende quand la catégorie d'une arme personnalisée est absente."
+  },
+  "itemInfoPanelRangeUnspecifiedLegend": "Portée non précisée : le modificateur de Force est utilisé.",
+  "@itemInfoPanelRangeUnspecifiedLegend": {
+    "description": "Légende quand la portée d'une arme personnalisée est absente (corps à corps par défaut)."
+  },
+  "characterEquippedWeaponsCardProficiencyUnknown": "Maîtrise non évaluée",
+  "@characterEquippedWeaponsCardProficiencyUnknown": {
+    "description": "Mention discrète sous une arme personnalisée sans catégorie."
   }
 }

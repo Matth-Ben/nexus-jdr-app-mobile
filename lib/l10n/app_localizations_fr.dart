@@ -4926,4 +4926,21 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get itemInfoPanelWeaponCategoryLabel => 'Catégorie d\'arme';
+
+  @override
+  String itemInfoPanelAttackValueWithMagic(String bonus, int magic) {
+    return '$bonus (dont +$magic magique)';
+  }
+
+  @override
+  String get itemInfoPanelProficiencyUnknownLegend =>
+      'Maîtrise non évaluée : la catégorie de l\'arme n\'est pas renseignée, aucun bonus de maîtrise n\'est ajouté.';
+
+  @override
+  String get itemInfoPanelRangeUnspecifiedLegend =>
+      'Portée non précisée : le modificateur de Force est utilisé.';
+
+  @override
+  String get characterEquippedWeaponsCardProficiencyUnknown =>
+      'Maîtrise non évaluée';
 }

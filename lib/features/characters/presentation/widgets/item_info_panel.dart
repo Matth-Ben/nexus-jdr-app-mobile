@@ -17,6 +17,7 @@ import '../../domain/character_inventory_item.dart';
 import '../../domain/inventory_armor_dex_bonus_formatter.dart';
 import '../../domain/inventory_rarity_formatter.dart';
 import '../../domain/signed_modifier_formatter.dart';
+import '../../domain/weapon_attack_calculator.dart';
 import '../../domain/weapon_slot.dart';
 import '../../domain/weight_formatter.dart';
 import '../custom_item_labels.dart';
@@ -69,6 +70,7 @@ Future<void> showItemInfoPanel(
   bool readOnly = false,
   int? weaponAttackBonus,
   int? weaponDamageModifier,
+  WeaponAttackStats? weaponStats,
   bool notProficient = false,
 }) async {
   final action = await showModalBottomSheet<_ItemInfoPanelAction>(
@@ -81,6 +83,7 @@ Future<void> showItemInfoPanel(
       readOnly: readOnly,
       weaponAttackBonus: weaponAttackBonus,
       weaponDamageModifier: weaponDamageModifier,
+      weaponStats: weaponStats,
       notProficient: notProficient,
       onToggleAttuned: () {
         onToggleAttuned(item);
@@ -108,6 +111,7 @@ class _ItemInfoPanelContent extends StatelessWidget {
     this.readOnly = false,
     this.weaponAttackBonus,
     this.weaponDamageModifier,
+    this.weaponStats,
     this.notProficient = false,
   });
 
@@ -122,6 +126,10 @@ class _ItemInfoPanelContent extends StatelessWidget {
   final int? weaponAttackBonus;
   final int? weaponDamageModifier;
 
+  /// Détail du calcul d'une arme (bonus magique appliqué, maîtrise non
+  /// évaluée, portée non précisée) pour les légendes ; `null` = aucune.
+  final WeaponAttackStats? weaponStats;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -131,7 +139,7 @@ class _ItemInfoPanelContent extends StatelessWidget {
     // `weapon_slot_picker_sheet.dart`), ce que ce pied (au plus un bouton
     // contextuel, voir la documentation de classe) ne peut pas représenter —
     // le joueur passe par la sheet d'actions d'objet pour équiper une arme.
-    final equippable = !readOnly && isEquippableItem(item);
+    final equippable = !readOnly && isEquippableItem(item) && !item.isWeapon;
     final usable = !readOnly && !item.isCustom && item.consumable;
     final attunable = !readOnly && item.requiresAttunement;
     final atAttunementCap =
@@ -174,7 +182,7 @@ class _ItemInfoPanelContent extends StatelessWidget {
               ? l10n.itemInfoPanelAttunementAttunedValue
               : l10n.itemInfoPanelAttunementPendingValue,
         ),
-      if (item.category == 'arme' && item.equipped && item.weaponSlot != null)
+      if (item.isWeapon && item.equipped && item.weaponSlot != null)
         _ItemInfoRow(
           label: l10n.itemInfoPanelSetLabel,
           value: item.weaponSlot!.label,
@@ -183,7 +191,12 @@ class _ItemInfoPanelContent extends StatelessWidget {
         if (weaponAttackBonus != null)
           _ItemInfoRow(
             label: l10n.itemInfoPanelAttackLabel,
-            value: SignedModifierFormatter.format(weaponAttackBonus!),
+            value: (weaponStats?.magicBonus ?? 0) > 0
+                ? l10n.itemInfoPanelAttackValueWithMagic(
+                    SignedModifierFormatter.format(weaponAttackBonus!),
+                    weaponStats!.magicBonus,
+                  )
+                : SignedModifierFormatter.format(weaponAttackBonus!),
           ),
         if (weapon.damageDice != null && weapon.damageType != null)
           _ItemInfoRow(
@@ -294,15 +307,13 @@ class _ItemInfoPanelContent extends StatelessWidget {
                           if (i < infoRows.length - 1)
                             const SheetActionDivider(),
                         ],
-                      if (item.isMagicBonusSuspended) ...[
-                        Text(
-                          l10n.itemInfoPanelMagicBonusInactiveLegend,
-                          style: AppTypography.body(
-                            fontSize: 12,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ],
+                      if (item.isMagicBonusSuspended)
+                        _Legend(l10n.itemInfoPanelMagicBonusInactiveLegend),
+                      if (weaponStats?.proficiency ==
+                          WeaponProficiencyStatus.unknown)
+                        _Legend(l10n.itemInfoPanelProficiencyUnknownLegend),
+                      if (weaponStats?.rangeUnspecified ?? false)
+                        _Legend(l10n.itemInfoPanelRangeUnspecifiedLegend),
                       if (infoRows.isNotEmpty)
                         const SizedBox(height: AppSpacing.md),
                       DisplayText(
@@ -377,6 +388,25 @@ class _ItemInfoPanelContent extends StatelessWidget {
   }
 }
 
+/// Légende discrète sous les lignes d'information (bonus magique inactif,
+/// maîtrise non évaluée, portée non précisée).
+class _Legend extends StatelessWidget {
+  const _Legend(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
+      child: Text(
+        text,
+        style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
+      ),
+    );
+  }
+}
+
 /// Lien "Harmoniser cet objet"/"Ne plus harmoniser" — calque de
 /// `spell_info_panel.dart::_TogglePreparedLink` (`body` 700/13, zone de tap
 /// 44px min-height), icône dépendante de l'état : `Icons.link` pour
@@ -417,14 +447,18 @@ class _ToggleAttunedLink extends StatelessWidget {
                   color: color,
                 ),
                 const SizedBox(width: 4),
-                Text(
-                  attuned
-                      ? l10n.itemInfoPanelStopAttuneLabel
-                      : l10n.itemInfoPanelAttuneLabel,
-                  style: AppTypography.body(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: color,
+                // `Flexible` : le libellé passe à la ligne à ×2,0/×3,0 sur
+                // 320 dp au lieu de déborder.
+                Flexible(
+                  child: Text(
+                    attuned
+                        ? l10n.itemInfoPanelStopAttuneLabel
+                        : l10n.itemInfoPanelAttuneLabel,
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
                   ),
                 ),
               ],
