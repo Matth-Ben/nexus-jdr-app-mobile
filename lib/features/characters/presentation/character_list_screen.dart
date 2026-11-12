@@ -67,12 +67,11 @@ const double _footerMaxHeightFraction = 0.35;
 /// panneau des alertes : le bandeau ne porte plus qu'un libellé court et un
 /// lien (plus le texte de la première alerte), il tient dans ce plafond.
 ///
-/// D211, volontairement NON résolu : le critère « liste >= 40 % de l'écran au
-/// repos à x2,0 sur 320x568 » n'est pas atteint (en-tête 136 px + bannière de
-/// mise à jour 120 px = 256 des 440 px de la zone de défilement, même sans
-/// bandeau). On ne le contourne pas ici : le test mesure les valeurs réelles
-/// (33 % sous le bandeau au repos, 40 % après défilement). Décision de design
-/// (bannière de mise à jour compacte à grande police) remontée à Matthias.
+/// D211 résolu : pendant une alerte de synchro, la bannière de mise à jour
+/// passe en forme compacte d'une ligne (`UpdateSuggestedBanner.compact`) et ce
+/// plafond reste à 0,2 (valeur conservée). Le critère « liste >= 40 % au repos
+/// à x2,0 sur 320x568 » n'est pas atteignable avec une alerte (en-tête 136 px
+/// + alerte 113,6 px sur 440 px) : les tests mesurent le critère reformulé.
 const double _syncBandMaxHeightFraction = 0.2;
 
 /// `true` quand la police système est agrandie au-delà de [_largeTextScale].
@@ -514,7 +513,18 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: EdgeInsets.symmetric(horizontal: side),
-                          child: const UpdateSuggestedBanner(),
+                          // Compact tant qu'une alerte de synchro est
+                          // affichée (D211) ; la bannière ne lit pas l'état de
+                          // synchro elle-même.
+                          child: Consumer(
+                            builder: (context, ref, _) => UpdateSuggestedBanner(
+                              compact: ref.watch(
+                                syncBannerProvider(
+                                  characterId: null,
+                                ).select((s) => s.kind == SyncBannerKind.alert),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                       if (pinSearch)

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,8 +26,15 @@ import '../providers/update_banner_dismissal_provider.dart';
 /// (`providers/update_banner_dismissal_provider.dart`) — l'écran appelant
 /// n'a donc aucune condition à évaluer lui-même, il insère ce widget
 /// inconditionnellement.
+///
+/// [compact] (D211) : forme d'une ligne, un seul bouton, sans ✕. L'écran
+/// appelant la demande pendant qu'une alerte de synchro est affichée ; ce
+/// widget ne lit volontairement pas l'état de synchro (feature découplée de
+/// `core/sync`). La forme compacte ne touche jamais à la fermeture mémorisée.
 class UpdateSuggestedBanner extends ConsumerWidget {
-  const UpdateSuggestedBanner({super.key});
+  const UpdateSuggestedBanner({this.compact = false, super.key});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,29 +48,201 @@ class UpdateSuggestedBanner extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.xs,
+    // Reduce motion : changement immédiat (même motif que `dice_roll_sheet`).
+    final reduceMotion =
+        MediaQuery.disableAnimationsOf(context) ||
+        MediaQuery.accessibleNavigationOf(context);
+
+    final Widget child = compact
+        ? _CompactBanner(key: const ValueKey(true), storeUrl: result.storeUrl)
+        : Padding(
+            key: const ValueKey(false),
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.parchmentCard,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: AppColors.goldEnd,
+                  width: AppBorders.card,
+                ),
+              ),
+              // Police système agrandie / écran étroit (F21) : le lien « Mettre
+              // à jour » passe sous le message quand les deux ne tiennent pas
+              // côte à côte, au lieu de déborder ou de serrer le message sur
+              // plusieurs lignes. Décision par largeur disponible, voir
+              // [_shouldStack].
+              child: LayoutBuilder(
+                builder: (context, constraints) => _BannerContent(
+                  result: result,
+                  stacked: _shouldStack(context, constraints.maxWidth),
+                  onDismiss: () => ref
+                      .read(updateBannerDismissalControllerProvider.notifier)
+                      .dismiss(result.latestVersion),
+                ),
+              ),
+            ),
+          );
+
+    // Reduce motion : changement immédiat. Pas d'`AnimatedSize` à durée nulle
+    // (assertion de layout au changement), on rend directement la forme.
+    if (reduceMotion) return child;
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      alignment: Alignment.topCenter,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 150),
+        layoutBuilder: (current, previous) => Stack(
+          alignment: Alignment.topCenter,
+          fit: StackFit.passthrough,
+          children: [...previous, ?current],
         ),
-        decoration: BoxDecoration(
-          color: AppColors.parchmentCard,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: AppColors.goldEnd, width: AppBorders.card),
-        ),
-        // Police système agrandie / écran étroit (F21) : le lien « Mettre à
-        // jour » passe sous le message quand les deux ne tiennent pas côte à
-        // côte, au lieu de déborder ou de serrer le message sur plusieurs
-        // lignes. Décision par largeur disponible, voir [_shouldStack].
-        child: LayoutBuilder(
-          builder: (context, constraints) => _BannerContent(
-            result: result,
-            stacked: _shouldStack(context, constraints.maxWidth),
-            onDismiss: () => ref
-                .read(updateBannerDismissalControllerProvider.notifier)
-                .dismiss(result.latestVersion),
+        child: child,
+      ),
+    );
+  }
+}
+
+/// Largeur (une seule ligne, sans contrainte) de [text] au style [style] et à
+/// l'échelle de police courante.
+double _measureWidth(BuildContext context, String text, TextStyle style) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text,
+      style: DefaultTextStyle.of(context).style.merge(style),
+    ),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
+}
+
+/// Style du libellé court de la forme compacte (corps 12, gras 700).
+TextStyle _compactLabelStyle() => AppTypography.body(
+  fontSize: 12,
+  fontWeight: FontWeight.w700,
+  color: AppColors.textPrimary,
+);
+
+/// Forme compacte (D211) : une ligne, toute la barre est la cible de tap
+/// (44 px de haut intérieur au minimum). Libellé court puis icône masqués, dans
+/// cet ordre, quand ils ne tiennent pas sur une ligne ; le bouton ne perd
+/// jamais de texte (il peut passer sur deux lignes à la frontière d'un mot).
+class _CompactBanner extends StatelessWidget {
+  const _CompactBanner({required this.storeUrl, super.key});
+
+  final String? storeUrl;
+
+  static const double _iconSize = 20;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final actionStyle = _UpdateLink.style().copyWith(
+      decoration: TextDecoration.underline,
+    );
+    void open() => unawaited(openAppStorePage(context, storeUrl: storeUrl));
+
+    return Semantics(
+      container: true,
+      button: true,
+      label: l10n.updateBannerCompactSemantics,
+      onTap: open,
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.parchmentCard,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: AppColors.goldEnd,
+              width: AppBorders.card,
+            ),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: open,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 44),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final available = constraints.maxWidth;
+                      final bounded = available.isFinite;
+                      final actionWidth = _measureWidth(
+                        context,
+                        l10n.updateBannerAction,
+                        actionStyle,
+                      );
+                      final labelWidth = _measureWidth(
+                        context,
+                        l10n.updateBannerCompactMessage,
+                        _compactLabelStyle(),
+                      );
+                      const iconBlock = _iconSize + AppSpacing.sm;
+                      final showLabel =
+                          !bounded ||
+                          iconBlock +
+                                  labelWidth +
+                                  AppSpacing.sm +
+                                  actionWidth <=
+                              available;
+                      final showIcon =
+                          !bounded || iconBlock + actionWidth <= available;
+                      final action = Text(
+                        l10n.updateBannerAction,
+                        style: actionStyle,
+                        softWrap: true,
+                        textAlign: TextAlign.end,
+                      );
+                      return Row(
+                        children: [
+                          if (showIcon) ...[
+                            const ExcludeSemantics(
+                              child: Icon(
+                                Icons.file_download_outlined,
+                                color: AppColors.goldEnd,
+                                size: _iconSize,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                          ],
+                          if (showLabel) ...[
+                            Expanded(
+                              child: Text(
+                                l10n.updateBannerCompactMessage,
+                                style: _compactLabelStyle(),
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.visible,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            action,
+                          ] else
+                            Expanded(child: action),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

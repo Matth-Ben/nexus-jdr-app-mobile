@@ -8120,6 +8120,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Type actuel'**
   String get customItemKindCurrentSemantics;
+
+  /// Libellé court de la forme compacte de `UpdateSuggestedBanner` (affichée pendant une alerte de synchronisation), à côté du bouton de mise à jour.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle version'**
+  String get updateBannerCompactMessage;
+
+  /// Sémantique (bouton unique) de la forme compacte de `UpdateSuggestedBanner`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle version disponible. Ouvrir la page de mise à jour.'**
+  String get updateBannerCompactSemantics;
 }
 
 class _AppLocalizationsDelegate
