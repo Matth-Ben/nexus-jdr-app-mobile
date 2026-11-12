@@ -55,6 +55,7 @@ import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/core/router/route_observer_provider.dart';
 import 'package:personnages/core/sync/sync_status_providers.dart';
 import 'package:personnages/core/widgets/alert_banner.dart';
+import 'package:personnages/core/widgets/destructive_button.dart';
 import 'package:personnages/core/widgets/info_banner.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
@@ -670,6 +671,21 @@ void main() {
                     child: const Text('Retour'),
                   ),
                 ],
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          // Simule la fin de la création d'un personnage
+          // (`edition_step_screen.dart` : `context.go('/')`) : le routeur
+          // reconstruit la pile de pages, et le `RouteObserver` notifie
+          // `didPopNext` pendant le `didUpdateWidget` du `Navigator`.
+          path: '/retour-par-go',
+          builder: (context, state) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => context.go('/'),
+                child: const Text('Terminer par go'),
               ),
             ),
           ),
@@ -1393,6 +1409,57 @@ void main() {
         expect(fakeCharacterRepository.fetchCallCount, 2);
       },
     );
+
+    testWidgets('un retour par context.go (fin de la création) relance '
+        'charactersProvider SANS invalider pendant le build (aucune erreur '
+        '"setState() or markNeedsBuild() called during build")', (
+      WidgetTester tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(
+          id: '42',
+          name: 'Halltesse Ambrelune',
+          level: 5,
+          xp: 7000,
+        ),
+      ];
+      final observer = RouteObserver<PageRoute<dynamic>>();
+      await tester.pumpWidget(buildTestWidget(routeObserver: observer));
+      await tester.pumpAndSettle();
+      expect(fakeCharacterRepository.fetchCallCount, 1);
+
+      final router = GoRouter.of(tester.element(find.byType(CharacterCard)));
+      unawaited(router.push('/retour-par-go'));
+      await tester.pumpAndSettle();
+      expect(find.text('Terminer par go'), findsOneWidget);
+
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(
+          id: '42',
+          name: 'Halltesse Ambrelune',
+          level: 6,
+          xp: 14000,
+        ),
+      ];
+
+      await tester.tap(find.text('Terminer par go'));
+      await tester.pumpAndSettle();
+
+      final exception = tester.takeException();
+      expect(
+        exception,
+        isNull,
+        reason:
+            'didPopNext ne doit pas invalider un provider pendant le '
+            'build du Navigator : $exception',
+      );
+      expect(find.text('Niv. 6'), findsOneWidget);
+      expect(
+        fakeCharacterRepository.fetchCallCount,
+        2,
+        reason: 'un seul refetch au retour, pas de requête doublée',
+      );
+    });
 
     testWidgets(
       'ne relance pas charactersProvider au premier affichage (pas de '
@@ -3202,6 +3269,53 @@ void main() {
         await finish(tester);
       });
 
+      Future<void> addSecondAlert(WidgetTester tester) => tester.runAsync(
+        () => SyncAlertStore(db).add(
+          ownerId: 'owner-1',
+          kind: SyncAlertKind.abandon,
+          characterId: 'c2',
+          characterName: 'Borgan Pierrefort',
+          dataKind: 'hp',
+          serverValue: {'currentHp': 3, 'maxHp': 20},
+        ),
+      );
+
+      for (final size in const [Size(360, 640), Size(320, 568)]) {
+        testWidgets('x2,0 sur ${size.width.toInt()}x${size.height.toInt()} : '
+            'alerte de synchro longue + mise à jour, sans chevauchement et '
+            'avec de la place pour la liste', (tester) async {
+          surface(tester, size);
+          fakeCharacterRepository.charactersToReturn = many(8);
+          await addAlert(tester);
+          await addSecondAlert(tester);
+          await pumpWithSync(tester, scale: 2, withUpdate: true);
+
+          expect(tester.takeException(), isNull);
+          final band = find.byKey(const Key('characterListSyncBandScroll'));
+          final update = find.text(
+            'Nouvelle version disponible',
+            skipOffstage: false,
+          );
+          final footer = find.byKey(const Key('characterListFooterScroll'));
+          final bandRect = tester.getRect(band);
+          final updateRect = tester.getRect(update);
+          // Pas de chevauchement au repos : la mise à jour est sous le bandeau.
+          expect(updateRect.top, greaterThanOrEqualTo(bandRect.bottom - 0.5));
+          // Le bandeau reste plafonné à 30 %, avec défilement interne.
+          expect(bandRect.height, lessThanOrEqualTo(size.height * 0.3 + 0.5));
+          // Défilé jusqu'à ce que l'en-tête soit sorti, le bandeau reste
+          // épinglé en haut : la zone de la liste (sous lui, au-dessus du pied)
+          // garde au moins 40 % de la hauteur de l'écran.
+          await scrollBy(tester, 150);
+          final pinned = tester.getRect(band);
+          expect(pinned.top, lessThan(1));
+          final listArea = tester.getRect(footer).top - pinned.bottom;
+          expect(listArea, greaterThanOrEqualTo(size.height * 0.4 - 0.5));
+          expect(tester.takeException(), isNull);
+          await finish(tester);
+        });
+      }
+
       testWidgets('x3,0 sur 320x568 : bandeau épinglé plafonné à 30 % de la '
           'hauteur, tout reste atteignable', (tester) async {
         surface(tester, const Size(320, 568));
@@ -3438,6 +3552,71 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('1 personnage sélectionné'), findsOneWidget);
       });
+    });
+
+    group('mode sélection à police agrandie', () {
+      for (final locale in const [Locale('fr'), Locale('en')]) {
+        for (final size in const [Size(320, 568), Size(360, 640)]) {
+          for (final scale in <double>[1.0, 2.0, 3.0]) {
+            testWidgets('${locale.languageCode} x$scale sur '
+                '${size.width.toInt()}x${size.height.toInt()} : le texte '
+                'passe sur des lignes lisibles, boutons >= 44 atteignables', (
+              tester,
+            ) async {
+              surface(tester, size);
+              fakeCharacterRepository.charactersToReturn = many(6);
+              await pumpList(tester, scale: scale, locale: locale);
+
+              await tester.tap(find.byIcon(Icons.checklist));
+              await tester.pumpAndSettle();
+              expect(tester.takeException(), isNull);
+
+              final text = locale.languageCode == 'fr'
+                  ? 'Aucun personnage sélectionné'
+                  : 'No character selected';
+              final count = find.text(text);
+              expect(count, findsOneWidget);
+              final paragraph = tester.renderObject<RenderParagraph>(count);
+              var longest = 0.0;
+              for (final word in text.split(' ')) {
+                final painter = TextPainter(
+                  text: TextSpan(text: word, style: paragraph.text.style),
+                  textDirection: TextDirection.ltr,
+                  textScaler: paragraph.textScaler,
+                )..layout();
+                longest = math.max(longest, painter.width);
+                painter.dispose();
+              }
+              // Aucun mot coupé lettre par lettre : le paragraphe est au
+              // moins aussi large que son plus long mot.
+              expect(
+                tester.getSize(count).width,
+                greaterThanOrEqualTo(longest - 0.5),
+              );
+              // Le texte n'est jamais tronqué.
+              expect(paragraph.didExceedMaxLines, isFalse);
+
+              final cancel = find.text(
+                locale.languageCode == 'fr' ? 'Annuler' : 'Cancel',
+              );
+              for (final target in [
+                find.ancestor(of: cancel, matching: find.byType(InkWell)),
+                find.byType(DestructiveButton),
+              ]) {
+                await tester.ensureVisible(target);
+                await tester.pumpAndSettle();
+                final rect = tester.getRect(target);
+                expect(rect.height, greaterThanOrEqualTo(44));
+                expect(rect.width, greaterThanOrEqualTo(44));
+                expect(rect.left, greaterThanOrEqualTo(-0.5));
+                expect(rect.right, lessThanOrEqualTo(size.width + 0.5));
+                expect(rect.bottom, lessThanOrEqualTo(size.height + 0.5));
+              }
+              expect(tester.takeException(), isNull);
+            });
+          }
+        }
+      }
     });
 
     group('en-tête (D174)', () {

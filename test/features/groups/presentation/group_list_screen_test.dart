@@ -4,6 +4,8 @@
 // (voir `test/features/characters/presentation/character_list_screen_test.dart`
 // pour la navigation déclenchée par ce bouton, non retestée ici).
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -164,6 +166,19 @@ GoRouter _buildTestRouter({List<NavigatorObserver> observers = const []}) {
         path: '/groups/new',
         builder: (context, state) =>
             const Scaffold(body: Center(child: Text('Créer un groupe'))),
+      ),
+      GoRoute(
+        // Retour par `context.go('/groups')` : le `RouteObserver` notifie
+        // pendant le build du `Navigator` (voir le test `didPopNext` plus bas).
+        path: '/groups/retour-par-go',
+        builder: (context, state) => Scaffold(
+          body: Center(
+            child: TextButton(
+              onPressed: () => context.go('/groups'),
+              child: const Text('Terminer par go'),
+            ),
+          ),
+        ),
       ),
       GoRoute(
         path: '/groups/join',
@@ -656,6 +671,35 @@ void main() {
               'sans quoi le badge resterait obsolète (aucun mort affiché)',
         );
         expect(find.text('1 MORT'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'un retour par context.go relance myGroupsProvider sans invalider '
+      'pendant le build (aucune erreur "markNeedsBuild() called during '
+      'build"), une seule fois',
+      (tester) async {
+        fakeGroupRepository.groupsToReturn = const [
+          GroupSummary(
+            id: 'group-1',
+            name: 'Les Lames',
+            memberCount: 2,
+            founderId: 'founder-id',
+          ),
+        ];
+        await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+        await tester.pumpAndSettle();
+        expect(fakeGroupRepository.fetchCallCount, 1);
+
+        final router = GoRouter.of(tester.element(find.text('Les Lames')));
+        unawaited(router.push('/groups/retour-par-go'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Terminer par go'));
+        await tester.pumpAndSettle();
+
+        final exception = tester.takeException();
+        expect(exception, isNull, reason: '$exception');
+        expect(fakeGroupRepository.fetchCallCount, 2);
       },
     );
   });

@@ -72,10 +72,23 @@ class _GroupListScreenState extends ConsumerState<GroupListScreen>
   /// écran est dépilée et que celui-ci redevient visible (retour de
   /// `group_screen.dart`) — voir la documentation de classe de
   /// [GroupListScreen].
+  ///
+  /// Invalidation reportée après la frame en cours (le `RouteObserver` peut
+  /// notifier pendant le build du `Navigator`, voir
+  /// `character_list_screen.dart::didPopNext`), dédoublonnée et gardée par
+  /// `mounted`.
   @override
   void didPopNext() {
-    ref.invalidate(myGroupsProvider);
+    if (_refreshScheduled) return;
+    _refreshScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshScheduled = false;
+      if (!mounted) return;
+      ref.invalidate(myGroupsProvider);
+    });
   }
+
+  bool _refreshScheduled = false;
 
   void _goBack(BuildContext context) {
     if (context.canPop()) {

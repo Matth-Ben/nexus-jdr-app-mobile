@@ -186,11 +186,19 @@ class _LabelValueRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      runSpacing: AppSpacing.xs,
-      children: [label, value],
+    // `SizedBox(width: infinity)` : un `Wrap` se réduit à la largeur de son
+    // contenu sous une contrainte lâche (parent `Column` aligné au début), et
+    // `spaceBetween` n'écartait alors plus rien — étiquette et valeur collées.
+    // `spacing` garantit un espace minimal avant de passer à la ligne.
+    return SizedBox(
+      width: double.infinity,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.xs,
+        children: [label, value],
+      ),
     );
   }
 }
