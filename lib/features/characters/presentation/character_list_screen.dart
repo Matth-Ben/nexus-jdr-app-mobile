@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
 
@@ -9,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/route_observer_provider.dart';
+import '../../../core/sync/sync_banner_engine.dart';
 import '../../../core/sync/sync_status_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -41,13 +43,32 @@ import 'widgets/character_selection_action_bar.dart';
 import 'widgets/connection_error_state.dart';
 import 'widgets/sync_exit_dialog.dart';
 
-/// Facteur d'échelle de police au-delà duquel le bloc d'en-tête est plafonné
-/// (F21), même seuil que la bannière de mise à jour.
-const double _headerCapFontScale = 1.3;
+/// Facteur d'échelle de police au-delà duquel la recherche cesse d'être
+/// épinglée (elle défile avec le reste) et le pied passe en colonne ; même
+/// seuil que la bannière de mise à jour.
+const double _largeTextScale = 1.3;
 
-/// Hauteur disponible en deçà de laquelle le bloc d'en-tête est plafonné
-/// (F21) : petit écran ou clavier ouvert.
-const double _headerCapMinHeight = 420;
+/// Hauteur disponible en deçà de laquelle la recherche n'est plus épinglée et
+/// le pied est plafonné : petit écran ou clavier ouvert (sinon les éléments
+/// fixes mangeraient toute la zone de défilement).
+const double _compactHeight = 420;
+
+/// Largeur maximale de lecture (tablette) : le contenu est centré, la barre
+/// de défilement reste au bord de l'écran.
+const double _readingWidth = 600;
+
+/// Part de la hauteur disponible que le pied fixe (Créer / Importer, ou barre
+/// d'actions de la sélection) ne dépasse jamais — seule exception documentée
+/// au défilement unique : au-delà, le pied défile en interne.
+const double _footerMaxHeightFraction = 0.35;
+
+/// Part de la hauteur disponible que le bandeau de synchro épinglé ne dépasse
+/// jamais à police agrandie (défilement interne au-delà).
+const double _syncBandMaxHeightFraction = 0.3;
+
+/// `true` quand la police système est agrandie au-delà de [_largeTextScale].
+bool _isLargeText(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(14) / 14 > _largeTextScale;
 
 /// Écran d'accueil listant les personnages du joueur connecté
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 2,
@@ -89,9 +110,10 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   /// d'objets), seul autre champ de recherche existant dans ce dépôt.
   final TextEditingController _searchController = TextEditingController();
 
-  /// Clé du bloc d'en-tête : conserve l'état (focus de la recherche) quand le
-  /// bloc passe dans/hors du conteneur plafonné (ex. ouverture du clavier).
-  final GlobalKey _headerKey = GlobalKey();
+  /// Clé de la rangée de recherche : conserve l'état (focus, saisie) quand
+  /// elle passe d'un sliver épinglé à un sliver qui défile (ex. ouverture du
+  /// clavier, qui réduit la hauteur sous [_compactHeight]).
+  final GlobalKey _searchRowKey = GlobalKey();
   Set<String> _selectedClassNames = {};
   Set<CharacterStatusFilter> _selectedStatuses = {};
 
@@ -341,7 +363,6 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   }
 
   Widget _buildList(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final charactersAsync = ref.watch(charactersProvider);
     // Purge des horodatages « dernière ouverture » des personnages disparus, à
     // chaque chargement de la liste (P18).
@@ -391,153 +412,115 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
             lastOpened,
           );
 
-    final headerBlock = Padding(
-      key: _headerKey,
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.md,
-        AppSpacing.lg,
-        AppSpacing.md,
-      ),
-      child: Column(
-        children: [
-          const _Header(),
-          const SizedBox(height: AppSpacing.sm),
-          // Bandeau de synchro hors-ligne (T2 du chantier hors-ligne) : au-dessus
-          // de la mise à jour suggérée, avant la recherche. Total du compte.
-          const SyncStatusBanner(
-            visiblePadding: EdgeInsets.only(bottom: AppSpacing.sm),
-          ),
-          // Bandeau "Mise à jour suggérée" (recettage
-          // direction-artistique du 13/09/2026) — inséré
-          // inconditionnellement : le widget se réduit lui-même à
-          // `SizedBox.shrink()` tant qu'aucune mise à jour n'est
-          // suggérée ou que sa version a déjà été refermée, voir sa
-          // documentation de classe.
-          const UpdateSuggestedBanner(),
-          _SearchRow(
-            controller: _searchController,
-            filterActive:
-                _selectedClassNames.isNotEmpty ||
-                _selectedStatuses.isNotEmpty ||
-                _selectedSort != CharacterListSort.defaultOrder,
-            // `null` (chargement) : bouton filtre sans effet, rien à
-            // filtrer tant que la liste n'a pas résolu.
-            onTapFilter: characters == null
-                ? null
-                : () => _openFilterSheet(characters),
-            selectionMode: _selectionMode,
-            // Désactivé tant que la liste charge ou que la liste
-            // visible est vide (spec de la tâche) : rien à
-            // sélectionner dans les deux cas.
-            onTapSelectionMode: (visible == null || visible.isEmpty)
-                ? null
-                : _enterSelectionMode,
-          ),
-        ],
-      ),
+    final searchRow = _SearchRow(
+      key: _searchRowKey,
+      controller: _searchController,
+      filterActive:
+          _selectedClassNames.isNotEmpty ||
+          _selectedStatuses.isNotEmpty ||
+          _selectedSort != CharacterListSort.defaultOrder,
+      // `null` (chargement) : bouton filtre sans effet, rien à filtrer tant
+      // que la liste n'a pas résolu.
+      onTapFilter: characters == null
+          ? null
+          : () => _openFilterSheet(characters),
+      selectionMode: _selectionMode,
+      // Désactivé tant que la liste charge ou que la liste visible est vide
+      // (spec de la tâche) : rien à sélectionner dans les deux cas.
+      onTapSelectionMode: (visible == null || visible.isEmpty)
+          ? null
+          : _enterSelectionMode,
     );
+
+    final largeText = _isLargeText(context);
 
     return SceneScaffold(
       body: SafeArea(
-        // Bloc d'en-tête (F21) : avec une police système très agrandie (ou un
-        // espace vertical très réduit, ex. clavier ouvert), en-tête + bandeau
-        // + recherche dépassaient à eux seuls la hauteur de l'écran
-        // (débordement vertical du `Column`). Le plafonnement à la moitié de
-        // l'écran + défilement n'est appliqué que dans ces cas : à police
-        // modérée (<= 1,3) sur un écran normal, aucun défilement imbriqué —
-        // apparence et comportement inchangés, la liste reste la seule zone
-        // défilante.
+        // Un seul défilement (refonte du 12/11/2026) : titre, bandeaux,
+        // recherche et cartes défilent ensemble dans un unique
+        // `CustomScrollView` ; seuls restent fixes le bandeau de synchro
+        // (épinglé tant qu'il a quelque chose à dire), la recherche (épinglée
+        // sauf police agrandie ou hauteur réduite) et le pied Créer/Importer.
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final fontScale = MediaQuery.textScalerOf(context).scale(14) / 14;
-            final capHeader =
-                fontScale > _headerCapFontScale ||
-                constraints.maxHeight < _headerCapMinHeight;
+            final side = math.max(
+              AppSpacing.lg,
+              (constraints.maxWidth - _readingWidth) / 2,
+            );
+            final compact = constraints.maxHeight < _compactHeight;
+            final pinSearch = !largeText && !compact;
             return Column(
               children: [
-                if (capHeader)
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: constraints.maxHeight * 0.5,
-                    ),
-                    child: SingleChildScrollView(child: headerBlock),
-                  )
-                else
-                  headerBlock,
                 Expanded(
-                  // `maybeWhen` plutôt que `when` : l'erreur est déjà interceptée
-                  // plus haut par le retour anticipé sur `charactersAsync.hasError`
-                  // — seuls `data`/`loading` restent possibles ici.
-                  child: charactersAsync.maybeWhen(
-                    data: (_) {
-                      if (characters!.isNotEmpty && visible!.isEmpty) {
-                        return _SearchEmptyState(
-                          query: _searchController.text.trim(),
-                          onReset: _resetSearch,
-                        );
-                      }
-                      return _CharacterList(
-                        characters: visible!,
-                        selectionMode: _selectionMode,
-                        selectedCharacterIds: _selectedCharacterIds,
-                        isDeletingSelection: _isDeletingSelection,
-                        onToggleSelected: _toggleCharacterSelected,
-                      );
-                    },
-                    orElse: () => const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.goldEnd,
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            side,
+                            AppSpacing.md,
+                            side,
+                            AppSpacing.sm,
+                          ),
+                          child: const _Header(),
+                        ),
                       ),
-                    ),
+                      // Bandeau de synchro hors-ligne (T2 du chantier
+                      // hors-ligne) : épinglé, hauteur nulle tant qu'il n'y a
+                      // rien à dire. Total du compte.
+                      PinnedHeaderSliver(
+                        child: ColoredBox(
+                          color: AppColors.woodDeepBgStart,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: side),
+                            child: _SyncBand(
+                              capHeight: largeText
+                                  ? constraints.maxHeight *
+                                        _syncBandMaxHeightFraction
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Bandeau "Mise à jour suggérée" : défile ; se réduit
+                      // lui-même à `SizedBox.shrink()` tant qu'aucune mise à
+                      // jour n'est suggérée (voir sa documentation).
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: side),
+                          child: const UpdateSuggestedBanner(),
+                        ),
+                      ),
+                      if (pinSearch)
+                        PinnedHeaderSliver(
+                          child: ColoredBox(
+                            color: AppColors.woodDeepBgStart,
+                            child: _searchPadding(side, searchRow),
+                          ),
+                        )
+                      else
+                        SliverToBoxAdapter(
+                          child: _searchPadding(side, searchRow),
+                        ),
+                      // `maybeWhen` plutôt que `when` : l'erreur est déjà
+                      // interceptée plus haut — seuls `data`/`loading`
+                      // restent possibles ici.
+                      ..._bodySlivers(
+                        charactersAsync: charactersAsync,
+                        characters: characters,
+                        visible: visible,
+                        side: side,
+                      ),
+                    ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    0,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                  ),
-                  child: _selectionMode
-                      ? CharacterSelectionActionBar(
-                          selectedCount: _selectedCharacterIds.length,
-                          isDeleting: _isDeletingSelection,
-                          onCancel: _exitSelectionMode,
-                          onDelete: _selectedCharacterIds.isEmpty
-                              ? null
-                              : () =>
-                                    _deleteSelectedCharacters(characters ?? []),
-                        )
-                      // Le bouton "Rejoindre une histoire" (`_JoinStoryButton`,
-                      // flux `features/join_story/`) est volontairement masqué
-                      // ici : cette fonctionnalité est mise de côté le temps de
-                      // terminer le reste du recettage direction-artistique
-                      // (section non encore traitée). Le flux et ses routes
-                      // (`/join`, `/join/step-2`, `/join/step-3`, `/join/:code`)
-                      // restent en place dans le code, simplement plus
-                      // atteignables depuis l'UI — aucune configuration native
-                      // de deep link n'est de toute façon encore branchée pour
-                      // `/join/:code` (voir `app_router.dart`), donc ce retrait
-                      // masque bien intégralement la fonctionnalité pour
-                      // l'instant.
-                      : Row(
-                          children: [
-                            Expanded(
-                              child: PrimaryButton(
-                                label: l10n.characterListCreateButton,
-                                onPressed: () => _startCreation(context, ref),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: SecondaryButton(
-                                label: l10n.characterListImportXmlButton,
-                                onPressed: () => _startXmlImport(context),
-                              ),
-                            ),
-                          ],
-                        ),
+                _buildFooter(
+                  context,
+                  characters: characters,
+                  side: side,
+                  availableHeight: constraints.maxHeight,
+                  largeText: largeText,
+                  compact: compact,
                 ),
               ],
             );
@@ -545,6 +528,154 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
         ),
       ),
     );
+  }
+
+  Widget _searchPadding(double side, Widget child) => Padding(
+    padding: EdgeInsets.fromLTRB(side, AppSpacing.sm, side, AppSpacing.md),
+    child: child,
+  );
+
+  /// Corps de la liste : chargement, vide, « aucun résultat » (centrés dans
+  /// l'espace restant) ou cartes.
+  List<Widget> _bodySlivers({
+    required AsyncValue<List<CharacterSummary>> charactersAsync,
+    required List<CharacterSummary>? characters,
+    required List<CharacterSummary>? visible,
+    required double side,
+  }) {
+    return charactersAsync.maybeWhen(
+      data: (_) {
+        if (characters!.isNotEmpty && visible!.isEmpty) {
+          return [
+            _fillRemaining(
+              side,
+              _SearchEmptyState(
+                query: _searchController.text.trim(),
+                onReset: _resetSearch,
+              ),
+            ),
+          ];
+        }
+        if (visible!.isEmpty) {
+          return [_fillRemaining(side, const _EmptyState())];
+        }
+        return [
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(side, 0, side, AppSpacing.lg),
+            sliver: _CharacterSliverList(
+              characters: visible,
+              selectionMode: _selectionMode,
+              selectedCharacterIds: _selectedCharacterIds,
+              isDeletingSelection: _isDeletingSelection,
+              onToggleSelected: _toggleCharacterSelected,
+            ),
+          ),
+        ];
+      },
+      orElse: () => [
+        _fillRemaining(
+          side,
+          const Center(
+            child: CircularProgressIndicator(color: AppColors.goldEnd),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Centre [child] dans l'espace restant de la zone de défilement (équivalent
+  /// de `SliverFillRemaining(hasScrollBody: false)`, qui exige les dimensions
+  /// intrinsèques de son enfant — or [SecondaryButton] contient un
+  /// `LayoutBuilder` qui n'en fournit pas). Quand le contenu dépasse l'espace
+  /// restant, il garde sa hauteur naturelle et le défilement unique prend le
+  /// relais.
+  Widget _fillRemaining(double side, Widget child) => SliverLayoutBuilder(
+    builder: (context, constraints) => SliverToBoxAdapter(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: math.max(
+            0,
+            constraints.remainingPaintExtent - constraints.overlap,
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: side - AppSpacing.lg),
+          child: Center(child: child),
+        ),
+      ),
+    ),
+  );
+
+  /// Pied fixe : « Créer » / « Importer » ou, en mode sélection, la barre
+  /// d'actions. À police agrandie les boutons passent en colonne pleine
+  /// largeur ; le pied est plafonné à [_footerMaxHeightFraction] de la hauteur
+  /// avec défilement interne (seule exception au défilement unique).
+  Widget _buildFooter(
+    BuildContext context, {
+    required List<CharacterSummary>? characters,
+    required double side,
+    required double availableHeight,
+    required bool largeText,
+    required bool compact,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final Widget content;
+    if (_selectionMode) {
+      content = CharacterSelectionActionBar(
+        selectedCount: _selectedCharacterIds.length,
+        isDeleting: _isDeletingSelection,
+        onCancel: _exitSelectionMode,
+        onDelete: _selectedCharacterIds.isEmpty
+            ? null
+            : () => _deleteSelectedCharacters(characters ?? []),
+      );
+    } else {
+      // Le bouton "Rejoindre une histoire" (`_JoinStoryButton`, flux
+      // `features/join_story/`) est volontairement masqué ici : cette
+      // fonctionnalité est mise de côté le temps de terminer le reste du
+      // recettage direction-artistique. Le flux et ses routes (`/join`,
+      // `/join/step-2`, `/join/step-3`, `/join/:code`) restent en place dans
+      // le code, simplement plus atteignables depuis l'UI.
+      final create = PrimaryButton(
+        label: l10n.characterListCreateButton,
+        onPressed: () => _startCreation(context, ref),
+      );
+      final import = SecondaryButton(
+        label: l10n.characterListImportXmlButton,
+        onPressed: () => _startXmlImport(context),
+      );
+      content = largeText
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                create,
+                const SizedBox(height: AppSpacing.sm),
+                import,
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(child: create),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(child: import),
+              ],
+            );
+    }
+    final padding = EdgeInsets.fromLTRB(side, 0, side, AppSpacing.lg);
+    if (largeText || compact) {
+      return ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: availableHeight * _footerMaxHeightFraction,
+        ),
+        child: ListView(
+          key: const Key('characterListFooterScroll'),
+          shrinkWrap: true,
+          padding: padding,
+          children: [content],
+        ),
+      );
+    }
+    return Padding(padding: padding, child: content);
   }
 
   /// Réinitialise le brouillon de création avant de démarrer l'assistant.
@@ -625,35 +756,107 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   }
 }
 
+/// Bandeau de synchro épinglé. Hauteur nulle tant qu'il n'y a rien à dire
+/// ([SyncStatusBanner] se réduit alors à une boîte vide). À police agrandie
+/// ([capHeight] non nul) et bandeau actif, sa hauteur est plafonnée avec
+/// défilement interne pour ne jamais manger la zone de défilement principale.
+///
+/// `ConsumerWidget` : seul ce sliver observe l'état du bandeau, un changement
+/// de synchro ne reconstruit donc pas tout l'écran.
+class _SyncBand extends ConsumerWidget {
+  const _SyncBand({required this.capHeight});
+
+  final double? capHeight;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final active =
+        ref.watch(syncBannerProvider(characterId: null)).kind !=
+        SyncBannerKind.none;
+    const banner = SyncStatusBanner(
+      visiblePadding: EdgeInsets.only(bottom: AppSpacing.sm),
+    );
+    if (capHeight == null || !active) return banner;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: capHeight!),
+      child: ListView(
+        key: const Key('characterListSyncBandScroll'),
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        children: const [banner],
+      ),
+    );
+  }
+}
+
+/// En-tête « TES AVENTURIERS » + boutons groupes/profil (44×44).
+///
+/// D174 : sur une ligne tant que le plus long mot du titre tient à côté des
+/// deux boutons ; sinon le titre passe sur sa propre ligne (pleine largeur) et
+/// les boutons descendent dessous, alignés à droite — rien n'est jamais
+/// poussé hors de l'écran ni coupé. Le titre est plafonné à x1,3
+/// ([DisplayText], palier `title`), la mesure en tient compte.
 class _Header extends StatelessWidget {
   const _Header();
+
+  static const double _buttonsWidth = 44 * 2 + AppSpacing.sm;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final title = l10n.characterListHeaderTitle;
+    // Le style est passé directement à `DisplayText` (garde de plafonnement
+    // de la police pixel) puis relu pour la mesure ci-dessous.
+    final titleWidget = DisplayText(
+      title,
+      style: AppTypography.display(fontSize: 15, color: AppColors.textOnWood),
+    );
+    final style = titleWidget.style;
+    const buttons = Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // `Expanded` : le titre passe à la ligne au lieu de pousser les
-        // boutons groupes/profil hors de l'écran avec une police agrandie.
-        Expanded(
-          child: DisplayText(
-            l10n.characterListHeaderTitle,
-            style: AppTypography.display(
-              fontSize: 15,
-              color: AppColors.textOnWood,
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        const Row(
-          children: [
-            _GroupsButton(),
-            SizedBox(width: AppSpacing.sm),
-            _ProfileButton(),
-          ],
-        ),
+        _GroupsButton(),
+        SizedBox(width: AppSpacing.sm),
+        _ProfileButton(),
       ],
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scaler = MediaQuery.textScalerOf(context)
+            .clamp(maxScaleFactor: DisplayTier.title.maxScaleFactor);
+        var longestWord = 0.0;
+        for (final word in title.split(RegExp(r'\s+'))) {
+          if (word.isEmpty) continue;
+          final painter = TextPainter(
+            text: TextSpan(text: word, style: style),
+            textDirection: Directionality.of(context),
+            textScaler: scaler,
+          )..layout();
+          longestWord = math.max(longestWord, painter.width);
+          painter.dispose();
+        }
+        final fitsBesideButtons =
+            longestWord + AppSpacing.sm + _buttonsWidth <= constraints.maxWidth;
+        if (fitsBesideButtons) {
+          return Row(
+            children: [
+              // `Expanded` : le titre passe à la ligne au lieu de pousser
+              // les boutons hors de l'écran.
+              Expanded(child: titleWidget),
+              const SizedBox(width: AppSpacing.sm),
+              buttons,
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            titleWidget,
+            const SizedBox(height: AppSpacing.sm),
+            const Align(alignment: Alignment.centerRight, child: buttons),
+          ],
+        );
+      },
     );
   }
 }
@@ -669,6 +872,7 @@ class _Header extends StatelessWidget {
 /// tous les autres champs de ce dépôt — aucun style en dur ici.
 class _SearchRow extends StatelessWidget {
   const _SearchRow({
+    super.key,
     required this.controller,
     required this.filterActive,
     required this.onTapFilter,
@@ -941,8 +1145,8 @@ class _ProfileButton extends StatelessWidget {
 /// : le clic long hors mode sélection ouvre `showCharacterCardActionSheet`,
 /// qui a besoin d'un [WidgetRef] pour appeler `characterRepositoryProvider`
 /// (archiver/marquer mort/supprimer) — voir sa documentation de classe.
-class _CharacterList extends ConsumerWidget {
-  const _CharacterList({
+class _CharacterSliverList extends ConsumerWidget {
+  const _CharacterSliverList({
     required this.characters,
     required this.selectionMode,
     required this.selectedCharacterIds,
@@ -967,12 +1171,7 @@ class _CharacterList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (characters.isEmpty) {
-      return const _EmptyState();
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+    return SliverList.separated(
       itemCount: characters.length,
       separatorBuilder: (context, index) =>
           const SizedBox(height: AppSpacing.md),
@@ -1099,92 +1298,54 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    // `LayoutBuilder` + `SingleChildScrollView` plutôt qu'un simple `Center`
-    // (bug F06, `docs/retours-utilisateurs.md`) : l'[Expanded] qui héberge
-    // cet état (voir `build()` de `CharacterListScreen`) donne une hauteur
-    // BORNÉE, pas infinie — sur un petit écran, avec le bandeau "Mise à jour
-    // suggérée" visible au-dessus et/ou une taille de texte système
-    // agrandie, cette hauteur peut devenir insuffisante pour l'icône fixe
-    // (88×88) + le titre + le corps, qui débordaient alors silencieusement
-    // en bas (`RenderFlex overflowed... on the bottom`, confirmé en test à
-    // hauteur réduite). `ConstrainedBox(minHeight: ...)` conserve EXACTEMENT
-    // le rendu centré actuel quand tout rentre (le `Center` continue de
-    // centrer verticalement dans cet espace minimal) ; seul le cas qui
-    // débordait auparavant passe désormais par le défilement de
-    // `SingleChildScrollView`, qui garde l'intégralité du texte lisible —
-    // jamais de `TextOverflow.clip`/`ellipsis`, qui aurait seulement masqué
-    // le symptôme en coupant le texte.
-    //
-    // `minHeight` retranche le padding vertical du `SingleChildScrollView`
-    // (`AppSpacing.lg` en haut ET en bas) de la hauteur disponible, sinon la
-    // hauteur minimale demandée dépasserait systématiquement l'espace
-    // disponible d'exactement ce padding — ce qui rendrait le contenu
-    // "défilable" en permanence (de 2×`AppSpacing.lg`) même quand tout
-    // rentrait déjà sans ce correctif. `clamp(0, ...)` : une hauteur
-    // disponible plus petite que le padding lui-même (écran extrêmement
-    // court) ne doit jamais produire une contrainte négative, invalide pour
-    // `BoxConstraints`. `isFinite` : cet état est toujours hébergé dans un
-    // [Expanded] (hauteur bornée) en pratique, mais rester défensif plutôt
-    // que de propager une contrainte infinie à [ConstrainedBox] si ce widget
-    // était un jour réutilisé dans un contexte à hauteur non bornée.
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final minContentHeight = constraints.maxHeight.isFinite
-            ? (constraints.maxHeight - AppSpacing.lg * 2).clamp(
-                0.0,
-                double.infinity,
-              )
-            : 0.0;
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: minContentHeight),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 88,
-                    height: 88,
-                    child: CustomPaint(
-                      painter: const DashedBorderPainter(
-                        color: AppColors.textOnWoodMuted,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.explore_outlined,
-                          size: 40,
-                          color: AppColors.accentTeal,
-                        ),
-                      ),
-                    ),
+    // Hébergé dans un `SliverFillRemaining(hasScrollBody: false)` (voir
+    // `_bodySlivers`) : centré dans l'espace restant quand tout rentre, et le
+    // défilement unique de la liste prend le relais sinon (F06) — plus de
+    // `SingleChildScrollView`/`LayoutBuilder` propre à cet état.
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 88,
+              height: 88,
+              child: CustomPaint(
+                painter: const DashedBorderPainter(
+                  color: AppColors.textOnWoodMuted,
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.explore_outlined,
+                    size: 40,
+                    color: AppColors.accentTeal,
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  DisplayText(
-                    l10n.characterListEmptyTitle,
-                    textAlign: TextAlign.center,
-                    style: AppTypography.display(
-                      fontSize: 11,
-                      color: AppColors.textOnWood,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    // "ou rejoins l'histoire d'un ami" volontairement
-                    // retiré : voir le commentaire sur le masquage du bouton
-                    // "Rejoindre une histoire" plus haut dans ce fichier
-                    // (`build`).
-                    l10n.characterListEmptyBody,
-                    textAlign: TextAlign.center,
-                    style: AppTypography.body(color: AppColors.textOnWoodMuted),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: AppSpacing.md),
+            DisplayText(
+              l10n.characterListEmptyTitle,
+              textAlign: TextAlign.center,
+              style: AppTypography.display(
+                fontSize: 11,
+                color: AppColors.textOnWood,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              // "ou rejoins l'histoire d'un ami" volontairement retiré : voir
+              // le commentaire sur le masquage du bouton "Rejoindre une
+              // histoire" plus haut dans ce fichier (`_buildFooter`).
+              l10n.characterListEmptyBody,
+              textAlign: TextAlign.center,
+              style: AppTypography.body(color: AppColors.textOnWoodMuted),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
