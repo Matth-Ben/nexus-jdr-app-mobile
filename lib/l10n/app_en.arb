@@ -1543,5 +1543,7 @@
   "itemActionSheetEditLabel": "Edit",
   "itemActionSheetEnrichLabel": "Enrich",
   "customItemKindChangeBlockedEquipped": "Unequip the item before changing its type",
-  "customItemKindCurrentSemantics": "Current type"
+  "customItemKindCurrentSemantics": "Current type",
+  "updateBannerCompactMessage": "New version",
+  "updateBannerCompactSemantics": "New version available. Open the update page."
 }

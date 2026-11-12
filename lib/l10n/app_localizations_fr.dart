@@ -5065,4 +5065,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get customItemKindCurrentSemantics => 'Type actuel';
+
+  @override
+  String get updateBannerCompactMessage => 'Nouvelle version';
+
+  @override
+  String get updateBannerCompactSemantics =>
+      'Nouvelle version disponible. Ouvrir la page de mise à jour.';
 }

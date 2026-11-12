@@ -79,20 +79,30 @@ class SyncStatusBanner extends ConsumerWidget {
       ),
     };
 
+    // Reduce motion : changement immédiat (même motif que `dice_roll_sheet`).
+    final reduceMotion =
+        MediaQuery.disableAnimationsOf(context) ||
+        MediaQuery.accessibleNavigationOf(context);
+
+    // Clé par nature d'état, jamais par compteur : un changement de N met le
+    // texte à jour sur place, sans fondu (ni nouvelle annonce).
+    final Widget content = banner == null
+        ? const SizedBox(key: ValueKey('none'), width: double.infinity)
+        : Padding(
+            key: ValueKey(state.kind),
+            padding: visiblePadding,
+            child: banner,
+          );
+    // Reduce motion : changement immédiat, sans `AnimatedSize` (même motif que
+    // `dice_roll_sheet`).
+    if (reduceMotion) return content;
+
     return AnimatedSize(
       duration: const Duration(milliseconds: 200),
       alignment: Alignment.topCenter,
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
-        // Clé par nature d'état, jamais par compteur : un changement de N met
-        // le texte à jour sur place, sans fondu (ni nouvelle annonce).
-        child: banner == null
-            ? const SizedBox(key: ValueKey('none'), width: double.infinity)
-            : Padding(
-                key: ValueKey(state.kind),
-                padding: visiblePadding,
-                child: banner,
-              ),
+        child: content,
       ),
     );
   }

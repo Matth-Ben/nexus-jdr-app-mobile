@@ -6704,5 +6704,13 @@
   "customItemKindCurrentSemantics": "Type actuel",
   "@customItemKindCurrentSemantics": {
     "description": "Sémantique de la tuile du type actuel de l'objet à l'étape « Type d'objet » de l'édition."
+  },
+  "updateBannerCompactMessage": "Nouvelle version",
+  "@updateBannerCompactMessage": {
+    "description": "Libellé court de la forme compacte de `UpdateSuggestedBanner` (affichée pendant une alerte de synchronisation), à côté du bouton de mise à jour."
+  },
+  "updateBannerCompactSemantics": "Nouvelle version disponible. Ouvrir la page de mise à jour.",
+  "@updateBannerCompactSemantics": {
+    "description": "Sémantique (bouton unique) de la forme compacte de `UpdateSuggestedBanner`."
   }
 }

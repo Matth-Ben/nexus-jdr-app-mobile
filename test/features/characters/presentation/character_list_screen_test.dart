@@ -19,6 +19,7 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:personnages/features/app_update/data/app_version_repository.dart';
 import 'package:personnages/features/app_update/presentation/providers/app_version_providers.dart';
+import 'package:personnages/features/app_update/presentation/widgets/update_suggested_banner.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
@@ -2590,9 +2591,7 @@ void main() {
           .getBottomLeft(find.text('TES AVENTURIERS'))
           .dy;
       final alertTop = tester.getTopLeft(find.byType(AlertBanner)).dy;
-      final updateTop = tester
-          .getTopLeft(find.text('Nouvelle version disponible'))
-          .dy;
+      final updateTop = tester.getTopLeft(find.text('Mettre à jour')).dy;
       final searchTop = tester
           .getTopLeft(
             find.widgetWithText(TextField, 'Rechercher un personnage'),
@@ -2652,6 +2651,37 @@ void main() {
         find.text('Hors ligne · 2 modifications en attente'),
         findsOneWidget,
       );
+      await finish(tester);
+    });
+
+    testWidgets('D211 : hors ligne avec modifications en attente (pas une '
+        'alerte) : la mise à jour garde sa forme complète, avec ✕', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+      await tester.pumpWidget(
+        buildTestWidget(
+          extraOverrides: syncOverrides(),
+          appVersionRepository: updateSuggested,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await flushDb(tester);
+
+      connectivity.goOffline();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 5));
+      await enqueue(tester, 'c1');
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Hors ligne · 1 modification en attente'),
+        findsOneWidget,
+      );
+      expect(find.byType(AlertBanner), findsNothing);
+      expect(find.text('Nouvelle version disponible'), findsOneWidget);
+      expect(find.byIcon(Icons.close), findsOneWidget);
       await finish(tester);
     });
 
@@ -3247,9 +3277,7 @@ void main() {
         expect(alertTop, lessThan(60));
         expect(
           tester
-              .getBottomLeft(
-                find.text('Nouvelle version disponible', skipOffstage: false),
-              )
+              .getBottomLeft(find.text('Mettre à jour', skipOffstage: false))
               .dy,
           lessThan(1),
         );
@@ -3303,16 +3331,17 @@ void main() {
               serverValue: {'currentHp': 3, 'maxHp': 20},
             );
           });
-
-      // Critère d'acceptation de la fiche A (D211) : à x2,0, avec 3 alertes ET
-      // le bandeau de mise à jour, le bandeau ne reste plus qu'un libellé court
-      // plafonné à 20 % de la hauteur. Le texte de la première alerte n'est
-      // plus dans le bandeau : sa hauteur ne dépend plus de la longueur des
-      // messages.
+      // Critère D211 reformulé (validé) : le « >= 40 % au repos à x2,0 » n'est
+      // pas atteignable avec une alerte (en-tête 136 + alerte 113,6 sur 440 px).
+      // Pendant une alerte, la mise à jour passe en forme compacte (une ligne,
+      // sans ✕) : compact <= 52 px sur 1 ligne, cumul alerte + compact <= 30 %
+      // de la hauteur, et au repos >= 120 px de contenu sous la mise à jour.
       for (final size in const [Size(360, 640), Size(320, 568)]) {
         testWidgets('x2,0 sur ${size.width.toInt()}x${size.height.toInt()} : '
-            '3 alertes + mise à jour, sans chevauchement, bandeau plafonné à '
-            '20 %, place pour la liste', (tester) async {
+            '3 alertes + mise à jour compacte, sans chevauchement, cumul '
+            '<= 30 %, >= 120 px de contenu sous la mise à jour', (
+          tester,
+        ) async {
           surface(tester, size);
           fakeCharacterRepository.charactersToReturn = many(8);
           await addAlert(tester);
@@ -3322,33 +3351,29 @@ void main() {
           expect(tester.takeException(), isNull);
           expect(find.text('3 alertes de synchronisation'), findsOneWidget);
           final band = find.byKey(const Key('characterListSyncBandScroll'));
-          final update = find.text(
-            'Nouvelle version disponible',
-            skipOffstage: false,
-          );
+          final compact = find.byType(UpdateSuggestedBanner);
           final footer = find.byKey(const Key('characterListFooterScroll'));
           final scroll = tester.getRect(find.byType(CustomScrollView));
           final bandRect = tester.getRect(band);
-          final updateRect = tester.getRect(update);
-          // Pas de chevauchement au repos : la mise à jour est sous le bandeau.
-          expect(updateRect.top, greaterThanOrEqualTo(bandRect.bottom - 0.5));
-          // Le bandeau reste plafonné à 20 %, avec défilement interne.
-          expect(bandRect.height, lessThanOrEqualTo(size.height * 0.2 + 0.5));
+          final compactRect = tester.getRect(compact);
 
-          // Au repos : la zone de défilement principale (hors pied fixe)
-          // mesure >= 40 % de la hauteur de l'écran...
-          expect(scroll.height, greaterThanOrEqualTo(size.height * 0.4));
-          // ... et, sous le bandeau épinglé, il en reste au moins 33 % pour le
-          // contenu qui défile (mise à jour + liste). Le critère de 40 % de la
-          // fiche A n'est atteignable qu'après défilement (ci-dessous) : au
-          // repos, l'en-tête (136 px à x2,0 sur 320x568) + la bannière de mise
-          // à jour (120 px) occupent à eux seuls 256 des 440 px (voir D211).
-          final belowBand = scroll.bottom - bandRect.bottom;
-          expect(belowBand, greaterThanOrEqualTo(size.height * 0.33));
+          // Forme compacte : une ligne, sans ✕, texte complet sans ellipse.
+          expect(find.byIcon(Icons.close), findsNothing);
+          expect(find.text('Nouvelle version disponible'), findsNothing);
+          expect(find.text('Mettre à jour'), findsOneWidget);
+          expect(compactRect.height, lessThanOrEqualTo(52));
+          // Pas de chevauchement au repos : la mise à jour est sous le bandeau.
+          expect(compactRect.top, greaterThanOrEqualTo(bandRect.bottom - 0.5));
+          // Cumul alerte + compact <= 30 % de la hauteur de l'écran.
+          expect(
+            bandRect.height + compactRect.height,
+            lessThanOrEqualTo(size.height * 0.3 + 0.5),
+          );
+          // Au repos : au moins 120 px de contenu visible sous la mise à jour.
+          expect(scroll.bottom - compactRect.bottom, greaterThanOrEqualTo(120));
 
           // Défilé jusqu'à ce que l'en-tête soit sorti, le bandeau reste
-          // épinglé en haut : la zone de la liste (sous lui, au-dessus du pied)
-          // garde au moins 40 % de la hauteur de l'écran.
+          // épinglé : la zone de la liste garde au moins 40 % de la hauteur.
           await scrollBy(tester, 400);
           final pinned = tester.getRect(band);
           expect(pinned.top, lessThan(1));
@@ -3359,8 +3384,8 @@ void main() {
         });
       }
 
-      testWidgets('x3,0 sur 320x568 : 3 alertes + mise à jour, bandeau '
-          'épinglé plafonné à 20 % de la hauteur, aucune cible coupée, liste '
+      testWidgets('x3,0 sur 320x568 : 3 alertes + mise à jour compacte '
+          '(<= 142 px, 2 lignes max), aucune cible coupée, liste '
           'atteignable', (tester) async {
         surface(tester, const Size(320, 568));
         fakeCharacterRepository.charactersToReturn = many(8);
@@ -3372,6 +3397,19 @@ void main() {
         final band = find.byKey(const Key('characterListSyncBandScroll'));
         expect(band, findsOneWidget);
         expect(tester.getSize(band).height, lessThanOrEqualTo(568 * 0.2 + 0.5));
+        // Mise à jour compacte : <= 142 px, une seule cible, texte complet.
+        final compactFinder = find.byType(UpdateSuggestedBanner);
+        expect(tester.getSize(compactFinder).height, lessThanOrEqualTo(142));
+        expect(find.byIcon(Icons.close), findsNothing);
+        final target = find.descendant(
+          of: compactFinder,
+          matching: find.byType(InkWell),
+        );
+        expect(target, findsOneWidget);
+        final targetRect = tester.getRect(target);
+        expect(targetRect.height, greaterThanOrEqualTo(44));
+        expect(targetRect.left, greaterThanOrEqualTo(0));
+        expect(targetRect.right, lessThanOrEqualTo(320.5));
         // Le bandeau (défilement interne) laisse atteindre sa ligne d'action
         // et sa cible reste entière (>= 44) dans l'écran.
         await tester.ensureVisible(find.text('Voir les alertes'));
@@ -3383,6 +3421,22 @@ void main() {
         // Le dernier personnage reste atteignable en défilant.
         await scrollUntilText(tester, 'Perso 07');
         expect(tester.takeException(), isNull);
+        await finish(tester);
+      });
+
+      testWidgets('x1,0 : alerte + mise à jour compacte <= 52 px, une ligne, '
+          'libellé court visible', (tester) async {
+        surface(tester, const Size(360, 640));
+        fakeCharacterRepository.charactersToReturn = many(3);
+        await addAlert(tester);
+        await pumpWithSync(tester, withUpdate: true);
+
+        expect(
+          tester.getSize(find.byType(UpdateSuggestedBanner)).height,
+          lessThanOrEqualTo(52),
+        );
+        expect(find.text('Nouvelle version'), findsOneWidget);
+        expect(find.byIcon(Icons.close), findsNothing);
         await finish(tester);
       });
 
