@@ -47,8 +47,13 @@ class CharacterInventoryItem {
   final String? customKind;
 
   /// `character_inventory.custom_magic_bonus` (0..3, `null` en base = 0).
-  /// Lu seulement : aucun calcul (CA, attaque) ne l'utilise encore.
   final int magicBonus;
+
+  /// `true` si le bonus magique est **suspendu** : l'objet porte un bonus mais
+  /// requiert l'harmonisation sans l'être (la CA de base d'une armure, elle,
+  /// reste comptée).
+  bool get isMagicBonusSuspended =>
+      magicBonus > 0 && requiresAttunement && !isAttuned;
 
   /// `character_inventory.custom_ac_base` (CA de base d'une armure, bonus
   /// d'un bouclier), `null` si non renseigné. Pas encore utilisé par la CA.
@@ -58,9 +63,8 @@ class CharacterInventoryItem {
   /// 'lourde'), `null` si non renseigné.
   final String? customArmorCategory;
 
-  /// `character_inventory.custom_requires_attunement`. Distinct de
-  /// [requiresAttunement] (inchangé : l'UI ne propose pas encore
-  /// l'harmonisation d'un objet personnalisé).
+  /// `character_inventory.custom_requires_attunement` brut. Pour un objet
+  /// personnalisé, [requiresAttunement] reprend cette valeur (P7 PR 2).
   final bool customRequiresAttunement;
 
   /// `character_inventory.custom_weapon_category` ('courante'/'guerre').
@@ -169,8 +173,9 @@ class CharacterInventoryItem {
   /// magique.
   final String? rarity;
 
-  /// `items.requires_attunement` — toujours `false` pour un objet
-  /// personnalisé (aucune ligne `items`). Capacité statique de l'objet
+  /// `items.requires_attunement` pour un objet du catalogue, ou
+  /// `character_inventory.custom_requires_attunement` pour un objet
+  /// personnalisé (P7 PR 2, résolu par les mappers). Capacité statique de l'objet
   /// (peut-il être harmonisé), à ne pas confondre avec [isAttuned] (est-il
   /// *actuellement* harmonisé par ce personnage).
   final bool requiresAttunement;

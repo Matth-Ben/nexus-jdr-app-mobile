@@ -6,12 +6,15 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
 import '../../../../core/widgets/dashed_border_painter.dart';
 import '../../../../core/widgets/dice_type_badge.dart';
+import '../../../../core/widgets/magic_bonus_badge.dart';
 import '../../../../core/widgets/not_proficient_badge.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_inventory_item.dart';
+import '../../domain/custom_item_enrichment.dart';
 import '../../domain/dice_notation_parser.dart';
 import '../../domain/inventory_category_rules.dart';
 import '../../domain/weight_formatter.dart';
+import '../custom_item_labels.dart';
 
 /// Une carte de l'onglet "Inventaire" — badge de catégorie, nom (précédé
 /// d'une petite icône `Icons.link` doré si [CharacterInventoryItem.isAttuned]
@@ -50,10 +53,21 @@ class CharacterInventoryItemCard extends StatelessWidget {
     // Police très agrandie : poids / badge « ÉQUIPÉ » sous le nom plutôt qu'à
     // sa droite, où ils écraseraient la colonne du nom (V3-1).
     final stacked = MediaQuery.textScalerOf(context).scale(14) / 14 >= 1.5;
-    final subtitle = l10n.characterInventoryItemCardSubtitle(
-      InventoryCategoryRules.labelFor(item.category),
-      item.quantity,
-    );
+    // Arme personnalisée enrichie (P7) : « Arme · tranchant · x1 ». Tout autre
+    // objet (catalogue, objet simple, ancien objet) garde « {catégorie} · x1 ».
+    final customDamageType = item.weaponProperties?.damageType;
+    final subtitle = item.customKind == CustomItemKinds.weapon
+        ? customDamageType != null
+              ? l10n.inventoryCardSubtitleWeaponWithType(
+                  customDamageTypeLabel(l10n, customDamageType).toLowerCase(),
+                  item.quantity,
+                )
+              : l10n.inventoryCardSubtitleWeapon(item.quantity)
+        : l10n.characterInventoryItemCardSubtitle(
+            InventoryCategoryRules.labelFor(item.category),
+            item.quantity,
+          );
+    final attunementPending = item.requiresAttunement && !item.isAttuned;
 
     return Material(
       color: Colors.transparent,
@@ -96,6 +110,19 @@ class CharacterInventoryItemCard extends StatelessWidget {
                                 color: AppColors.goldEnd,
                               ),
                               const SizedBox(width: 2),
+                            ] else if (attunementPending) ...[
+                              Semantics(
+                                label: l10n
+                                    .inventoryCardAttunementPendingSemantics,
+                                container: true,
+                                excludeSemantics: true,
+                                child: const Icon(
+                                  Icons.link_off,
+                                  size: 12,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                              const SizedBox(width: 2),
                             ],
                             Flexible(
                               child: Text(
@@ -113,6 +140,8 @@ class CharacterInventoryItemCard extends StatelessWidget {
                             sides: dice.sides,
                             label: '${dice.count}d${dice.sides}',
                           ),
+                        if (item.magicBonus > 0)
+                          MagicBonusBadge(bonus: item.magicBonus),
                         if (notProficient) const NotProficientBadge(),
                       ],
                     ),

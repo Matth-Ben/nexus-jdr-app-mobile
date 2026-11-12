@@ -320,6 +320,8 @@ void main() {
       expect(item.magicBonus, 1);
       expect(item.customAcBase, 2);
       expect(item.customRequiresAttunement, isTrue);
+      // P7 PR 2 : l'harmonisation d'un objet personnalisé est exposée.
+      expect(item.requiresAttunement, isTrue);
       expect(item.unitWeight, 3.5);
       expect(item.totalWeight, 7);
       expect(item.armorProperties, isNull);

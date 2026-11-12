@@ -19,6 +19,7 @@ import '../../domain/inventory_rarity_formatter.dart';
 import '../../domain/signed_modifier_formatter.dart';
 import '../../domain/weapon_slot.dart';
 import '../../domain/weight_formatter.dart';
+import '../custom_item_labels.dart';
 import 'item_action_sheet.dart';
 
 /// Ouvre le panneau "Infos" d'un objet de l'onglet "Inventaire" — gabarit B
@@ -132,7 +133,7 @@ class _ItemInfoPanelContent extends StatelessWidget {
     // le joueur passe par la sheet d'actions d'objet pour équiper une arme.
     final equippable = !readOnly && isEquippableItem(item);
     final usable = !readOnly && !item.isCustom && item.consumable;
-    final attunable = !readOnly && !item.isCustom && item.requiresAttunement;
+    final attunable = !readOnly && item.requiresAttunement;
     final atAttunementCap =
         !item.isAttuned && attunedCount >= CharacterDetail.attunementCap;
     final weapon = item.weaponProperties;
@@ -140,6 +141,13 @@ class _ItemInfoPanelContent extends StatelessWidget {
     final rarity = item.rarity;
 
     final infoRows = <Widget>[
+      // Objet personnalisé enrichi (P7) : type, bonus magique, harmonisation.
+      // Un objet non enrichi (`customKind` nul) garde le rendu historique.
+      if (item.isCustom && item.customKind != null)
+        _ItemInfoRow(
+          label: l10n.itemInfoPanelTypeLabel,
+          value: customKindLabel(l10n, item.customKind!),
+        ),
       if (item.unitWeight case final unitWeight?)
         _ItemInfoRow(
           label: l10n.itemInfoPanelWeightLabel,
@@ -153,6 +161,18 @@ class _ItemInfoPanelContent extends StatelessWidget {
           value: l10n.itemInfoPanelCostValue(
             GoldAmountFormatter.format(costAmount),
           ),
+        ),
+      if (item.magicBonus > 0)
+        _ItemInfoRow(
+          label: l10n.itemInfoPanelMagicBonusLabel,
+          value: '+${item.magicBonus}',
+        ),
+      if (item.isCustom && item.requiresAttunement)
+        _ItemInfoRow(
+          label: l10n.itemInfoPanelAttunementLabel,
+          value: item.isAttuned
+              ? l10n.itemInfoPanelAttunementAttunedValue
+              : l10n.itemInfoPanelAttunementPendingValue,
         ),
       if (item.category == 'arme' && item.equipped && item.weaponSlot != null)
         _ItemInfoRow(
@@ -172,6 +192,16 @@ class _ItemInfoPanelContent extends StatelessWidget {
                 '${weapon.damageDice}'
                 '${weaponDamageModifier == null || weaponDamageModifier == 0 ? '' : SignedModifierFormatter.format(weaponDamageModifier!)} '
                 '${weapon.damageType}',
+          ),
+        if (item.customWeaponCategory case final category?)
+          _ItemInfoRow(
+            label: l10n.itemInfoPanelWeaponCategoryLabel,
+            value: customWeaponCategoryLabel(l10n, category),
+          ),
+        if (item.customWeaponRange case final range?)
+          _ItemInfoRow(
+            label: l10n.itemInfoPanelRangeLabel,
+            value: customWeaponRangeLabel(l10n, range),
           ),
         if (weapon.properties.isNotEmpty)
           _ItemInfoRow(
@@ -264,6 +294,15 @@ class _ItemInfoPanelContent extends StatelessWidget {
                           if (i < infoRows.length - 1)
                             const SheetActionDivider(),
                         ],
+                      if (item.isMagicBonusSuspended) ...[
+                        Text(
+                          l10n.itemInfoPanelMagicBonusInactiveLegend,
+                          style: AppTypography.body(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
                       if (infoRows.isNotEmpty)
                         const SizedBox(height: AppSpacing.md),
                       DisplayText(

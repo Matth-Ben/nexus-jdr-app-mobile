@@ -497,7 +497,10 @@ CharacterInventoryItem _mapInventoryItem(Map<String, dynamic> row) {
         ? row['description'] as String?
         : row['custom_description'] as String?,
     rarity: row['rarity'] as String?,
-    requiresAttunement: row['requires_attunement'] == true,
+    // Objet personnalisé : `custom_requires_attunement` (P7).
+    requiresAttunement: itemId != null
+        ? row['requires_attunement'] == true
+        : row['custom_requires_attunement'] == true,
     isAttuned: row['is_attuned'] == true,
     consumable: row['consumable'] == true,
     notes: row['notes'] as String?,

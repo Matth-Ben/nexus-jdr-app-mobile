@@ -12,6 +12,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/armor_proficiency_rules.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
+import '../../domain/custom_item_enrichment.dart';
 import '../../domain/inventory_category_rules.dart';
 import '../../domain/weapon_slot.dart';
 import 'item_info_panel.dart';
@@ -89,9 +90,9 @@ bool isEquippableItem(CharacterInventoryItem item) =>
 /// sheet de choix de set) — voir [onEquipWeaponToSlot]/[onToggleEquipped].
 ///
 /// Un objet personnalisé ([CharacterInventoryItem.isCustom]) n'a jamais
-/// "Utiliser" ni "Équiper"/"Déséquiper" ni "Harmoniser" (pas de
-/// `consumable`/`category`/`requiresAttunement` résolus, voir la
-/// documentation de ces champs) : seulement "Infos" et "Retirer".
+/// "Utiliser" ni "Équiper"/"Déséquiper" (pas de `consumable`/`category`
+/// résolus) ; "Harmoniser" n'apparaît que s'il requiert l'harmonisation
+/// (`custom_requires_attunement`, P7) : sinon seulement "Infos" et "Retirer".
 ///
 /// "Harmoniser cet objet" n'apparaît que pour un objet
 /// [CharacterInventoryItem.requiresAttunement] — désactivée (grisée, avec
@@ -204,11 +205,13 @@ class _ItemActionSheetContent extends StatelessWidget {
     final isWeapon = !item.isCustom && item.category == 'arme';
     final equippable = !isWeapon && isEquippableItem(item);
     final usable = !item.isCustom && item.consumable;
-    final attunable = !item.isCustom && item.requiresAttunement;
+    final attunable = item.requiresAttunement;
     final atAttunementCap =
         !item.isAttuned && attunedCount >= CharacterDetail.attunementCap;
     final subtitle = l10n.itemActionSheetSubtitle(
-      InventoryCategoryRules.labelFor(item.category),
+      InventoryCategoryRules.labelFor(
+        item.customKind == CustomItemKinds.weapon ? 'arme' : item.category,
+      ),
       item.quantity,
     );
 
