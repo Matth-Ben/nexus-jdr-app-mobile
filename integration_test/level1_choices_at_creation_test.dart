@@ -35,6 +35,7 @@ import "package:personnages/features/character_creation/presentation/widgets/sub
 import "support/app_launch.dart";
 import "support/character_creation_flow.dart"
     show fillAbilityScoreRacialBonusIfPresent, fillAvailableCheckableTiles;
+import "support/qa_cleanup.dart";
 import "support/qa_test_account.dart";
 import "support/tap_helpers.dart";
 
@@ -206,6 +207,7 @@ void main() {
     // Horodate (D109, docs/dette-technique.md) : evite un doublon en base a
     // chaque relance de ce fichier.
     final name = qaUniqueCharacterName("QA-Test-Guerrier-D99");
+    registerQaCharacterCleanup(name);
     await finishCreationFromBackgroundStep(tester, name);
 
     expect(
@@ -271,6 +273,7 @@ void main() {
     // Horodate (D109, docs/dette-technique.md) : evite un doublon en base a
     // chaque relance de ce fichier.
     final name = qaUniqueCharacterName("QA-Test-Rodeur-D99");
+    registerQaCharacterCleanup(name);
     await finishCreationFromBackgroundStep(tester, name);
 
     expect(
@@ -352,6 +355,7 @@ void main() {
     // Horodate (D109, docs/dette-technique.md) : evite un doublon en base
     // a chaque relance de ce fichier.
     final name = qaUniqueCharacterName("QA-Test-Roublard-D99");
+    registerQaCharacterCleanup(name);
     await tapText(tester, "SUIVANT");
     await pumpUntilSettled(tester, attempts: 4);
     await tapText(tester, "SUIVANT");
@@ -430,6 +434,7 @@ void main() {
       // Horodate (D109, docs/dette-technique.md) : evite un doublon en base
       // a chaque relance de ce fichier.
       final name = qaUniqueCharacterName("QA-Test-Ensorceleur-D99");
+      registerQaCharacterCleanup(name);
       await finishCreationFromBackgroundStep(tester, name);
 
       expect(

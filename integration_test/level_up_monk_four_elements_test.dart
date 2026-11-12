@@ -19,6 +19,7 @@ import 'package:integration_test/integration_test.dart';
 import 'support/app_launch.dart';
 import 'support/character_creation_flow.dart';
 import 'support/level_up_flow.dart';
+import 'support/qa_cleanup.dart';
 import 'support/qa_test_account.dart';
 import 'support/tap_helpers.dart';
 
@@ -46,6 +47,7 @@ void main() {
     // Horodate (D109, docs/dette-technique.md) : evite un doublon en base a
     // chaque relance de ce fichier.
     final name = qaUniqueCharacterName('QA-Test-Moine4Elements');
+    registerQaCharacterCleanup(name);
     await createCharacter(
       tester,
       characterName: name,
@@ -116,6 +118,7 @@ void main() {
     // Horodate (D109, docs/dette-technique.md) : evite un doublon en base a
     // chaque relance de ce fichier.
     final name = qaUniqueCharacterName('QA-Test-MoineControle');
+    registerQaCharacterCleanup(name);
     await createCharacter(
       tester,
       characterName: name,

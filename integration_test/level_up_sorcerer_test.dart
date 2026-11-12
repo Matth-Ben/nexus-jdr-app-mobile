@@ -30,6 +30,7 @@ import 'package:integration_test/integration_test.dart';
 import 'support/app_launch.dart';
 import 'support/character_creation_flow.dart';
 import 'support/level_up_flow.dart';
+import 'support/qa_cleanup.dart';
 import 'support/qa_test_account.dart';
 import 'support/tap_helpers.dart';
 
@@ -55,6 +56,7 @@ void main() {
     // suffixe variable creait un doublon supplementaire a chaque fois (3
     // deja trouves en base avant ce correctif, voir D107).
     final name = qaUniqueCharacterName('QA-Test-Ensorceleur');
+    registerQaCharacterCleanup(name);
     await createCharacter(
       tester,
       characterName: name,
