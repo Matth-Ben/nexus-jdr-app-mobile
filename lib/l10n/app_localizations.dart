@@ -7576,6 +7576,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{name} désarchivé'**
   String characterDetailUnarchivedSnackBarMessage(String name);
+
+  /// Pastille « Épopée » d'un don proposé au choix (faveur épique) — informative, le don reste choisissable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Épopée'**
+  String get featTagEpic;
+
+  /// Pastille « Campagne » d'un don issu d'un supplément de campagne — informative, le don reste choisissable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Campagne'**
+  String get featTagCampaign;
 }
 
 class _AppLocalizationsDelegate

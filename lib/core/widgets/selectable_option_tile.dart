@@ -26,6 +26,7 @@ class SelectableOptionTile extends StatelessWidget {
     this.onInfo,
     this.infoTooltip = 'Informations',
     this.enabled = true,
+    this.titleBadge,
     super.key,
   });
 
@@ -73,6 +74,10 @@ class SelectableOptionTile extends StatelessWidget {
   /// existants (race, sous-race, lignée).
   final bool enabled;
 
+  /// Pastille informative (non interactive) affichée sous [title], ex. une
+  /// étiquette de don (P13). `null` : rien de plus qu'avant.
+  final Widget? titleBadge;
+
   @override
   Widget build(BuildContext context) {
     // Grande police (D192) : à x2,0 ou x3,0 sur 320 dp, une ligne coupée par
@@ -114,6 +119,10 @@ class SelectableOptionTile extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
+                      if (titleBadge != null) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Wrap(children: [titleBadge!]),
+                      ],
                       if (subtitle != null) ...[
                         const SizedBox(height: 2),
                         Text(

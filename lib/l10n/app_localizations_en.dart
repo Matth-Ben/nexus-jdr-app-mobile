@@ -4705,4 +4705,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String characterDetailUnarchivedSnackBarMessage(String name) {
     return '$name unarchived';
   }
+
+  @override
+  String get featTagEpic => 'Epic';
+
+  @override
+  String get featTagCampaign => 'Campaign';
 }

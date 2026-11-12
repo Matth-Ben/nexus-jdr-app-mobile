@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/data/level_up_feat_row_mapper.dart';
+import 'package:personnages/features/characters/domain/feat_tag.dart';
 
 void main() {
   group('LevelUpFeatRowMapper.collectFeatIds', () {
@@ -169,6 +170,36 @@ void main() {
         ),
         isEmpty,
       );
+    });
+  });
+
+  group('LevelUpFeatRowMapper.toFeatOptions : étiquette (P13)', () {
+    List<Object?> tags(List<Map<String, dynamic>> rows) => [
+      for (final o in LevelUpFeatRowMapper.toFeatOptions(
+        rows,
+        names: {for (final r in rows) r['id'].toString(): 'Don ${r['id']}'},
+        descriptions: const {},
+      ))
+        o.tag,
+    ];
+
+    test('category/source mappés sur l\'étiquette, sans filtrer aucun don', () {
+      final rows = <Map<String, dynamic>>[
+        {'id': 1, 'category': 'epic_boon', 'source': 'PHB24'},
+        {'id': 2, 'category': 'legacy', 'source': 'BGG'},
+        {'id': 3, 'category': 'legacy', 'source': 'XGtE'},
+        {'id': 4, 'category': 'general', 'source': 'PHB14'},
+        {'id': 5, 'category': null, 'source': null},
+      ];
+      expect(tags(rows), [FeatTag.epic, FeatTag.campaign, null, null, null]);
+    });
+
+    test('ancien payload sans clés category/source : aucune pastille, '
+        'aucun crash', () {
+      final rows = <Map<String, dynamic>>[
+        {'id': 1, 'prerequisites': <String, dynamic>{}},
+      ];
+      expect(tags(rows), [null]);
     });
   });
 }

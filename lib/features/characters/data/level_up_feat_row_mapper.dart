@@ -1,4 +1,5 @@
 import '../../../core/utils/french_text_normalizer.dart';
+import '../domain/feat_tag.dart';
 import '../domain/level_up_feat_option.dart';
 
 /// Fonctions de mapping pures entre les lignes brutes `feats`/`translations`
@@ -61,6 +62,10 @@ abstract final class LevelUpFeatRowMapper {
             prerequisiteText: prerequisiteTextFor(row),
             increasableAbilities: increasableAbilitiesFor(row),
             abilityIncreaseMax: abilityIncreaseMaxFor(row),
+            tag: FeatTag.fromColumns(
+              category: row['category'],
+              source: row['source'],
+            ),
           ),
     ]..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name));
     return options;

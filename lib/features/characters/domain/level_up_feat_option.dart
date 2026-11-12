@@ -1,3 +1,5 @@
+import 'feat_tag.dart';
+
 /// Un don disponible au choix à l'étape "Choix à faire" de la montée de
 /// niveau, sous-mode "don" (niveaux ASI 4/8/12/16/19,
 /// `presentation/level_up_screen.dart`, spec visuelle direction-artistique
@@ -20,7 +22,12 @@ class LevelUpFeatOption {
     this.prerequisiteText,
     this.increasableAbilities = const [],
     this.abilityIncreaseMax = 20,
+    this.tag,
   });
+
+  /// Etiquette informative (Epopee/Campagne, P13), `null` = aucune pastille.
+  /// Ne conditionne jamais le choix du don.
+  final FeatTag? tag;
 
   /// Demi-don (`feats.ability_increase`) : caractéristiques ('str'...) dont
   /// une gagne +1 en prenant ce don — le joueur choisit s'il y en a

@@ -5274,6 +5274,24 @@ class SupabaseCharacterRepository implements CharacterRepository {
     );
   }
 
+  /// Lit `feats` avec les colonnes d'étiquette `category`/`source` (P13).
+  /// Tolérance de schéma : sur une base antérieure à la migration
+  /// `20261112120000_feats_category_source_edition` (colonne inexistante,
+  /// SQLSTATE 42703 ou PGRST204), relit sans ces colonnes : aucune pastille
+  /// n'est alors affichée. La production possède les colonnes.
+  Future<List<Map<String, dynamic>>> _selectFeatsWithTags() async {
+    try {
+      return await _client
+          .from('feats')
+          .select('id, prerequisites, ability_increase, category, source');
+    } on PostgrestException catch (error) {
+      if (error.code != '42703' && error.code != 'PGRST204') rethrow;
+      return _client
+          .from('feats')
+          .select('id, prerequisites, ability_increase');
+    }
+  }
+
   @override
   Future<List<LevelUpFeatOption>> fetchAvailableFeats({
     required String characterId,
@@ -5287,9 +5305,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         for (final row in ownedRows) (row['feat_id'] as num).toInt(),
       };
 
-      final allRows = await _client
-          .from('feats')
-          .select('id, prerequisites, ability_increase');
+      final allRows = await _selectFeatsWithTags();
       final availableRows = [
         for (final row in allRows)
           if (!ownedIds.contains((row['id'] as num).toInt())) row,

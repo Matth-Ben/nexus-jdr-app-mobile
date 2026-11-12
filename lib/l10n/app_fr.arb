@@ -6274,5 +6274,13 @@
         "type": "String"
       }
     }
+  },
+  "featTagEpic": "Épopée",
+  "@featTagEpic": {
+    "description": "Pastille « Épopée » d'un don proposé au choix (faveur épique) — informative, le don reste choisissable."
+  },
+  "featTagCampaign": "Campagne",
+  "@featTagCampaign": {
+    "description": "Pastille « Campagne » d'un don issu d'un supplément de campagne — informative, le don reste choisissable."
   }
 }

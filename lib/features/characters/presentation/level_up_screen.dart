@@ -11,6 +11,7 @@ import '../../../core/utils/french_text_normalizer.dart';
 import '../../../core/widgets/accent_icon_badge.dart';
 import '../../../core/widgets/alert_banner.dart';
 import '../../../core/widgets/checkable_option_tile.dart';
+import '../../../core/widgets/feat_tag_badge.dart';
 import '../../../core/widgets/gain_row.dart';
 import '../../../core/widgets/info_banner.dart';
 import '../../../core/widgets/primary_button.dart';
@@ -21,6 +22,7 @@ import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/spell_level_tab_selector.dart';
 import '../../../core/widgets/stepper_counter.dart';
 import '../../character_creation/domain/ability_score_definitions.dart';
+import '../domain/feat_tag.dart';
 import '../domain/level_up_feat_option.dart';
 import '../../character_creation/domain/spell_catalog.dart';
 import '../../character_creation/domain/spell_option.dart';
@@ -2904,6 +2906,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                       description: subclass.description!,
                     )
                   : null,
+              tag: null,
             ),
         ],
       ),
@@ -2912,7 +2915,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         icon: Icons.security,
         options: [
           for (final style in LevelUpChoiceOptions.fightingStyles)
-            (id: style, title: style, subtitle: null, onInfoTap: null),
+            (
+              id: style,
+              title: style,
+              subtitle: null,
+              onInfoTap: null,
+              tag: null,
+            ),
         ],
       ),
       LevelUpChoiceKind.favoredEnemy => _buildOptionListBody(
@@ -2920,7 +2929,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         icon: Icons.gps_fixed,
         options: [
           for (final enemy in LevelUpChoiceOptions.favoredEnemies)
-            (id: enemy, title: enemy, subtitle: null, onInfoTap: null),
+            (
+              id: enemy,
+              title: enemy,
+              subtitle: null,
+              onInfoTap: null,
+              tag: null,
+            ),
         ],
       ),
       LevelUpChoiceKind.pact => _buildOptionListBody(
@@ -2937,6 +2952,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                 name: pact.label,
                 description: pact.description,
               ),
+              tag: null,
             ),
         ],
       ),
@@ -3004,6 +3020,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         id: feat.id,
                         title: feat.name,
                         subtitle: feat.prerequisiteText,
+                        tag: feat.tag,
                         onInfoTap: () => showFeatInfoPanel(
                           context,
                           name: feat.name,
@@ -3067,7 +3084,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     required String instruction,
     required IconData icon,
     required List<
-      ({Object id, String title, String? subtitle, VoidCallback? onInfoTap})
+      ({
+        Object id,
+        String title,
+        String? subtitle,
+        VoidCallback? onInfoTap,
+        FeatTag? tag,
+      })
     >
     options,
   }) {
@@ -3109,6 +3132,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   setState(() => _selectedListOptionId = options[i].id),
               leading: AccentIconBadge(index: i, icon: icon),
               onInfo: options[i].onInfoTap,
+              titleBadge: options[i].tag == null
+                  ? null
+                  : FeatTagBadge(tag: options[i].tag!),
             ),
           ],
         ],
