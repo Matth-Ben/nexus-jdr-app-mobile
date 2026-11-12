@@ -37,49 +37,85 @@ class CharacterSelectionActionBar extends StatelessWidget {
 
   static const double _minHeight = 56;
 
+  /// Facteur de police au-delà duquel la barre passe en colonne.
+  static const double _stackedTextScale = 1.1;
+
+  /// Largeur disponible en deçà de laquelle la barre passe en colonne.
+  static const double _narrowWidth = 300;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return ColoredBox(
-      color: AppColors.woodMedium,
-      child: SafeArea(
-        top: false,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: _minHeight),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: Row(
-              children: [
-                _CancelButton(
-                  enabled: !isDeleting,
-                  onTap: onCancel,
-                  label: l10n.characterSelectionActionBarCancelButton,
+    // À police agrandie, le texte coincé entre « Annuler » et « Supprimer »
+    // n'aurait plus que quelques pixels de large (une lettre par ligne) : il
+    // prend alors toute la largeur et les deux boutons passent dessous.
+    final largeText =
+        MediaQuery.textScalerOf(context).scale(14) / 14 > _stackedTextScale;
+    final count = Text(
+      l10n.characterSelectionActionBarSelectedCount(selectedCount),
+      textAlign: TextAlign.center,
+      style: AppTypography.body(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textOnWood,
+      ),
+    );
+    final cancel = _CancelButton(
+      enabled: !isDeleting,
+      onTap: onCancel,
+      label: l10n.characterSelectionActionBarCancelButton,
+    );
+    final deleteButton = DestructiveButton(
+      filled: true,
+      label: l10n.characterSelectionActionBarDeleteButton,
+      isLoading: isDeleting,
+      onPressed: onDelete,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Étroit : même à police normale, le texte n'aurait que ~50 px entre
+        // les deux boutons (écran de 320 dp).
+        final stacked = largeText || constraints.maxWidth < _narrowWidth;
+        return ColoredBox(
+          color: AppColors.woodMedium,
+          child: SafeArea(
+            top: false,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: _minHeight),
+              child: Padding(
+                // En colonne, marges réduites : chaque pixel compte pour le
+                // plus long mot du texte à police agrandie.
+                padding: EdgeInsets.symmetric(
+                  horizontal: stacked ? AppSpacing.sm : AppSpacing.lg,
                 ),
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      l10n.characterSelectionActionBarSelectedCount(
-                        selectedCount,
+                child: stacked
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.sm,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            count,
+                            const SizedBox(height: AppSpacing.sm),
+                            cancel,
+                            const SizedBox(height: AppSpacing.xs),
+                            deleteButton,
+                          ],
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          cancel,
+                          Expanded(child: Center(child: count)),
+                          deleteButton,
+                        ],
                       ),
-                      style: AppTypography.body(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textOnWood,
-                      ),
-                    ),
-                  ),
-                ),
-                DestructiveButton(
-                  filled: true,
-                  label: l10n.characterSelectionActionBarDeleteButton,
-                  isLoading: isDeleting,
-                  onPressed: onDelete,
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
