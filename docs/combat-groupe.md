@@ -75,3 +75,19 @@ rien ; un membre non-MJ ne peut ni lancer, ni avancer, ni toucher aux monstres ;
 Chaque PR : dev-flutter / dev-backend-supabase → qa-testeur → code-reviewer ; regles-dnd pour toute règle.
 Limite de test : 2 comptes QA seulement (MJ + joueur) ; un 3e compte est nécessaire pour tester proprement tour suivant et
 notification.
+
+## Précisions issues de la relecture de la PR web #47 (12/11/2026)
+- **MJ dans l'app** = le propriétaire du groupe **et** une ligne `group_members` avec `is_game_master = true`. Un propriétaire
+  qui joue avec un personnage ne peut pas lancer de combat (`no_game_master`) ; l'UI dérive « Lancer un combat » de cette
+  règle, pas du simple rôle MJ affiché, et explique l'erreur. Un membre MJ non propriétaire (rejoint sans personnage) ne
+  pilote pas.
+- **MJ absent** : lecture seule pour tous les joueurs, y compris leur propre initiative (`gm_absent`) ; seul le
+  propriétaire peut terminer le combat (même sans ligne membre). Le propriétaire ne doit pas pouvoir quitter le groupe
+  pendant un combat actif (à traiter dans la PR mobile).
+- **Limites** (choix de produit) : 20 monstres par appel (×N) et 60 monstres non retirés par combat.
+- Un joueur dont la ligne est `removed` (retiré par le MJ ou changement de personnage A→B→A) n'est pas réintégré dans le
+  même combat en V1 : l'UI affiche un message clair.
+- Un membre qui rejoint après le lancement, ou change de personnage, n'a pas de ligne tant qu'il n'a pas saisi son
+  initiative : le client tolère des membres sans ligne.
+- Tri côté client : initiative décroissante (NULL en dernier), puis `sort_order` croissant (le serveur place PJ avant PNJ
+  puis l'ordre d'arrivée) ; aucune règle de tri propre au client.
