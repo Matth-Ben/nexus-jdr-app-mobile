@@ -446,6 +446,20 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
     });
   }
 
+  Widget _rerollRow(AppLocalizations l10n) => Wrap(
+    alignment: WrapAlignment.center,
+    spacing: AppSpacing.sm,
+    runSpacing: AppSpacing.sm,
+    children: [
+      SecondaryButton(
+        label: l10n.diceRollSheetRerollButton,
+        surface: SecondaryButtonSurface.parchment,
+        // Inactif pendant le lancer.
+        onPressed: _isRolling ? null : _reroll,
+      ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -533,36 +547,44 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
                         ),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    if (widget.useResultLabel != null) ...[
-                      PrimaryButton(
-                        key: const Key('diceRollUseResult'),
-                        label: widget.useResultLabel!(result.total),
-                        // Inactif pendant le lancer : le total n'est connu du
-                        // joueur qu'une fois le dé posé.
-                        onPressed: _isRolling
-                            ? null
-                            : () => Navigator.of(context).pop(result.total),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
+                    // Avec `useResultLabel`, les actions sont dans un pied fixe
+                    // (jamais sous le pli à ×2,0/×3,0) ; sinon, comme avant,
+                    // « Relancer » reste dans la zone défilante.
+                    if (widget.useResultLabel == null) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      _rerollRow(l10n),
                     ],
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: [
-                        SecondaryButton(
-                          label: l10n.diceRollSheetRerollButton,
-                          surface: SecondaryButtonSurface.parchment,
-                          // Inactif pendant le lancer.
-                          onPressed: _isRolling ? null : _reroll,
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),
             ),
+            if (widget.useResultLabel != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                ),
+                child: Column(
+                  key: const Key('diceRollFooter'),
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    PrimaryButton(
+                      key: const Key('diceRollUseResult'),
+                      label: widget.useResultLabel!(result.total),
+                      // Inactif pendant le lancer : le total n'est connu du
+                      // joueur qu'une fois le dé posé.
+                      onPressed: _isRolling
+                          ? null
+                          : () => Navigator.of(context).pop(result.total),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _rerollRow(l10n),
+                  ],
+                ),
+              ),
           ],
         ),
       ),

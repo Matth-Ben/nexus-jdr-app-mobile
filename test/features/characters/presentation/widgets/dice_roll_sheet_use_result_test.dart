@@ -151,4 +151,61 @@ void main() {
       expect(outcome.value, isNull);
     });
   });
+
+  group('pied fixe sur petit écran à grand texte', () {
+    for (final scale in [2.0, 3.0]) {
+      testWidgets('×$scale sur 320×568 : « Utiliser » visible sans défiler', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(320, 568);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('fr'),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!,
+            ),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => showDiceRollSheet(
+                    context,
+                    label: 'Initiative',
+                    modifier: 3,
+                    random: Random(1),
+                    useResultLabel: (total) => 'Utiliser $total',
+                  ),
+                  child: const Text('Ouvrir'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Ouvrir'));
+        await tester.pumpAndSettle();
+        final use = find.byKey(const Key('diceRollUseResult'));
+        expect(use, findsOneWidget);
+        expect(tester.getBottomLeft(use).dy, lessThanOrEqualTo(568));
+        expect(tester.getTopLeft(use).dy, greaterThanOrEqualTo(0));
+        // Hors de la zone défilante : jamais sous le pli.
+        expect(
+          find.ancestor(of: use, matching: find.byType(SingleChildScrollView)),
+          findsNothing,
+        );
+        expect(
+          find.ancestor(
+            of: find.text('RELANCER'),
+            matching: find.byType(SingleChildScrollView),
+          ),
+          findsNothing,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
+  });
 }
