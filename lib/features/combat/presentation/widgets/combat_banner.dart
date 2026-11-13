@@ -171,6 +171,7 @@ extension on CombatBannerView {
     final text = time == null
         ? l10n.combatBannerTitle(round)
         : l10n.combatSheetBannerOffline(round, time);
+    final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.6;
     final semantics = time == null
         ? l10n.combatSheetBannerSemantics(round)
         : l10n.combatSheetBannerSemanticsOffline(round, time);
@@ -198,30 +199,39 @@ extension on CombatBannerView {
               constraints: BoxConstraints(minHeight: compact ? 44 : 48),
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  horizontal: compact ? AppSpacing.sm : AppSpacing.md,
+                  horizontal: largeText
+                      ? AppSpacing.xs
+                      : compact
+                      ? AppSpacing.sm
+                      : AppSpacing.md,
                   vertical: compact ? 0 : AppSpacing.xs,
                 ),
                 child: Row(
                   children: [
-                    const PixelIcon(
-                      matrix: kCombatSwordsMatrix,
-                      size: 16,
-                      color: AppColors.accentTeal,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
+                    // Grand texte (≥ ×1,6) : l'icône, purement décorative (le
+                    // libellé dit « Combat »), laisse sa place au texte pour
+                    // rester sous 112 dp à ×2,0/×3,0 sur 320 dp (spec §6).
+                    if (!largeText) ...[
+                      const PixelIcon(
+                        matrix: kCombatSwordsMatrix,
+                        size: 16,
+                        color: AppColors.accentTeal,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                    ],
                     Expanded(
                       child: Text(
                         text,
                         style: AppTypography.body(
                           fontSize: compact ? 12 : 13,
                           fontWeight: FontWeight.w800,
-                        ),
+                        ).copyWith(height: largeText ? 1.05 : null),
                       ),
                     ),
-                    const Icon(
+                    Icon(
                       Icons.chevron_right,
                       color: AppColors.textSecondary,
-                      size: 20,
+                      size: largeText ? 16 : 20,
                     ),
                   ],
                 ),
