@@ -104,6 +104,7 @@ ce document est la référence de recettage. Niveau **parchemin** (`parchment.bg
 - Ligne : ×1,0 = 64 à 84 dp ; ×2,0 = mode empilé 100 à 150 dp ; ×3,0 = empilé ≤ 280 dp, nom sur plusieurs lignes.
 - En-tête : ×1,0 = 72 à 96 ; ×2,0 = ×3,0 (plafonné) ≤ 40 % du viewport. Bandeau Groupe : ×1,0 = 64 à 76 ; ×2,0/×3,0 ≤ 150.
   Bandeau fiche : ×1,0 = 48 à 56 ; ×2,0/×3,0 ≤ 112 ; bloc sticky combiné ≤ 40 % de la hauteur. Pied ≥ 48 de haut, libellé à la ligne.
+- **Exception validée (PR #301)** : bandeau de la fiche **hors ligne**, à partir de ×1,6 : ≤ 120 dp, icône masquée (texte long « Combat en cours · round N · état de HH:MM » sur 4 lignes). Ne pas comprimer davantage ; si trop dense, raccourcir le texte à grande échelle.
 - Zéro saut de défilement à la réception d'un événement (offset identique avant/après, tests widget) ; contrastes de la section 0 testés.
 
 ## 7. Clés `.arb` (préfixe `combat`, FR/EN, bloc contigu à la fin)
