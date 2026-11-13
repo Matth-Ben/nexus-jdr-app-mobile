@@ -16,17 +16,19 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../characters/presentation/providers/character_detail_provider.dart';
 import '../../groups/domain/group_detail.dart';
 import '../../groups/presentation/providers/group_providers.dart';
 import '../../groups/presentation/widgets/group_confirmation_dialog.dart';
 import '../domain/combat_announcement.dart';
-import '../domain/combat_enums.dart';
 import '../domain/combat_failure.dart';
 import '../domain/combat_participant.dart';
 import '../domain/combat_permissions.dart';
+import '../domain/combat_player_input.dart';
 import '../domain/combat_reorder.dart';
 import '../domain/combat_snapshot.dart';
 import '../domain/combat_view_state.dart';
+import 'combat_announcer.dart';
 import 'combat_l10n.dart';
 import 'combat_motion.dart';
 import 'providers/combat_providers.dart';
@@ -34,6 +36,7 @@ import 'providers/combat_read_only_provider.dart';
 import 'widgets/add_monster_sheet.dart';
 import 'widgets/combat_action_menu.dart';
 import 'widgets/combat_header.dart';
+import 'widgets/initiative_roll_block.dart';
 import 'widgets/initiative_row.dart';
 import 'widgets/initiative_sheet.dart';
 
@@ -47,12 +50,20 @@ import 'widgets/initiative_sheet.dart';
 /// seul défilement initial vers le tour actif, puis seulement sur appui du
 /// bouton « Voir le tour en cours ».
 class CombatScreen extends ConsumerStatefulWidget {
-  const CombatScreen({required this.groupId, this.announcer, super.key});
+  const CombatScreen({
+    required this.groupId,
+    this.announcer,
+    this.rollOpener = defaultInitiativeRollOpener,
+    super.key,
+  });
 
   final String groupId;
 
   /// Annonceur sémantique (surchargeable en test).
   final CombatSheetAnnouncer? announcer;
+
+  /// Lanceur de d20 de la feuille d'initiative (surchargeable en test).
+  final InitiativeRollOpener rollOpener;
 
   @override
   ConsumerState<CombatScreen> createState() => _CombatScreenState();
@@ -209,12 +220,22 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
   CombatNotifier get _notifier =>
       ref.read(combatProvider(widget.groupId).notifier);
 
-  Future<bool> _run(Future<void> Function() action) async {
+  /// Exécute une écriture et affiche l'échec localisé en snackbar. [mine] :
+  /// écriture du joueur sur sa propre ligne — un `participant_removed` se lit
+  /// alors « Le MJ t'a retiré de ce combat » plutôt que « Ce participant... ».
+  Future<bool> _run(Future<void> Function() action, {bool mine = false}) async {
     try {
       await action();
       return true;
     } on CombatFailure catch (failure) {
-      if (mounted) _snack(failure.localized(AppLocalizations.of(context)!));
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        _snack(
+          mine && failure.kind == CombatFailureKind.participantRemoved
+              ? l10n.combatPlayerRemoved
+              : failure.localized(l10n),
+        );
+      }
     } on Object {
       if (mounted) {
         _snack(AppLocalizations.of(context)!.combatFailureGeneric);
@@ -224,13 +245,59 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
   }
 
   Future<void> _editInitiative(CombatParticipant participant) async {
+    // Le MJ ne connaît pas le modificateur de Dextérité d'un joueur ni d'un
+    // monstre : d20 + 0, sans aide.
     final value = await showInitiativeSheet(
       context,
       participantName: participant.name,
       initial: participant.initiative,
+      rollModifier: 0,
+      announcer: widget.announcer ?? defaultCombatAnnouncer,
+      rollOpener: widget.rollOpener,
     );
     if (value == null || !mounted) return;
     await _run(() => _notifier.setParticipantInitiative(participant.id, value));
+  }
+
+  /// Modificateur d'initiative du personnage du joueur, lu sur sa fiche
+  /// (`CharacterDetail.initiative`, jamais recalculé ici). `null` si la fiche
+  /// n'est pas disponible : pas de lanceur plutôt qu'un modificateur faux.
+  Future<int?> _dexModifier(String characterId) async {
+    final provider = characterDetailProvider(characterId);
+    final cached = ref.read(provider).value;
+    if (cached != null) return cached.initiative;
+    try {
+      final detail = await ref
+          .read(provider.future)
+          .timeout(const Duration(seconds: 3));
+      return detail.initiative;
+    } on Object {
+      return null;
+    }
+  }
+
+  /// Le joueur saisit **sa** propre initiative (`set_my_initiative`), pour sa
+  /// ligne ou, si elle n'existe pas encore, pour la ligne que le serveur créera.
+  Future<void> _editMine(
+    GroupDetail detail,
+    PlayerInitiativeStatus status,
+  ) async {
+    final member = detail.currentMember;
+    final characterId = member?.characterId;
+    if (member == null || characterId == null) return;
+    final modifier = await _dexModifier(characterId);
+    if (!mounted) return;
+    final value = await showInitiativeSheet(
+      context,
+      participantName: status.row?.name ?? member.name,
+      initial: status.row?.initiative,
+      rollModifier: modifier,
+      showDexHelp: modifier != null,
+      announcer: widget.announcer ?? defaultCombatAnnouncer,
+      rollOpener: widget.rollOpener,
+    );
+    if (value == null || !mounted) return;
+    await _run(() => _notifier.setMyInitiative(value), mine: true);
   }
 
   Future<void> _confirmRemove(CombatParticipant participant) async {
@@ -298,7 +365,7 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
   ) => _run(
     () => _notifier.reorderParticipant(
       participantId: participant.id,
-      newSortOrder: neighbor.sortOrder,
+      newSortOrder: swapSortOrderWith(neighbor),
     ),
   );
 
@@ -423,7 +490,7 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
 
   Widget _endedSummary(AppLocalizations l10n, CombatSnapshot? snapshot) {
     final rounds = snapshot?.combat.round ?? 1;
-    final count = snapshot?.participants.where((p) => !p.isRemoved).length ?? 0;
+    final count = snapshot?.summaryParticipantCount ?? 0;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
@@ -473,21 +540,22 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
     final readOnly = ref.watch(combatReadOnlyProvider(groupId));
     final isOwner = detail.isOwner;
     final masterAbsent = isCombatMasterAbsent(detail);
-    final canPilot = isOwner && !masterAbsent && !readOnly;
+    final canPilot = canPilotCombat(detail, readOnly: readOnly);
     final canEnd = canEndCombat(detail) && !readOnly;
     final me = detail.currentUserId;
     // Seul ordre d'affichage : `sortedForDisplay` (via le snapshot).
     final displayed = snapshot.displayParticipants;
-    final removed = isOwner
-        ? snapshot.removedParticipants
-        : const <CombatParticipant>[];
+    final removed = snapshot.removedVisibleTo(isOwner: isOwner);
     final current = snapshot.currentParticipant;
     final progress = snapshot.initiativeProgress;
     final reorderActive =
         _reorderMode && canPilot && hasInitiativeTies(snapshot);
-    final iWasRemoved = snapshot.removedParticipants.any(
-      (p) => p.userId == me && p.kind == ParticipantKind.pc,
-    );
+    final mine = playerInitiativeStatus(snapshot, detail);
+    final iWasRemoved = wasRemovedFromCombat(mine);
+    // Le joueur ne peut écrire que si le MJ est là, qu'il n'est pas retiré et
+    // que l'état est à jour (jamais d'écriture hors ligne).
+    final playerCanWrite =
+        !readOnly && mine.access == PlayerInitiativeAccess.allowed;
     final disabledHint = readOnly
         ? l10n.combatStartUnavailableOffline
         : l10n.combatFailureGmAbsent;
@@ -502,18 +570,24 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
           ? reorderNeighbor(displayed, index, up: false)
           : null;
       final manageable = isOwner && !participant.isRemoved;
+      // Un joueur n'agit que sur SA ligne (jamais celle d'un autre).
+      final ownRow = !isOwner && isOwnEditableRow(mine, participant);
+      final VoidCallback? edit = manageable
+          ? () => _editInitiative(participant)
+          : ownRow
+          ? () => _editMine(detail, mine)
+          : null;
       return InitiativeRow(
         key: _rowKey(participant.id),
         participant: participant,
         rank: participant.initiative == null ? null : index + 1,
         isCurrent: current?.id == participant.id,
         isYou: participant.userId != null && participant.userId == me,
-        actionsEnabled: canPilot,
+        actionsEnabled: manageable ? canPilot : playerCanWrite,
         disabledHint: disabledHint,
-        onEditInitiative: manageable
-            ? () => _editInitiative(participant)
-            : null,
-        onFill: manageable ? () => _editInitiative(participant) : null,
+        onEditInitiative: edit,
+        editLabel: ownRow ? l10n.combatMenuEditMine : null,
+        onFill: edit,
         onRemove: manageable ? () => _confirmRemove(participant) : null,
         reorderMode: reorderActive,
         onMoveUp: up == null ? null : () => _reorder(participant, up),
@@ -589,6 +663,28 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
                 : () => _scrollToCurrent(current.id, animate: true),
           ),
         ),
+        if (shouldOfferFirstInitiative(mine))
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              0,
+              AppSpacing.lg,
+              AppSpacing.sm,
+            ),
+            child: Tooltip(
+              message: playerCanWrite ? '' : disabledHint,
+              child: SizedBox(
+                width: double.infinity,
+                child: PrimaryButton(
+                  key: const Key('combatFillMine'),
+                  label: l10n.combatFillMine,
+                  onPressed: playerCanWrite
+                      ? () => _editMine(detail, mine)
+                      : null,
+                ),
+              ),
+            ),
+          ),
         Expanded(
           child: NotificationListener<ScrollNotification>(
             onNotification: (notification) {

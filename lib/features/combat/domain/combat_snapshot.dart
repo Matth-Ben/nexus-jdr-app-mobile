@@ -64,6 +64,16 @@ abstract class CombatSnapshot with _$CombatSnapshot {
       .where((p) => p.status != ParticipantStatus.removed)
       .sortedForDisplay;
 
+  /// Participants retirés visibles de [isOwner] : seul le MJ (propriétaire)
+  /// voit la section « Retirés », un joueur n'en voit jamais.
+  List<CombatParticipant> removedVisibleTo({required bool isOwner}) =>
+      isOwner ? removedParticipants : const <CombatParticipant>[];
+
+  /// Nombre de participants du résumé de fin de combat : tous les non
+  /// retirés.
+  int get summaryParticipantCount =>
+      participants.where((p) => !p.isRemoved).length;
+
   /// Initiatives saisies sur le total de participants non retirés
   /// (« 2/4 »).
   ({int entered, int total}) get initiativeProgress {

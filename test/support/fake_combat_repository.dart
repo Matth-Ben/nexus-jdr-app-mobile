@@ -32,6 +32,9 @@ class FakeCombatChannel implements CombatRealtimeSubscription {
 class FakeCombatRepository implements CombatRepository {
   CombatSnapshot? snapshot;
   CombatFailure? fetchFailure;
+
+  /// Réponse par groupe (prioritaire sur [snapshot]) : plusieurs groupes.
+  final Map<String, CombatSnapshot?> snapshotsByGroup = {};
   Completer<void>? fetchGate;
   int fetchCount = 0;
   int concurrentFetches = 0;
@@ -55,7 +58,9 @@ class FakeCombatRepository implements CombatRepository {
     }
     final gate = fetchGate;
     final failure = fetchFailure;
-    final result = snapshot;
+    final result = snapshotsByGroup.containsKey(groupId)
+        ? snapshotsByGroup[groupId]
+        : snapshot;
     try {
       if (gate != null) await gate.future;
       if (failure != null) throw failure;

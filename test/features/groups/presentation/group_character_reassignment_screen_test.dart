@@ -407,6 +407,10 @@ class _FakeCharacterRepository implements CharacterRepository {
 }
 
 class _FakeGroupRepository implements GroupRepository {
+  @override
+  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async =>
+      const [];
+
   Object? setGroupCharacterError;
   Completer<void>? setGroupCharacterCompleter;
   String? lastSetGroupId;

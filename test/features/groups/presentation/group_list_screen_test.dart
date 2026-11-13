@@ -35,6 +35,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/widgets/display_scale_helpers.dart';
 
 class _FakeGroupRepository implements GroupRepository {
+  @override
+  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async =>
+      const [];
+
   List<GroupSummary>? groupsToReturn;
   Object? errorToThrow;
   int fetchCallCount = 0;

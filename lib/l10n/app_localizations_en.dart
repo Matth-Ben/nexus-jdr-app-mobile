@@ -5144,11 +5144,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get combatReorderLimit => 'Tie limit';
 
   @override
-  String combatReorderHandle(String name) {
-    return 'Drag $name';
-  }
-
-  @override
   String get combatJumpToTurn => 'Show current turn';
 
   @override
@@ -5199,7 +5194,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String combatDexHelp(String mod) {
-    return 'Dexterity: $mod → d20 $mod';
+    return 'Dexterity modifier: $mod (excluding feat and feature bonuses)';
   }
 
   @override
@@ -5385,4 +5380,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get combatFailureParticipantRemoved =>
       'This participant was removed from the combat.';
+
+  @override
+  String get combatFillMine => 'Enter my initiative';
+
+  @override
+  String get combatFailureNoCharacter =>
+      'Pick a character in this group to enter your initiative.';
+
+  @override
+  String combatSheetBannerOffline(int round, String time) {
+    return 'Combat in progress · round $round · state as of $time';
+  }
+
+  @override
+  String combatSheetBannerSemantics(int round) {
+    return 'Combat in progress, round $round. Open the combat.';
+  }
+
+  @override
+  String combatSheetBannerSemanticsOffline(int round, String time) {
+    return 'Combat in progress, round $round, state as of $time. Open the combat.';
+  }
 }

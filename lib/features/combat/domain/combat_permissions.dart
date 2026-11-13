@@ -33,3 +33,10 @@ bool isLeaveBlockedByCombat({
 bool isCombatMasterAbsent(GroupDetail group) => !group.members.any(
   (member) => member.userId == group.ownerId && member.isGameMaster,
 );
+
+/// Le MJ peut-il piloter (ajouter/éditer/retirer/réordonner) ? Propriétaire
+/// du groupe **et** MJ dans l'app (ligne `is_game_master`, donc pas « MJ
+/// absent »), hors lecture seule (hors ligne ou état périmé). Compose les
+/// prédicats ci-dessus : aucune règle recopiée dans l'UI.
+bool canPilotCombat(GroupDetail group, {bool readOnly = false}) =>
+    !readOnly && group.isOwner && !isCombatMasterAbsent(group);

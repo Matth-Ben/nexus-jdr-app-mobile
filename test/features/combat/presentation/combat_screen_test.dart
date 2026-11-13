@@ -251,6 +251,8 @@ void main() {
             name: 'Aria',
             initiative: 5,
             status: ParticipantStatus.removed,
+            // Ligne du personnage courant du joueur (c-player).
+            characterId: 'c-player',
           ).copyWith(userId: playerId),
         ],
       );

@@ -1576,7 +1576,6 @@
   "combatMoveUp": "Move {name} up",
   "combatMoveDown": "Move {name} down",
   "combatReorderLimit": "Tie limit",
-  "combatReorderHandle": "Drag {name}",
   "combatJumpToTurn": "Show current turn",
   "combatAddMonster": "Add a monster",
   "combatEnd": "End combat",
@@ -1592,7 +1591,7 @@
   "combatInitiativeRangeError": "Enter -20 to 60",
   "combatInitiativeDecrease": "Decrease initiative",
   "combatInitiativeIncrease": "Increase initiative",
-  "combatDexHelp": "Dexterity: {mod} → d20 {mod}",
+  "combatDexHelp": "Dexterity modifier: {mod} (excluding feat and feature bonuses)",
   "combatRollD20": "Roll a d20",
   "combatUseRoll": "Use {total}",
   "combatRollUsedAnnounce": "Result used: {total}",
@@ -1636,5 +1635,10 @@
   "combatFailureNpcLimitCombat": "60 monsters at most per combat.",
   "combatFailureInvalidName": "Invalid name (1 to 80 characters).",
   "combatFailureNotActive": "This combat has already ended.",
-  "combatFailureParticipantRemoved": "This participant was removed from the combat."
+  "combatFailureParticipantRemoved": "This participant was removed from the combat.",
+  "combatFillMine": "Enter my initiative",
+  "combatFailureNoCharacter": "Pick a character in this group to enter your initiative.",
+  "combatSheetBannerOffline": "Combat in progress · round {round} · state as of {time}",
+  "combatSheetBannerSemantics": "Combat in progress, round {round}. Open the combat.",
+  "combatSheetBannerSemanticsOffline": "Combat in progress, round {round}, state as of {time}. Open the combat."
 }

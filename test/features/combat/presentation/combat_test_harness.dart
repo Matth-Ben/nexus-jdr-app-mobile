@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
@@ -13,6 +14,7 @@ import 'package:personnages/features/combat/domain/combat_enums.dart';
 import 'package:personnages/features/combat/domain/combat_participant.dart';
 import 'package:personnages/features/combat/presentation/combat_screen.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
+import 'package:personnages/features/combat/presentation/widgets/initiative_roll_block.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/features/groups/domain/group_member.dart';
 import 'package:personnages/features/groups/domain/group_role.dart';
@@ -87,9 +89,17 @@ class CombatHarness {
     GroupDetail? detail,
     FakeCombatRepository? repo,
     FakeConnectivityChecker? connectivity,
+    this.extraOverrides = const [],
+    this.rollOpener,
   }) : detail = detail ?? fakeGroupDetail(),
        repo = repo ?? FakeCombatRepository(),
        connectivity = connectivity ?? FakeConnectivityChecker();
+
+  /// Surcharges supplémentaires (ex. la fiche du joueur).
+  final List<Override> extraOverrides;
+
+  /// Lanceur de d20 de remplacement (`null` : le vrai).
+  final InitiativeRollOpener? rollOpener;
 
   final GroupDetail detail;
   final FakeCombatRepository repo;
@@ -112,6 +122,7 @@ class CombatHarness {
           const Duration(milliseconds: 10),
         ),
         groupDetailProvider(groupId).overrideWith((ref) async => detail),
+        ...extraOverrides,
       ],
     );
     final router = GoRouter(
@@ -133,6 +144,7 @@ class CombatHarness {
           builder: (context, state) => CombatScreen(
             groupId: state.pathParameters['id']!,
             announcer: (context, text) => announcements.add(text),
+            rollOpener: rollOpener ?? defaultInitiativeRollOpener,
           ),
         ),
         GoRoute(

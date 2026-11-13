@@ -76,6 +76,10 @@ class _FakeCharacterRepository implements CharacterRepository {
 /// exercés par `DataExportRepository`, le reste lève `UnimplementedError`
 /// (jamais atteint par ces tests).
 class _FakeGroupRepository implements GroupRepository {
+  @override
+  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async =>
+      const [];
+
   List<GroupSummary> groups = const [];
   final Map<String, List<GroupNoteEntry>> entriesByGroupId = {};
   Object? fetchMyGroupsErrorToThrow;

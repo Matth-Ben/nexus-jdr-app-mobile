@@ -1,3 +1,5 @@
+import '../../combat/presentation/providers/character_combat_provider.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -206,6 +208,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
       final created = await ref
           .read(groupRepositoryProvider)
           .createGroup(name: name, characterId: characterId);
+      ref.invalidate(characterGroupIdsProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Groupe créé !')));

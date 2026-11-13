@@ -8313,12 +8313,6 @@ abstract class AppLocalizations {
   /// **'Limite de l\'égalité'**
   String get combatReorderLimit;
 
-  /// Poignée de glisser-déposer.
-  ///
-  /// In fr, this message translates to:
-  /// **'Glisser {name}'**
-  String combatReorderHandle(String name);
-
   /// Bouton de défilement vers le tour actif.
   ///
   /// In fr, this message translates to:
@@ -8409,10 +8403,10 @@ abstract class AppLocalizations {
   /// **'Augmenter l\'initiative'**
   String get combatInitiativeIncrease;
 
-  /// Aide Dex (saisie par le joueur, PR3).
+  /// Aide sous le champ d'initiative d'un PJ : `mod` = modificateur de Dextérité signé (+3). Ne compte pas les bonus de dons et d'aptitudes.
   ///
   /// In fr, this message translates to:
-  /// **'Dextérité : {mod} → d20 {mod}'**
+  /// **'Modificateur de Dextérité : {mod} (hors bonus de dons et d\'aptitudes)'**
   String combatDexHelp(String mod);
 
   /// Bouton du lanceur (PR3).
@@ -8678,6 +8672,36 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ce participant a été retiré du combat.'**
   String get combatFailureParticipantRemoved;
+
+  /// Bouton de l'écran Combat pour un joueur dont la ligne n'existe pas encore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renseigner mon initiative'**
+  String get combatFillMine;
+
+  /// Réponse serveur no_character.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis un personnage dans ce groupe pour renseigner ton initiative.'**
+  String get combatFailureNoCharacter;
+
+  /// Bandeau de la fiche hors ligne (pas de second « Hors ligne », celui de la synchro suffit).
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat en cours · round {round} · état de {time}'**
+  String combatSheetBannerOffline(int round, String time);
+
+  /// Libellé lecteur d'écran du bandeau de la fiche.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat en cours, round {round}. Ouvrir le combat.'**
+  String combatSheetBannerSemantics(int round);
+
+  /// Libellé lecteur d'écran du bandeau de la fiche hors ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat en cours, round {round}, état de {time}. Ouvrir le combat.'**
+  String combatSheetBannerSemanticsOffline(int round, String time);
 }
 
 class _AppLocalizationsDelegate

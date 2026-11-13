@@ -488,7 +488,12 @@ void main() {
       repo.snapshot = fakeSnapshot(combat: fakeCombat(round: 2));
       await container.read(combatProvider(groupId).notifier).refresh();
       final banner = container.read(combatBannerProvider(groupId));
-      expect(banner, (combatId: 'combat-1', round: 2, isStale: false));
+      expect(banner, (
+        combatId: 'combat-1',
+        round: 2,
+        isStale: false,
+        startedAt: null,
+      ));
     });
 
     test('ne se reconstruit pas pour un changement sans rapport, se '

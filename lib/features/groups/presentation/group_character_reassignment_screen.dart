@@ -1,3 +1,5 @@
+import '../../combat/presentation/providers/character_combat_provider.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -96,7 +98,10 @@ class _GroupCharacterReassignmentScreenState
   Future<void> _confirmLeaveGroupGuarded() async {
     // Garde du propriétaire : pas de départ pendant un combat actif.
     // Le détail n'est pas forcément déjà chargé (route autonome) : on
-    // l'attend ; un échec laisse le serveur décider (il reste l'autorité).
+    // l'attend. Si son chargement échoue, la garde est ignorée (fail-open) : le
+    // serveur n'applique PAS cette règle (ticket web « Combat : règle serveur,
+    // le propriétaire ne quitte ni ne dissout pendant un combat actif »), la
+    // garde cliente est donc la seule protection tant qu'il n'existe pas.
     GroupDetail? detail;
     try {
       detail = await ref.read(groupDetailProvider(widget.groupId).future);
@@ -133,6 +138,7 @@ class _GroupCharacterReassignmentScreenState
 
     try {
       await ref.read(groupRepositoryProvider).leaveGroup(widget.groupId);
+      ref.invalidate(characterGroupIdsProvider);
       if (!mounted) return;
       context.go('/groups');
     } on GroupFailure catch (failure) {
@@ -160,6 +166,7 @@ class _GroupCharacterReassignmentScreenState
           .read(groupRepositoryProvider)
           .setGroupCharacter(groupId: widget.groupId, characterId: characterId);
       ref.invalidate(groupDetailProvider(widget.groupId));
+      ref.invalidate(characterGroupIdsProvider);
       if (!mounted) return;
       context.go('/groups/${widget.groupId}');
     } on GroupCharacterReassignmentFailure catch (failure) {

@@ -20,6 +20,7 @@ extension CombatFailureL10n on CombatFailure {
       l10n.combatFailureParticipantRemoved,
     CombatFailureKind.npcLimitPerCall => l10n.combatFailureNpcLimitCall,
     CombatFailureKind.npcLimitPerCombat => l10n.combatFailureNpcLimitCombat,
+    CombatFailureKind.noCharacter => l10n.combatFailureNoCharacter,
     CombatFailureKind.invalidInitiative => l10n.combatInitiativeRangeError,
     CombatFailureKind.invalidName => l10n.combatFailureInvalidName,
     CombatFailureKind.offline => l10n.combatStartUnavailableOffline,

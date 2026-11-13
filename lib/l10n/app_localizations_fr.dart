@@ -5185,11 +5185,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get combatReorderLimit => 'Limite de l\'égalité';
 
   @override
-  String combatReorderHandle(String name) {
-    return 'Glisser $name';
-  }
-
-  @override
   String get combatJumpToTurn => 'Voir le tour en cours';
 
   @override
@@ -5240,7 +5235,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String combatDexHelp(String mod) {
-    return 'Dextérité : $mod → d20 $mod';
+    return 'Modificateur de Dextérité : $mod (hors bonus de dons et d\'aptitudes)';
   }
 
   @override
@@ -5427,4 +5422,26 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get combatFailureParticipantRemoved =>
       'Ce participant a été retiré du combat.';
+
+  @override
+  String get combatFillMine => 'Renseigner mon initiative';
+
+  @override
+  String get combatFailureNoCharacter =>
+      'Choisis un personnage dans ce groupe pour renseigner ton initiative.';
+
+  @override
+  String combatSheetBannerOffline(int round, String time) {
+    return 'Combat en cours · round $round · état de $time';
+  }
+
+  @override
+  String combatSheetBannerSemantics(int round) {
+    return 'Combat en cours, round $round. Ouvrir le combat.';
+  }
+
+  @override
+  String combatSheetBannerSemanticsOffline(int round, String time) {
+    return 'Combat en cours, round $round, état de $time. Ouvrir le combat.';
+  }
 }
