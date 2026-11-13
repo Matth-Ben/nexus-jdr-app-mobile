@@ -5444,4 +5444,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String combatSheetBannerSemanticsOffline(int round, String time) {
     return 'Combat en cours, round $round, état de $time. Ouvrir le combat.';
   }
+
+  @override
+  String get characterSpellsSectionRitualBadgeLabel => 'R';
+
+  @override
+  String get characterSpellsSectionRitualSemanticLabel => 'Rituel';
+
+  @override
+  String get spellInfoPanelRitualLabel => 'Rituel';
+
+  @override
+  String get spellInfoPanelRitualValue => 'Oui · +10 min d\'incantation';
 }

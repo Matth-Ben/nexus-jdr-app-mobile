@@ -427,8 +427,10 @@ class _SpellRow extends StatelessWidget {
     // Sort à concentration (P3a) : pastille « C » informative, jamais déduite
     // du texte de la durée. En grande police elle rejoint la seconde ligne.
     final concentration = spell.concentration;
+    // Sort rituel : pastille « R » à côté de « C » (jamais déduite du texte).
+    final ritual = spell.ritual;
     final twoLines =
-        (innateLimited || concentration) &&
+        (innateLimited || concentration || ritual) &&
         MediaQuery.textScalerOf(context).scale(1) >= _innateTwoLineTextScale;
 
     final nameAndDice = Row(
@@ -504,6 +506,7 @@ class _SpellRow extends StatelessWidget {
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             if (concentration) const _ConcentrationMarker(),
+                            if (ritual) const _RitualMarker(),
                             if (spell.grantSource != null)
                               _GrantBadge(source: spell.grantSource!),
                             if (innateLimited) _InnateUsage(spell: spell),
@@ -525,6 +528,10 @@ class _SpellRow extends StatelessWidget {
                         if (concentration) ...[
                           const SizedBox(width: AppSpacing.xs),
                           const _ConcentrationMarker(),
+                        ],
+                        if (ritual) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          const _RitualMarker(),
                         ],
                         if (spell.grantSource != null) ...[
                           const SizedBox(width: AppSpacing.xs),
@@ -626,6 +633,29 @@ class _ConcentrationMarker extends StatelessWidget {
         key: const ValueKey('spellConcentrationMarker'),
         label: l10n.characterSpellsSectionConcentrationBadgeLabel,
         icon: Icons.psychology,
+        iconSize: 12,
+      ),
+    );
+  }
+}
+
+/// Marqueur « R » d'un sort rituel : pastille [_RowBadge] + icône
+/// `auto_stories` (la forme, pas la couleur, porte le sens). Purement
+/// informatif, sans tap propre. `Semantics` « Rituel » (le « R » seul n'est
+/// pas lisible par un lecteur d'écran).
+class _RitualMarker extends StatelessWidget {
+  const _RitualMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Semantics(
+      label: l10n.characterSpellsSectionRitualSemanticLabel,
+      excludeSemantics: true,
+      child: _RowBadge(
+        key: const ValueKey('spellRitualMarker'),
+        label: l10n.characterSpellsSectionRitualBadgeLabel,
+        icon: Icons.auto_stories,
         iconSize: 12,
       ),
     );

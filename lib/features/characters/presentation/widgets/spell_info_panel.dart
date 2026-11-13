@@ -194,6 +194,14 @@ class _SpellInfoPanelContent extends StatelessWidget {
             : AppColors.textMuted,
         valueWeight: spell.concentration ? FontWeight.w700 : null,
       ),
+      // Rituel : information seule (jamais d'action ici, voir le lot C) ;
+      // `castingTime` n'est jamais modifié, le « +10 min » est un libellé fixe.
+      if (spell.ritual)
+        _SpellInfoRow(
+          label: l10n.spellInfoPanelRitualLabel,
+          value: l10n.spellInfoPanelRitualValue,
+          valueWeight: FontWeight.w700,
+        ),
     ];
 
     return SafeArea(

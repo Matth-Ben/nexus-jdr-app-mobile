@@ -1640,5 +1640,13 @@
   "combatFailureNoCharacter": "Pick a character in this group to enter your initiative.",
   "combatSheetBannerOffline": "Combat in progress · round {round} · state as of {time}",
   "combatSheetBannerSemantics": "Combat in progress, round {round}. Open the combat.",
-  "combatSheetBannerSemanticsOffline": "Combat in progress, round {round}, state as of {time}. Open the combat."
+  "combatSheetBannerSemanticsOffline": "Combat in progress, round {round}, state as of {time}. Open the combat.",
+  "characterSpellsSectionRitualBadgeLabel": "R",
+  "@characterSpellsSectionRitualBadgeLabel": {"description": "Lettre de la pastille « R » d'un sort rituel sur la ligne de sort."},
+  "characterSpellsSectionRitualSemanticLabel": "Ritual",
+  "@characterSpellsSectionRitualSemanticLabel": {"description": "Libellé lecteur d'écran de la pastille « R » (sort rituel)."},
+  "spellInfoPanelRitualLabel": "Ritual",
+  "@spellInfoPanelRitualLabel": {"description": "Libellé de la ligne « Rituel » du panneau « Infos » d'un sort."},
+  "spellInfoPanelRitualValue": "Yes · +10 min casting",
+  "@spellInfoPanelRitualValue": {"description": "Valeur de la ligne « Rituel » : le +10 min est un libellé fixe, castingTime n'est jamais modifié."}
 }

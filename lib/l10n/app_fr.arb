@@ -6902,5 +6902,13 @@
   "combatSheetBannerSemantics": "Combat en cours, round {round}. Ouvrir le combat.",
   "@combatSheetBannerSemantics": {"description": "Libellé lecteur d'écran du bandeau de la fiche.", "placeholders": {"round": {"type": "int"}}},
   "combatSheetBannerSemanticsOffline": "Combat en cours, round {round}, état de {time}. Ouvrir le combat.",
-  "@combatSheetBannerSemanticsOffline": {"description": "Libellé lecteur d'écran du bandeau de la fiche hors ligne.", "placeholders": {"round": {"type": "int"}, "time": {"type": "String"}}}
+  "@combatSheetBannerSemanticsOffline": {"description": "Libellé lecteur d'écran du bandeau de la fiche hors ligne.", "placeholders": {"round": {"type": "int"}, "time": {"type": "String"}}},
+  "characterSpellsSectionRitualBadgeLabel": "R",
+  "@characterSpellsSectionRitualBadgeLabel": {"description": "Lettre de la pastille « R » d'un sort rituel sur la ligne de sort."},
+  "characterSpellsSectionRitualSemanticLabel": "Rituel",
+  "@characterSpellsSectionRitualSemanticLabel": {"description": "Libellé lecteur d'écran de la pastille « R » (sort rituel)."},
+  "spellInfoPanelRitualLabel": "Rituel",
+  "@spellInfoPanelRitualLabel": {"description": "Libellé de la ligne « Rituel » du panneau « Infos » d'un sort."},
+  "spellInfoPanelRitualValue": "Oui · +10 min d'incantation",
+  "@spellInfoPanelRitualValue": {"description": "Valeur de la ligne « Rituel » : le +10 min est un libellé fixe, castingTime n'est jamais modifié."}
 }
