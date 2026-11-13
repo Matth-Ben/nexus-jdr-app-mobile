@@ -5072,4 +5072,359 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get updateBannerCompactSemantics =>
       'Nouvelle version disponible. Ouvrir la page de mise à jour.';
+
+  @override
+  String combatBannerTitle(int round) {
+    return 'Combat en cours · round $round';
+  }
+
+  @override
+  String combatBannerTurn(String name) {
+    return 'Tour de $name · Ouvrir le combat';
+  }
+
+  @override
+  String get combatBannerNoTurn => 'Aucun tour actif · Ouvrir le combat';
+
+  @override
+  String get combatBannerAwaitingMaster => 'En attente du MJ';
+
+  @override
+  String combatBannerOffline(String time) {
+    return 'Hors ligne · état de $time';
+  }
+
+  @override
+  String get combatScreenTitle => 'COMBAT';
+
+  @override
+  String combatRound(int round) {
+    return 'Round $round';
+  }
+
+  @override
+  String combatTurnOf(String name) {
+    return 'Tour de $name';
+  }
+
+  @override
+  String get combatNoActiveTurn => 'Aucun tour actif';
+
+  @override
+  String combatInitiativeProgress(int done, int total) {
+    return 'initiatives $done/$total';
+  }
+
+  @override
+  String get combatCurrentTurnLabel => 'Tour en cours';
+
+  @override
+  String get combatInitiativeToEnter => 'Initiative à saisir';
+
+  @override
+  String get combatFillInitiative => 'Renseigner';
+
+  @override
+  String get combatBadgePc => 'PJ';
+
+  @override
+  String get combatBadgeNpc => 'PNJ';
+
+  @override
+  String get combatYouTag => 'Toi';
+
+  @override
+  String get combatStatusWaiting => 'En attente';
+
+  @override
+  String get combatStatusRemoved => 'Retiré';
+
+  @override
+  String combatRemovedSection(int count) {
+    return 'Retirés ($count)';
+  }
+
+  @override
+  String get combatMenuEditInitiative => 'Éditer l\'initiative';
+
+  @override
+  String get combatMenuEditMine => 'Modifier mon initiative';
+
+  @override
+  String get combatMenuRemove => 'Retirer du combat';
+
+  @override
+  String combatRemoveConfirmTitle(String name) {
+    return 'Retirer $name du combat ?';
+  }
+
+  @override
+  String get combatRemoveConfirmBody =>
+      'Il ne pourra pas être réintégré dans ce combat.';
+
+  @override
+  String get combatRemoveConfirmAction => 'Retirer';
+
+  @override
+  String get combatReorderMode => 'Réordonner les égalités';
+
+  @override
+  String get combatReorderDone => 'Terminé';
+
+  @override
+  String combatMoveUp(String name) {
+    return 'Monter $name';
+  }
+
+  @override
+  String combatMoveDown(String name) {
+    return 'Descendre $name';
+  }
+
+  @override
+  String get combatReorderLimit => 'Limite de l\'égalité';
+
+  @override
+  String combatReorderHandle(String name) {
+    return 'Glisser $name';
+  }
+
+  @override
+  String get combatJumpToTurn => 'Voir le tour en cours';
+
+  @override
+  String get combatAddMonster => 'Ajouter un monstre';
+
+  @override
+  String get combatEnd => 'Terminer le combat';
+
+  @override
+  String get combatEndConfirmTitle => 'Terminer le combat ?';
+
+  @override
+  String combatEndConfirmBody(int round) {
+    return 'Le combat disparaît pour tous les joueurs. Round atteint : $round.';
+  }
+
+  @override
+  String get combatStart => 'Lancer un combat';
+
+  @override
+  String get combatStartUnavailableOffline => 'Indisponible hors ligne';
+
+  @override
+  String get combatStartAlreadyActive => 'Un combat est déjà en cours.';
+
+  @override
+  String get combatNoMasterExplain => 'Pas de combat sans MJ dans l\'app.';
+
+  @override
+  String get combatNoMasterSettings => 'Paramètres du groupe';
+
+  @override
+  String combatInitiativeSheetTitle(String name) {
+    return 'Initiative de $name';
+  }
+
+  @override
+  String get combatInitiativeField => 'Initiative';
+
+  @override
+  String get combatInitiativeRangeError => 'Entre -20 et 60';
+
+  @override
+  String get combatInitiativeDecrease => 'Diminuer l\'initiative';
+
+  @override
+  String get combatInitiativeIncrease => 'Augmenter l\'initiative';
+
+  @override
+  String combatDexHelp(String mod) {
+    return 'Dextérité : $mod → d20 $mod';
+  }
+
+  @override
+  String get combatRollD20 => 'Lancer un d20';
+
+  @override
+  String combatUseRoll(int total) {
+    return 'Utiliser $total';
+  }
+
+  @override
+  String combatRollUsedAnnounce(int total) {
+    return 'Résultat repris : $total';
+  }
+
+  @override
+  String get combatSave => 'Enregistrer';
+
+  @override
+  String get combatCancel => 'Annuler';
+
+  @override
+  String get combatMonsterName => 'Nom';
+
+  @override
+  String get combatMonsterQuantity => 'Quantité ×N';
+
+  @override
+  String get combatQuantityDecrease => 'Diminuer la quantité';
+
+  @override
+  String get combatQuantityIncrease => 'Augmenter la quantité';
+
+  @override
+  String combatMonsterPreview(String names) {
+    return 'Sera ajouté : $names';
+  }
+
+  @override
+  String combatMonsterPreviewMany(String first, String last, int count) {
+    return '$first … $last ($count monstres)';
+  }
+
+  @override
+  String get combatAdd => 'Ajouter';
+
+  @override
+  String get combatAddAndContinue => 'Ajouter et continuer';
+
+  @override
+  String combatAddedAnnounce(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ajoutés',
+      one: '1 ajouté',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get combatEmptyMasterTitle => 'Le combat est lancé';
+
+  @override
+  String get combatEmptyMasterBody =>
+      'Ajoute des monstres et attends les initiatives.';
+
+  @override
+  String get combatEmptyPlayer => 'Le MJ prépare le combat.';
+
+  @override
+  String get combatLoading => 'Chargement du combat';
+
+  @override
+  String get combatLoadError => 'Impossible de charger le combat.';
+
+  @override
+  String combatOfflineBanner(String time) {
+    return 'Hors ligne · dernier état connu à $time. Lecture seule.';
+  }
+
+  @override
+  String get combatAwaitingMasterBody =>
+      'En attente du MJ. Seul le MJ peut terminer le combat.';
+
+  @override
+  String combatEndedSummary(int rounds, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      rounds,
+      locale: localeName,
+      other: '$rounds rounds',
+      one: '$rounds round',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count participants',
+      one: '$count participant',
+    );
+    return 'Combat terminé · $_temp0 · $_temp1';
+  }
+
+  @override
+  String get combatBackToGroup => 'Retour au groupe';
+
+  @override
+  String combatAnnounceTurn(int round, String name) {
+    return 'Round $round. Tour de $name.';
+  }
+
+  @override
+  String get combatAnnounceYourTurn => 'C\'est ton tour.';
+
+  @override
+  String get combatAnnounceEnded => 'Le combat est terminé.';
+
+  @override
+  String get combatInitLabel => 'Init.';
+
+  @override
+  String combatRowSemantics(
+    int rank,
+    String name,
+    String kind,
+    int initiative,
+  ) {
+    return '$rank. $name, $kind, initiative $initiative';
+  }
+
+  @override
+  String combatRowSemanticsPending(String name, String kind) {
+    return '$name, $kind, initiative à saisir';
+  }
+
+  @override
+  String get combatKebabLabel => 'Actions du combat';
+
+  @override
+  String combatRowMenuLabel(String name) {
+    return 'Actions pour $name';
+  }
+
+  @override
+  String get combatPlayerRemoved =>
+      'Le MJ t\'a retiré de ce combat. Tu ne peux pas le rejoindre à nouveau.';
+
+  @override
+  String get combatLeaveBlocked =>
+      'Tu ne peux pas quitter le groupe pendant un combat en cours. Termine d\'abord le combat.';
+
+  @override
+  String get combatFailureGeneric => 'Action impossible. Réessaie.';
+
+  @override
+  String get combatFailureNoActive => 'Aucun combat actif.';
+
+  @override
+  String get combatFailureNotFound =>
+      'Ce combat n\'existe plus ou n\'est plus accessible.';
+
+  @override
+  String get combatFailureNetwork => 'Connexion instable. Réessaie.';
+
+  @override
+  String get combatFailureNotOwner => 'Seul le MJ peut faire cela.';
+
+  @override
+  String get combatFailureGmAbsent =>
+      'Le MJ n\'est plus dans le groupe : lecture seule.';
+
+  @override
+  String get combatFailureNpcLimitCall => '20 monstres au maximum à la fois.';
+
+  @override
+  String get combatFailureNpcLimitCombat =>
+      '60 monstres au maximum par combat.';
+
+  @override
+  String get combatFailureInvalidName => 'Nom invalide (1 à 80 caractères).';
+
+  @override
+  String get combatFailureNotActive => 'Ce combat est déjà terminé.';
+
+  @override
+  String get combatFailureParticipantRemoved =>
+      'Ce participant a été retiré du combat.';
 }

@@ -8,8 +8,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/core/widgets/destructive_button.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
@@ -39,6 +41,7 @@ import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
+import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/created_group.dart';
 import 'package:personnages/features/groups/domain/group_character_reassignment_failure.dart';
@@ -51,6 +54,12 @@ import 'package:personnages/features/groups/domain/group_treasure_item.dart';
 import 'package:personnages/features/groups/domain/joined_group.dart';
 import 'package:personnages/features/groups/presentation/group_character_reassignment_screen.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
+
+import '../../../support/combat_fixtures.dart';
+import '../../../support/fake_combat_repository.dart';
+import '../../../support/fake_connectivity_checker.dart';
+import '../../../support/fake_current_user.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   List<CharacterSummary>? charactersToReturn;
@@ -563,13 +572,20 @@ GoRouter _buildTestRouter() {
 Widget _buildTestWidget({
   required _FakeCharacterRepository characterRepository,
   required _FakeGroupRepository groupRepository,
+  List<Override> extraOverrides = const [],
 }) {
   return ProviderScope(
     overrides: [
       characterRepositoryProvider.overrideWithValue(characterRepository),
       groupRepositoryProvider.overrideWithValue(groupRepository),
+      ...extraOverrides,
     ],
-    child: MaterialApp.router(routerConfig: _buildTestRouter()),
+    child: MaterialApp.router(
+      routerConfig: _buildTestRouter(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('fr'),
+    ),
   );
 }
 
@@ -851,6 +867,76 @@ void main() {
 
       expect(fakeGroupRepository.leaveGroupCalled, isTrue);
       expect(find.text('Écran Groupes'), findsOneWidget);
+    });
+  });
+
+  group('garde du propriétaire pendant un combat actif', () {
+    GroupDetail detail({required bool owner}) => GroupDetail(
+      id: 'group-1',
+      name: 'Les Lames',
+      ownerId: 'user-1',
+      inviteCode: 'ABC',
+      currentUserId: owner ? 'user-1' : 'user-2',
+      members: const [],
+    );
+
+    Widget build({required bool owner, required bool combatActive}) {
+      final combatRepo = FakeCombatRepository();
+      if (combatActive) combatRepo.snapshot = fakeSnapshot();
+      return _buildTestWidget(
+        characterRepository: fakeCharacterRepository,
+        groupRepository: fakeGroupRepository,
+        extraOverrides: [
+          currentUserFromTestOverride,
+          combatRepositoryProvider.overrideWithValue(combatRepo),
+          connectivityCheckerProvider.overrideWithValue(
+            FakeConnectivityChecker(),
+          ),
+          groupDetailProvider('group-1')
+              .overrideWith((ref) async => detail(owner: owner)),
+        ],
+      );
+    }
+
+    testWidgets('propriétaire + combat actif : départ bloqué avec message', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+      await tester.pumpWidget(build(owner: true, combatActive: true));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Quitter le groupe'));
+      await tester.pumpAndSettle();
+      expect(find.text('Quitter ce groupe ?'), findsNothing);
+      expect(
+        find.text(
+          "Tu ne peux pas quitter le groupe pendant un combat en cours. "
+          "Termine d'abord le combat.",
+        ),
+        findsOneWidget,
+      );
+      expect(fakeGroupRepository.leaveGroupCalled, isFalse);
+    });
+
+    testWidgets('propriétaire sans combat : confirmation habituelle', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+      await tester.pumpWidget(build(owner: true, combatActive: false));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Quitter le groupe'));
+      await tester.pumpAndSettle();
+      expect(find.text('Quitter ce groupe ?'), findsOneWidget);
+    });
+
+    testWidgets('membre non propriétaire + combat actif : peut quitter', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+      await tester.pumpWidget(build(owner: false, combatActive: true));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Quitter le groupe'));
+      await tester.pumpAndSettle();
+      expect(find.text('Quitter ce groupe ?'), findsOneWidget);
     });
   });
 

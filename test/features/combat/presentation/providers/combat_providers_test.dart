@@ -15,6 +15,7 @@ import 'package:personnages/features/combat/presentation/providers/combat_provid
 import '../../../../support/combat_fixtures.dart';
 import '../../../../support/fake_combat_repository.dart';
 import '../../../../support/fake_connectivity_checker.dart';
+import '../../../../support/fake_current_user.dart';
 
 const groupId = 'group-1';
 const _debounce = Duration(milliseconds: 20);
@@ -35,6 +36,7 @@ void main() {
   ProviderContainer makeContainer({Duration debounce = _debounce}) {
     final c = ProviderContainer(
       overrides: [
+        currentUserFromTestOverride,
         combatRepositoryProvider.overrideWithValue(repo),
         connectivityCheckerProvider.overrideWithValue(connectivity),
         combatRefetchDebounceProvider.overrideWithValue(debounce),
@@ -387,7 +389,7 @@ void main() {
     });
 
     test(
-      'sans combat actif connu : combatNotFound sans appel au dépôt',
+      'sans combat actif connu : noActiveCombat sans appel au dépôt',
       () async {
         repo.snapshot = null;
         await container.read(combatProvider(groupId).notifier).refresh();
@@ -398,13 +400,83 @@ void main() {
             isA<CombatFailure>().having(
               (f) => f.kind,
               'kind',
-              CombatFailureKind.combatNotFound,
+              CombatFailureKind.noActiveCombat,
             ),
           ),
         );
         expect(repo.calls, isEmpty);
       },
     );
+  });
+
+  group('purge au changement de compte', () {
+    test('un autre compte ne voit pas l ancien instantané', () async {
+      repo.snapshot = fakeSnapshot(
+        participants: [fakeParticipant('secret', initiative: 12)],
+      );
+      container.listen(combatProvider(groupId), (_, _) {});
+      await settle();
+      expect(read().phase, CombatPhase.active);
+
+      // Le compte suivant n'a aucun combat : le dépôt ne renvoie rien, mais
+      // l'état doit être purgé (chargement) avant même ce refetch.
+      repo
+        ..snapshot = null
+        ..fetchGate = Completer<void>();
+      container.read(testUserIdProvider.notifier).set('user-2');
+      await pumpEventQueue();
+      expect(read().phase, CombatPhase.loading);
+      expect(read().snapshot, isNull);
+      repo.fetchGate!.complete();
+      await settle();
+      expect(read().phase, CombatPhase.none);
+    });
+
+    test('la déconnexion purge aussi l état', () async {
+      repo.snapshot = fakeSnapshot(
+        participants: [fakeParticipant('a', initiative: 1)],
+      );
+      container.listen(combatProvider(groupId), (_, _) {});
+      await settle();
+      container.read(testUserIdProvider.notifier).set(null);
+      repo.snapshot = null;
+      await settle();
+      expect(read().snapshot, isNull);
+    });
+
+    test(
+      'un refetch du compte précédent n écrase pas le nouvel état',
+      () async {
+        final gate = Completer<void>();
+        repo
+          ..snapshot = fakeSnapshot(
+            participants: [fakeParticipant('ancien', initiative: 5)],
+          )
+          ..fetchGate = gate;
+        container.listen(combatProvider(groupId), (_, _) {});
+        await pumpEventQueue();
+        repo.snapshot = null; // le fetch en vol a déjà capturé l ancien état
+        container.read(testUserIdProvider.notifier).set('user-2');
+        await pumpEventQueue();
+        gate.complete();
+        await settle();
+        expect(read().snapshot, isNull);
+        expect(read().phase, CombatPhase.none);
+      },
+    );
+
+    test('même utilisateur : aucune purge', () async {
+      repo.snapshot = fakeSnapshot(
+        participants: [fakeParticipant('a', initiative: 1)],
+      );
+      container.listen(combatProvider(groupId), (_, _) {});
+      await settle();
+      final before = repo.fetchCount;
+      container.read(testUserIdProvider.notifier).set('user-1');
+      await settle();
+      expect(repo.fetchCount, before);
+      expect(read().phase, CombatPhase.active);
+    });
   });
 
   group('bandeau de la fiche', () {

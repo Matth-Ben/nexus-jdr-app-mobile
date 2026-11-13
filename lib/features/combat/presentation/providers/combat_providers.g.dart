@@ -167,8 +167,9 @@ String _$combatClockHash() => r'2867b69ee2f75b988642b4917cee57051e41959b';
 ///
 /// `keepAlive` : le dernier état est gardé **en mémoire** (jamais persisté,
 /// pas de cache drift) pour que l'écran Groupe et la fiche l'affichent
-/// immédiatement. Limite connue : il n'est pas purgé à la déconnexion tant que
-/// le conteneur vit (voir le rapport de la PR1).
+/// immédiatement. Il est **purgé** (`invalidateSelf`) dès que l'utilisateur
+/// authentifié change (déconnexion, autre compte) : un autre compte ne voit
+/// jamais l'instantané du précédent.
 ///
 /// Stratégie Realtime : « notification de changement puis refetch complet »
 /// ([scheduleRefresh] debouncé, [refresh] immédiat). Un seul refetch à la
@@ -186,8 +187,9 @@ final combatProvider = CombatNotifierFamily._();
 ///
 /// `keepAlive` : le dernier état est gardé **en mémoire** (jamais persisté,
 /// pas de cache drift) pour que l'écran Groupe et la fiche l'affichent
-/// immédiatement. Limite connue : il n'est pas purgé à la déconnexion tant que
-/// le conteneur vit (voir le rapport de la PR1).
+/// immédiatement. Il est **purgé** (`invalidateSelf`) dès que l'utilisateur
+/// authentifié change (déconnexion, autre compte) : un autre compte ne voit
+/// jamais l'instantané du précédent.
 ///
 /// Stratégie Realtime : « notification de changement puis refetch complet »
 /// ([scheduleRefresh] debouncé, [refresh] immédiat). Un seul refetch à la
@@ -203,8 +205,9 @@ final class CombatNotifierProvider
   ///
   /// `keepAlive` : le dernier état est gardé **en mémoire** (jamais persisté,
   /// pas de cache drift) pour que l'écran Groupe et la fiche l'affichent
-  /// immédiatement. Limite connue : il n'est pas purgé à la déconnexion tant que
-  /// le conteneur vit (voir le rapport de la PR1).
+  /// immédiatement. Il est **purgé** (`invalidateSelf`) dès que l'utilisateur
+  /// authentifié change (déconnexion, autre compte) : un autre compte ne voit
+  /// jamais l'instantané du précédent.
   ///
   /// Stratégie Realtime : « notification de changement puis refetch complet »
   /// ([scheduleRefresh] debouncé, [refresh] immédiat). Un seul refetch à la
@@ -255,7 +258,7 @@ final class CombatNotifierProvider
   }
 }
 
-String _$combatNotifierHash() => r'323c3ac80bc5070fb50b1b03d7a6745e80689383';
+String _$combatNotifierHash() => r'c6665d54a70bdef7f3e41da9d5645801df882596';
 
 /// État du combat du groupe [groupId] : chargement / aucun combat / actif /
 /// terminé récemment / erreur, avec horodatage du dernier état connu et
@@ -264,8 +267,9 @@ String _$combatNotifierHash() => r'323c3ac80bc5070fb50b1b03d7a6745e80689383';
 ///
 /// `keepAlive` : le dernier état est gardé **en mémoire** (jamais persisté,
 /// pas de cache drift) pour que l'écran Groupe et la fiche l'affichent
-/// immédiatement. Limite connue : il n'est pas purgé à la déconnexion tant que
-/// le conteneur vit (voir le rapport de la PR1).
+/// immédiatement. Il est **purgé** (`invalidateSelf`) dès que l'utilisateur
+/// authentifié change (déconnexion, autre compte) : un autre compte ne voit
+/// jamais l'instantané du précédent.
 ///
 /// Stratégie Realtime : « notification de changement puis refetch complet »
 /// ([scheduleRefresh] debouncé, [refresh] immédiat). Un seul refetch à la
@@ -298,8 +302,9 @@ final class CombatNotifierFamily extends $Family
   ///
   /// `keepAlive` : le dernier état est gardé **en mémoire** (jamais persisté,
   /// pas de cache drift) pour que l'écran Groupe et la fiche l'affichent
-  /// immédiatement. Limite connue : il n'est pas purgé à la déconnexion tant que
-  /// le conteneur vit (voir le rapport de la PR1).
+  /// immédiatement. Il est **purgé** (`invalidateSelf`) dès que l'utilisateur
+  /// authentifié change (déconnexion, autre compte) : un autre compte ne voit
+  /// jamais l'instantané du précédent.
   ///
   /// Stratégie Realtime : « notification de changement puis refetch complet »
   /// ([scheduleRefresh] debouncé, [refresh] immédiat). Un seul refetch à la
@@ -321,8 +326,9 @@ final class CombatNotifierFamily extends $Family
 ///
 /// `keepAlive` : le dernier état est gardé **en mémoire** (jamais persisté,
 /// pas de cache drift) pour que l'écran Groupe et la fiche l'affichent
-/// immédiatement. Limite connue : il n'est pas purgé à la déconnexion tant que
-/// le conteneur vit (voir le rapport de la PR1).
+/// immédiatement. Il est **purgé** (`invalidateSelf`) dès que l'utilisateur
+/// authentifié change (déconnexion, autre compte) : un autre compte ne voit
+/// jamais l'instantané du précédent.
 ///
 /// Stratégie Realtime : « notification de changement puis refetch complet »
 /// ([scheduleRefresh] debouncé, [refresh] immédiat). Un seul refetch à la

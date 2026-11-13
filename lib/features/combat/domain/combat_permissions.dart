@@ -17,3 +17,19 @@ bool canStartCombat(GroupDetail group) {
 /// Seul le propriétaire du groupe peut terminer un combat, même sans ligne
 /// membre (MJ absent).
 bool canEndCombat(GroupDetail group) => group.isOwner;
+
+/// Le propriétaire du groupe ne peut pas **quitter** le groupe pendant un
+/// combat actif (décision du 12/11/2026 : « MJ absent » = lecture seule pour
+/// tous). Un membre non propriétaire peut toujours partir (sa ligne
+/// participant est retirée côté serveur).
+bool isLeaveBlockedByCombat({
+  required bool isOwner,
+  required bool hasActiveCombat,
+}) => isOwner && hasActiveCombat;
+
+/// « MJ absent » : le propriétaire n'a plus de ligne `group_members` avec
+/// `is_game_master` (il a quitté, ou n'est plus MJ). Le combat reste lisible
+/// (« En attente du MJ »), seul le propriétaire peut encore le terminer.
+bool isCombatMasterAbsent(GroupDetail group) => !group.members.any(
+  (member) => member.userId == group.ownerId && member.isGameMaster,
+);

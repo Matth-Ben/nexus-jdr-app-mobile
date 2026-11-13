@@ -16,7 +16,10 @@ import '../../character_creation/presentation/providers/character_creation_retur
 import '../../characters/domain/character_failure.dart';
 import '../../characters/domain/character_summary.dart';
 import '../../characters/presentation/providers/character_providers.dart';
+import '../../combat/domain/combat_permissions.dart';
+import '../../combat/presentation/providers/combat_providers.dart';
 import '../domain/group_character_reassignment_failure.dart';
+import '../domain/group_detail.dart';
 import '../domain/group_failure.dart';
 import 'providers/group_providers.dart';
 import 'widgets/group_confirmation_dialog.dart';
@@ -80,6 +83,33 @@ class _GroupCharacterReassignmentScreenState
 
   Future<void> _confirmLeaveGroup() async {
     if (_isSaving) return;
+    // Garde du propriétaire : pas de départ pendant un combat actif.
+    // Le détail n'est pas forcément déjà chargé (route autonome) : on
+    // l'attend ; un échec laisse le serveur décider (il reste l'autorité).
+    GroupDetail? detail;
+    try {
+      detail = await ref.read(groupDetailProvider(widget.groupId).future);
+    } on Object {
+      detail = null;
+    }
+    if (!mounted) return;
+    if (detail?.isOwner ?? false) {
+      final combat = ref.read(combatProvider(widget.groupId).notifier);
+      await combat.refresh();
+      if (!mounted) return;
+      if (isLeaveBlockedByCombat(
+        isOwner: true,
+        hasActiveCombat: ref
+            .read(combatProvider(widget.groupId))
+            .hasActiveCombat,
+      )) {
+        setState(
+          () =>
+              _bannerMessage = AppLocalizations.of(context)!.combatLeaveBlocked,
+        );
+        return;
+      }
+    }
     final confirmed = await showGroupConfirmationDialog(
       context,
       title: 'Quitter ce groupe ?',

@@ -45,7 +45,7 @@ class StepperCounter extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _StepperButton(
+        StepperButton(
           icon: Icons.remove,
           onPressed: onDecrement,
           semanticLabel: decrementLabel,
@@ -61,7 +61,7 @@ class StepperCounter extends StatelessWidget {
             ),
           ),
         ),
-        _StepperButton(
+        StepperButton(
           icon: Icons.add,
           onPressed: onIncrement,
           semanticLabel: incrementLabel,
@@ -71,11 +71,12 @@ class StepperCounter extends StatelessWidget {
   }
 }
 
-class _StepperButton extends StatelessWidget {
-  const _StepperButton({
+class StepperButton extends StatelessWidget {
+  const StepperButton({
     required this.icon,
     required this.onPressed,
     required this.semanticLabel,
+    super.key,
   });
 
   final IconData icon;
