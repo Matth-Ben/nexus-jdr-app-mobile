@@ -66,6 +66,12 @@ import 'package:personnages/features/characters/presentation/providers/character
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 
 import '../../../support/fake_connectivity_checker.dart';
+import '../../../support/combat_fixtures.dart';
+import '../../../support/fake_combat_repository.dart';
+import '../../../support/fake_current_user.dart';
+import '../../../support/fake_group_character_lookup.dart';
+import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
+import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
 
 import 'package:personnages/features/characters/presentation/widgets/character_ability_score_grid.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_equipped_weapons_card.dart';
@@ -3797,6 +3803,100 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Level 1 slot used'), findsOneWidget);
+    });
+  });
+
+  group('bandeau de combat de la fiche', () {
+    late FakeCombatRepository combats;
+    late FakeGroupCharacterLookup groups;
+    late FakeConnectivityChecker connectivity;
+
+    setUp(() {
+      combats = FakeCombatRepository()
+        ..snapshotsByGroup['g1'] = fakeSnapshot(
+          combat: fakeCombat(groupId: 'g1', round: 2),
+          participants: [fakeParticipant('a', initiative: 5)],
+        );
+      groups = FakeGroupCharacterLookup()..groupsByCharacter['1'] = ['g1'];
+      connectivity = FakeConnectivityChecker();
+    });
+
+    tearDown(() async {
+      debugOnRebuildDirtyWidget = null;
+      await connectivity.close();
+    });
+
+    Future<void> pumpWithCombat(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        buildTestWidget(
+          extraOverrides: [
+            currentUserFromTestOverride,
+            combatRepositoryProvider.overrideWithValue(combats),
+            groupRepositoryProvider.overrideWithValue(groups),
+            connectivityCheckerProvider.overrideWithValue(connectivity),
+            combatRefetchDebounceProvider.overrideWithValue(
+              const Duration(milliseconds: 10),
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    testWidgets('visible sous l\'en-tête quand le groupe du personnage a un '
+        'combat actif', (tester) async {
+      await pumpWithCombat(tester);
+      expect(find.text('Combat en cours · round 2'), findsOneWidget);
+      final headerBottom = tester.getBottomLeft(find.byType(WoodBackHeader)).dy;
+      expect(
+        tester.getTopLeft(find.byKey(const Key('combatSheetBanner'))).dy,
+        greaterThanOrEqualTo(headerBottom),
+      );
+    });
+
+    testWidgets('absent sans combat actif', (tester) async {
+      combats.snapshotsByGroup['g1'] = null;
+      await pumpWithCombat(tester);
+      expect(find.byKey(const Key('combatSheetBanner')), findsNothing);
+    });
+
+    testWidgets('un évènement de combat ne reconstruit jamais la fiche', (
+      tester,
+    ) async {
+      await pumpWithCombat(tester);
+      var rebuilds = 0;
+      debugOnRebuildDirtyWidget = (element, builtOnce) {
+        if (element.widget is CharacterDetailScreen) rebuilds++;
+      };
+
+      // Témoin : le compteur voit bien une reconstruction de la fiche.
+      tester.element(find.byType(CharacterDetailScreen)).markNeedsBuild();
+      await tester.pump();
+      expect(rebuilds, 1);
+
+      // Initiative d'un participant : rien ne change pour le bandeau.
+      combats.snapshotsByGroup['g1'] = fakeSnapshot(
+        combat: fakeCombat(groupId: 'g1', round: 2),
+        participants: [fakeParticipant('a', initiative: 19)],
+      );
+      combats.lastChannel.emitChange();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+      expect(rebuilds, 1);
+
+      // Changement de round : le bandeau est mis à jour, pas la fiche.
+      combats.snapshotsByGroup['g1'] = fakeSnapshot(
+        combat: fakeCombat(groupId: 'g1', round: 3),
+      );
+      combats.lastChannel.emitChange();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+      expect(find.text('Combat en cours · round 3'), findsOneWidget);
+      expect(rebuilds, 1);
     });
   });
 }

@@ -1197,6 +1197,56 @@ void main() {
       expect(deleteRequest.url.queryParameters['id'], 'eq.entry-1');
     });
   });
+
+  group('SupabaseGroupRepository.fetchGroupIdsForCharacter', () {
+    test('une seule requête group_members filtrée sur user_id et '
+        'character_id, lecture seule', () async {
+      final requests = <http.Request>[];
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'user-1',
+        onRequest: requests.add,
+        tableRows: {
+          'group_members': [
+            {'group_id': 'g1'},
+            {'group_id': 'g2'},
+          ],
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      final ids = await repository.fetchGroupIdsForCharacter('char-1');
+
+      expect(ids, ['g1', 'g2']);
+      expect(requests, hasLength(1));
+      final request = requests.single;
+      expect(request.method, 'GET');
+      expect(request.url.path, endsWith('/group_members'));
+      expect(request.url.queryParameters['select'], 'group_id');
+      expect(request.url.queryParameters['user_id'], 'eq.user-1');
+      expect(request.url.queryParameters['character_id'], 'eq.char-1');
+    });
+
+    test('aucun groupe : liste vide', () async {
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'user-1',
+        tableRows: const {'group_members': []},
+      );
+      final repository = SupabaseGroupRepository(client);
+      expect(await repository.fetchGroupIdsForCharacter('char-1'), isEmpty);
+    });
+
+    test('erreur serveur : GroupFailure', () async {
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'user-1',
+        failingTables: const {'group_members'},
+      );
+      final repository = SupabaseGroupRepository(client);
+      await expectLater(
+        repository.fetchGroupIdsForCharacter('char-1'),
+        throwsA(isA<GroupFailure>()),
+      );
+    });
+  });
 }
 
 /// Fabrique un `SupabaseClient` réel dont le transport HTTP est fabriqué de
