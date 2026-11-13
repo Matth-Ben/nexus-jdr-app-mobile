@@ -9,7 +9,16 @@ import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/segmented_tab_bar.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../../characters/domain/currency_kind.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../characters/domain/reward_item_draft.dart';
+import '../../combat/domain/combat_announcement.dart';
+import '../../combat/domain/combat_permissions.dart';
+import '../../combat/domain/combat_view_state.dart';
+import '../../combat/presentation/providers/combat_providers.dart';
+import '../../combat/presentation/widgets/add_monster_sheet.dart'
+    show defaultCombatAnnouncer;
+import '../../combat/presentation/widgets/combat_banner.dart';
+import '../../combat/presentation/widgets/start_combat_section.dart';
 import '../domain/group_detail.dart';
 import '../domain/group_failure.dart';
 import '../domain/group_member.dart';
@@ -66,6 +75,7 @@ class GroupScreen extends ConsumerStatefulWidget {
 class _GroupScreenState extends ConsumerState<GroupScreen> {
   GroupTab _tab = GroupTab.members;
   bool _isWritingTreasure = false;
+  bool _leaveInFlight = false;
 
   void _goBack() {
     if (context.canPop()) {
@@ -81,7 +91,43 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Point d'entrée de test de la garde (le propriétaire n'a aucun lien de
+  /// départ visible : la garde défensive n'est sinon pas atteignable).
+  @visibleForTesting
+  Future<void> confirmLeaveGroupForTest(GroupDetail detail) =>
+      _confirmLeaveGroup(detail);
+
   Future<void> _confirmLeaveGroup(GroupDetail detail) async {
+    // Garde du propriétaire : jamais de départ pendant un combat actif. Le
+    // serveur n'applique PAS cette règle, cette garde est la seule protection :
+    // on refetch le combat avant de décider (un état `loading`/`error`/périmé
+    // ne doit jamais laisser passer). Hors ligne, `refresh()` avale l'erreur et
+    // laisse l'état périmé : un combat actif déjà connu bloque ; sans état
+    // connu (`loading`/`none`) le départ passe, mais `leaveGroup` échouerait
+    // de toute façon hors ligne.
+    if (_leaveInFlight) return;
+    _leaveInFlight = true;
+    try {
+      if (detail.isOwner) {
+        await ref.read(combatProvider(widget.groupId).notifier).refresh();
+        if (!mounted) return;
+        if (isLeaveBlockedByCombat(
+          isOwner: true,
+          hasActiveCombat: ref
+              .read(combatProvider(widget.groupId))
+              .hasActiveCombat,
+        )) {
+          _showSnackBar(AppLocalizations.of(context)!.combatLeaveBlocked);
+          return;
+        }
+      }
+      await _confirmLeaveGroupDialog(detail);
+    } finally {
+      _leaveInFlight = false;
+    }
+  }
+
+  Future<void> _confirmLeaveGroupDialog(GroupDetail detail) async {
     final confirmed = await showGroupConfirmationDialog(
       context,
       title: 'Quitter « ${detail.name} » ?',
@@ -321,6 +367,27 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     final detailAsync = ref.watch(groupDetailProvider(widget.groupId));
     final detail = detailAsync.value;
 
+    // Fin du combat vue depuis l'écran Groupe (le bandeau disparaît) : une
+    // seule annonce polie. L'écran Combat annonce lui-même la fin quand il
+    // est au premier plan.
+    ref.listen<CombatViewState>(combatProvider(widget.groupId), (
+      previous,
+      next,
+    ) {
+      if (previous == null || !mounted) return;
+      if (ModalRoute.of(context)?.isCurrent != true) return;
+      final announcement = combatAnnouncementFor(
+        previous: previous,
+        next: next,
+      );
+      if (announcement?.kind == CombatAnnouncementKind.ended) {
+        defaultCombatAnnouncer(
+          context,
+          AppLocalizations.of(context)!.combatAnnounceEnded,
+        );
+      }
+    });
+
     // Interception "membre orphelin" (voir `GroupMember.isAwaitingCharacter`)
     // : le joueur connecté doit rattacher un nouveau personnage avant de
     // pouvoir suivre ce groupe normalement — remplace entièrement la
@@ -367,6 +434,14 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             ),
             orElse: () => const SizedBox.shrink(),
           ),
+          // Bandeau « Combat en cours » : sous les onglets, hors zone
+          // défilante, visible sur les trois onglets.
+          if (detail != null)
+            CombatGroupBanner(
+              groupId: widget.groupId,
+              masterAbsent: isCombatMasterAbsent(detail),
+              onTap: () => context.push('/groups/${widget.groupId}/combat'),
+            ),
           Expanded(
             child: detailAsync.when(
               data: (data) => _buildTabBody(data),
@@ -393,6 +468,12 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         detail: detail,
         onRemoveMember: _confirmRemoveMember,
         onLeaveGroup: () => _confirmLeaveGroup(detail),
+        combatSection: StartCombatSection(
+          detail: detail,
+          onOpenCombat: () => context.push('/groups/${widget.groupId}/combat'),
+          onOpenSettings: () =>
+              context.push('/groups/${widget.groupId}/settings'),
+        ),
       ),
       GroupTab.treasure => _buildTreasureTab(detail),
       GroupTab.notes => _buildNotesTab(detail),

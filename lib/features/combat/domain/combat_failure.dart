@@ -54,6 +54,10 @@ enum CombatFailureKind {
   /// `invalid_sort_order` (22023).
   invalidSortOrder('invalid_sort_order'),
 
+  /// Purement local : aucun combat actif connu côté client au moment d'une
+  /// action (à ne pas confondre avec une réponse serveur [combatNotFound]).
+  noActiveCombat(null),
+
   /// Aucune connexion détectée : écriture refusée sans toucher le réseau
   /// (aucune file de synchro pour le combat).
   offline(null),

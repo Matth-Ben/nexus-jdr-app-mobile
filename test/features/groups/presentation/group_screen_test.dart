@@ -8,12 +8,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/theme/app_spacing.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/core/widgets/wood_back_header.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
+import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/created_group.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
@@ -28,6 +30,11 @@ import 'package:personnages/features/groups/domain/group_treasure_item.dart';
 import 'package:personnages/features/groups/domain/joined_group.dart';
 import 'package:personnages/features/groups/presentation/group_screen.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
+
+import '../../../support/fake_combat_repository.dart';
+import '../../../support/fake_connectivity_checker.dart';
+import '../../../support/fake_current_user.dart';
 
 class _NoopSubscription implements GroupRealtimeSubscription {
   @override
@@ -304,8 +311,19 @@ GoRouter _buildTestRouter() {
 
 Widget _buildTestWidget(_FakeGroupRepository repository) {
   return ProviderScope(
-    overrides: [groupRepositoryProvider.overrideWithValue(repository)],
-    child: MaterialApp.router(routerConfig: _buildTestRouter()),
+    overrides: [
+      groupRepositoryProvider.overrideWithValue(repository),
+      // Combat du groupe (bandeau, « Lancer un combat ») : aucun combat actif.
+      combatRepositoryProvider.overrideWithValue(FakeCombatRepository()),
+      connectivityCheckerProvider.overrideWithValue(FakeConnectivityChecker()),
+      currentUserFromTestOverride,
+    ],
+    child: MaterialApp.router(
+      routerConfig: _buildTestRouter(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('fr'),
+    ),
   );
 }
 
@@ -466,6 +484,11 @@ void main() {
       tester,
     ) async {
       fakeRepository.detailToReturn = ownerViewDetail();
+      // Écran haut : le bandeau « Pas de combat sans MJ » du propriétaire
+      // sans rôle MJ pousse le pied de liste hors de la fenêtre construite.
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
 
       await tester.pumpWidget(_buildTestWidget(fakeRepository));
       await tester.pumpAndSettle();

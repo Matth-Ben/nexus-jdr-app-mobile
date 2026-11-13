@@ -8132,6 +8132,552 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Nouvelle version disponible. Ouvrir la page de mise à jour.'**
   String get updateBannerCompactSemantics;
+
+  /// Bandeau du combat, ligne 1.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat en cours · round {round}'**
+  String combatBannerTitle(int round);
+
+  /// Bandeau du combat, ligne 2 avec tour actif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tour de {name} · Ouvrir le combat'**
+  String combatBannerTurn(String name);
+
+  /// Bandeau du combat, ligne 2 sans tour actif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun tour actif · Ouvrir le combat'**
+  String get combatBannerNoTurn;
+
+  /// Bandeau du combat, ligne 2 quand le MJ est absent.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente du MJ'**
+  String get combatBannerAwaitingMaster;
+
+  /// Bandeau du combat hors ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors ligne · état de {time}'**
+  String combatBannerOffline(String time);
+
+  /// Titre de l'écran Combat (en-tête bois).
+  ///
+  /// In fr, this message translates to:
+  /// **'COMBAT'**
+  String get combatScreenTitle;
+
+  /// Ligne 1 de l'en-tête du combat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Round {round}'**
+  String combatRound(int round);
+
+  /// Ligne 2 de l'en-tête : participant dont c'est le tour.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tour de {name}'**
+  String combatTurnOf(String name);
+
+  /// Aucun participant n'a encore la main.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun tour actif'**
+  String get combatNoActiveTurn;
+
+  /// Progression des initiatives saisies.
+  ///
+  /// In fr, this message translates to:
+  /// **'initiatives {done}/{total}'**
+  String combatInitiativeProgress(int done, int total);
+
+  /// Libellé de la ligne dont c'est le tour.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tour en cours'**
+  String get combatCurrentTurnLabel;
+
+  /// Libellé d'une ligne sans initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Initiative à saisir'**
+  String get combatInitiativeToEnter;
+
+  /// Bouton de saisie d'initiative sur une ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renseigner'**
+  String get combatFillInitiative;
+
+  /// Badge personnage joueur.
+  ///
+  /// In fr, this message translates to:
+  /// **'PJ'**
+  String get combatBadgePc;
+
+  /// Badge personnage non joueur / monstre.
+  ///
+  /// In fr, this message translates to:
+  /// **'PNJ'**
+  String get combatBadgeNpc;
+
+  /// Pastille sur la ligne du joueur connecté.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toi'**
+  String get combatYouTag;
+
+  /// Libellé d'une ligne en attente.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente'**
+  String get combatStatusWaiting;
+
+  /// Libellé d'une ligne retirée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retiré'**
+  String get combatStatusRemoved;
+
+  /// Section repliable des participants retirés (MJ).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirés ({count})'**
+  String combatRemovedSection(int count);
+
+  /// Menu de ligne (MJ).
+  ///
+  /// In fr, this message translates to:
+  /// **'Éditer l\'initiative'**
+  String get combatMenuEditInitiative;
+
+  /// Menu de ligne (joueur, sa propre ligne).
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier mon initiative'**
+  String get combatMenuEditMine;
+
+  /// Menu de ligne (MJ).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer du combat'**
+  String get combatMenuRemove;
+
+  /// Titre de la confirmation de retrait.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer {name} du combat ?'**
+  String combatRemoveConfirmTitle(String name);
+
+  /// Corps de la confirmation de retrait.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il ne pourra pas être réintégré dans ce combat.'**
+  String get combatRemoveConfirmBody;
+
+  /// Bouton de confirmation du retrait.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get combatRemoveConfirmAction;
+
+  /// Entrée du menu et du mode de réordonnancement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réordonner les égalités'**
+  String get combatReorderMode;
+
+  /// Sortie du mode de réordonnancement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminé'**
+  String get combatReorderDone;
+
+  /// Action de réordonnancement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Monter {name}'**
+  String combatMoveUp(String name);
+
+  /// Action de réordonnancement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Descendre {name}'**
+  String combatMoveDown(String name);
+
+  /// Indice d'une flèche désactivée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Limite de l\'égalité'**
+  String get combatReorderLimit;
+
+  /// Poignée de glisser-déposer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Glisser {name}'**
+  String combatReorderHandle(String name);
+
+  /// Bouton de défilement vers le tour actif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le tour en cours'**
+  String get combatJumpToTurn;
+
+  /// Pied fixe du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un monstre'**
+  String get combatAddMonster;
+
+  /// Menu du MJ et bouton de confirmation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer le combat'**
+  String get combatEnd;
+
+  /// Titre de la confirmation de fin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer le combat ?'**
+  String get combatEndConfirmTitle;
+
+  /// Corps de la confirmation de fin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le combat disparaît pour tous les joueurs. Round atteint : {round}.'**
+  String combatEndConfirmBody(int round);
+
+  /// Bouton MJ de l'onglet Membres.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer un combat'**
+  String get combatStart;
+
+  /// Indice des actions désactivées hors ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Indisponible hors ligne'**
+  String get combatStartUnavailableOffline;
+
+  /// Conflit au lancement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un combat est déjà en cours.'**
+  String get combatStartAlreadyActive;
+
+  /// Bandeau du propriétaire sans rôle MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas de combat sans MJ dans l\'app.'**
+  String get combatNoMasterExplain;
+
+  /// Lien du bandeau « Pas de combat sans MJ ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Paramètres du groupe'**
+  String get combatNoMasterSettings;
+
+  /// Titre de la feuille d'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Initiative de {name}'**
+  String combatInitiativeSheetTitle(String name);
+
+  /// Libellé du champ d'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Initiative'**
+  String get combatInitiativeField;
+
+  /// Erreur de saisie d'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Entre -20 et 60'**
+  String get combatInitiativeRangeError;
+
+  /// Compteur moins.
+  ///
+  /// In fr, this message translates to:
+  /// **'Diminuer l\'initiative'**
+  String get combatInitiativeDecrease;
+
+  /// Compteur plus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Augmenter l\'initiative'**
+  String get combatInitiativeIncrease;
+
+  /// Aide Dex (saisie par le joueur, PR3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Dextérité : {mod} → d20 {mod}'**
+  String combatDexHelp(String mod);
+
+  /// Bouton du lanceur (PR3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer un d20'**
+  String get combatRollD20;
+
+  /// Bouton du lanceur (PR3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser {total}'**
+  String combatUseRoll(int total);
+
+  /// Annonce (PR3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Résultat repris : {total}'**
+  String combatRollUsedAnnounce(int total);
+
+  /// Bouton primaire des feuilles.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get combatSave;
+
+  /// Bouton secondaire des feuilles et confirmations.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get combatCancel;
+
+  /// Champ du nom du monstre.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom'**
+  String get combatMonsterName;
+
+  /// Compteur de quantité.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quantité ×N'**
+  String get combatMonsterQuantity;
+
+  /// Compteur moins.
+  ///
+  /// In fr, this message translates to:
+  /// **'Diminuer la quantité'**
+  String get combatQuantityDecrease;
+
+  /// Compteur plus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Augmenter la quantité'**
+  String get combatQuantityIncrease;
+
+  /// Aperçu de la numérotation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sera ajouté : {names}'**
+  String combatMonsterPreview(String names);
+
+  /// Aperçu au-delà de 4 monstres.
+  ///
+  /// In fr, this message translates to:
+  /// **'{first} … {last} ({count} monstres)'**
+  String combatMonsterPreviewMany(String first, String last, int count);
+
+  /// Ajout d'un monstre.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get combatAdd;
+
+  /// Ajout sans fermer la feuille.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter et continuer'**
+  String get combatAddAndContinue;
+
+  /// Annonce après « Ajouter et continuer ».
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, one{1 ajouté} other{{count} ajoutés}}'**
+  String combatAddedAnnounce(int count);
+
+  /// État vide du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le combat est lancé'**
+  String get combatEmptyMasterTitle;
+
+  /// État vide du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoute des monstres et attends les initiatives.'**
+  String get combatEmptyMasterBody;
+
+  /// État vide du joueur.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ prépare le combat.'**
+  String get combatEmptyPlayer;
+
+  /// Libellé sémantique du chargement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chargement du combat'**
+  String get combatLoading;
+
+  /// Erreur de chargement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger le combat.'**
+  String get combatLoadError;
+
+  /// Bandeau hors ligne de l'écran Combat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors ligne · dernier état connu à {time}. Lecture seule.'**
+  String combatOfflineBanner(String time);
+
+  /// Bandeau MJ absent.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente du MJ. Seul le MJ peut terminer le combat.'**
+  String get combatAwaitingMasterBody;
+
+  /// Résumé d'un combat terminé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat terminé · {rounds, plural, one{{rounds} round} other{{rounds} rounds}} · {count, plural, one{{count} participant} other{{count} participants}}'**
+  String combatEndedSummary(int rounds, int count);
+
+  /// Sortie du résumé de fin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour au groupe'**
+  String get combatBackToGroup;
+
+  /// Annonce polie d'un changement de tour.
+  ///
+  /// In fr, this message translates to:
+  /// **'Round {round}. Tour de {name}.'**
+  String combatAnnounceTurn(int round, String name);
+
+  /// Annonce polie quand c'est le tour du joueur.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est ton tour.'**
+  String get combatAnnounceYourTurn;
+
+  /// Annonce polie de fin de combat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le combat est terminé.'**
+  String get combatAnnounceEnded;
+
+  /// Petit libellé sous la valeur d'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Init.'**
+  String get combatInitLabel;
+
+  /// Sémantique d'une ligne avec initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'{rank}. {name}, {kind}, initiative {initiative}'**
+  String combatRowSemantics(int rank, String name, String kind, int initiative);
+
+  /// Sémantique d'une ligne sans initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name}, {kind}, initiative à saisir'**
+  String combatRowSemanticsPending(String name, String kind);
+
+  /// Libellé du menu de l'en-tête.
+  ///
+  /// In fr, this message translates to:
+  /// **'Actions du combat'**
+  String get combatKebabLabel;
+
+  /// Libellé du menu de ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Actions pour {name}'**
+  String combatRowMenuLabel(String name);
+
+  /// Message au joueur retiré.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ t\'a retiré de ce combat. Tu ne peux pas le rejoindre à nouveau.'**
+  String get combatPlayerRemoved;
+
+  /// Garde du propriétaire.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu ne peux pas quitter le groupe pendant un combat en cours. Termine d\'abord le combat.'**
+  String get combatLeaveBlocked;
+
+  /// Échec générique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Action impossible. Réessaie.'**
+  String get combatFailureGeneric;
+
+  /// Échec local : aucun combat actif connu.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun combat actif.'**
+  String get combatFailureNoActive;
+
+  /// Réponse serveur combat_not_found.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce combat n\'existe plus ou n\'est plus accessible.'**
+  String get combatFailureNotFound;
+
+  /// Échec de transport.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion instable. Réessaie.'**
+  String get combatFailureNetwork;
+
+  /// Réponse serveur not_group_owner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seul le MJ peut faire cela.'**
+  String get combatFailureNotOwner;
+
+  /// Réponse serveur gm_absent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ n\'est plus dans le groupe : lecture seule.'**
+  String get combatFailureGmAbsent;
+
+  /// Réponse serveur npc_limit_per_call.
+  ///
+  /// In fr, this message translates to:
+  /// **'20 monstres au maximum à la fois.'**
+  String get combatFailureNpcLimitCall;
+
+  /// Réponse serveur npc_limit_per_combat.
+  ///
+  /// In fr, this message translates to:
+  /// **'60 monstres au maximum par combat.'**
+  String get combatFailureNpcLimitCombat;
+
+  /// Réponse serveur invalid_name.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom invalide (1 à 80 caractères).'**
+  String get combatFailureInvalidName;
+
+  /// Réponse serveur combat_not_active.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce combat est déjà terminé.'**
+  String get combatFailureNotActive;
+
+  /// Réponse serveur participant_removed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce participant a été retiré du combat.'**
+  String get combatFailureParticipantRemoved;
 }
 
 class _AppLocalizationsDelegate

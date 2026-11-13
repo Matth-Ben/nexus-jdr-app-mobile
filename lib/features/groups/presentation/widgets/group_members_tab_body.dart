@@ -37,8 +37,14 @@ class GroupMembersTabBody extends StatelessWidget {
     required this.detail,
     required this.onRemoveMember,
     required this.onLeaveGroup,
+    this.combatSection,
     super.key,
   });
+
+  /// Entrée « Lancer un combat » / bandeau « Pas de combat sans MJ » (voir
+  /// `StartCombatSection`), fournie par `group_screen.dart` pour que cet
+  /// onglet reste déclaratif et sans dépendance au combat.
+  final Widget? combatSection;
 
   final GroupDetail detail;
   final RemoveGroupMemberCallback onRemoveMember;
@@ -89,6 +95,7 @@ class GroupMembersTabBody extends StatelessWidget {
       children: [
         const _LiveUpdateIndicator(),
         const SizedBox(height: AppSpacing.md),
+        ?combatSection,
         if (showBanner) ...[
           const InfoBanner(
             icon: Icons.share_outlined,

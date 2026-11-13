@@ -26,6 +26,8 @@ Future<bool?> showGroupConfirmationDialog(
   required String message,
   required String confirmLabel,
   bool destructive = true,
+  String cancelLabel = 'Annuler',
+  bool focusCancelInitially = false,
 }) {
   return showDialog<bool>(
     context: context,
@@ -63,10 +65,16 @@ Future<bool?> showGroupConfirmationDialog(
             Row(
               children: [
                 Expanded(
-                  child: SecondaryButton(
-                    label: 'Annuler',
-                    surface: SecondaryButtonSurface.parchment,
-                    onPressed: () => Navigator.of(context).pop(false),
+                  child: Focus(
+                    // Focus initial sur « Annuler » (actions destructrices du
+                    // combat) : un appui accidentel sur Entrée n'est jamais
+                    // une confirmation.
+                    autofocus: focusCancelInitially,
+                    child: SecondaryButton(
+                      label: cancelLabel,
+                      surface: SecondaryButtonSurface.parchment,
+                      onPressed: () => Navigator.of(context).pop(false),
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),

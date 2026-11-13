@@ -41,6 +41,9 @@ class FakeCombatRepository implements CombatRepository {
   final List<String> calls = [];
   CombatFailure? writeFailure;
 
+  /// Si posé, toute écriture attend ce signal (état « en cours »).
+  Completer<void>? writeGate;
+
   FakeCombatChannel get lastChannel => channels.last;
 
   @override
@@ -64,6 +67,8 @@ class FakeCombatRepository implements CombatRepository {
 
   Future<T> _write<T>(String call, T value) async {
     calls.add(call);
+    final gate = writeGate;
+    if (gate != null) await gate.future;
     final failure = writeFailure;
     if (failure != null) throw failure;
     return value;

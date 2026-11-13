@@ -26,6 +26,7 @@ import '../../features/character_sharing/presentation/shared_character_view_scre
 import '../../features/characters/presentation/character_detail_screen.dart';
 import '../../features/characters/presentation/character_list_screen.dart';
 import '../../features/characters/presentation/level_up_screen.dart';
+import '../../features/combat/presentation/combat_screen.dart';
 import '../../features/groups/presentation/group_character_reassignment_screen.dart';
 import '../../features/groups/presentation/group_create_screen.dart';
 import '../../features/groups/presentation/group_join_screen.dart';
@@ -544,6 +545,15 @@ GoRouter appRouter(Ref ref) {
         path: '/groups/:id/settings',
         builder: (context, state) =>
             GroupSettingsScreen(groupId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        // Écran « Combat » du groupe (`features/combat/`) — poussé depuis le
+        // bandeau du groupe et le bouton « Lancer un combat » ; spec
+        // `docs/combat-groupe-ui.md`.
+        name: 'group-combat',
+        path: '/groups/:id/combat',
+        builder: (context, state) =>
+            CombatScreen(groupId: state.pathParameters['id']!),
       ),
       GoRoute(
         // Fiche complète, en lecture seule, d'un autre membre du groupe —

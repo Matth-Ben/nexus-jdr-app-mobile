@@ -7,6 +7,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/network/connectivity_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../data/combat_error_mapper.dart';
 import '../../data/combat_repository.dart';
 import '../../domain/combat.dart';
@@ -45,8 +46,9 @@ Duration? _noRetry(int retryCount, Object error) => null;
 ///
 /// `keepAlive` : le dernier état est gardé **en mémoire** (jamais persisté,
 /// pas de cache drift) pour que l'écran Groupe et la fiche l'affichent
-/// immédiatement. Limite connue : il n'est pas purgé à la déconnexion tant que
-/// le conteneur vit (voir le rapport de la PR1).
+/// immédiatement. Il est **purgé** (`invalidateSelf`) dès que l'utilisateur
+/// authentifié change (déconnexion, autre compte) : un autre compte ne voit
+/// jamais l'instantané du précédent.
 ///
 /// Stratégie Realtime : « notification de changement puis refetch complet »
 /// ([scheduleRefresh] debouncé, [refresh] immédiat). Un seul refetch à la
@@ -59,9 +61,26 @@ class CombatNotifier extends _$CombatNotifier {
   bool _dirty = false;
   Timer? _debounce;
 
+  /// Génération de l'état : incrémentée à chaque (re)construction. Un refetch
+  /// lancé avant une purge (changement d'utilisateur) ne doit jamais écrire
+  /// son résultat dans l'état du compte suivant.
+  int _epoch = 0;
+
   @override
   CombatViewState build(String groupId) {
+    _epoch++;
+    _inFlight = null;
+    _dirty = false;
+    _debounce?.cancel();
     ref.onDispose(() => _debounce?.cancel());
+    // Purge à la déconnexion / changement de compte : l'état (gardé en
+    // mémoire, `keepAlive`) ne doit jamais fuiter vers un autre utilisateur.
+    ref.listen<String?>(currentUserProvider.select((user) => user?.id), (
+      previous,
+      next,
+    ) {
+      if (previous != next) ref.invalidateSelf();
+    });
     Future.microtask(() {
       if (ref.mounted) unawaited(refresh());
     });
@@ -84,13 +103,14 @@ class CombatNotifier extends _$CombatNotifier {
   }
 
   Future<void> _runRefresh() async {
+    final epoch = _epoch;
     try {
       do {
         _dirty = false;
         await _fetchOnce();
-      } while (_dirty && ref.mounted);
+      } while (_dirty && ref.mounted && epoch == _epoch);
     } finally {
-      _inFlight = null;
+      if (epoch == _epoch) _inFlight = null;
     }
   }
 
@@ -103,9 +123,10 @@ class CombatNotifier extends _$CombatNotifier {
   }
 
   Future<void> _fetchOnce() async {
+    final epoch = _epoch;
     try {
       final snapshot = await _repository.fetchActiveCombat(groupId);
-      if (!ref.mounted) return;
+      if (!ref.mounted || epoch != _epoch) return;
       final now = ref.read(combatClockProvider)();
       final previous = state;
       if (snapshot != null) {
@@ -137,7 +158,7 @@ class CombatNotifier extends _$CombatNotifier {
         state = CombatViewState(phase: CombatPhase.none, lastKnownAt: now);
       }
     } catch (error) {
-      if (!ref.mounted) return;
+      if (!ref.mounted || epoch != _epoch) return;
       final failure = mapCombatUnknownError(error);
       final previous = state;
       state = previous.phase == CombatPhase.loading
@@ -204,7 +225,7 @@ class CombatNotifier extends _$CombatNotifier {
   CombatSnapshot _requireActive() {
     final snapshot = state.snapshot;
     if (state.phase != CombatPhase.active || snapshot == null) {
-      throw const CombatFailure(CombatFailureKind.combatNotFound);
+      throw const CombatFailure(CombatFailureKind.noActiveCombat);
     }
     return snapshot;
   }
