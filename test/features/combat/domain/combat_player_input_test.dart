@@ -4,7 +4,6 @@ import 'package:personnages/features/combat/domain/combat_participant.dart';
 import 'package:personnages/features/combat/domain/combat_permissions.dart';
 import 'package:personnages/features/combat/domain/combat_player_input.dart';
 import 'package:personnages/features/combat/domain/combat_reorder.dart';
-import 'package:personnages/features/combat/domain/combat_snapshot.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/features/groups/domain/group_member.dart';
 import 'package:personnages/features/groups/domain/group_role.dart';

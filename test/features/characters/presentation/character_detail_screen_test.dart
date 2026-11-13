@@ -70,6 +70,7 @@ import '../../../support/combat_fixtures.dart';
 import '../../../support/fake_combat_repository.dart';
 import '../../../support/fake_current_user.dart';
 import '../../../support/fake_group_character_lookup.dart';
+
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
 

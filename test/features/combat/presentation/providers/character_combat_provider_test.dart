@@ -1,9 +1,6 @@
 // Groupe d'un personnage (cache mémoire, hors ligne, plusieurs groupes) et
 // bandeau de combat de sa fiche. Voir `character_combat_provider.dart`.
 
-import 'dart:async';
-
-import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';

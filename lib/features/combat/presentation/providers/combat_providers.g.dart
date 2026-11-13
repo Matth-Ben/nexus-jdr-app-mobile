@@ -494,10 +494,8 @@ final class CombatRealtimeWatcherFamily extends $Family
 /// rapport (ex. initiative d'un participant) ne reconstruisent pas le bandeau
 /// ni la fiche. Maintient aussi l'abonnement Realtime tant qu'il est observé.
 ///
-/// Retrouver le groupe d'un personnage n'existe pas encore dans `groups`
-/// (`myGroups` ne liste pas les personnages des groupes) : la PR3 devra
-/// fournir ce `groupId`, par exemple une requête `group_members` filtrée sur
-/// `character_id` (aucune requête réseau supplémentaire n'est inventée ici).
+/// Le groupe d'un personnage se retrouve avec `characterGroupIdsProvider` /
+/// `characterCombatBannerProvider` (`character_combat_provider.dart`).
 
 @ProviderFor(combatBanner)
 final combatBannerProvider = CombatBannerFamily._();
@@ -507,10 +505,8 @@ final combatBannerProvider = CombatBannerFamily._();
 /// rapport (ex. initiative d'un participant) ne reconstruisent pas le bandeau
 /// ni la fiche. Maintient aussi l'abonnement Realtime tant qu'il est observé.
 ///
-/// Retrouver le groupe d'un personnage n'existe pas encore dans `groups`
-/// (`myGroups` ne liste pas les personnages des groupes) : la PR3 devra
-/// fournir ce `groupId`, par exemple une requête `group_members` filtrée sur
-/// `character_id` (aucune requête réseau supplémentaire n'est inventée ici).
+/// Le groupe d'un personnage se retrouve avec `characterGroupIdsProvider` /
+/// `characterCombatBannerProvider` (`character_combat_provider.dart`).
 
 final class CombatBannerProvider
     extends
@@ -525,10 +521,8 @@ final class CombatBannerProvider
   /// rapport (ex. initiative d'un participant) ne reconstruisent pas le bandeau
   /// ni la fiche. Maintient aussi l'abonnement Realtime tant qu'il est observé.
   ///
-  /// Retrouver le groupe d'un personnage n'existe pas encore dans `groups`
-  /// (`myGroups` ne liste pas les personnages des groupes) : la PR3 devra
-  /// fournir ce `groupId`, par exemple une requête `group_members` filtrée sur
-  /// `character_id` (aucune requête réseau supplémentaire n'est inventée ici).
+  /// Le groupe d'un personnage se retrouve avec `characterGroupIdsProvider` /
+  /// `characterCombatBannerProvider` (`character_combat_provider.dart`).
   CombatBannerProvider._({
     required CombatBannerFamily super.from,
     required String super.argument,
@@ -581,17 +575,15 @@ final class CombatBannerProvider
   }
 }
 
-String _$combatBannerHash() => r'5eff315e63f9552d5c0a4608bc4d5037b53f2200';
+String _$combatBannerHash() => r'a233a957ed1ec6b7b5da87b3f1d98f8e4ff929ce';
 
 /// Combat actif du groupe [groupId], pour le bandeau de la fiche : `null` si
 /// aucun combat actif. **Rebuild ciblé** (`select`) : les changements sans
 /// rapport (ex. initiative d'un participant) ne reconstruisent pas le bandeau
 /// ni la fiche. Maintient aussi l'abonnement Realtime tant qu'il est observé.
 ///
-/// Retrouver le groupe d'un personnage n'existe pas encore dans `groups`
-/// (`myGroups` ne liste pas les personnages des groupes) : la PR3 devra
-/// fournir ce `groupId`, par exemple une requête `group_members` filtrée sur
-/// `character_id` (aucune requête réseau supplémentaire n'est inventée ici).
+/// Le groupe d'un personnage se retrouve avec `characterGroupIdsProvider` /
+/// `characterCombatBannerProvider` (`character_combat_provider.dart`).
 
 final class CombatBannerFamily extends $Family
     with $FunctionalFamilyOverride<CombatBannerInfo?, String> {
@@ -609,10 +601,8 @@ final class CombatBannerFamily extends $Family
   /// rapport (ex. initiative d'un participant) ne reconstruisent pas le bandeau
   /// ni la fiche. Maintient aussi l'abonnement Realtime tant qu'il est observé.
   ///
-  /// Retrouver le groupe d'un personnage n'existe pas encore dans `groups`
-  /// (`myGroups` ne liste pas les personnages des groupes) : la PR3 devra
-  /// fournir ce `groupId`, par exemple une requête `group_members` filtrée sur
-  /// `character_id` (aucune requête réseau supplémentaire n'est inventée ici).
+  /// Le groupe d'un personnage se retrouve avec `characterGroupIdsProvider` /
+  /// `characterCombatBannerProvider` (`character_combat_provider.dart`).
 
   CombatBannerProvider call(String groupId) =>
       CombatBannerProvider._(argument: groupId, from: this);
