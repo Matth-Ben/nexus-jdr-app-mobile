@@ -91,3 +91,5 @@ notification.
   initiative : le client tolère des membres sans ligne.
 - Tri côté client : initiative décroissante (NULL en dernier), puis `sort_order` croissant (le serveur place PJ avant PNJ
   puis l'ordre d'arrivée) ; aucune règle de tri propre au client.
+
+Spec visuelle finale (écrans, états, bandeaux, feuilles, recettage, clés .arb) : `docs/combat-groupe-ui.md`.
