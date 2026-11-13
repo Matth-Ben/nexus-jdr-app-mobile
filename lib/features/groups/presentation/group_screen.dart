@@ -1,3 +1,5 @@
+import '../../combat/presentation/providers/character_combat_provider.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -139,6 +141,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
 
     try {
       await ref.read(groupRepositoryProvider).leaveGroup(widget.groupId);
+      ref.invalidate(characterGroupIdsProvider);
       if (!mounted) return;
       context.go('/');
       _showSnackBar('Tu as quitté le groupe.');

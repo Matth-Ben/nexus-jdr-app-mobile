@@ -1,3 +1,5 @@
+import '../../combat/presentation/providers/character_combat_provider.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -281,6 +283,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
       final result = await ref
           .read(groupRepositoryProvider)
           .joinGroup(code: code, characterId: character?.id);
+      ref.invalidate(characterGroupIdsProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Groupe rejoint !')));

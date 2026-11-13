@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:personnages/features/combat/presentation/providers/character_combat_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,9 +43,13 @@ class _NoopSubscription implements GroupRealtimeSubscription {
 }
 
 class _FakeGroupRepository implements GroupRepository {
+  int idsCalls = 0;
+
   @override
-  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async =>
-      const [];
+  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async {
+    idsCalls++;
+    return const [];
+  }
 
   GroupDetail? detailToReturn;
   Object? detailErrorToThrow;
@@ -743,6 +748,31 @@ void main() {
         expect(find.text('Tu as quitté le groupe.'), findsOneWidget);
       },
     );
+    testWidgets('quitter invalide le cache des groupes d\'un personnage (le '
+        'bandeau de combat disparaît sans attendre)', (tester) async {
+      fakeRepository.detailToReturn = memberViewDetail();
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MaterialApp)),
+      );
+      container.listen(characterGroupIdsProvider('c-1'), (_, _) {});
+      await tester.pumpAndSettle();
+      expect(fakeRepository.idsCalls, 1);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(WoodBackHeader),
+          matching: find.byIcon(Icons.logout),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Quitter'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.leaveGroupCalled, isTrue);
+      expect(fakeRepository.idsCalls, 2);
+    });
   });
 
   group('quitter le groupe (lien en pied de l\'onglet Membres)', () {

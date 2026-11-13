@@ -1,3 +1,5 @@
+import '../../../combat/presentation/providers/character_combat_provider.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -104,6 +106,7 @@ class _GroupDissolveSheetContentState
 
     try {
       await ref.read(groupRepositoryProvider).dissolveGroup(widget.groupId);
+      ref.invalidate(characterGroupIdsProvider);
     } catch (_) {
       if (!mounted) return;
       setState(() {

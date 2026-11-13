@@ -1,3 +1,5 @@
+import '../../combat/presentation/providers/character_combat_provider.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -136,6 +138,7 @@ class _GroupCharacterReassignmentScreenState
 
     try {
       await ref.read(groupRepositoryProvider).leaveGroup(widget.groupId);
+      ref.invalidate(characterGroupIdsProvider);
       if (!mounted) return;
       context.go('/groups');
     } on GroupFailure catch (failure) {
@@ -163,6 +166,7 @@ class _GroupCharacterReassignmentScreenState
           .read(groupRepositoryProvider)
           .setGroupCharacter(groupId: widget.groupId, characterId: characterId);
       ref.invalidate(groupDetailProvider(widget.groupId));
+      ref.invalidate(characterGroupIdsProvider);
       if (!mounted) return;
       context.go('/groups/${widget.groupId}');
     } on GroupCharacterReassignmentFailure catch (failure) {

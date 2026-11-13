@@ -8,8 +8,12 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:personnages/features/combat/presentation/providers/character_combat_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../support/fake_current_user.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
@@ -398,9 +402,13 @@ class _FakeCharacterRepository implements CharacterRepository {
 }
 
 class _FakeGroupRepository implements GroupRepository {
+  int idsCalls = 0;
+
   @override
-  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async =>
-      const [];
+  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async {
+    idsCalls++;
+    return const [];
+  }
 
   GroupPreview? previewToReturn;
   Object? previewErrorToThrow;
@@ -564,6 +572,7 @@ Widget _buildTestWidget({
     overrides: [
       characterRepositoryProvider.overrideWithValue(characterRepository),
       groupRepositoryProvider.overrideWithValue(groupRepository),
+      currentUserFromTestOverride,
     ],
     child: MaterialApp.router(routerConfig: _buildTestRouter()),
   );
@@ -587,6 +596,35 @@ void main() {
     characterRepository: fakeCharacterRepository,
     groupRepository: fakeGroupRepository,
   );
+
+  testWidgets('rejoindre un groupe invalide le cache des groupes d\'un '
+      'personnage (le bandeau de combat apparaît sans attendre)', (
+    tester,
+  ) async {
+    fakeCharacterRepository.charactersToReturn = const [
+      CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
+    ];
+    await tester.pumpWidget(buildWidget());
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    );
+    container.listen(characterGroupIdsProvider('42'), (_, _) {});
+    await tester.pumpAndSettle();
+    expect(fakeGroupRepository.idsCalls, 1);
+
+    await tester.tap(find.text('Borgan'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('MJ — sans personnage'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'ab3f7k');
+    await tester.pump();
+    await tester.tap(find.text('REJOINDRE'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Écran Groupe group-1'), findsOneWidget);
+    expect(fakeGroupRepository.idsCalls, 2);
+  });
 
   testWidgets('affiche le titre et le texte d\'intro', (tester) async {
     fakeCharacterRepository.charactersToReturn = const [];
