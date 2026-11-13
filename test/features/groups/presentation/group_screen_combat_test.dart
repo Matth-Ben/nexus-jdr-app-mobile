@@ -1,12 +1,15 @@
 // Écran Groupe : bandeau « Combat en cours » (3 onglets, tappable, hors zone
 // défilante) et entrée « Lancer un combat » de l'onglet Membres.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/features/combat/domain/combat_failure.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
 import 'package:personnages/features/combat/presentation/widgets/combat_banner.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
@@ -260,6 +263,100 @@ void main() {
       await tester.pumpAndSettle();
       expect(repo.calls, ['start:group-1']);
       expect(find.text('ÉCRAN COMBAT'), findsOneWidget);
+    });
+  });
+
+  group('garde du propriétaire : jamais de départ pendant un combat', () {
+    const blocked =
+        'Tu ne peux pas quitter le groupe pendant un combat en cours. '
+        "Termine d'abord le combat.";
+
+    Future<void> tryLeave(WidgetTester tester, GroupDetail detail) async {
+      final state = tester.state(find.byType(GroupScreen)) as dynamic;
+      // ignore: avoid_dynamic_calls
+      unawaited(state.confirmLeaveGroupForTest(detail) as Future<void>);
+      await tester.pumpAndSettle();
+    }
+
+    final dialog = find.textContaining('Quitter « ');
+
+    testWidgets('propriétaire + combat actif : message, aucun dialogue', (
+      tester,
+    ) async {
+      repo.snapshot = fakeSnapshot();
+      final detail = fakeGroupDetail();
+      await _pump(tester, _app(repo: repo, detail: detail));
+      await tryLeave(tester, detail);
+      expect(find.text(blocked), findsOneWidget);
+      expect(dialog, findsNothing);
+    });
+
+    testWidgets('état encore en chargement : le refetch décide', (
+      tester,
+    ) async {
+      repo
+        ..snapshot = fakeSnapshot()
+        ..fetchGate = Completer<void>();
+      final detail = fakeGroupDetail();
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(_app(repo: repo, detail: detail));
+      await tester.pump();
+      final state = tester.state(find.byType(GroupScreen)) as dynamic;
+      // ignore: avoid_dynamic_calls
+      unawaited(state.confirmLeaveGroupForTest(detail) as Future<void>);
+      await tester.pump();
+      expect(dialog, findsNothing);
+      repo.fetchGate!.complete();
+      await tester.pumpAndSettle();
+      expect(find.text(blocked), findsOneWidget);
+      expect(dialog, findsNothing);
+    });
+
+    testWidgets('hors ligne avec un combat actif déjà connu : bloqué', (
+      tester,
+    ) async {
+      repo.snapshot = fakeSnapshot();
+      final detail = fakeGroupDetail();
+      await _pump(tester, _app(repo: repo, detail: detail));
+      repo.fetchFailure = const CombatFailure.network();
+      await tryLeave(tester, detail);
+      expect(find.text(blocked), findsOneWidget);
+      expect(dialog, findsNothing);
+    });
+
+    testWidgets('le refetch révèle un combat alors que l\'état était vide', (
+      tester,
+    ) async {
+      final detail = fakeGroupDetail();
+      await _pump(tester, _app(repo: repo, detail: detail));
+      expect(find.byKey(const Key('combatBanner')), findsNothing);
+      repo.snapshot = fakeSnapshot();
+      await tryLeave(tester, detail);
+      expect(find.text(blocked), findsOneWidget);
+      expect(dialog, findsNothing);
+    });
+
+    testWidgets('propriétaire sans combat : confirmation habituelle', (
+      tester,
+    ) async {
+      final detail = fakeGroupDetail();
+      await _pump(tester, _app(repo: repo, detail: detail));
+      await tryLeave(tester, detail);
+      expect(dialog, findsOneWidget);
+      expect(find.text(blocked), findsNothing);
+    });
+
+    testWidgets('membre non propriétaire : peut quitter malgré le combat', (
+      tester,
+    ) async {
+      repo.snapshot = fakeSnapshot();
+      final detail = fakeGroupDetail(asPlayer: true);
+      await _pump(tester, _app(repo: repo, detail: detail));
+      await tryLeave(tester, detail);
+      expect(dialog, findsOneWidget);
+      expect(find.text(blocked), findsNothing);
     });
   });
 }

@@ -81,6 +81,33 @@ void main() {
       expect(offset(tester), before);
     });
 
+    testWidgets('une bannière qui apparaît au-dessus de la liste ne change '
+        'pas l\'offset de défilement', (tester) async {
+      final h = CombatHarness();
+      h.repo.snapshot = fakeSnapshot(
+        combat: fakeCombat(currentParticipantId: 'p25'),
+        participants: many(),
+      );
+      await h.pumpScreen(tester);
+      await tester.drag(find.byType(ListView), const Offset(0, 300));
+      await tester.pumpAndSettle();
+      final before = offset(tester);
+      expect(before, greaterThan(0));
+      expect(find.textContaining('Hors ligne'), findsNothing);
+
+      // Hors ligne : une bannière s'insère au-dessus de la liste.
+      h.connectivity.goOffline();
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Hors ligne'), findsOneWidget);
+      expect(offset(tester), before);
+
+      // Retour en ligne : la bannière disparaît, l'offset reste.
+      h.connectivity.goOnline();
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Hors ligne'), findsNothing);
+      expect(offset(tester), before);
+    });
+
     testWidgets('« Voir le tour en cours » : seul son appui fait défiler', (
       tester,
     ) async {

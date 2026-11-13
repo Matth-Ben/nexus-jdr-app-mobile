@@ -62,24 +62,28 @@ class InitiativeField extends StatelessWidget {
             Expanded(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 44),
-                child: TextField(
-                  key: const Key('combatInitiativeField'),
-                  controller: controller,
-                  focusNode: focusNode,
-                  onChanged: (_) => onChanged(),
-                  textAlign: TextAlign.center,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    signed: true,
+                child: Semantics(
+                  label: l10n.combatInitiativeField,
+                  textField: true,
+                  child: TextField(
+                    key: const Key('combatInitiativeField'),
+                    controller: controller,
+                    focusNode: focusNode,
+                    onChanged: (_) => onChanged(),
+                    textAlign: TextAlign.center,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      signed: true,
+                    ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-−]')),
+                      LengthLimitingTextInputFormatter(4),
+                    ],
+                    style: AppTypography.body(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    decoration: _decoration(invalid),
                   ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-−]')),
-                    LengthLimitingTextInputFormatter(4),
-                  ],
-                  style: AppTypography.body(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                  decoration: _decoration(invalid),
                 ),
               ),
             ),

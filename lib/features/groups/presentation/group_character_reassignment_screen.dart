@@ -56,6 +56,7 @@ class _GroupCharacterReassignmentScreenState
     extends ConsumerState<GroupCharacterReassignmentScreen> {
   String? _selectedCharacterId;
   bool _isSaving = false;
+  bool _leaveInFlight = false;
   String? _bannerMessage;
 
   void _goBack() {
@@ -82,7 +83,17 @@ class _GroupCharacterReassignmentScreenState
   }
 
   Future<void> _confirmLeaveGroup() async {
-    if (_isSaving) return;
+    if (_isSaving || _leaveInFlight) return;
+    // Pose dès l'entrée : un double appui ne doit pas ouvrir deux dialogues.
+    _leaveInFlight = true;
+    try {
+      await _confirmLeaveGroupGuarded();
+    } finally {
+      _leaveInFlight = false;
+    }
+  }
+
+  Future<void> _confirmLeaveGroupGuarded() async {
     // Garde du propriétaire : pas de départ pendant un combat actif.
     // Le détail n'est pas forcément déjà chargé (route autonome) : on
     // l'attend ; un échec laisse le serveur décider (il reste l'autorité).

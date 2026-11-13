@@ -176,40 +176,44 @@ class _AddMonsterSheetState extends State<AddMonsterSheet> {
                   const SizedBox(height: AppSpacing.xs),
                   ConstrainedBox(
                     constraints: const BoxConstraints(minHeight: 44),
-                    child: TextField(
-                      key: const Key('combatMonsterName'),
-                      controller: _name,
-                      focusNode: _nameFocus,
-                      autofocus: true,
-                      textCapitalization: TextCapitalization.sentences,
-                      inputFormatters: [
-                        LengthLimitingTextInputFormatter(kParticipantNameMax),
-                      ],
-                      onChanged: (_) => setState(() {}),
-                      style: AppTypography.body(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: AppColors.parchmentCard,
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: AppSpacing.sm,
+                    child: Semantics(
+                      label: l10n.combatMonsterName,
+                      textField: true,
+                      child: TextField(
+                        key: const Key('combatMonsterName'),
+                        controller: _name,
+                        focusNode: _nameFocus,
+                        autofocus: true,
+                        textCapitalization: TextCapitalization.sentences,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(kParticipantNameMax),
+                        ],
+                        onChanged: (_) => setState(() {}),
+                        style: AppTypography.body(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                          borderSide: const BorderSide(
-                            color: AppColors.woodLight,
-                            width: 1.5,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: AppColors.parchmentCard,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.sm,
                           ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                          borderSide: const BorderSide(
-                            color: AppColors.woodMedium,
-                            width: 1.5,
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                            borderSide: const BorderSide(
+                              color: AppColors.woodLight,
+                              width: 1.5,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                            borderSide: const BorderSide(
+                              color: AppColors.woodMedium,
+                              width: 1.5,
+                            ),
                           ),
                         ),
                       ),

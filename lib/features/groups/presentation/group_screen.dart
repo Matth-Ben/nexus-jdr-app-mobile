@@ -75,6 +75,7 @@ class GroupScreen extends ConsumerStatefulWidget {
 class _GroupScreenState extends ConsumerState<GroupScreen> {
   GroupTab _tab = GroupTab.members;
   bool _isWritingTreasure = false;
+  bool _leaveInFlight = false;
 
   void _goBack() {
     if (context.canPop()) {
@@ -90,16 +91,43 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Point d'entrée de test de la garde (le propriétaire n'a aucun lien de
+  /// départ visible : la garde défensive n'est sinon pas atteignable).
+  @visibleForTesting
+  Future<void> confirmLeaveGroupForTest(GroupDetail detail) =>
+      _confirmLeaveGroup(detail);
+
   Future<void> _confirmLeaveGroup(GroupDetail detail) async {
-    // Garde du propriétaire : jamais de départ pendant un combat actif (MJ
-    // absent = lecture seule pour tous). Le serveur reste l'autorité.
-    if (isLeaveBlockedByCombat(
-      isOwner: detail.isOwner,
-      hasActiveCombat: ref.read(combatProvider(widget.groupId)).hasActiveCombat,
-    )) {
-      _showSnackBar(AppLocalizations.of(context)!.combatLeaveBlocked);
-      return;
+    // Garde du propriétaire : jamais de départ pendant un combat actif. Le
+    // serveur n'applique PAS cette règle, cette garde est la seule protection :
+    // on refetch le combat avant de décider (un état `loading`/`error`/périmé
+    // ne doit jamais laisser passer). Hors ligne, `refresh()` avale l'erreur et
+    // laisse l'état périmé : un combat actif déjà connu bloque ; sans état
+    // connu (`loading`/`none`) le départ passe, mais `leaveGroup` échouerait
+    // de toute façon hors ligne.
+    if (_leaveInFlight) return;
+    _leaveInFlight = true;
+    try {
+      if (detail.isOwner) {
+        await ref.read(combatProvider(widget.groupId).notifier).refresh();
+        if (!mounted) return;
+        if (isLeaveBlockedByCombat(
+          isOwner: true,
+          hasActiveCombat: ref
+              .read(combatProvider(widget.groupId))
+              .hasActiveCombat,
+        )) {
+          _showSnackBar(AppLocalizations.of(context)!.combatLeaveBlocked);
+          return;
+        }
+      }
+      await _confirmLeaveGroupDialog(detail);
+    } finally {
+      _leaveInFlight = false;
     }
+  }
+
+  Future<void> _confirmLeaveGroupDialog(GroupDetail detail) async {
     final confirmed = await showGroupConfirmationDialog(
       context,
       title: 'Quitter « ${detail.name} » ?',

@@ -87,61 +87,51 @@ class CombatBannerView extends StatelessWidget {
                         ? AppSpacing.xs
                         : AppSpacing.sm,
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 1),
-                                  child: PixelIcon(
-                                    matrix: kCombatSwordsMatrix,
-                                    size: 16,
-                                    color: AppColors.accentTeal,
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.xs),
-                                Expanded(
-                                  child: Text(
-                                    title,
-                                    style: AppTypography.body(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 1),
+                            child: PixelIcon(
+                              matrix: kCombatSwordsMatrix,
+                              size: 16,
+                              color: AppColors.accentTeal,
                             ),
-                            const SizedBox.shrink(),
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    secondLine,
-                                    style:
-                                        AppTypography.body(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.textSecondary,
-                                        ).copyWith(
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.chevron_right,
-                                  color: AppColors.textSecondary,
-                                  size: 16,
-                                ),
-                              ],
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: AppTypography.body(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              secondLine,
+                              style: AppTypography.body(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textSecondary,
+                              ).copyWith(decoration: TextDecoration.underline),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: AppColors.textSecondary,
+                            size: 16,
+                          ),
+                        ],
                       ),
                     ],
                   ),

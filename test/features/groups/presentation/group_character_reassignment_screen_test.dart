@@ -917,6 +917,35 @@ void main() {
       expect(fakeGroupRepository.leaveGroupCalled, isFalse);
     });
 
+    testWidgets('double appui : un seul dialogue de confirmation', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+      final gate = Completer<GroupDetail>();
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          groupRepository: fakeGroupRepository,
+          extraOverrides: [
+            currentUserFromTestOverride,
+            combatRepositoryProvider.overrideWithValue(FakeCombatRepository()),
+            connectivityCheckerProvider.overrideWithValue(
+              FakeConnectivityChecker(),
+            ),
+            groupDetailProvider('group-1').overrideWith((ref) => gate.future),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Quitter le groupe'));
+      await tester.pump();
+      await tester.tap(find.text('Quitter le groupe'));
+      await tester.pump();
+      gate.complete(detail(owner: false));
+      await tester.pumpAndSettle();
+      expect(find.text('Quitter ce groupe ?'), findsOneWidget);
+    });
+
     testWidgets('propriétaire sans combat : confirmation habituelle', (
       tester,
     ) async {

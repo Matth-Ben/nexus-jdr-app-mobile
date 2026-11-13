@@ -367,4 +367,35 @@ void main() {
       );
     });
   });
+
+  group('libellés sémantiques des champs', () {
+    testWidgets('nom et initiative du monstre', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pump(
+        tester,
+        AddMonsterSheet(
+          onSubmit: _Submit().call,
+          existingNames: () => const [],
+        ),
+      );
+      expect(tester.getSemantics(_nameField).label, contains('Nom'));
+      expect(tester.getSemantics(_initField).label, contains('Initiative'));
+      expect(
+        tester.getSemantics(_nameField).flagsCollection.isTextField,
+        isTrue,
+      );
+      handle.dispose();
+    });
+
+    testWidgets('initiative (feuille MJ), en anglais', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pump(
+        tester,
+        const InitiativeSheet(participantName: 'Brun'),
+        locale: const Locale('en'),
+      );
+      expect(tester.getSemantics(_initField).label, contains('Initiative'));
+      handle.dispose();
+    });
+  });
 }
