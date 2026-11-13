@@ -204,7 +204,7 @@ extension on CombatBannerView {
                       : compact
                       ? AppSpacing.sm
                       : AppSpacing.md,
-                  vertical: compact ? 0 : AppSpacing.xs,
+                  vertical: compact ? (largeText ? 2 : 0) : AppSpacing.xs,
                 ),
                 child: Row(
                   children: [

@@ -378,7 +378,15 @@ void main() {
         connectivity.goOffline();
         await tester.pumpAndSettle();
         if (scale > 1) {
-          expect(tester.getSize(banner()).height, lessThanOrEqualTo(112));
+          final height = tester.getSize(banner()).height;
+          expect(height, lessThanOrEqualTo(120));
+          // Le texte ne touche pas la bordure : 2 dp de marge verticale mini (+ 2×2 de bordure).
+          final text = tester.getSize(
+            find
+                .descendant(of: banner(), matching: find.byType(RichText))
+                .first,
+          );
+          expect(height - text.height, greaterThanOrEqualTo(8));
         }
         expect(tester.takeException(), isNull);
       });
