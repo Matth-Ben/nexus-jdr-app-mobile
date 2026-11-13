@@ -8403,11 +8403,11 @@ abstract class AppLocalizations {
   /// **'Augmenter l\'initiative'**
   String get combatInitiativeIncrease;
 
-  /// Aide Dex sous le champ d'initiative d'un PJ : `mod` = modificateur signé (+3), `spaced` = même valeur avec espace (+ 3).
+  /// Aide sous le champ d'initiative d'un PJ : `mod` = modificateur de Dextérité signé (+3). Ne compte pas les bonus de dons et d'aptitudes.
   ///
   /// In fr, this message translates to:
-  /// **'Dextérité : {mod} → d20 {spaced}'**
-  String combatDexHelp(String mod, String spaced);
+  /// **'Modificateur de Dextérité : {mod} (hors bonus de dons et d\'aptitudes)'**
+  String combatDexHelp(String mod);
 
   /// Bouton du lanceur (PR3).
   ///

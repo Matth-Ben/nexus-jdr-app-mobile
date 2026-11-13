@@ -168,7 +168,12 @@ void main() {
       final h = await open(tester, roller: roller);
       await tester.tap(find.text('Renseigner'));
       await tester.pumpAndSettle();
-      expect(find.text('Dextérité : +3 → d20 + 3'), findsOneWidget);
+      expect(
+        find.text(
+          "Modificateur de Dextérité : +3 (hors bonus de dons et d'aptitudes)",
+        ),
+        findsOneWidget,
+      );
 
       await tester.tap(find.text('Lancer un d20'.toUpperCase()));
       await tester.pumpAndSettle();
@@ -216,7 +221,12 @@ void main() {
       await h.pumpScreen(tester);
       await tester.tap(find.text('Renseigner'));
       await tester.pumpAndSettle();
-      expect(find.text('Dextérité : −2 → d20 − 2'), findsOneWidget);
+      expect(
+        find.text(
+          "Modificateur de Dextérité : −2 (hors bonus de dons et d'aptitudes)",
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('MJ : d20 + 0 et aucune aide Dextérité', (tester) async {
@@ -436,7 +446,10 @@ void main() {
     expect(find.text('ENTER MY INITIATIVE'), findsOneWidget);
     await tester.tap(find.byKey(const Key('combatFillMine')));
     await tester.pumpAndSettle();
-    expect(find.text('Dexterity: +3 → d20 + 3'), findsOneWidget);
+    expect(
+      find.text('Dexterity modifier: +3 (excluding feat and feature bonuses)'),
+      findsOneWidget,
+    );
     expect(find.text('ROLL A D20'), findsOneWidget);
   });
 }

@@ -7,8 +7,7 @@ import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/initiative_input.dart';
-import 'add_monster_sheet.dart'
-    show CombatSheetAnnouncer, defaultCombatAnnouncer;
+import '../combat_announcer.dart';
 import 'initiative_field.dart';
 import 'initiative_roll_block.dart';
 

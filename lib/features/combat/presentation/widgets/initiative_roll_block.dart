@@ -80,7 +80,6 @@ class InitiativeRollBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final signed = SignedModifierFormatter.format(modifier);
-    final spaced = '${signed.substring(0, 1)} ${signed.substring(1)}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -88,7 +87,7 @@ class InitiativeRollBlock extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: Text(
-              l10n.combatDexHelp(signed, spaced),
+              l10n.combatDexHelp(signed),
               key: const Key('combatDexHelp'),
               style: AppTypography.body(
                 fontSize: 12,

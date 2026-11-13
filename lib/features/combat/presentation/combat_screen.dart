@@ -28,6 +28,7 @@ import '../domain/combat_player_input.dart';
 import '../domain/combat_reorder.dart';
 import '../domain/combat_snapshot.dart';
 import '../domain/combat_view_state.dart';
+import 'combat_announcer.dart';
 import 'combat_l10n.dart';
 import 'combat_motion.dart';
 import 'providers/combat_providers.dart';

@@ -5234,8 +5234,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get combatInitiativeIncrease => 'Augmenter l\'initiative';
 
   @override
-  String combatDexHelp(String mod, String spaced) {
-    return 'Dextérité : $mod → d20 $spaced';
+  String combatDexHelp(String mod) {
+    return 'Modificateur de Dextérité : $mod (hors bonus de dons et d\'aptitudes)';
   }
 
   @override

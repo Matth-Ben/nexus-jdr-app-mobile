@@ -1591,7 +1591,7 @@
   "combatInitiativeRangeError": "Enter -20 to 60",
   "combatInitiativeDecrease": "Decrease initiative",
   "combatInitiativeIncrease": "Increase initiative",
-  "combatDexHelp": "Dexterity: {mod} → d20 {spaced}",
+  "combatDexHelp": "Dexterity modifier: {mod} (excluding feat and feature bonuses)",
   "combatRollD20": "Roll a d20",
   "combatUseRoll": "Use {total}",
   "combatRollUsedAnnounce": "Result used: {total}",

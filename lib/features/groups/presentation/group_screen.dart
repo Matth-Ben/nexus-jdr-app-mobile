@@ -15,8 +15,7 @@ import '../../combat/domain/combat_announcement.dart';
 import '../../combat/domain/combat_permissions.dart';
 import '../../combat/domain/combat_view_state.dart';
 import '../../combat/presentation/providers/combat_providers.dart';
-import '../../combat/presentation/widgets/add_monster_sheet.dart'
-    show defaultCombatAnnouncer;
+import '../../combat/presentation/combat_announcer.dart';
 import '../../combat/presentation/widgets/combat_banner.dart';
 import '../../combat/presentation/widgets/start_combat_section.dart';
 import '../domain/group_detail.dart';

@@ -15,8 +15,6 @@ import '../combat_announcer.dart';
 import 'initiative_field.dart';
 import 'initiative_roll_block.dart';
 
-export '../combat_announcer.dart';
-
 /// Envoie l'ajout au serveur : renvoie `null` en cas de succès, sinon le
 /// message d'erreur localisé à afficher dans la feuille.
 typedef AddMonsterSubmit = Future<String?> Function({
