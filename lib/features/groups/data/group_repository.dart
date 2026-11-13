@@ -75,6 +75,14 @@ abstract class GroupRepository {
   /// "Groupes".
   Future<List<GroupSummary>> fetchMyGroups();
 
+  /// Identifiants des groupes dont le joueur connecté fait partie avec le
+  /// personnage [characterId] (`group_members.character_id`) — une seule
+  /// requête ciblée (aucune jointure, aucune écriture), utilisée pour retrouver
+  /// le groupe d'un personnage depuis sa fiche (bandeau « Combat en cours »).
+  /// Un personnage peut être dans plusieurs groupes ; liste vide s'il n'est
+  /// dans aucun.
+  Future<List<String>> fetchGroupIdsForCharacter(String characterId);
+
   /// `create-group` — écran "Créer un groupe" : crée le groupe, son
   /// `group_treasure` (côté serveur) et la ligne `group_members` du créateur
   /// (`role: 'owner'`). [characterId] `null`/vide : le créateur rejoint
@@ -291,6 +299,23 @@ class SupabaseGroupRepository implements GroupRepository {
   SupabaseGroupRepository(this._client);
 
   final SupabaseClient _client;
+
+  @override
+  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async {
+    final ownerId = _requireOwnerId();
+    try {
+      final rows = await _client
+          .from('group_members')
+          .select('group_id')
+          .eq('user_id', ownerId)
+          .eq('character_id', characterId);
+      return [for (final row in rows) row['group_id'] as String];
+    } on PostgrestException catch (error) {
+      throw mapGroupError(error);
+    } catch (_) {
+      throw mapUnknownGroupError();
+    }
+  }
 
   @override
   Future<List<GroupSummary>> fetchMyGroups() async {

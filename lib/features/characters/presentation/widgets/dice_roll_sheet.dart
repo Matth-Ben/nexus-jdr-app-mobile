@@ -10,6 +10,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/display_text.dart';
 import '../../../../core/widgets/pixel_icon.dart';
 import '../../../../core/widgets/pixel_icons/die_result_pixel_icons.dart';
+import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/segmented_toggle.dart';
 import '../../../../core/widgets/selectable_option_tile.dart';
@@ -72,10 +73,18 @@ void _defaultAnnouncer(BuildContext context, String text) {
 /// traitement entre les cas — le bonus de maîtrise éventuel est déjà reflété
 /// dans [modifier] par l'appelant. Ces jets ne sont pas des attaques : on
 /// affiche "20 naturel"/"1 naturel", jamais "critique" (RAW).
-Future<void> showDiceRollSheet(
+///
+/// [useResultLabel] (optionnel, combat de groupe — saisie d'initiative) : si
+/// fourni, un bouton primaire « Utiliser {total} » (libellé construit par
+/// l'appelant à partir du total d20 ± modificateur) apparaît une fois le dé
+/// posé ; il ferme la feuille et **renvoie le total**. « Relancer » reste
+/// possible avant. Sans [useResultLabel] (tous les autres appelants), rien ne
+/// change : aucun bouton en plus, le futur se termine toujours à `null`.
+Future<int?> showDiceRollSheet(
   BuildContext context, {
   required String label,
   required int modifier,
+  String Function(int total)? useResultLabel,
   @visibleForTesting Random? random,
   @visibleForTesting DiceRollAnnouncer announcer = _defaultAnnouncer,
   @visibleForTesting DieSkin skin = DieSkin.defaultSkin,
@@ -88,7 +97,7 @@ Future<void> showDiceRollSheet(
   // Chargement du shader pendant l'ouverture de la feuille, jamais pendant
   // l'animation (ne lève jamais : un échec = rendu de niveau 1).
   (shaderCache ?? DieShaderCache.shared).preload(skin.shaderId);
-  return showModalBottomSheet<void>(
+  return showModalBottomSheet<int>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
@@ -102,6 +111,7 @@ Future<void> showDiceRollSheet(
     builder: (sheetContext) => _DiceRollSheetContent(
       label: label,
       modifier: modifier,
+      useResultLabel: useResultLabel,
       random: random,
       announcer: announcer,
       skin: skin,
@@ -120,6 +130,7 @@ class _DiceRollSheetContent extends StatefulWidget {
     required this.modifier,
     required this.announcer,
     required this.skin,
+    this.useResultLabel,
     this.random,
     this.shaderCache,
     this.paintProbe,
@@ -130,6 +141,9 @@ class _DiceRollSheetContent extends StatefulWidget {
 
   final String label;
   final int modifier;
+
+  /// `null` : feuille classique, sans bouton « Utiliser ».
+  final String Function(int total)? useResultLabel;
   final DiceRollAnnouncer announcer;
 
   /// Injectable uniquement pour les tests (`DiceRoller.rollD20` documente le
@@ -520,6 +534,18 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent>
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
+                    if (widget.useResultLabel != null) ...[
+                      PrimaryButton(
+                        key: const Key('diceRollUseResult'),
+                        label: widget.useResultLabel!(result.total),
+                        // Inactif pendant le lancer : le total n'est connu du
+                        // joueur qu'une fois le dé posé.
+                        onPressed: _isRolling
+                            ? null
+                            : () => Navigator.of(context).pop(result.total),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
                     Wrap(
                       alignment: WrapAlignment.center,
                       spacing: AppSpacing.sm,

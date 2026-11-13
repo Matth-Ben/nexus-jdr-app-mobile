@@ -41,3 +41,8 @@ CombatParticipant? reorderNeighbor(
   }
   return neighbor;
 }
+
+/// Position (`sort_order`) à demander au serveur pour échanger [participant]
+/// avec son voisin d'égalité [neighbor] (`reorder_participant`) : il prend la
+/// place du voisin, le serveur décale les autres lignes.
+int swapSortOrderWith(CombatParticipant neighbor) => neighbor.sortOrder;

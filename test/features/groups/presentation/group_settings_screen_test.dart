@@ -30,6 +30,10 @@ import 'package:personnages/features/groups/presentation/group_settings_screen.d
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
 
 class _FakeGroupRepository implements GroupRepository {
+  @override
+  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async =>
+      const [];
+
   GroupDetail? detailToReturn;
   Object? detailErrorToThrow;
   Completer<GroupDetail>? detailCompleter;

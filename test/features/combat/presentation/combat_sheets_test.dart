@@ -62,9 +62,11 @@ bool _enabled(WidgetTester tester, Type type) {
             .onPressed !=
         null;
   }
+  // Dernier bouton secondaire : « Ajouter et continuer » (le premier est le
+  // lanceur de d20, toujours actif).
   return tester
           .widgetList<SecondaryButton>(find.byType(SecondaryButton))
-          .first
+          .last
           .onPressed !=
       null;
 }

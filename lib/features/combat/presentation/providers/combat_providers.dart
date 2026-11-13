@@ -334,17 +334,20 @@ class _CombatLifecycleObserver with WidgetsBindingObserver {
 /// Informations minimales du bandeau « Combat en cours · round N » (écran
 /// Groupe, fiche du personnage). Un record : égalité structurelle, donc
 /// `select` ne reconstruit le bandeau que si l'un de ces champs change.
-typedef CombatBannerInfo = ({String combatId, int round, bool isStale});
+typedef CombatBannerInfo = ({
+  String combatId,
+  int round,
+  bool isStale,
+  DateTime? startedAt,
+});
 
 /// Combat actif du groupe [groupId], pour le bandeau de la fiche : `null` si
 /// aucun combat actif. **Rebuild ciblé** (`select`) : les changements sans
 /// rapport (ex. initiative d'un participant) ne reconstruisent pas le bandeau
 /// ni la fiche. Maintient aussi l'abonnement Realtime tant qu'il est observé.
 ///
-/// Retrouver le groupe d'un personnage n'existe pas encore dans `groups`
-/// (`myGroups` ne liste pas les personnages des groupes) : la PR3 devra
-/// fournir ce `groupId`, par exemple une requête `group_members` filtrée sur
-/// `character_id` (aucune requête réseau supplémentaire n'est inventée ici).
+/// Le groupe d'un personnage se retrouve avec `characterGroupIdsProvider` /
+/// `characterCombatBannerProvider` (`character_combat_provider.dart`).
 @riverpod
 CombatBannerInfo? combatBanner(Ref ref, String groupId) {
   ref.watch(combatRealtimeWatcherProvider(groupId));
@@ -356,6 +359,7 @@ CombatBannerInfo? combatBanner(Ref ref, String groupId) {
         combatId: snapshot.combat.id,
         round: snapshot.combat.round,
         isStale: state.isStale,
+        startedAt: snapshot.combat.createdAt,
       );
     }),
   );

@@ -24,6 +24,10 @@ import 'package:personnages/features/groups/presentation/providers/group_provide
 import 'package:personnages/features/groups/presentation/widgets/group_note_entry_edit_sheet.dart';
 
 class _FakeGroupRepository implements GroupRepository {
+  @override
+  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async =>
+      const [];
+
   final Completer<void> gate = Completer<void>();
   bool gateAdd = false;
 

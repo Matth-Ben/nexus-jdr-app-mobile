@@ -13,6 +13,10 @@ import '../combat_motion.dart';
 import '../providers/combat_providers.dart';
 import '../providers/combat_read_only_provider.dart';
 
+/// Variante du bandeau de combat : sous les onglets du groupe ou dans le bloc
+/// sticky de la fiche d'un personnage.
+enum CombatBannerVariant { group, sheet }
+
 /// Bandeau « Combat en cours · round N » — variante **Groupe**, tappable
 /// (`docs/combat-groupe-ui.md` §2). Variante tappable d'`InfoBanner` : fond
 /// `parchment.card`, bordure 2 `goldEnd`, icône `accent.teal` ; jamais un
@@ -27,8 +31,19 @@ class CombatBannerView extends StatelessWidget {
     this.turnName,
     this.offlineSince,
     this.masterAbsent = false,
+    this.variant = CombatBannerVariant.group,
+    this.compact = false,
     super.key,
   });
+
+  /// [CombatBannerVariant.group] (2 lignes, 64 dp mini) ou
+  /// [CombatBannerVariant.sheet] (1 ligne, 48 dp mini, bloc sticky de la fiche).
+  final CombatBannerVariant variant;
+
+  /// Variante fiche seulement : forme compacte (44 dp mini, marges réduites)
+  /// tant qu'une alerte de synchro ou le mode hors ligne occupe déjà le bloc
+  /// sticky (D211).
+  final bool compact;
 
   final int round;
 
@@ -46,6 +61,7 @@ class CombatBannerView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    if (variant == CombatBannerVariant.sheet) return _sheet(context, l10n);
     final title = l10n.combatBannerTitle(round);
     final since = offlineSince;
     final secondLine = since != null
@@ -135,6 +151,79 @@ class CombatBannerView extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Variante **fiche** de [CombatBannerView] : une seule ligne (« Combat en
+/// cours · round N », hors ligne « … · état de HH:MM » — jamais un second
+/// « Hors ligne », celui du bandeau de synchro suffit), même cadre, chevron.
+extension on CombatBannerView {
+  Widget _sheet(BuildContext context, AppLocalizations l10n) {
+    final since = offlineSince;
+    final time = since == null ? null : combatClockLabel(l10n, since);
+    final text = time == null
+        ? l10n.combatBannerTitle(round)
+        : l10n.combatSheetBannerOffline(round, time);
+    final semantics = time == null
+        ? l10n.combatSheetBannerSemantics(round)
+        : l10n.combatSheetBannerSemanticsOffline(round, time);
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: AppTypography.maxTextScaleFactor,
+      child: Semantics(
+        button: true,
+        label: semantics,
+        excludeSemantics: true,
+        onTap: onTap,
+        child: Material(
+          color: AppColors.parchmentCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            side: const BorderSide(
+              color: AppColors.goldEnd,
+              width: AppBorders.card,
+            ),
+          ),
+          child: InkWell(
+            key: const Key('combatSheetBanner'),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            onTap: onTap,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: compact ? 44 : 48),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? AppSpacing.sm : AppSpacing.md,
+                  vertical: compact ? 0 : AppSpacing.xs,
+                ),
+                child: Row(
+                  children: [
+                    const PixelIcon(
+                      matrix: kCombatSwordsMatrix,
+                      size: 16,
+                      color: AppColors.accentTeal,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        text,
+                        style: AppTypography.body(
+                          fontSize: compact ? 12 : 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: AppColors.textSecondary,
+                      size: 20,
+                    ),
+                  ],
                 ),
               ),
             ),

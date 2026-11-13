@@ -328,6 +328,10 @@ class _RecordingSubscription implements GroupRealtimeSubscription {
 /// `_NoopSubscription` de `group_screen_test.dart` — seuls
 /// [fetchGroupDetail]/[subscribeToMemberUpdates] sont exercés par ces tests.
 class _FakeGroupRepository implements GroupRepository {
+  @override
+  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async =>
+      const [];
+
   GroupDetail Function()? detailBuilder;
   int fetchGroupDetailCallCount = 0;
 

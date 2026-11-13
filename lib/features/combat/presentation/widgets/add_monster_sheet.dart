@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -12,7 +11,11 @@ import '../../../../core/widgets/stepper_counter.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/initiative_input.dart';
 import '../../domain/monster_numbering.dart';
+import '../combat_announcer.dart';
 import 'initiative_field.dart';
+import 'initiative_roll_block.dart';
+
+export '../combat_announcer.dart';
 
 /// Envoie l'ajout au serveur : renvoie `null` en cas de succès, sinon le
 /// message d'erreur localisé à afficher dans la feuille.
@@ -21,17 +24,6 @@ typedef AddMonsterSubmit = Future<String?> Function({
   required int? initiative,
   required int count,
 });
-
-typedef CombatSheetAnnouncer = void Function(BuildContext context, String text);
-
-/// Annonce sémantique via `SemanticsService` (annonceur par défaut).
-void defaultCombatAnnouncer(BuildContext context, String text) {
-  SemanticsService.sendAnnouncement(
-    View.of(context),
-    text,
-    Directionality.of(context),
-  );
-}
 
 /// Feuille « Ajouter un monstre » : nom (1..80), initiative facultative,
 /// quantité ×N (1..20, initiative commune), aperçu `liveRegion` de la
@@ -42,6 +34,7 @@ Future<void> showAddMonsterSheet(
   required AddMonsterSubmit onSubmit,
   required List<String> Function() existingNames,
   CombatSheetAnnouncer announcer = defaultCombatAnnouncer,
+  InitiativeRollOpener rollOpener = defaultInitiativeRollOpener,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -51,6 +44,7 @@ Future<void> showAddMonsterSheet(
       onSubmit: onSubmit,
       existingNames: existingNames,
       announcer: announcer,
+      rollOpener: rollOpener,
     ),
   );
 }
@@ -60,12 +54,14 @@ class AddMonsterSheet extends StatefulWidget {
     required this.onSubmit,
     required this.existingNames,
     this.announcer = defaultCombatAnnouncer,
+    this.rollOpener = defaultInitiativeRollOpener,
     super.key,
   });
 
   final AddMonsterSubmit onSubmit;
   final List<String> Function() existingNames;
   final CombatSheetAnnouncer announcer;
+  final InitiativeRollOpener rollOpener;
 
   @override
   State<AddMonsterSheet> createState() => _AddMonsterSheetState();
@@ -75,6 +71,7 @@ class _AddMonsterSheetState extends State<AddMonsterSheet> {
   final TextEditingController _name = TextEditingController();
   final TextEditingController _initiative = TextEditingController();
   final FocusNode _nameFocus = FocusNode();
+  final FocusNode _initiativeFocus = FocusNode();
   int _quantity = 1;
   bool _busy = false;
   String? _error;
@@ -84,6 +81,7 @@ class _AddMonsterSheetState extends State<AddMonsterSheet> {
     _name.dispose();
     _initiative.dispose();
     _nameFocus.dispose();
+    _initiativeFocus.dispose();
     super.dispose();
   }
 
@@ -222,6 +220,17 @@ class _AddMonsterSheetState extends State<AddMonsterSheet> {
                   const SizedBox(height: AppSpacing.md),
                   InitiativeField(
                     controller: _initiative,
+                    focusNode: _initiativeFocus,
+                    onChanged: () => setState(() {}),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  // Monstre : d20 + 0 (modificateur de Dex inconnu), pas d'aide.
+                  InitiativeRollBlock(
+                    controller: _initiative,
+                    focusNode: _initiativeFocus,
+                    modifier: 0,
+                    announcer: widget.announcer,
+                    opener: widget.rollOpener,
                     onChanged: () => setState(() {}),
                   ),
                   const SizedBox(height: AppSpacing.md),

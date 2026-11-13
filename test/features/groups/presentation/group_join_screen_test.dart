@@ -398,6 +398,10 @@ class _FakeCharacterRepository implements CharacterRepository {
 }
 
 class _FakeGroupRepository implements GroupRepository {
+  @override
+  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async =>
+      const [];
+
   GroupPreview? previewToReturn;
   Object? previewErrorToThrow;
   int previewCallCount = 0;

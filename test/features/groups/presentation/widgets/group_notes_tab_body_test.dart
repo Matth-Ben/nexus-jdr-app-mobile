@@ -21,6 +21,10 @@ import 'package:personnages/features/groups/presentation/widgets/group_notes_tab
 /// sont exercées par `GroupNotesTabBody`/sa sheet, le reste lève
 /// `UnimplementedError` (jamais atteint par ces tests).
 class _FakeGroupRepository implements GroupRepository {
+  @override
+  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async =>
+      const [];
+
   int addCallCount = 0;
   String? lastAddedTitle;
   String? lastAddedBody;

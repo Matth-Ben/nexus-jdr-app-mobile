@@ -96,7 +96,10 @@ class _GroupCharacterReassignmentScreenState
   Future<void> _confirmLeaveGroupGuarded() async {
     // Garde du propriétaire : pas de départ pendant un combat actif.
     // Le détail n'est pas forcément déjà chargé (route autonome) : on
-    // l'attend ; un échec laisse le serveur décider (il reste l'autorité).
+    // l'attend. Si son chargement échoue, la garde est ignorée (fail-open) : le
+    // serveur n'applique PAS cette règle (ticket web « Combat : règle serveur,
+    // le propriétaire ne quitte ni ne dissout pendant un combat actif »), la
+    // garde cliente est donc la seule protection tant qu'il n'existe pas.
     GroupDetail? detail;
     try {
       detail = await ref.read(groupDetailProvider(widget.groupId).future);

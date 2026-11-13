@@ -11,7 +11,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/secondary_button.dart';
-import '../../../core/widgets/sync_status_banner.dart';
 import '../../../core/widgets/undo_snack_bar.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../../../l10n/app_localizations.dart';
@@ -62,6 +61,7 @@ import 'widgets/character_pact_weapon_card.dart';
 import 'widgets/custom_item_form_sheet.dart';
 import 'widgets/character_saving_throws_card.dart';
 import 'widgets/character_stat_pills_row.dart';
+import 'widgets/character_sticky_banners.dart';
 import 'widgets/character_skills_tab_body.dart';
 import 'widgets/character_spells_tab_body.dart';
 import 'widgets/character_story_edit_sheet.dart';
@@ -3055,18 +3055,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                     CharacterDetailTab.story => null,
                   },
           ),
-          // Bandeau de synchro hors-ligne : sticky, hors zone défilante
-          // (T2 du chantier hors-ligne), visible aussi pendant
-          // chargement/erreur de la fiche.
-          SyncStatusBanner(
-            characterId: widget.characterId,
-            visiblePadding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.sm,
-              AppSpacing.lg,
-              AppSpacing.sm,
-            ),
-          ),
+          // Bloc sticky, hors zone défilante, visible aussi pendant
+          // chargement/erreur de la fiche : bandeau de synchro hors-ligne
+          // (T2 du chantier hors-ligne) puis, si le personnage a un combat
+          // actif dans un groupe, le bandeau « Combat en cours ». Widget
+          // isolé : un évènement de combat ne reconstruit pas la fiche.
+          CharacterStickyBanners(characterId: widget.characterId),
           Expanded(
             child: detailAsync.when(
               data: (detail) => _buildTabBody(detail),
