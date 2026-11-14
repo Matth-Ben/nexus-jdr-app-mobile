@@ -197,8 +197,9 @@ abstract final class CharacterSpellRowMapper {
 
   /// Construit les [CharacterSpellEntry] à partir des lignes brutes `spells`
   /// (id, level, school, casting_time, range, components, duration,
-  /// concentration, ritual, duration_kind, duration_value, duration_unit) déjà filtrées sur les sorts du personnage, des noms déjà
-  /// résolus (`names`), des descriptions déjà résolues (`descriptions` —
+  /// concentration, ritual, duration_kind, duration_value, duration_unit)
+  /// déjà filtrées sur les sorts du personnage, des noms déjà résolus
+  /// (`names`), des descriptions déjà résolues (`descriptions` —
   /// `spells` n'a pas de colonne `description` directe, elle vit dans
   /// `translations` comme le nom, voir `data/character_repository.dart`) et
   /// des statuts déjà résolus (`statuses`, voir [parseStatuses]). Un sort

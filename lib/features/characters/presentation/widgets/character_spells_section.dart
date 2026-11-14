@@ -379,17 +379,22 @@ class _SpellSlotDot extends StatelessWidget {
 }
 
 /// Taille du texte des pastilles de ligne de sort ([_GrantBadge],
-/// [_InnateBadge]) — une seule constante pour qu'elles restent alignées.
+/// [_InnateUsage], [_ConcentrationMarker], [_RitualMarker]) — une seule
+/// constante pour qu'elles restent alignées.
 const double _rowBadgeFontSize = 11;
 
 /// Taille du texte du marqueur « Épuisé » d'un sort inné ([_InnateUsage]).
 const double _innateSpentFontSize = 11;
 
-/// Échelle de texte à partir de laquelle la ligne d'un sort inné à charge
-/// passe sur deux lignes (nom + dé, puis pastille + marqueur) : en dessous,
-/// tout tient en face du nom. Propre aux sorts innés, pas généralisé aux
-/// autres sorts (spec direction-artistique).
+/// Échelle de texte à partir de laquelle la ligne d'un sort inné à charge, à
+/// concentration (« C ») ou rituel (« R ») passe sur deux lignes (nom + dé,
+/// puis pastilles) : en dessous, tout tient en face du nom. Les autres sorts
+/// restent sur une ligne (spec direction-artistique).
 const double _innateTwoLineTextScale = 1.3;
+
+/// Nombre de pastilles à partir duquel la ligne passe sur deux lignes, quelle
+/// que soit l'échelle de texte.
+const int _crowdedBadgeCount = 3;
 
 class _SpellRow extends StatelessWidget {
   const _SpellRow({
@@ -429,9 +434,20 @@ class _SpellRow extends StatelessWidget {
     final concentration = spell.concentration;
     // Sort rituel : pastille « R » à côté de « C » (jamais déduite du texte).
     final ritual = spell.ritual;
+    // Trois pastilles ou plus (C, R, octroi, inné, préparation) écraseraient
+    // le nom même à ×1,0 sur 320 dp : seconde ligne dès la troisième.
+    final badgeCount = [
+      concentration,
+      ritual,
+      spell.grantSource != null,
+      innateLimited,
+      preparationLabel != null,
+    ].where((shown) => shown).length;
     final twoLines =
-        (innateLimited || concentration || ritual) &&
-        MediaQuery.textScalerOf(context).scale(1) >= _innateTwoLineTextScale;
+        badgeCount >= _crowdedBadgeCount ||
+        ((innateLimited || concentration || ritual) &&
+            MediaQuery.textScalerOf(context).scale(1) >=
+                _innateTwoLineTextScale);
 
     final nameAndDice = Row(
       children: [
@@ -485,14 +501,13 @@ class _SpellRow extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 32),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs / 2),
-              // Grandes polices (échelle >= 1.3), sort inné à charge
-              // uniquement : pastille et marqueur passent sous le nom,
-              // alignés à gauche, pour ne pas écraser le nom sur petit écran.
-              // Le libellé de préparation (sort à double route, D43) rejoint
-              // la pastille inné sur cette même seconde ligne plutôt que
-              // d'être perdu — jamais cumulé avec la pastille d'octroi (voir
-              // la doc de [innateLimited] ci-dessus), donc au plus deux
-              // éléments à y placer.
+              // Grandes polices (échelle >= 1.3), sort inné à charge, à
+              // concentration ou rituel : les pastilles (C, R, octroi, inné)
+              // et le marqueur passent sous le nom, alignés à gauche, pour ne
+              // pas écraser le nom sur petit écran. Le libellé de préparation
+              // rejoint ces pastilles sur cette même seconde ligne plutôt que
+              // d'être perdu. La pastille d'octroi n'est jamais cumulée avec
+              // la pastille inné (voir la doc de [innateLimited]).
               child: twoLines
                   ? Column(
                       mainAxisSize: MainAxisSize.min,
@@ -662,7 +677,8 @@ class _RitualMarker extends StatelessWidget {
   }
 }
 
-/// Pastille de ligne de sort partagée par [_GrantBadge] et [_InnateUsage] :
+/// Pastille de ligne de sort partagée par [_GrantBadge], [_InnateUsage],
+/// [_ConcentrationMarker] (« C ») et [_RitualMarker] (« R ») :
 /// fond `parchment.card-alt`, liseré `wood.light` 1 px, `radius.sm`, texte
 /// `font.display` [_rowBadgeFontSize]. [icon] facultative, devant le
 /// libellé. Purement visuelle : la sémantique est portée par l'appelant.

@@ -8,11 +8,11 @@ import '../../characters/domain/character_inventory_item.dart';
 import '../../characters/domain/character_journal_entry.dart';
 import '../../characters/domain/character_skill_row.dart';
 import '../../characters/domain/character_spell_entry.dart';
-import '../../characters/domain/spell_duration.dart';
 import '../../characters/domain/character_spell_slot.dart';
 import '../../characters/domain/condition_type.dart';
 import '../../characters/domain/custom_armor_properties.dart';
 import '../../characters/domain/prepared_spells_limit.dart';
+import '../../characters/domain/spell_duration.dart';
 import '../../characters/domain/spell_grant_source.dart';
 import 'shared_character_skill_catalog.dart';
 

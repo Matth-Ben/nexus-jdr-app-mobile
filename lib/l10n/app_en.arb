@@ -1647,6 +1647,6 @@
   "@characterSpellsSectionRitualSemanticLabel": {"description": "Libellé lecteur d'écran de la pastille « R » (sort rituel)."},
   "spellInfoPanelRitualLabel": "Ritual",
   "@spellInfoPanelRitualLabel": {"description": "Libellé de la ligne « Rituel » du panneau « Infos » d'un sort."},
-  "spellInfoPanelRitualValue": "Yes · +10 min casting",
+  "spellInfoPanelRitualValue": "Yes · +10 min casting time",
   "@spellInfoPanelRitualValue": {"description": "Valeur de la ligne « Rituel » : le +10 min est un libellé fixe, castingTime n'est jamais modifié."}
 }

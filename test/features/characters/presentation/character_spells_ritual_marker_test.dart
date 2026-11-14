@@ -158,7 +158,10 @@ void main() {
       final c = tester.getRect(find.byKey(_cMarker));
       final r = tester.getRect(find.byKey(_rMarker));
       final grant = tester.getRect(find.text('DOMAINE'));
-      expect(c.left, greaterThan(name.left));
+      // C + R + octroi + préparation : trois pastilles, donc seconde ligne.
+      expect(c.top, greaterThanOrEqualTo(name.bottom - 1));
+      expect(r.top, c.top);
+      expect(c.right, lessThanOrEqualTo(r.left));
       expect(r.left, greaterThanOrEqualTo(c.right));
       expect(r.right, lessThanOrEqualTo(grant.left));
     });
@@ -187,6 +190,39 @@ void main() {
         findsNothing,
       );
     });
+
+    for (final scale in [1.0, 1.25]) {
+      testWidgets('x$scale sur 320 dp : rituel + C + octroi + préparation sur '
+          'une ligne, nom non écrasé', (tester) async {
+        const spell = CharacterSpellEntry(
+          id: 9,
+          name: 'Vision lointaine',
+          level: 2,
+          school: 'Divination',
+          status: SpellStatus.prepared,
+          ritual: true,
+          concentration: true,
+          grantSource: SpellGrantSource.domain,
+        );
+        await _pump(tester, [spell], scale: scale, size: const Size(320, 1600));
+
+        expect(tester.takeException(), isNull);
+        expect(find.byKey(_rMarker), findsOneWidget);
+        expect(find.byKey(_cMarker), findsOneWidget);
+        expect(find.text('DOMAINE'), findsOneWidget);
+        final paragraph = tester.renderObject<RenderParagraph>(
+          find.text('Vision lointaine'),
+        );
+        expect(paragraph.didExceedMaxLines, isFalse);
+        final name = tester.getRect(find.text('Vision lointaine'));
+        // Le nom reste lisible (pas réduit à une fraction de sa largeur).
+        expect(name.width, greaterThan(60));
+        for (final key in [_rMarker, _cMarker]) {
+          final r = tester.getRect(find.byKey(key));
+          expect(r.right, lessThanOrEqualTo(320));
+        }
+      });
+    }
 
     for (final scale in [1.3, 2.0, 3.0]) {
       testWidgets('x$scale sur 320 dp : seconde ligne, sans overflow ni '

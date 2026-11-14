@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/rules/character_class.dart';
 import 'package:personnages/core/rules/spell_status.dart';
-import 'package:personnages/features/characters/domain/character_class_choice.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/ritual_casting.dart';
@@ -42,22 +41,8 @@ CharacterSpellEntry _spell({
 
 RitualEligibility _eval(
   CharacterSpellEntry spell,
-  List<CharacterDetailClassRow> classes, {
-  List<CharacterClassChoice> choices = const [],
-}) => RitualCasting.evaluate(
-  spell: spell,
-  classes: classes,
-  classChoices: choices,
-);
-
-const _tome = CharacterClassChoice(
-  featureName: 'Faveur de pacte',
-  chosenValue: 'grimoire',
-);
-const _blade = CharacterClassChoice(
-  featureName: 'Faveur de pacte',
-  chosenValue: 'lame',
-);
+  List<CharacterDetailClassRow> classes,
+) => RitualCasting.evaluate(spell: spell, classes: classes);
 
 void _expectNo(RitualEligibility r, RitualIneligibility reason) {
   expect(r.isEligible, isFalse);
@@ -120,12 +105,30 @@ void main() {
 
     test('Druide : sort de cercle (octroi de sous-classe) -> éligible', () {
       final r = _eval(
-        _spell(status: SpellStatus.prepared, grant: SpellGrantSource.subclass),
+        _spell(
+          status: SpellStatus.prepared,
+          grant: SpellGrantSource.subclass,
+          sources: {CharacterClass.druid.id},
+        ),
         [_row(CharacterClass.druid, subclass: 'Cercle de la terre')],
       );
       expect(r.isEligible, isTrue);
       expect(r.viaClass, CharacterClass.druid);
     });
+
+    test(
+      'octroi de sous-classe, classe unique sans origine : cette classe',
+      () {
+        final r = _eval(
+          _spell(
+            status: SpellStatus.prepared,
+            grant: SpellGrantSource.subclass,
+          ),
+          [_row(CharacterClass.druid, subclass: 'Cercle de la terre')],
+        );
+        expect(r.viaClass, CharacterClass.druid);
+      },
+    );
 
     test('Barde : sort connu', () {
       final r = _eval(_spell(sources: {CharacterClass.bard.id}), [
@@ -135,29 +138,17 @@ void main() {
       expect(r.viaClass, CharacterClass.bard);
     });
 
-    test('Occultiste avec Pacte du livre : éligible', () {
-      final r = _eval(
-        _spell(sources: {CharacterClass.warlock.id}),
-        [_row(CharacterClass.warlock)],
-        choices: [_tome],
-      );
-      expect(r.isEligible, isTrue);
-      expect(r.viaClass, CharacterClass.warlock);
-    });
-
-    test('Occultiste sans Pacte du livre (lame, ou aucun pacte)', () {
-      for (final choices in [
-        <CharacterClassChoice>[],
-        [_blade],
-      ]) {
-        _expectNo(
-          _eval(_spell(sources: {CharacterClass.warlock.id}), [
-            _row(CharacterClass.warlock),
-          ], choices: choices),
-          RitualIneligibility.warlockNeedsBook,
-        );
-      }
-    });
+    test(
+      'Occultiste : aucun rituel, quel que soit le pacte (non modélisé)',
+      () {
+        // Le pacte (chaîne, lame, grimoire) n'entre pas dans le calcul : la
+        // fonction ne le reçoit pas.
+        final r = _eval(_spell(sources: {CharacterClass.warlock.id}), [
+          _row(CharacterClass.warlock),
+        ]);
+        _expectNo(r, RitualIneligibility.warlockNotModeled);
+      },
+    );
 
     for (final c in [
       CharacterClass.sorcerer,
@@ -286,6 +277,40 @@ void main() {
         );
       },
     );
+
+    test('sort octroyé par une sous-classe de Guerrier : pas éligible via le '
+        'Magicien', () {
+      _expectNo(
+        _eval(
+          _spell(
+            status: SpellStatus.prepared,
+            grant: SpellGrantSource.subclass,
+            sources: {CharacterClass.fighter.id},
+          ),
+          [
+            _row(CharacterClass.wizard, subclass: 'Abjuration', primary: true),
+            _row(CharacterClass.fighter, subclass: 'Chevalier occulte'),
+          ],
+        ),
+        RitualIneligibility.classNoRitual,
+      );
+    });
+
+    test('sous-classe octroyant, origine inconnue, multiclassé : notKnown', () {
+      _expectNo(
+        _eval(
+          _spell(
+            status: SpellStatus.prepared,
+            grant: SpellGrantSource.subclass,
+          ),
+          [
+            _row(CharacterClass.wizard, subclass: 'Abjuration', primary: true),
+            _row(CharacterClass.fighter, subclass: 'Chevalier occulte'),
+          ],
+        ),
+        RitualIneligibility.notKnown,
+      );
+    });
 
     test('Occultiste/Magicien : le livre du Magicien suffit sans pacte', () {
       final r = _eval(_spell(sources: {CharacterClass.wizard.id}), [
