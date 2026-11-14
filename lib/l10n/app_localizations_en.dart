@@ -5413,5 +5413,5 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spellInfoPanelRitualLabel => 'Ritual';
 
   @override
-  String get spellInfoPanelRitualValue => 'Yes · +10 min casting';
+  String get spellInfoPanelRitualValue => 'Yes · +10 min casting time';
 }
