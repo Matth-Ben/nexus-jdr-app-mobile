@@ -1,4 +1,5 @@
 import '../../../core/rules/spell_status.dart';
+import 'spell_duration.dart';
 import 'spell_grant_source.dart';
 
 /// Un sort connu/préparé du personnage (onglet "Sorts", section "SORTS" —
@@ -20,6 +21,8 @@ class CharacterSpellEntry {
     this.components = const {},
     this.duration = '',
     this.concentration = false,
+    this.ritual = false,
+    this.spellDuration = SpellDuration.unknown,
     this.description = '',
     this.grantSource,
     this.isPersisted = true,
@@ -62,6 +65,17 @@ class CharacterSpellEntry {
 
   /// `spells.concentration`.
   final bool concentration;
+
+  /// `spells.ritual` : le sort peut se lancer en rituel (+10 min
+  /// d'incantation, sans emplacement), sous réserve de
+  /// `domain/ritual_casting.dart`. `false` quand la donnée est absente
+  /// (cache hors ligne ancien, fiche partagée d'une version antérieure).
+  final bool ritual;
+
+  /// Durée structurée (`spells.duration_kind/value/unit`), distincte du
+  /// texte localisé [duration] (affichage). [SpellDuration.unknown] quand la
+  /// donnée est absente. Ne modifie jamais [castingTime] ni [duration].
+  final SpellDuration spellDuration;
 
   /// `spells.description`, chaîne vide si non renseignée.
   final String description;
@@ -197,6 +211,8 @@ class CharacterSpellEntry {
       components: components,
       duration: duration,
       concentration: concentration,
+      ritual: ritual,
+      spellDuration: spellDuration,
       description: description,
       grantSource: grantSource,
       isPersisted: nextPersisted,
@@ -221,6 +237,8 @@ class CharacterSpellEntry {
         components: components,
         duration: duration,
         concentration: concentration,
+        ritual: ritual,
+        spellDuration: spellDuration,
         description: description,
         grantSource: grantSource,
         isPersisted: isPersisted,

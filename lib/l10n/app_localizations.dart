@@ -8133,6 +8133,30 @@ abstract class AppLocalizations {
   /// **'Nouvelle version disponible. Ouvrir la page de mise à jour.'**
   String get updateBannerCompactSemantics;
 
+  /// Lettre de la pastille « R » d'un sort rituel sur la ligne de sort.
+  ///
+  /// In fr, this message translates to:
+  /// **'R'**
+  String get characterSpellsSectionRitualBadgeLabel;
+
+  /// Libellé lecteur d'écran de la pastille « R » (sort rituel).
+  ///
+  /// In fr, this message translates to:
+  /// **'Rituel'**
+  String get characterSpellsSectionRitualSemanticLabel;
+
+  /// Libellé de la ligne « Rituel » du panneau « Infos » d'un sort.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rituel'**
+  String get spellInfoPanelRitualLabel;
+
+  /// Valeur de la ligne « Rituel » : le +10 min est un libellé fixe, castingTime n'est jamais modifié.
+  ///
+  /// In fr, this message translates to:
+  /// **'Oui · +10 min d\'incantation'**
+  String get spellInfoPanelRitualValue;
+
   /// Bandeau du combat, ligne 1.
   ///
   /// In fr, this message translates to:

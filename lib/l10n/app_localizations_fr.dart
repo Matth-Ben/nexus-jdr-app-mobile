@@ -5074,6 +5074,18 @@ class AppLocalizationsFr extends AppLocalizations {
       'Nouvelle version disponible. Ouvrir la page de mise à jour.';
 
   @override
+  String get characterSpellsSectionRitualBadgeLabel => 'R';
+
+  @override
+  String get characterSpellsSectionRitualSemanticLabel => 'Rituel';
+
+  @override
+  String get spellInfoPanelRitualLabel => 'Rituel';
+
+  @override
+  String get spellInfoPanelRitualValue => 'Oui · +10 min d\'incantation';
+
+  @override
   String combatBannerTitle(int round) {
     return 'Combat en cours · round $round';
   }

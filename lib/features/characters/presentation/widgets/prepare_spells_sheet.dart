@@ -228,6 +228,8 @@ class _PrepareSpellsSheetContentState
       components: spell.components,
       duration: spell.duration,
       concentration: spell.concentration,
+      ritual: spell.ritual,
+      spellDuration: spell.spellDuration,
       description: spell.description,
       grantSource: spell.grantSource,
       isPersisted: spell.isPersisted,

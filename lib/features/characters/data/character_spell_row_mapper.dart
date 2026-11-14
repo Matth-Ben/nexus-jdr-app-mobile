@@ -2,6 +2,7 @@ import '../../../core/rules/spell_status.dart';
 import '../domain/character_detail_class_row.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/prepared_spells_limit.dart';
+import '../domain/spell_duration.dart';
 import '../domain/spell_grant_source.dart';
 
 /// Fonctions de mapping pures entre les lignes brutes renvoyées par
@@ -196,8 +197,9 @@ abstract final class CharacterSpellRowMapper {
 
   /// Construit les [CharacterSpellEntry] à partir des lignes brutes `spells`
   /// (id, level, school, casting_time, range, components, duration,
-  /// concentration) déjà filtrées sur les sorts du personnage, des noms déjà
-  /// résolus (`names`), des descriptions déjà résolues (`descriptions` —
+  /// concentration, ritual, duration_kind, duration_value, duration_unit)
+  /// déjà filtrées sur les sorts du personnage, des noms déjà résolus
+  /// (`names`), des descriptions déjà résolues (`descriptions` —
   /// `spells` n'a pas de colonne `description` directe, elle vit dans
   /// `translations` comme le nom, voir `data/character_repository.dart`) et
   /// des statuts déjà résolus (`statuses`, voir [parseStatuses]). Un sort
@@ -263,6 +265,16 @@ abstract final class CharacterSpellRowMapper {
               : const {},
           duration: row['duration'] as String? ?? '',
           concentration: row['concentration'] == true,
+          // Colonnes absentes (payload mis en cache avant leur lecture, ligne
+          // ancienne) ou inexploitables : pas un rituel, durée inconnue,
+          // jamais de crash.
+          ritual: row['ritual'] == true,
+          spellDuration: SpellDuration.fromColumns(
+            kind: row['duration_kind'],
+            value: row['duration_value'],
+            unit: row['duration_unit'],
+            concentration: row['concentration'] == true,
+          ),
           description: descriptions[id.toString()] ?? '',
           grantSource: grant,
           isPersisted: statuses.containsKey(id),

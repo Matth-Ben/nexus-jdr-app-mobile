@@ -12,6 +12,7 @@ import '../../characters/domain/character_spell_slot.dart';
 import '../../characters/domain/condition_type.dart';
 import '../../characters/domain/custom_armor_properties.dart';
 import '../../characters/domain/prepared_spells_limit.dart';
+import '../../characters/domain/spell_duration.dart';
 import '../../characters/domain/spell_grant_source.dart';
 import 'shared_character_skill_catalog.dart';
 
@@ -425,6 +426,15 @@ CharacterSpellEntry _mapSpell(
     components: _mapOf(row['components']) ?? const {},
     duration: row['duration'] as String? ?? '',
     concentration: row['concentration'] == true,
+    // `build_character_sheet_json` n'expose pas encore ces colonnes : absentes,
+    // elles retombent sur « pas un rituel » et « durée inconnue ».
+    ritual: row['ritual'] == true,
+    spellDuration: SpellDuration.fromColumns(
+      kind: row['duration_kind'],
+      value: row['duration_value'],
+      unit: row['duration_unit'],
+      concentration: row['concentration'] == true,
+    ),
     description: row['description'] as String? ?? '',
     grantSource: grantSource,
     isPersisted: isPersisted,

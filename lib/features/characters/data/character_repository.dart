@@ -8839,7 +8839,8 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .from('spells')
           .select(
             'id, level, school, casting_time, range, components, '
-            'duration, concentration',
+            'duration, concentration, ritual, '
+            'duration_kind, duration_value, duration_unit',
           )
           .inFilter('id', spellIds.toList());
       final spellIdStrings = spellIds.map((id) => id.toString()).toSet();
