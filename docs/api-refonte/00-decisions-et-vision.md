@@ -53,3 +53,18 @@ histoires, un groupe sans MJ propriétaire de l'histoire, transfert de propriét
 survit ?), partage d'une histoire entre MJ (co-MJ), droits des joueurs sur l'environnement (jamais de spoilers),
 données de référence personnalisées par le MJ (monstres/objets maison), jeu de données de test et projet Supabase séparé
 avant les phases lourdes (dev/staging/prod partagent aujourd'hui le même projet), calendrier de l'outil de Florian.
+
+## Décisions de la session de propositions (Matthias, 14/11/2026)
+1. **Migrations** : elles restent dans le dépôt web (`markdown-editor`, gelé côté application mais historique unique de la base).
+2. **Pas de projet Supabase de test séparé** pour l'instant : on continue sur la production avec `--dry-run`. Ce n'était pas
+   la recommandation de `dev-sql-api` (risque : toute erreur de migration touche la production). **Garde-fous obligatoires** :
+   migrations additives et idempotentes, rejeu complet dans un Postgres jetable (deux fois) avant PR, contraintes ajoutées en
+   `NOT VALID` puis validées séparément, aucune suppression ni renommage d'objet utilisé, retour arrière documenté pour chaque
+   migration, requêtes de contrôle en lecture seule avant et après, application étape par étape (une migration à la fois) par
+   Matthias avec `--dry-run`, sauvegarde/point de restauration vérifié avant les phases qui touchent des données. À rediscuter
+   avant la phase 2 (histoire) et la phase 4 (actions du MJ), qui modifient des données et des droits.
+3. **Cardinalité histoire ↔ groupe** : un groupe a 0 ou 1 histoire, une histoire a 0 à N groupes (liaison par procédures, le
+   plusieurs-à-plusieurs reste possible plus tard sans rupture).
+4. **Démarrage** : **phase 0 seule** (hygiène invisible : index manquants, politiques d'accès plus rapides, contraintes,
+   droits), sans aucun changement de contrat visible par les apps. Les phases 1 et suivantes ne démarrent qu'avec une nouvelle
+   validation de Matthias.
