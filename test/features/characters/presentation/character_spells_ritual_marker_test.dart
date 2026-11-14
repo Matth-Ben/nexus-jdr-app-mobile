@@ -308,7 +308,7 @@ void main() {
     testWidgets('EN', (tester) async {
       await open(tester, _ritual, locale: const Locale('en'));
       expect(find.text('Ritual'), findsOneWidget);
-      expect(find.text('Yes · +10 min casting'), findsOneWidget);
+      expect(find.text('Yes · +10 min casting time'), findsOneWidget);
     });
 
     testWidgets('absente pour un sort non rituel', (tester) async {
