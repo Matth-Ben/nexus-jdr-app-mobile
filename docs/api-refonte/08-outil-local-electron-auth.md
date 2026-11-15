@@ -174,3 +174,22 @@ personnages (instantané) → combat.
 | B3+4 puis 6c - Actions MJ | `game_events`, Broadcast privé, `gm_tool_enabled_at`, consentement, `gm_*` (dégâts, récompenses, effets) ; puis bouton côté outil | 6a, `regles-dnd`, `rgpd`, A1-A12 de 06 | voir 09 §5 étape 5 |
 
 Chaque lot deviendra un ticket Project #7 (avec ses tâches « Tâche (toi) ») une fois la feuille de route validée.
+
+**Version à faire valider par Florian** (15/11/2026) : `FEUILLE-DE-ROUTE.md` sur la branche d'intégration
+`dev/nexus-desktop` du dépôt de Florian (https://github.com/Coudercf/grimoire-du-mj/blob/dev/nexus-desktop/FEUILLE-DE-ROUTE.md),
+autonome et numérotée en **étapes**. Correspondance avec les lots et tickets ci-dessus :
+
+| Étape (Florian) | Lots / tickets Nexus |
+|---|---|
+| 0 Préparation | lot 0 (Node 24, accord de Florian, compte de test, sous-agent) |
+| 1 Logiciel de bureau et accès local | lot 1 |
+| 2 Connexion au compte Nexus | lot 2 |
+| 3 Générer un groupe | lot 2b |
+| 4 Titre de campagne visible | B2' + lot 2c |
+| 5 Joueurs et personnages | B1a + lot 3 |
+| 6 Écrans joueur sur tablette | lot 4 |
+| 7 Combat depuis Grimoire | lot 6a (+ tickets Combat V2) |
+| 8 Bestiaire et catalogues hors ligne | B1b + lot 6b |
+| 9 Google et macOS | lot 5 |
+| 10 Actions du MJ en temps réel | B3+4 + 6c (ticket « Associer le mode histoire (app de Florian) à un Groupe ») |
+| 11 Pistes pour plus tard | non planifié |
