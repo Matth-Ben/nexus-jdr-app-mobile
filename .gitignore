@@ -76,3 +76,8 @@ config/qa_test_account.json
 # de groupe) du sous-agent simulation-utilisateur — identifiants réels,
 # jamais committés — voir docs/retours-utilisateurs.md.
 config/qa_test_account_joueur.json
+
+# Tout autre compte de test (joueur2, MJ de l'outil de Florian…) : même règle,
+# identifiants réels jamais committés ; seuls les modèles *.json.example le sont.
+config/qa_test_account_*.json
+!config/qa_test_account_*.json.example

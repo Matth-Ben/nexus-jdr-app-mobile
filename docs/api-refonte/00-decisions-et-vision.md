@@ -68,3 +68,36 @@ avant les phases lourdes (dev/staging/prod partagent aujourd'hui le même projet
 4. **Démarrage** : **phase 0 seule** (hygiène invisible : index manquants, politiques d'accès plus rapides, contraintes,
    droits), sans aucun changement de contrat visible par les apps. Les phases 1 et suivantes ne démarrent qu'avec une nouvelle
    validation de Matthias.
+
+## Décisions du 15/11/2026 (Matthias, après l'analyse de `grimoire-du-mj`)
+1. **L'outil de Florian est `grimoire-du-mj`** (github.com/Coudercf/grimoire-du-mj) : application locale (serveur Node +
+   SQLite, client React), sans Supabase ni compte à ce jour.
+2. **Il reste local** et sera lancé avec **Electron** comme un logiciel : « afin d'avoir un local avec les fichiers à importer
+   qui seront stockés directement en local afin d'éviter de devoir les importer sur un serveur et de devoir les stocker ».
+3. **Connexion au compte Nexus** à ajouter : « afin de récupérer son compte et pouvoir récupérer les groupes et les joueurs ».
+4. **Auth locale obligatoire** : l'absence d'authentification sur le réseau local n'est pas acceptée.
+5. Import de l'outil : « mettre à jour » et « réutiliser la bibliothèque » restent cochés par défaut.
+
+Étude : `08-outil-local-electron-auth.md` (Electron, connexion) et `09-base-outil-local.md` (base). Décisions prises par
+Matthias le même jour sur les questions de l'étude (D1 à D14 de 09 §4) :
+
+6. **Décision n° 2 du 14/11 remplacée** (option O1 + étiquette de 09 §2.2) : « Le contenu des campagnes (histoire, PNJ, lieux,
+   plateaux, images, imports) vit dans l'outil local du MJ. La base Nexus porte les comptes, les groupes, les membres, les
+   personnages, le combat, les données de référence et, plus tard, les actions du MJ journalisées. » Le **titre (et un résumé
+   public) de la campagne est visible des joueurs** sur le groupe (colonnes nullables sur `groups`, migration additive + version
+   mobile). La phase 2 de `05` (§2.1-2.4 : `adventure_*`, bucket, modèle de spoilers, `generate_group_from_story`,
+   `groups.adventure_id`) est **abandonnée**.
+7. **Créer le groupe depuis l'outil** : « le compte qui fait l'histoire sera le MJ […] quand son histoire est terminée, créer le
+   groupe et inviter les joueurs ». Via l'edge function existante `create-group` (sans personnage : MJ `is_game_master = true`),
+   avancée juste après la connexion dans la feuille de route.
+8. **Qui développe** : un sous-agent dédié TypeScript/Electron ; chaque lot = PR sur `Coudercf/grimoire-du-mj`, relue par
+   `code-reviewer` puis par Florian, qui merge.
+9. **Une base locale par compte**, avec reprise (copie) de la base existante de Florian au premier lancement.
+10. **Contrat de lecture d'abord** : `api_v1.group_snapshot` / `my_gm_groups` livrés avant la lecture des groupes et joueurs.
+11. **CA** : fonction SQL, parité testée avec le calcul du mobile (C2). **PV d'un héros lié** : la fiche mobile fait foi (jeton
+    de l'outil en lecture jusqu'aux actions MJ). **Groupes affichés** : ceux dont le compte est propriétaire.
+12. **Code d'invitation lisible par les membres** : voulu, on garde ; seul le commentaire faux est corrigé (D227).
+13. **Distribution** : Windows non signé, sans mise à jour automatique au début. **Florian travaille aussi sur Mac** : version
+    macOS à prévoir (notarisation quand le compte Apple Developer existera).
+14. **Comptes et groupes de test dédiés** pour le développement de l'outil (pas de projet Supabase de test).
+15. **Google** : au lot 5, après e-mail + mot de passe.
