@@ -4,6 +4,11 @@ Date : 15/11/2026. Ticket Project #7 : « Outil de Florian : Electron, connexion
 base (étude) ». Document de **proposition** : rien n'est développé, rien n'est appliqué. La partie base de données
 (Supabase et SQLite local) est dans `09-base-outil-local.md` (agent `dev-sql-api`).
 
+> **Mise à jour du 16/11/2026** : la référence pour l'outil est désormais `FEUILLE-DE-ROUTE.md` (branche `dev/nexus-desktop` du
+> dépôt de Florian) et les décisions 16 à 25 de `00`. Les recommandations techniques E (Electron), S (sécurité locale) et A
+> (connexion) ci-dessous restent valables, sauf A9 (compte obligatoire, outil payant) et E9/E10 (obligatoires avant la mise en
+> vente). La section 8 renvoie maintenant à la feuille de route.
+
 Fiabilité : **[C]** vérifié (code lu ou essai exécuté sur ce poste), **[D]** déduit, **[I]** incertain (à vérifier).
 
 ## 0. Décisions de Matthias (15/11/2026)
@@ -77,7 +82,7 @@ ramasse-miettes bloqueraient les fenêtres et le menu) ; un plantage du serveur 
 | E7 | **Écran joueur en 2e fenêtre** sur l'écran choisi (`screen.getAllDisplays()`, plein écran) : couvre la télévision en HDMI sans réseau local | [D] |
 | E8 | Empaquetage `electron-builder`, Windows x64 (installeur NSIS) d'abord. Serveur compilé par esbuild **sans dépendances externes** (évite les liens symboliques de pnpm dans l'archive) ; client Vite en `extraResources` tant que la lecture d'un `asar` depuis le `utilityProcess` n'est pas vérifiée. Aucune dépendance native : `node:sqlite` est intégré, les images sont traitées dans le navigateur | [D] ; [I] pour `asar` |
 | E9 | Mises à jour : `electron-updater`. Le dépôt est **privé** : la mise à jour depuis GitHub exigerait un jeton embarqué (à proscrire). Options : dépôt public dédié aux versions, ou stockage public (bucket) | [D] décision Matthias/Florian |
-| E10 | Signature : sans certificat, Windows affiche l'alerte SmartScreen (acceptable pour Florian et toi en test, pas pour une diffusion). macOS exige un compte Apple Developer et la notarisation : à repousser sauf si Florian travaille sur Mac | [D] décision et coût |
+| E10 | Signature : sans certificat, Windows affiche l'alerte SmartScreen (acceptable pour Florian et toi en test, pas pour une diffusion). macOS exige un compte Apple Developer et la notarisation. **16/11 : Grimoire étant payant, signature (Windows et macOS) et mises à jour automatiques (E9) sont obligatoires avant la mise en vente** | [D] décision et coût |
 | E11 | Scripts : `pnpm dev` inchangé (web) ; `pnpm dev:desktop` (Vite + Electron, serveur lancé avec `--import tsx`, testé ci-dessus) ; `pnpm dist:win` | [C] pour `--import tsx` sous le Node d'Electron |
 | E12 | CSP inchangée (`server/static.ts`) : les appels Supabase partent du serveur local, pas de la page ; les portraits distants sont téléchargés par le serveur et servis comme images locales | [D] |
 
@@ -109,7 +114,7 @@ réinitialisation du mot de passe vers `https://nexus-jdr.app/update-password` (
 | A6 | **Apple** : les comptes Apple ne viennent que d'iOS, pas encore publié : hors v1. Repli universel possible : **code à 6 chiffres par e-mail** (`signInWithOtp` + `verifyOtp`) si le modèle d'e-mail Supabase affiche `{{ .Token }}`. À décider | [D] |
 | A7 | **Inscription** : même parcours que le mobile. Message « vérifie ta boîte mail », puis connexion dans l'outil après le clic. Rien à créer côté Supabase | [C] confirmation activée |
 | A8 | **Une base locale par compte** : la première connexion lie la base au compte (`app_meta.owner_user_id`, voir 09) ; changer de compte change de base, jamais de mélange | [D] |
-| A9 | **Hors ligne** : connexion obligatoire au **premier** lancement seulement. Ensuite, sans réseau, l'outil démarre avec l'identité en cache : tout le contenu local reste utilisable, les groupes et joueurs sont lus dans le cache avec leur date, les actions distantes sont grisées avec un message | [D] ; [I] limites de session dans le tableau de bord Supabase (durée maximale, inactivité) |
+| A9 | **Compte obligatoire** (Grimoire payant, décision du 16/11). **Hors ligne** : après une connexion, l'outil démarre sans réseau avec l'identité en cache, dans la limite de la **période de grâce** de l'attestation de licence (étape 11 de la feuille de route, 14 jours proposés) ; les groupes et joueurs sont lus dans le cache avec leur date, les actions distantes sont grisées avec un message | [D] ; [I] limites de session dans le tableau de bord Supabase (durée maximale, inactivité) |
 | A10 | Session révoquée ou compte supprimé (rafraîchissement refusé) : retour à l'écran de connexion ; la base locale n'est **jamais** supprimée automatiquement, export proposé | [D] |
 | A11 | Interface : écran Connexion / Inscription / Mot de passe oublié, menu Compte (pseudo, en ligne / hors ligne, dernière synchro, déconnexion), garde de route tant que `signed_out`, redirection sur 401. Habillage dans le design de Florian (shadcn), pas celui de Nexus : à valider avec lui | [D] |
 | A12 | Groupes et joueurs : routes locales `/api/nexus/*` qui lisent le **cache local** et déclenchent une synchro. Forme des données, droits et optimisations : `09-base-outil-local.md` | renvoi |
@@ -128,17 +133,43 @@ réinitialisation du mot de passe vers `https://nexus-jdr.app/update-password` (
 
 ## 7. Risques et points ouverts
 
-1. **Conflit avec la décision n° 2** (section 0) : bloque la conception de la liaison groupe ↔ campagne (09).
-2. **Développement sur la production** (même projet Supabase) : comptes et groupes de test obligatoires pour Florian.
-3. **Qui développe et avec quel circuit** : c'est le dépôt de Florian (PR sur `Coudercf/grimoire-du-mj`). Nos sous-agents
-   sont spécialisés Flutter (`dev-flutter`) et Supabase ; aucun n'est défini pour TypeScript/Electron. À décider : Florian
-   code, ou un agent dédié est créé, avec `code-reviewer` en relecture.
-4. **Accord de Florian** sur l'architecture (utilityProcess, cookie local, portée « écran », une base par compte).
-5. Distribution : signature, mises à jour depuis un dépôt privé, macOS.
-6. **RGPD** : l'outil mettra en cache, sur la machine du MJ, des données d'autres utilisateurs (pseudos, personnages).
-   Durée, purge à la sortie d'un groupe : à faire auditer par `rgpd` avant diffusion.
+1. ~~Conflit avec la décision n° 2~~ : **tranché** le 15/11 (contenu local + titre visible), précisé le 16/11 (`00`, 16 à 25).
+2. **Développement sur la production** (même projet Supabase) : comptes et groupes de test obligatoires pour Florian (décidé).
+3. ~~Qui développe~~ : **tranché** (sous-agent TypeScript/Electron dédié, PR vers `dev/nexus-desktop` relues et mergées par Florian).
+4. **Accord de Florian** sur la feuille de route (section 10 de `FEUILLE-DE-ROUTE.md`).
+5. Distribution : signature et mises à jour **obligatoires avant la mise en vente** (Grimoire payant) ; version macOS prévue.
+6. **RGPD** : l'outil mettra en cache, sur la machine du MJ, des données d'autres utilisateurs (pseudos, personnages), et le
+   paiement ajoute un sous-traitant. Durée, purge à la sortie d'un groupe, politique de confidentialité : à faire auditer
+   par `rgpd` avant diffusion.
+7. **Offre Supabase gratuite** : aucune sauvegarde et pause après une semaine d'inactivité ; passage en Pro proposé avant la
+   mise en vente.
 
-## 8. Feuille de route proposée (à valider ensemble)
+## 8. Feuille de route
+
+**La feuille de route de référence est `FEUILLE-DE-ROUTE.md`** sur la branche `dev/nexus-desktop` du dépôt de Florian
+(https://github.com/Coudercf/grimoire-du-mj/blob/dev/nexus-desktop/FEUILLE-DE-ROUTE.md), étapes 0 à 12, avec les check-lists
+outil / base / app mobile. Depuis le 16/11, les tickets Project #7 portent la même numérotation :
+
+| Étape | Tickets Project #7 |
+|---|---|
+| 0 Préparation | « Outil de Florian, étape 0 : … » (Node 24, faire valider la feuille de route, compte de test MJ, sous-agent) |
+| 1 Logiciel de bureau et accès local protégé | « Outil de Florian, étape 1 » |
+| 2 Connexion au compte Nexus (obligatoire) | « Outil de Florian, étape 2 » |
+| 3 Associer un groupe à une histoire, devenir MJ | « Outil de Florian, étape 3 » + « Base + app, étape 3 : devenir MJ du groupe » |
+| 4 Titre de l'histoire visible | « Base, étape 4 » + « Outil de Florian, étape 4 » |
+| 5 Joueurs et personnages dans Grimoire | « Base, étape 5 : contrat de lecture » + « Outil de Florian, étape 5 » |
+| 6 Écrans joueur sur tablette | « Outil de Florian, étape 6 » |
+| 7 Combat piloté par Grimoire, notifications | « Outil de Florian, étape 7 » + « Base, étapes 7 et 10 : canaux temps réel privés et notifier mon groupe » |
+| 8 Bestiaire embarqué et catalogue d'objets | « Outil de Florian, étape 8 » |
+| 9 Google, macOS, signature et mises à jour | « Outil de Florian, étape 9 » |
+| 10 Actions du MJ et révélations | « Outil de Florian, étape 10 » (ex « Associer le mode histoire ») |
+| 11 Licence et abonnement | « Outil de Florian, étape 11 » |
+| 12 Pistes pour plus tard | non planifié |
+
+Le tableau des « lots » ci-dessous (15/11) est **remplacé** ; il est conservé pour l'historique.
+
+<details>
+<summary>Ancien découpage en lots (15/11/2026, remplacé)</summary>
 
 Intègre les recommandations de `09-base-outil-local.md` (D1 à D14 de 09 §4 ; ordre côté base en 09 §5). Deux pistes en
 parallèle possibles : **outil** (dépôt de Florian, lots 1 à 6) et **base** (dépôt web, étapes B), avec un seul point de
@@ -193,3 +224,5 @@ autonome et numérotée en **étapes**. Correspondance avec les lots et tickets 
 | 9 Google et macOS | lot 5 |
 | 10 Actions du MJ en temps réel | B3+4 + 6c (ticket « Associer le mode histoire (app de Florian) à un Groupe ») |
 | 11 Pistes pour plus tard | non planifié |
+
+</details>

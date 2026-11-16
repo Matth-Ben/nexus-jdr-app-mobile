@@ -27,6 +27,58 @@ des 9 migrations de la phase 0 et du fichier différé ; `functions/create-group
 
 ---
 
+## Mise à jour du 16/11/2026 (chef de projet) : ce qui a changé depuis ce rapport
+
+Ce rapport date du 15/11. Les décisions de Matthias des 15 et 16/11 (`00`, points 6 à 25) et la feuille de route de l'outil
+(`FEUILLE-DE-ROUTE.md`, branche `dev/nexus-desktop` du dépôt de Florian) **priment** sur les sections ci-dessous là où elles
+les contredisent. Les analyses de l'existant (droits, objets réutilisables, fichiers cités) restent valables.
+
+**État des décisions D1 à D14 (§4)**
+
+| # | Décision |
+|---|---|
+| D1 | **O1 + étiquette** : contenu local, titre et résumé public de l'histoire sur `groups` |
+| D2 | Oui : une base locale par compte, reprise de la base de Florian par copie |
+| D3 | Oui : `group_snapshot` / `my_gm_groups` livrés avant la lecture des groupes et joueurs (étape 5) |
+| D4 | **C2** : fonction SQL de CA, parité testée avec le calcul Dart |
+| D5 | Comptes et groupes de test dédiés |
+| D6 | La fiche mobile fait foi ; pendant les combats, Grimoire écrit les PV et états par une fonction protégée (A1) |
+| D7 | Oui : titre visible des joueurs (étape 4) |
+| D8 | **Catalogue d'objets seulement** ; le bestiaire est embarqué dans Grimoire, pas lu en base |
+| D9 | Groupes dont le compte est propriétaire (liste utilisée pour associer un groupe existant à une histoire) |
+| D10 | Ouvert (avis `rgpd`) |
+| D11 | Ouvert (avis `rgpd`) |
+| D12 | Butin vers le trésor commun : piste pour plus tard (étape 12), non décidée |
+| D13 | Remplacé par les **révélations** Afficher / Cacher sur le canal temps réel, **sans table** (`group_publications` et bucket abandonnés) |
+| D14 | `api_v1` (cohérent avec 05) |
+
+**Sections remplacées**
+
+- §2.3 « Générer un groupe » : l'association est facultative et peut viser un **groupe existant** ; la fonction **« devenir MJ
+  du groupe »** est décidée. `gm_tool_enabled_at` et le « groupe piloté » ne sont plus nécessaires : les écritures du MJ sont
+  autorisées par la fonction protégée des PV et états (MJ du groupe, personnage membre actif).
+- §2.5 et §2.6 (combat) : l'outil **n'utilise plus** les tables et RPC de combat ; combats et messages passent par des
+  **canaux temps réel privés** (broadcast, deux sujets par groupe, règles d'accès sur `realtime.messages`, sans table).
+- §2.4 et §5 (références) : `reference_manifest` / `reference_export` et les slugs **uniquement pour les objets** ; la table
+  `creatures` peut être retirée après export vers Grimoire (décision séparée).
+- §5 étape 5 (phases 3 et 4 fusionnées) : `game_events`, consentement par `gm_actions_consent_at`, `gm_*` génériques,
+  `combat_npc_state`, `add_npc_participants_batch` et `advance_turn` côté base pour l'outil sont **abandonnés**. Restent une
+  fonction protégée PV et états, l'adaptation de la file hors ligne mobile en écarts, et une fonction « notifier mon groupe ».
+- Nouveau : Grimoire est **payant**. Une table de **droits d'accès** est écrite uniquement par le serveur, avec une fonction
+  de réception des paiements et une attestation de licence signée (étape 11). C'est la seule table ajoutée pour l'outil.
+
+**Ordre révisé des travaux côté base** (garde-fous de `00` inchangés)
+
+1. Terminer la phase 0 (PR web #48).
+2. « Devenir MJ du groupe » ; colonnes `story_title` et `story_summary_public` ; correction du commentaire D227.
+3. Phase 1a : `api_v1`, `group_snapshot`, `my_gm_groups` (avec la présence d'un MJ), CA en SQL.
+4. Canaux temps réel privés (règles d'accès) et fonction « notifier mon groupe ».
+5. Catalogue d'objets : slugs, édition, export par empreinte ; export du bestiaire vers Grimoire.
+6. Fonction protégée des PV et états (avec `regles-dnd`), et file hors ligne mobile en écarts.
+7. Droits d'accès Grimoire (table, paiements, attestation) ; passage en offre Pro proposé avant la mise en vente.
+
+---
+
 ## 0. Synthèse
 
 **Verdict sur le conflit avec la décision n° 2 du 14/11.** Le conflit est réel et ne se règle pas par un compromis

@@ -1,5 +1,10 @@
 # 05 - Révision des propositions à la lumière de la vision produit
 
+> **Remplacé en partie (16/11/2026)** : l'outil de Florian reste local (`grimoire-du-mj`). Les §2.1 à §2.4 (histoire en base),
+> §3 (actions `gm_*`, `game_events`, monstres), §4 (références pour l'outil) et §5 (événements) ne valent plus pour l'outil.
+> Voir `00` (décisions 6 à 25), `09` (section « Mise à jour du 16/11/2026 ») et `FEUILLE-DE-ROUTE.md` (branche
+> `dev/nexus-desktop` du dépôt de Florian). La phase 0 et les principes généraux (`api_v1`, idempotence, codes d'erreur) restent valables.
+
 Date : 14/11/2026. Étape 2, lecture seule : rien n'est décidé, rien n'est appliqué, aucun dépôt modifié. Ce document **complète** `03-propositions.md` et le **remplace là où il le contredit**. Références : `00-decisions-et-vision.md` (vision de Matthias, 14/11/2026), `01`..`04` (étape 1), `06-questions-revisees.md` (décisions), `07-parcours-et-exemples.md` (parcours).
 
 Fiabilité : **[C]** certain (lu dans le code/les migrations), **[D]** déduit, **[I]** incertain (dépend de la production ou de l'outil de Florian). Tout ce qui concerne le futur outil de Florian est **à valider avec Florian** : je propose ce qu'il *consomme*, jamais comment il se construit.

@@ -1,5 +1,10 @@
 # 06 - Questions révisées (décisions à trancher) et requêtes de contrôle complémentaires
 
+> **Remplacé en partie (16/11/2026)** : les blocs H (histoire en base), A (actions MJ `gm_*`) et R (temps réel avec
+> `game_events`) supposaient l'histoire en base, ce qui a été abandonné. Les questions encore ouvertes sont dans `09` (D10, D11,
+> D12) et dans la section 11 de `FEUILLE-DE-ROUTE.md` (branche `dev/nexus-desktop` du dépôt de Florian). Les requêtes de
+> contrôle Q-SQL restent utilisables.
+
 Date : 14/11/2026. Remplace `04-questions.md` pour le modèle révisé (`05-revision-propositions.md`) ; les requêtes Q-SQL-1 à 13 de `04` restent valables, les nouvelles portent les numéros 14 à 24. Aucune décision n'est prise par l'agent SQL/API : chaque ligne a une **recommandation par défaut**. « Qui » : **M** = Matthias, **F** = Florian, **M+F** = les deux, **CP** = chef de projet, avec l'agent à consulter si besoin.
 
 Classement par **ordre de blocage** : bloc B (bloque la phase 1, contrat figé), H (phase 2 : histoire), A (phase 4 : actions MJ), R (temps réel, phase 3), L (legacy), M (mobile, phases 5-7). Les questions 1 à 4 du bloc B bloquent aussi **tout** début de travail de Florian sur un projet réel.

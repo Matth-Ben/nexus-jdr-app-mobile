@@ -1,5 +1,9 @@
 # 07 - Parcours de bout en bout (modèle révisé)
 
+> **Obsolète pour l'outil de Florian (16/11/2026)** : ces parcours décrivent l'ancien modèle (histoire en base,
+> `generate_group_from_story`, combats et monstres en base, `game_events`, `gm_*`). Les parcours à jour sont dans
+> `FEUILLE-DE-ROUTE.md` (branche `dev/nexus-desktop` du dépôt de Florian), étapes 3, 7 et 10. Document conservé pour l'historique.
+
 Date : 14/11/2026. Illustrations du modèle de `05-revision-propositions.md` ; **aucune de ces RPC n'existe encore** (sauf mention **[E]** = existe et publiée [C]). Les noms de colonnes `game_events`, `character_grants`, etc. sont des **propositions**. « Outil » = le nouvel outil de MJ de Florian (**son fonctionnement interne est à valider avec Florian** ; seuls les appels qu'il fait à l'API sont décrits). « Mobile » = l'app Flutter. Les codes d'erreur suivent `message` + SQLSTATE.
 
 Hypothèses communes : MJ = Alice (`A`), joueurs Bob (`B`) et Chloé (`C`) ; même projet Supabase de test ; Alice et les joueurs sont connectés avec leur compte ; les droits MJ sur fiches sont limités à un groupe **lié** (05 §3.1).

@@ -29,6 +29,9 @@ ces informations. Aucune modification de la base ni des dépôts n'est faite ava
    l'inverse.
 
 ## Conséquences pour l'API (à instruire par `dev-sql-api`, sans rien modifier avant validation)
+
+> **Remplacé en grande partie par les décisions des 15 et 16/11/2026** (fin de ce document) : plus d'histoire en base, plus
+> d'actions `gm_*` journalisées dans `game_events`, combats de l'outil non stockés. Section conservée pour l'historique.
 - **Modèle** : `story` (histoire + environnement, propriétaire = MJ), `group.story_id` **nullable** (groupe lié ou non),
   génération d'un groupe depuis une histoire (RPC dédiée : crée le groupe, le code d'invitation, lie l'histoire, MJ =
   propriétaire de l'histoire et du groupe), relation avec l'existant (`groups.campaign_id` jamais utilisé,
@@ -101,3 +104,35 @@ Matthias le même jour sur les questions de l'étude (D1 à D14 de 09 §4) :
     macOS à prévoir (notarisation quand le compte Apple Developer existera).
 14. **Comptes et groupes de test dédiés** pour le développement de l'outil (pas de projet Supabase de test).
 15. **Google** : au lot 5, après e-mail + mot de passe.
+
+## Décisions du 16/11/2026 (Matthias, revue de la feuille de route de l'outil)
+
+**Document de référence pour l'outil** : `FEUILLE-DE-ROUTE.md` de la branche `dev/nexus-desktop` du dépôt de Florian
+(https://github.com/Coudercf/grimoire-du-mj/blob/dev/nexus-desktop/FEUILLE-DE-ROUTE.md), étapes 0 à 12. Il prime sur `05` à `09` là
+où ils le contredisent. Les tickets Project #7 portent la même numérotation (« étape N »).
+
+16. **Combats de l'outil non enregistrés en base** : « les combats seront juste des actions ». Grimoire est le maître du combat
+    (monstres, PV des monstres, ordre d'initiative en local) ; les messages passent par un canal temps réel privé du groupe
+    (Supabase Realtime, broadcast). Les tables et RPC de combat existantes restent pour le combat mené **dans l'app** par un MJ
+    sans Grimoire.
+17. **PV synchronisés dans les deux sens** pendant les combats ; fin de combat affichée dans l'app ; le MJ peut montrer l'image
+    d'un monstre.
+18. **Actions sur les fiches** : PV et états écrits par Grimoire via une fonction protégée (A1, l'app passe ses PV hors ligne en
+    écarts) ; récompenses proposées sur le canal, acceptées et appliquées par l'app du joueur (A2).
+19. **Révélations** (image de monstre, carte PNJ, énoncé d'énigme, parchemin) : affichées dans l'app tant que le MJ ne les cache
+    pas (bouton Afficher / Cacher) ; rien en base.
+20. **Bestiaire uniquement dans Grimoire** (l'app ne l'utilise pas) ; **catalogue d'objets** partagé, objets personnalisés dans
+    Grimoire. Les autres catalogues ne sont pas copiés dans l'outil.
+21. **Lien histoire ↔ groupe facultatif** ; Grimoire affiche les histoires ; une histoire peut être associée à un groupe généré
+    depuis Grimoire **ou existant** (créé dans l'app). Grimoire et l'app restent utilisables séparément. Remplace le point 11
+    « groupes affichés ».
+22. **Devenir MJ du groupe** : oui (fonction base + bouton dans l'app).
+23. **Notifier mon groupe** : oui (fonction réservée au MJ : « Combat ! », « À toi de jouer », « Nouvelle révélation »).
+24. **Grimoire payant** (abonnement ou licence, formule à définir) : compte Nexus **obligatoire** ; droits d'accès en base (seule
+    table ajoutée pour l'outil) ; signature et mises à jour automatiques obligatoires avant la mise en vente (complète le point 13).
+25. **Offre Supabase gratuite** pour le moment (256 Ko par message temps réel, donc images réduites ; aucune sauvegarde ; pause
+    après une semaine d'inactivité) ; le passage en Pro avant la mise en vente est proposé, non décidé.
+
+**Abandonné** par rapport aux propositions de `05`/`09` : tables `adventure_*`, bucket d'images d'histoire,
+`generate_group_from_story`, `groups.adventure_id`, `game_events`, `combat_npc_state`, `add_monsters`, `revealed`, API de bestiaire,
+export des catalogues autres que les objets, utilisation des RPC de combat par l'outil.
