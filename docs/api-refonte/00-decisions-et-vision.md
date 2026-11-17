@@ -133,6 +133,23 @@ où ils le contredisent. Les tickets Project #7 portent la même numérotation (
 25. **Offre Supabase gratuite** pour le moment (256 Ko par message temps réel, donc images réduites ; aucune sauvegarde ; pause
     après une semaine d'inactivité) ; le passage en Pro avant la mise en vente est proposé, non décidé.
 
+## Décisions du 17/11/2026 (validation de Florian et réponses de Matthias)
+
+26. **Noms des projets** (demande de Florian) : **Grimoire** = l'app de bureau Electron (`grimoire-du-mj`, ex « outil de
+    Florian ») ; **Nexus** = l'app mobile (ce dépôt) ; **DeepCore** = l'API et la base (Supabase), et son dépôt (ex
+    `markdown-editor`, « dépôt web »). Le compte utilisateur commun s'affiche « **compte Nexus** ».
+27. **Florian valide** le travail sur son dépôt, sur la branche `dev/nexus-desktop`. Les PR de chaque étape y sont **mergées
+    par Matthias** (jamais par Claude) ; Florian décide seul de la fusion dans `main`. Remplace le point 8 (« Florian relit
+    et merge »).
+28. **Version d'essai** (demande de Florian) : Grimoire gratuit, local, **sans limite de durée et sans compte**, avec un
+    extrait du bestiaire et des objets livré à l'installation. La **licence** (compte Nexus) débloque DeepCore : bestiaire
+    et catalogue d'objets complets, groupes, lien avec Nexus. Licence expirée : retour à la version d'essai. Remplace « compte
+    obligatoire » (point 24).
+29. **Bestiaire complet dans DeepCore, réservé aux licences** : la table des monstres **reste** (n'est pas supprimée) ; sa
+    lecture publique et celle de ses traductions sont à restreindre ; Grimoire la télécharge avec une licence valide.
+    Remplace « bestiaire uniquement dans Grimoire » (point 20).
+
 **Abandonné** par rapport aux propositions de `05`/`09` : tables `adventure_*`, bucket d'images d'histoire,
-`generate_group_from_story`, `groups.adventure_id`, `game_events`, `combat_npc_state`, `add_monsters`, `revealed`, API de bestiaire,
-export des catalogues autres que les objets, utilisation des RPC de combat par l'outil.
+`generate_group_from_story`, `groups.adventure_id`, `game_events`, `combat_npc_state`, `add_monsters`, `revealed`,
+export des catalogues autres que les objets et les monstres, utilisation des RPC de combat par l'outil. (Le 17/11, le
+bestiaire revient dans DeepCore, réservé aux licences : point 29.)

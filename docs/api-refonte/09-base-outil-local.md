@@ -44,7 +44,7 @@ les contredisent. Les analyses de l'existant (droits, objets réutilisables, fic
 | D5 | Comptes et groupes de test dédiés |
 | D6 | La fiche mobile fait foi ; pendant les combats, Grimoire écrit les PV et états par une fonction protégée (A1) |
 | D7 | Oui : titre visible des joueurs (étape 4) |
-| D8 | **Catalogue d'objets seulement** ; le bestiaire est embarqué dans Grimoire, pas lu en base |
+| D8 | Objets **et monstres** (17/11) : un extrait livré avec Grimoire pour la version d'essai ; le bestiaire complet reste en base, **réservé aux licences**, et le catalogue d'objets complet est exporté pour les licences. Pas de copie des sorts, classes, races, dons ni historiques |
 | D9 | Groupes dont le compte est propriétaire (liste utilisée pour associer un groupe existant à une histoire) |
 | D10 | Ouvert (avis `rgpd`) |
 | D11 | Ouvert (avis `rgpd`) |
@@ -59,8 +59,10 @@ les contredisent. Les analyses de l'existant (droits, objets réutilisables, fic
   autorisées par la fonction protégée des PV et états (MJ du groupe, personnage membre actif).
 - §2.5 et §2.6 (combat) : l'outil **n'utilise plus** les tables et RPC de combat ; combats et messages passent par des
   **canaux temps réel privés** (broadcast, deux sujets par groupe, règles d'accès sur `realtime.messages`, sans table).
-- §2.4 et §5 (références) : `reference_manifest` / `reference_export` et les slugs **uniquement pour les objets** ; la table
-  `creatures` peut être retirée après export vers Grimoire (décision séparée).
+- §2.4 et §5 (références) : `reference_manifest` / `reference_export` et les slugs **pour les objets et les monstres**. La
+  table `creatures` **reste** (décision du 17/11) : sa lecture publique (policies « Anonymous/Authenticated users can read
+  creatures », `using (true)`) et celle de ses traductions sont à restreindre, et le bestiaire est servi aux seules licences
+  par une fonction qui vérifie les droits. Nexus n'utilise pas `creatures`.
 - §5 étape 5 (phases 3 et 4 fusionnées) : `game_events`, consentement par `gm_actions_consent_at`, `gm_*` génériques,
   `combat_npc_state`, `add_npc_participants_batch` et `advance_turn` côté base pour l'outil sont **abandonnés**. Restent une
   fonction protégée PV et états, l'adaptation de la file hors ligne mobile en écarts, et une fonction « notifier mon groupe ».
@@ -73,7 +75,8 @@ les contredisent. Les analyses de l'existant (droits, objets réutilisables, fic
 2. « Devenir MJ du groupe » ; colonnes `story_title` et `story_summary_public` ; correction du commentaire D227.
 3. Phase 1a : `api_v1`, `group_snapshot`, `my_gm_groups` (avec la présence d'un MJ), CA en SQL.
 4. Canaux temps réel privés (règles d'accès) et fonction « notifier mon groupe ».
-5. Catalogue d'objets : slugs, édition, export par empreinte ; export du bestiaire vers Grimoire.
+5. Catalogues pour Grimoire : slugs, édition, export par empreinte des objets et des monstres ; lecture publique des monstres
+   et de leurs traductions restreinte ; export du bestiaire réservé aux licences.
 6. Fonction protégée des PV et états (avec `regles-dnd`), et file hors ligne mobile en écarts.
 7. Droits d'accès Grimoire (table, paiements, attestation) ; passage en offre Pro proposé avant la mise en vente.
 

@@ -3,6 +3,20 @@
 Ce fichier oriente Claude Code quand il travaille dans **ce dépôt** (le dépôt mobile,
 séparé du monorepo web — voir `13-depot-versioning-publication.md` du cahier des charges).
 
+## Noms des projets (décision du 17/11/2026)
+
+Utiliser ces noms dans les échanges, les tickets et les documents :
+
+- **Nexus** : cette app mobile (ce dépôt).
+- **Grimoire** : l'app de bureau Electron du MJ, dépôt `Coudercf/grimoire-du-mj`
+  (local `H:\Projets\Labo\grimoire-du-mj`, branche de travail `dev/nexus-desktop` : PR mergées
+  par Matthias, `main` gardée par Florian). Ex « outil de Florian ». Sa feuille de route de
+  référence est `FEUILLE-DE-ROUTE.md` sur cette branche.
+- **DeepCore** : l'API et la base Supabase communes, et leur dépôt (ex `markdown-editor`,
+  « dépôt web », local `H:\Projets\Labo\markdown-editor`) : migrations SQL et edge functions.
+  Partout où ce fichier dit « dépôt web », il s'agit de DeepCore.
+- **Compte Nexus** : le nom affiché du compte utilisateur commun (géré par DeepCore).
+
 ## Où est la spec
 
 Le cahier des charges complet (14 documents : vision, modèle de données, UX,
@@ -83,7 +97,7 @@ dehors du cahier des charges.
 | `dette-technique` | Audit de dette technique | Analyser le code en place (périssable, fragile, mort) et produire un registre de dette priorisé — ne corrige rien lui-même |
 | `regles-dnd` | Expert des règles D&D 5e (RAW) | Valider la règle exacte **avant** d'implémenter une mécanique de jeu (sorts, emplacements, multiclassage, dés de vie, préparation), puis vérifier la fidélité RAW du code **après** — ne code pas, ne tranche jamais seul une ambiguïté RAW (remonte à la conversation principale) |
 | `rgpd` | Audit RGPD / confidentialité | Analyser l'app en place (consentement, droits d'accès/export/suppression, sous-traitants tiers, permissions OS, textes légaux vs comportement réel du code) et produire un registre d'écarts priorisé — ne corrige rien lui-même |
-| `dev-sql-api` | Expert SQL / architecte d'API (décision du 14/11/2026) | Auditer le schéma partagé avec l'app web de Florian, concevoir la couche d'API (vues/RPC versionnées, droits par rôle) et rédiger les migrations progressives sur le dépôt **web** ; jamais d'accès à la production, jamais d'application d'une migration (Matthias l'applique), compatibilité avec les deux apps pendant toute la transition |
+| `dev-sql-api` | Expert SQL / architecte d'API (décision du 14/11/2026) | Auditer le schéma de DeepCore partagé par Nexus et Grimoire, concevoir la couche d'API (vues/RPC versionnées, droits par rôle) et rédiger les migrations progressives dans le dépôt **DeepCore** ; jamais d'accès à la production, jamais d'application d'une migration (Matthias l'applique), compatibilité avec les deux apps pendant toute la transition |
 | `simulation-utilisateur` | Simulation joueur/MJ | Utiliser réellement l'app (parcours sur émulateur via `integration_test/` + analyse de code) du point de vue d'un joueur ou d'un MJ, pour juger la pertinence/complétude des fonctionnalités et proposer des axes d'amélioration — ne tranche jamais seul la faisabilité ou la pertinence d'une proposition |
 
 **Tout développement passe par ces sous-agents** (décision du 06/10/2026) :

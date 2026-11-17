@@ -8,6 +8,10 @@ base (étude) ». Document de **proposition** : rien n'est développé, rien n'e
 > dépôt de Florian) et les décisions 16 à 25 de `00`. Les recommandations techniques E (Electron), S (sécurité locale) et A
 > (connexion) ci-dessous restent valables, sauf A9 (compte obligatoire, outil payant) et E9/E10 (obligatoires avant la mise en
 > vente). La section 8 renvoie maintenant à la feuille de route.
+>
+> **Mise à jour du 17/11/2026** : noms des projets, **Grimoire** (l'outil, app Electron), **Nexus** (l'app mobile) et
+> **DeepCore** (API et base, ex `markdown-editor`). Le compte devient **facultatif** : version d'essai locale sans compte et
+> sans limite de durée, licence pour DeepCore et Nexus (décisions 26 à 29 de `00`). A9 est mis à jour en conséquence.
 
 Fiabilité : **[C]** vérifié (code lu ou essai exécuté sur ce poste), **[D]** déduit, **[I]** incertain (à vérifier).
 
@@ -114,7 +118,7 @@ réinitialisation du mot de passe vers `https://nexus-jdr.app/update-password` (
 | A6 | **Apple** : les comptes Apple ne viennent que d'iOS, pas encore publié : hors v1. Repli universel possible : **code à 6 chiffres par e-mail** (`signInWithOtp` + `verifyOtp`) si le modèle d'e-mail Supabase affiche `{{ .Token }}`. À décider | [D] |
 | A7 | **Inscription** : même parcours que le mobile. Message « vérifie ta boîte mail », puis connexion dans l'outil après le clic. Rien à créer côté Supabase | [C] confirmation activée |
 | A8 | **Une base locale par compte** : la première connexion lie la base au compte (`app_meta.owner_user_id`, voir 09) ; changer de compte change de base, jamais de mélange | [D] |
-| A9 | **Compte obligatoire** (Grimoire payant, décision du 16/11). **Hors ligne** : après une connexion, l'outil démarre sans réseau avec l'identité en cache, dans la limite de la **période de grâce** de l'attestation de licence (étape 11 de la feuille de route, 14 jours proposés) ; les groupes et joueurs sont lus dans le cache avec leur date, les actions distantes sont grisées avec un message | [D] ; [I] limites de session dans le tableau de bord Supabase (durée maximale, inactivité) |
+| A9 | **Compte facultatif** (17/11) : sans compte, Grimoire tourne en version d'essai locale, sans limite de durée ; le compte Nexus sert à la licence. **Hors ligne** : après une connexion, l'outil démarre sans réseau avec l'identité en cache, dans la limite de la **période de grâce** de l'attestation de licence (étape 11 de la feuille de route, 14 jours proposés) ; les groupes et joueurs sont lus dans le cache avec leur date, les actions distantes sont grisées avec un message | [D] ; [I] limites de session dans le tableau de bord Supabase (durée maximale, inactivité) |
 | A10 | Session révoquée ou compte supprimé (rafraîchissement refusé) : retour à l'écran de connexion ; la base locale n'est **jamais** supprimée automatiquement, export proposé | [D] |
 | A11 | Interface : écran Connexion / Inscription / Mot de passe oublié, menu Compte (pseudo, en ligne / hors ligne, dernière synchro, déconnexion), garde de route tant que `signed_out`, redirection sur 401. Habillage dans le design de Florian (shadcn), pas celui de Nexus : à valider avec lui | [D] |
 | A12 | Groupes et joueurs : routes locales `/api/nexus/*` qui lisent le **cache local** et déclenchent une synchro. Forme des données, droits et optimisations : `09-base-outil-local.md` | renvoi |
