@@ -10,7 +10,7 @@ Utiliser ces noms dans les échanges, les tickets et les documents :
 - **Nexus** : cette app mobile (ce dépôt).
 - **Grimoire** : l'app de bureau Electron du MJ, dépôt `Coudercf/grimoire-du-mj`
   (local `H:\Projets\Labo\grimoire-du-mj`, branche de travail `dev/nexus-desktop` : PR mergées
-  par Matthias, `main` gardée par Florian). Ex « outil de Florian ». Sa feuille de route de
+  sur accord explicite de Matthias, `main` gardée par Florian). Ex « outil de Florian ». Sa feuille de route de
   référence est `FEUILLE-DE-ROUTE.md` sur cette branche.
 - **DeepCore** : l'API et la base Supabase communes, et leur dépôt (ex `markdown-editor`,
   « dépôt web », local `H:\Projets\Labo\markdown-editor`) : migrations SQL et edge functions.
