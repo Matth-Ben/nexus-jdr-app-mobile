@@ -97,6 +97,7 @@ dehors du cahier des charges.
 | `dette-technique` | Audit de dette technique | Analyser le code en place (périssable, fragile, mort) et produire un registre de dette priorisé — ne corrige rien lui-même |
 | `regles-dnd` | Expert des règles D&D 5e (RAW) | Valider la règle exacte **avant** d'implémenter une mécanique de jeu (sorts, emplacements, multiclassage, dés de vie, préparation), puis vérifier la fidélité RAW du code **après** — ne code pas, ne tranche jamais seul une ambiguïté RAW (remonte à la conversation principale) |
 | `rgpd` | Audit RGPD / confidentialité | Analyser l'app en place (consentement, droits d'accès/export/suppression, sous-traitants tiers, permissions OS, textes légaux vs comportement réel du code) et produire un registre d'écarts priorisé — ne corrige rien lui-même |
+| `dev-grimoire` | Développeur TypeScript / Electron de Grimoire (décision du 18/11/2026) | Implémenter une étape de `FEUILLE-DE-ROUTE.md` dans le dépôt de Florian (`H:\Projets\Labo\grimoire-du-mj`), sur une branche `feat/…` issue de `dev/nexus-desktop`, avec ses tests ; PR vers `dev/nexus-desktop`, jamais de merge ; ne touche ni Nexus ni DeepCore |
 | `dev-sql-api` | Expert SQL / architecte d'API (décision du 14/11/2026) | Auditer le schéma de DeepCore partagé par Nexus et Grimoire, concevoir la couche d'API (vues/RPC versionnées, droits par rôle) et rédiger les migrations progressives dans le dépôt **DeepCore** ; jamais d'accès à la production, jamais d'application d'une migration (Matthias l'applique), compatibilité avec les deux apps pendant toute la transition |
 | `simulation-utilisateur` | Simulation joueur/MJ | Utiliser réellement l'app (parcours sur émulateur via `integration_test/` + analyse de code) du point de vue d'un joueur ou d'un MJ, pour juger la pertinence/complétude des fonctionnalités et proposer des axes d'amélioration — ne tranche jamais seul la faisabilité ou la pertinence d'une proposition |
 
@@ -119,6 +120,16 @@ qui entrent en conflit et les signale à Matthias avant de lancer le travail. Le
 « Tâche (toi) » avec les **commandes exactes** et ce qu'il doit renvoyer, pour qu'il n'ait pas à relire les messages.
 Les reliquats d'une PR restent dans `docs/dette-technique.md` (lignes D…) ; le ticket est mis à jour (statut, PR) à chaque
 étape.
+
+### Séquence type pour une étape de Grimoire
+
+1. Le ticket « Grimoire, étape N » passe en cours ; le chef de projet relit l'étape dans `FEUILLE-DE-ROUTE.md`.
+2. Si l'étape touche DeepCore : `dev-sql-api` ou `dev-backend-supabase` d'abord (migration dans le dépôt DeepCore,
+   appliquée par Matthias). Si elle touche Nexus : boucle habituelle `dev-flutter` → `qa-testeur` → `code-reviewer`.
+3. `dev-grimoire` implémente la partie Grimoire et ouvre la PR vers `dev/nexus-desktop`.
+4. Le chef de projet revérifie lui-même `pnpm typecheck` et `pnpm test` sur la branche (ne pas se fier au seul rapport).
+5. `code-reviewer` relit la PR.
+6. **Matthias merge** dans `dev/nexus-desktop` ; Florian décide seul de la fusion dans `main`.
 
 ### Séquence type pour une fonctionnalité UI
 
