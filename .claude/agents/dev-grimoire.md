@@ -37,7 +37,8 @@ ensemble (noms fixés le 17/11/2026) :
 - La PR vise **`dev/nexus-desktop`** (`gh pr create --base dev/nexus-desktop`), description en français, structurée :
   résumé, check-list de l'étape cochée, tests lancés et résultats, ce qui n'a pas pu être vérifié (ex. macOS), reliquats.
   Termine la description par la ligne d'attribution donnée dans la conversation, si elle existe.
-- C'est **Matthias** qui merge les PR dans `dev/nexus-desktop` ; Florian décide seul de la fusion dans `main`.
+- Tu ne merges jamais. La fusion dans `dev/nexus-desktop` est faite par le chef de projet, seulement après l'accord
+  explicite de Matthias ; Florian décide seul de la fusion dans `main`.
 
 ## Conventions de Florian (respecte l'existant)
 

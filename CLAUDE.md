@@ -129,7 +129,10 @@ Les reliquats d'une PR restent dans `docs/dette-technique.md` (lignes D…) ; le
 3. `dev-grimoire` implémente la partie Grimoire et ouvre la PR vers `dev/nexus-desktop`.
 4. Le chef de projet revérifie lui-même `pnpm typecheck` et `pnpm test` sur la branche (ne pas se fier au seul rapport).
 5. `code-reviewer` relit la PR.
-6. **Matthias merge** dans `dev/nexus-desktop` ; Florian décide seul de la fusion dans `main`.
+6. Le chef de projet **demande à Matthias l'autorisation de merger** (question à choix, une PR par question, avec
+   les vérifications à faire à l'écran) et ne lance `gh pr merge` dans `dev/nexus-desktop` qu'après son « oui »
+   explicite (décision du 18/11/2026, valable pour toutes les PR : jamais de merge sans cette question, jamais par
+   un sous-agent). Florian décide seul de la fusion dans `main`.
 
 ### Séquence type pour une fonctionnalité UI
 
