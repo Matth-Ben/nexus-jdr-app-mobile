@@ -7613,6 +7613,24 @@ abstract class AppLocalizations {
   /// **'Tu ne peux pas dissoudre le groupe pendant un combat en cours. Termine d\'abord le combat.'**
   String get groupDissolveBlockedByCombat;
 
+  /// Préfixe du titre de la campagne associée au groupe (carte « Campagne » de l'écran Groupe, aperçu d'invitation), suivi du titre écrit par le MJ dans Grimoire, jamais traduit. Espace insécable avant les deux-points, espace finale conservée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Campagne : '**
+  String get groupCampaignPrefix;
+
+  /// En-tête repliable du résumé public de la campagne (carte « Campagne » de l'écran Groupe). Le résumé, écrit par le MJ, n'est jamais traduit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Résumé de la campagne'**
+  String get groupCampaignSummaryToggle;
+
+  /// Nombre de membres du groupe dans l'aperçu d'invitation (écran « Rejoindre un groupe »). `{count}` dans la branche `=1` (et non « 1 ») : en français, 0 relève aussi de cette branche et doit afficher « 0 membre ».
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{{count} membre} other{{count} membres}}'**
+  String groupInvitePreviewMemberCount(int count);
+
   /// `CharacterCreationErrorCode.accessDenied` (D141).
   ///
   /// In fr, this message translates to:

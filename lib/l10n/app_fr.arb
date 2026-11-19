@@ -6262,6 +6262,23 @@
   "@groupDissolveBlockedByCombat": {
     "description": "Dissolution refusée pendant un combat actif (garde cliente ou refus serveur `combat_active`, D224)."
   },
+  "groupCampaignPrefix": "Campagne\u00a0: ",
+  "@groupCampaignPrefix": {
+    "description": "Préfixe du titre de la campagne associée au groupe (carte « Campagne » de l'écran Groupe, aperçu d'invitation), suivi du titre écrit par le MJ dans Grimoire, jamais traduit. Espace insécable avant les deux-points, espace finale conservée."
+  },
+  "groupCampaignSummaryToggle": "Résumé de la campagne",
+  "@groupCampaignSummaryToggle": {
+    "description": "En-tête repliable du résumé public de la campagne (carte « Campagne » de l'écran Groupe). Le résumé, écrit par le MJ, n'est jamais traduit."
+  },
+  "groupInvitePreviewMemberCount": "{count, plural, =1{{count} membre} other{{count} membres}}",
+  "@groupInvitePreviewMemberCount": {
+    "description": "Nombre de membres du groupe dans l'aperçu d'invitation (écran « Rejoindre un groupe »). `{count}` dans la branche `=1` (et non « 1 ») : en français, 0 relève aussi de cette branche et doit afficher « 0 membre ».",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "creationAccessDeniedErrorMessage": "Vous n'avez pas accès à cette action.",
   "@creationAccessDeniedErrorMessage": {
     "description": "`CharacterCreationErrorCode.accessDenied` (D141)."

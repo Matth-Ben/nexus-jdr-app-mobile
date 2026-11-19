@@ -17,7 +17,9 @@ import '../../characters/domain/character_failure.dart';
 import '../../characters/domain/character_summary.dart';
 import '../../characters/presentation/providers/character_providers.dart';
 import '../domain/group_invite_failure.dart';
+import '../domain/group_preview.dart';
 import 'providers/group_providers.dart';
+import 'widgets/group_campaign_card.dart';
 import '../../characters/presentation/character_failure_l10n.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -62,8 +64,9 @@ const String _genericJoinErrorMessage =
 /// encore choisi par l'edge function `preview-group-invite`, même remarque
 /// que l'ancienne étape 2/3), puis le rattachement par
 /// `GroupRepository.joinGroup` (peut, lui, lever les 4 natures d'échec). Les
-/// deux appels sont maintenant orchestrés l'un après l'autre par [_submit]
-/// plutôt que répartis sur 2 routes séparées.
+/// deux appels sont orchestrés par [_submit] sur ce seul écran plutôt que
+/// répartis sur 2 routes séparées (voir « Aperçu avant de rejoindre »
+/// ci-dessous).
 ///
 /// **Affichage des erreurs, 2 canaux distincts** (spec de la tâche) :
 /// - code invalide (`GroupInviteFailureKind.invalidCode`, qu'il vienne de
@@ -76,6 +79,17 @@ const String _genericJoinErrorMessage =
 /// - tout le reste (`alreadyInGroup`/`mjAlreadyAssigned`/`generic`, échec
 ///   réseau) → [AlertBanner] en tête d'écran, même composant que l'ancienne
 ///   étape 3/3.
+///
+/// **Aperçu avant de rejoindre** (étape 4, décisions n° 33, 34 et 36 du
+/// 19/11/2026) : une carte sous le champ code ([_GroupInvitePreviewCard])
+/// montre le nom du groupe, son nombre de membres et le titre de sa
+/// campagne (jamais le résumé). Un code complet ([_rawCodeLength]
+/// caractères, la longueur de tous les codes générés) est prévisualisé dès sa
+/// saisie (`groupInvitePreviewProvider`, en ligne seulement) ; ses erreurs
+/// ne s'affichent qu'au toucher de « Rejoindre », comme avant. « Rejoindre »
+/// ne rattache qu'à un groupe dont la carte est affichée : sinon, ce toucher
+/// charge l'aperçu (même validation du code et mêmes canaux d'erreur
+/// qu'avant) et le joueur confirme d'un second toucher.
 class GroupJoinScreen extends ConsumerStatefulWidget {
   const GroupJoinScreen({this.initialCode, super.key});
 
@@ -97,6 +111,15 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
   String? _codeErrorMessage;
   String? _bannerMessage;
 
+  /// Code incomplet (6 ou 7 caractères) dont le joueur a demandé l'aperçu en
+  /// touchant « Rejoindre » ; un code complet est prévisualisé d'office.
+  String? _requestedPreviewCode;
+
+  /// Garde en vie l'aperçu demandé par [_loadPreview] (provider
+  /// `autoDispose`) pendant l'attente, avant que `build` ne l'écoute.
+  /// Fermé automatiquement au démontage de l'écran.
+  ProviderSubscription<AsyncValue<GroupPreview>>? _previewSubscription;
+
   @override
   void dispose() {
     _codeController.dispose();
@@ -113,6 +136,23 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
   }
 
   String get _rawCurrentCode => _rawCode(_codeController.text);
+
+  /// Code dont l'aperçu est chargé et affiché sous le champ : le code saisi
+  /// s'il est complet, ou s'il est celui que le joueur a demandé
+  /// ([_requestedPreviewCode]) ; `null` sinon.
+  String? get _previewCode {
+    final code = _rawCurrentCode;
+    if (code.length == _rawCodeLength || code == _requestedPreviewCode) {
+      return code;
+    }
+    return null;
+  }
+
+  /// Aperçu affiché pour [code], ou `null` s'il ne l'est pas (encore).
+  GroupPreview? _displayedPreview(String code) {
+    if (_previewCode != code) return null;
+    return ref.read(groupInvitePreviewProvider(code: code)).value;
+  }
 
   /// Auto-sélectionne le premier personnage de [characters] tant qu'aucun
   /// personnage n'a été explicitement choisi — comportement hérité, inchangé
@@ -240,9 +280,10 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
     return characters != null && _selectedCharacter(characters) != null;
   }
 
-  /// Enchaîne `previewGroupInvite` (validation/résolution du code) puis
-  /// `joinGroup` (rattachement) — voir la documentation de classe pour le
-  /// détail de la migration et le routage des 2 canaux d'erreur.
+  /// « Rejoindre » : `joinGroup` (rattachement) si la carte d'aperçu de ce
+  /// code est affichée, sinon [_loadPreview] seulement (décision n° 34 : le
+  /// joueur voit le groupe, puis confirme) — voir la documentation de classe
+  /// pour le détail de la migration et le routage des 2 canaux d'erreur.
   Future<void> _submit(List<CharacterSummary> characters) async {
     final code = _rawCurrentCode;
     final character = _joinAsGameMaster ? null : _selectedCharacter(characters);
@@ -251,33 +292,16 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
       return;
     }
 
+    if (_displayedPreview(code) == null) {
+      await _loadPreview(code);
+      return;
+    }
+
     setState(() {
       _isJoining = true;
       _codeErrorMessage = null;
       _bannerMessage = null;
     });
-
-    try {
-      await ref.read(groupRepositoryProvider).previewGroupInvite(code);
-    } on GroupInviteFailure catch (failure) {
-      if (!mounted) return;
-      setState(() {
-        _isJoining = false;
-        if (failure.kind == GroupInviteFailureKind.invalidCode) {
-          _codeErrorMessage = "Ce code d'invitation n'est pas valide.";
-        } else {
-          _bannerMessage = _genericJoinErrorMessage;
-        }
-      });
-      return;
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _isJoining = false;
-        _bannerMessage = _genericJoinErrorMessage;
-      });
-      return;
-    }
 
     try {
       final result = await ref
@@ -312,6 +336,48 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
     }
   }
 
+  /// Charge l'aperçu de [code] (`preview-group-invite`, qui valide aussi le
+  /// code) sans rejoindre : la carte apparaît sous le champ et le joueur
+  /// confirme d'un second toucher. Aperçu en cours : attendu ; en échec :
+  /// relancé. Mêmes canaux d'erreur qu'avant l'étape 4 (code invalide sous
+  /// le champ, tout le reste en bandeau).
+  Future<void> _loadPreview(String code) async {
+    final provider = groupInvitePreviewProvider(code: code);
+    setState(() {
+      _isJoining = true;
+      _codeErrorMessage = null;
+      _bannerMessage = null;
+      _requestedPreviewCode = code;
+    });
+    _previewSubscription?.close();
+    final subscription = ref.listenManual(provider, (_, _) {});
+    _previewSubscription = subscription;
+
+    String? codeError;
+    String? banner;
+    try {
+      // Aperçu automatique en échec : relancé (la lecture qui suit attend le
+      // nouvel appel). En cours : la lecture attend l'appel déjà lancé.
+      if (subscription.read().hasError) ref.invalidate(provider);
+      await ref.read(provider.future);
+    } on GroupInviteFailure catch (failure) {
+      if (failure.kind == GroupInviteFailureKind.invalidCode) {
+        codeError = "Ce code d'invitation n'est pas valide.";
+      } else {
+        banner = _genericJoinErrorMessage;
+      }
+    } catch (_) {
+      banner = _genericJoinErrorMessage;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isJoining = false;
+      _codeErrorMessage = codeError;
+      _bannerMessage = banner;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final charactersAsync = ref.watch(charactersProvider);
@@ -320,6 +386,10 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
         ? null
         : (characters != null ? _selectedCharacter(characters) : null);
     final hasResolvedEmptyList = characters != null && characters.isEmpty;
+    final previewCode = _previewCode;
+    final preview = previewCode == null
+        ? null
+        : ref.watch(groupInvitePreviewProvider(code: previewCode)).value;
 
     return Scaffold(
       body: Stack(
@@ -354,11 +424,19 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
                         _CodeField(
                           controller: _codeController,
                           enabled: !_isJoining,
-                          onChanged: (_) => setState(() {}),
+                          // Code modifié : l'erreur de code affichée portait
+                          // sur l'ancien code (sinon elle resterait à côté de
+                          // l'aperçu du nouveau).
+                          onChanged: (_) =>
+                              setState(() => _codeErrorMessage = null),
                         ),
                         if (_codeErrorMessage != null) ...[
                           const SizedBox(height: AppSpacing.xs),
                           _CodeErrorHint(message: _codeErrorMessage!),
+                        ],
+                        if (preview != null) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          _GroupInvitePreviewCard(preview: preview),
                         ],
                         const SizedBox(height: AppSpacing.lg),
                         const _SectionLabel(
@@ -526,6 +604,67 @@ class _CodeErrorHint extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Carte d'aperçu du groupe visé par le code (décision n° 34) : nom, nombre
+/// de membres, puis « Campagne : … » sans icône (décision n° 33 : le titre
+/// seul, jamais le résumé), omis sans campagne ou si le titre répète le nom
+/// du groupe (décision n° 36, [GroupPreview.campaignTitle]). Même encadré
+/// que [_RoleSelectorTile]. `liveRegion` : son apparition est annoncée par
+/// le lecteur d'écran.
+class _GroupInvitePreviewCard extends StatelessWidget {
+  const _GroupInvitePreviewCard({required this.preview});
+
+  final GroupPreview preview;
+
+  @override
+  Widget build(BuildContext context) {
+    final campaignTitle = preview.campaignTitle;
+
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: Container(
+        key: const ValueKey('groupInvitePreviewCard'),
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.parchmentCard,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: AppColors.woodLight,
+            width: AppBorders.card,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              preview.name,
+              style: AppTypography.body(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            Text(
+              AppLocalizations.of(context)!
+                  .groupInvitePreviewMemberCount(preview.memberCount),
+              style: AppTypography.body(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            if (campaignTitle != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              GroupCampaignTitleText(title: campaignTitle),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

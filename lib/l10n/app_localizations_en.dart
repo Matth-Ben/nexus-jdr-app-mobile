@@ -4693,6 +4693,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'You can\'t dissolve the group during a combat. End the combat first.';
 
   @override
+  String get groupCampaignPrefix => 'Campaign: ';
+
+  @override
+  String get groupCampaignSummaryToggle => 'Campaign summary';
+
+  @override
+  String groupInvitePreviewMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '1 member',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get creationAccessDeniedErrorMessage =>
       'You don\'t have access to this action.';
 

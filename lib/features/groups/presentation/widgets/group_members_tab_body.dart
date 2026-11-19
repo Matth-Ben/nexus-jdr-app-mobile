@@ -12,6 +12,7 @@ import '../../../characters/presentation/widgets/condition_chips.dart';
 import '../../domain/character_vital_status.dart';
 import '../../domain/group_detail.dart';
 import '../../domain/group_member.dart';
+import 'group_campaign_card.dart';
 import 'group_invite_code_chip.dart';
 import 'member_conditions_sheet.dart';
 
@@ -32,6 +33,11 @@ typedef RemoveGroupMemberCallback = void Function(GroupMember member);
 /// nécessaire ici pour éviter tout flash visuel. [_LiveUpdateIndicator] en
 /// tête de liste rend ce comportement explicite pour le joueur plutôt que de
 /// rester un détail d'implémentation invisible.
+///
+/// La carte « Campagne » ([GroupCampaignCard], étape 4 de Grimoire) le
+/// précède quand le groupe a une campagne associée. `groups` n'étant pas
+/// diffusée en temps réel, son titre est celui de la dernière lecture du
+/// détail (ouverture de l'écran, rafraîchissement).
 class GroupMembersTabBody extends StatelessWidget {
   const GroupMembersTabBody({
     required this.detail,
@@ -93,6 +99,15 @@ class GroupMembersTabBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
+        // Campagne associée (étape 4) : défile avec la liste, jamais de
+        // bandeau fixe. Ni carte ni espace sans campagne à montrer.
+        if (detail.hasCampaignCard) ...[
+          GroupCampaignCard(
+            title: detail.campaignTitle,
+            summary: detail.campaignSummary,
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
         const _LiveUpdateIndicator(),
         const SizedBox(height: AppSpacing.md),
         ?combatSection,

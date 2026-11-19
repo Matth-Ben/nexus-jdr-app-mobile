@@ -4734,6 +4734,23 @@ class AppLocalizationsFr extends AppLocalizations {
       'Tu ne peux pas dissoudre le groupe pendant un combat en cours. Termine d\'abord le combat.';
 
   @override
+  String get groupCampaignPrefix => 'Campagne : ';
+
+  @override
+  String get groupCampaignSummaryToggle => 'Résumé de la campagne';
+
+  @override
+  String groupInvitePreviewMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count membres',
+      one: '$count membre',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get creationAccessDeniedErrorMessage =>
       'Vous n\'avez pas accès à cette action.';
 
