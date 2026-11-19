@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../../combat/presentation/providers/character_combat_provider.dart';
 
 import 'package:flutter/material.dart';
@@ -11,6 +13,10 @@ import '../../../../core/widgets/alert_banner.dart';
 import '../../../../core/widgets/destructive_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../combat/presentation/providers/combat_providers.dart';
+import '../../domain/group_failure.dart';
+import '../group_failure_l10n.dart';
 import '../providers/group_providers.dart';
 
 /// Ouvre la sheet "Dissoudre le groupe" (`DestructiveButton` de la section
@@ -32,6 +38,17 @@ import '../providers/group_providers.dart';
 /// contrairement à `showGroupRenameSheet`, il n'y a rien à faire après coup
 /// côté appelant (succès -> `context.go('/')` + `SnackBar('Groupe
 /// dissous.')`, directement depuis cette sheet).
+///
+/// **Combat actif (D224)** : l'appelant (`GroupSettingsScreen`) relit l'état
+/// du combat avant d'ouvrir cette sheet (garde cliente), mais le serveur est
+/// l'autorité : DeepCore refuse la dissolution pendant un combat actif
+/// (`combat_active`, migration `20261119090000`). Ce refus, même avec un état
+/// local périmé, est traduit ici en message clair et relance la lecture du
+/// combat.
+///
+/// **Avertissement (D228)** : liste toutes les suppressions en cascade de
+/// DeepCore (membres, butin commun, carnets de notes des joueurs, journal,
+/// combats) et rappelle que les personnages restent intacts.
 Future<void> showGroupDissolveSheet(
   BuildContext context, {
   required String groupId,
@@ -50,14 +67,16 @@ Future<void> showGroupDissolveSheet(
 
 enum _DissolveStep { warning, confirm }
 
-const String _warningMessage =
-    'Cette action est irréversible. Elle supprimera définitivement le '
-    'groupe, son butin commun et l\'accès de tous ses membres — leurs '
-    'personnages gardent toutes leurs données.\n\n'
-    'Cette action ne peut pas être annulée.';
-
-const String _genericErrorMessage =
-    'Impossible de dissoudre le groupe. Réessayez.';
+/// Message d'un échec de dissolution : refus `combat_active` dédié, échec non
+/// reconnu générique (jamais le message brut du serveur), sinon le texte du
+/// code (réseau, session, conflit transitoire...).
+String _dissolveFailureMessage(GroupFailure failure, AppLocalizations l10n) {
+  return switch (failure.code) {
+    GroupErrorCode.combatActive => l10n.groupDissolveBlockedByCombat,
+    GroupErrorCode.generic => l10n.groupDissolveGenericError,
+    _ => failure.localizedWith(l10n),
+  };
+}
 
 class _GroupDissolveSheetContent extends ConsumerStatefulWidget {
   const _GroupDissolveSheetContent({
@@ -99,6 +118,7 @@ class _GroupDissolveSheetContentState
 
   Future<void> _confirmDissolve() async {
     if (_isDissolving || !_nameMatches) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isDissolving = true;
       _errorMessage = null;
@@ -107,11 +127,23 @@ class _GroupDissolveSheetContentState
     try {
       await ref.read(groupRepositoryProvider).dissolveGroup(widget.groupId);
       ref.invalidate(characterGroupIdsProvider);
+    } on GroupFailure catch (failure) {
+      if (!mounted) return;
+      if (failure.code == GroupErrorCode.combatActive) {
+        // État local périmé : le serveur a vu un combat actif. On relit le
+        // combat pour que l'écran Groupe affiche son bandeau.
+        unawaited(ref.read(combatProvider(widget.groupId).notifier).refresh());
+      }
+      setState(() {
+        _isDissolving = false;
+        _errorMessage = _dissolveFailureMessage(failure, l10n);
+      });
+      return;
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _isDissolving = false;
-        _errorMessage = _genericErrorMessage;
+        _errorMessage = l10n.groupDissolveGenericError;
       });
       return;
     }
@@ -120,11 +152,12 @@ class _GroupDissolveSheetContentState
     Navigator.of(context).pop();
     context.go('/');
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Groupe dissous.')));
+        .showSnackBar(SnackBar(content: Text(l10n.groupDissolveSuccess)));
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return PopScope(
       canPop: !_isDissolving,
       child: SafeArea(
@@ -136,15 +169,15 @@ class _GroupDissolveSheetContentState
             child: Column(
               children: [
                 SheetHeaderBar(
-                  title: 'DISSOUDRE LE GROUPE',
+                  title: l10n.groupDissolveSheetTitle,
                   closeEnabled: !_isDissolving,
                 ),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(AppSpacing.lg),
                     child: switch (_step) {
-                      _DissolveStep.warning => const AlertBanner(
-                        message: _warningMessage,
+                      _DissolveStep.warning => AlertBanner(
+                        message: l10n.groupDissolveWarning,
                       ),
                       _DissolveStep.confirm => _ConfirmStepBody(
                         nameController: _nameController,
@@ -167,7 +200,7 @@ class _GroupDissolveSheetContentState
                       children: [
                         Expanded(
                           child: SecondaryButton(
-                            label: 'Annuler',
+                            label: l10n.groupDissolveCancel,
                             surface: SecondaryButtonSurface.parchment,
                             onPressed: () => Navigator.of(context).pop(),
                           ),
@@ -175,7 +208,7 @@ class _GroupDissolveSheetContentState
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: DestructiveButton(
-                            label: 'Continuer',
+                            label: l10n.groupDissolveContinue,
                             onPressed: _goToConfirmStep,
                           ),
                         ),
@@ -185,7 +218,7 @@ class _GroupDissolveSheetContentState
                       children: [
                         Expanded(
                           child: SecondaryButton(
-                            label: 'Annuler',
+                            label: l10n.groupDissolveCancel,
                             surface: SecondaryButtonSurface.parchment,
                             onPressed: _isDissolving
                                 ? null
@@ -196,8 +229,8 @@ class _GroupDissolveSheetContentState
                         Expanded(
                           child: DestructiveButton(
                             label: _isDissolving
-                                ? 'Dissolution en cours…'
-                                : 'Dissoudre définitivement',
+                                ? l10n.groupDissolveInProgress
+                                : l10n.groupDissolveConfirm,
                             onPressed: (!_isDissolving && _nameMatches)
                                 ? _confirmDissolve
                                 : null,
@@ -231,6 +264,7 @@ class _ConfirmStepBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -239,7 +273,7 @@ class _ConfirmStepBody extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
         ],
         Text(
-          'RETAPE LE NOM DU GROUPE POUR CONFIRMER',
+          l10n.groupDissolveRetypeLabel,
           style: AppTypography.body(
             fontSize: 13,
             fontWeight: FontWeight.w800,
@@ -251,7 +285,7 @@ class _ConfirmStepBody extends StatelessWidget {
           controller: nameController,
           enabled: enabled,
           onChanged: (_) => onChanged(),
-          decoration: const InputDecoration(hintText: 'Nom du groupe'),
+          decoration: InputDecoration(hintText: l10n.groupDissolveRetypeHint),
         ),
       ],
     );

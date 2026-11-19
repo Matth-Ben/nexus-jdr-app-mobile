@@ -6115,6 +6115,133 @@
   "@groupInviteCodeGenerationFailedErrorMessage": {
     "description": "`GroupErrorCode.inviteCodeGenerationFailed` (D141)."
   },
+  "groupCombatActiveErrorMessage": "Action impossible pendant un combat en cours. Termine d'abord le combat.",
+  "@groupCombatActiveErrorMessage": {
+    "description": "`GroupErrorCode.combatActive` (refus serveur `combat_active`), texte par défaut quand l'action n'a pas de message dédié."
+  },
+  "groupMjAlreadyAssignedErrorMessage": "Un autre membre est déjà MJ de ce groupe. Rien n'a changé : il doit d'abord quitter le groupe, ou tu peux l'exclure depuis l'onglet Membres.",
+  "@groupMjAlreadyAssignedErrorMessage": {
+    "description": "`GroupErrorCode.mjAlreadyAssigned` (refus serveur `mj_already_assigned` de « Devenir MJ ») : personne n'est rétrogradé (décision de Matthias du 19/11/2026)."
+  },
+  "groupNotGroupOwnerErrorMessage": "Seul le créateur du groupe peut faire cela.",
+  "@groupNotGroupOwnerErrorMessage": {
+    "description": "`GroupErrorCode.notGroupOwner` (refus serveur `not_group_owner`)."
+  },
+  "groupNotMemberErrorMessage": "Tu ne fais plus partie de ce groupe.",
+  "@groupNotMemberErrorMessage": {
+    "description": "`GroupErrorCode.notMember` (refus serveur `not_member`)."
+  },
+  "groupTransientConflictErrorMessage": "Le serveur était occupé : rien n'a été modifié. Réessaie.",
+  "@groupTransientConflictErrorMessage": {
+    "description": "`GroupErrorCode.transientConflict` (SQLSTATE `40P01` ou `40001`, transaction annulée sans effet)."
+  },
+  "groupServerOutdatedErrorMessage": "Cette action n'est pas encore disponible sur le serveur. Réessaie plus tard.",
+  "@groupServerOutdatedErrorMessage": {
+    "description": "`GroupErrorCode.serverOutdated` (`PGRST202` : fonction serveur absente, migration DeepCore pas encore appliquée)."
+  },
+  "groupBecomeGameMasterSectionTitle": "MAÎTRE DU JEU",
+  "@groupBecomeGameMasterSectionTitle": {
+    "description": "Titre de la section « Devenir MJ » des paramètres du groupe (propriétaire qui joue un personnage)."
+  },
+  "groupBecomeGameMasterExplain": "Tu joues {characterName} dans ce groupe. Pour lancer des combats dans l'app, le créateur du groupe doit en être le MJ, sans personnage.",
+  "@groupBecomeGameMasterExplain": {
+    "description": "Explication sous le titre de la section « Devenir MJ ».",
+    "placeholders": {"characterName": {"type": "String"}}
+  },
+  "groupBecomeGameMasterAction": "Devenir MJ (ne plus jouer de personnage dans ce groupe)",
+  "@groupBecomeGameMasterAction": {
+    "description": "Bouton « Devenir MJ » des paramètres du groupe."
+  },
+  "groupBecomeGameMasterInProgress": "Passage en MJ en cours…",
+  "@groupBecomeGameMasterInProgress": {
+    "description": "Libellé du bouton « Devenir MJ » pendant l'appel serveur (bouton bloqué)."
+  },
+  "groupBecomeGameMasterOffline": "Indisponible hors ligne : cette action a besoin du serveur.",
+  "@groupBecomeGameMasterOffline": {
+    "description": "Indice sous le bouton « Devenir MJ » désactivé hors ligne (jamais mis en file d'attente)."
+  },
+  "groupBecomeGameMasterConfirmTitle": "Devenir MJ de « {groupName} » ?",
+  "@groupBecomeGameMasterConfirmTitle": {
+    "description": "Titre de la confirmation « Devenir MJ ».",
+    "placeholders": {"groupName": {"type": "String"}}
+  },
+  "groupBecomeGameMasterConfirmBody": "{characterName} quitte ce groupe mais reste dans ta liste de personnages, avec toutes ses données. Tu deviens MJ sans personnage et tu pourras lancer les combats. Retour en arrière impossible pour l'instant.",
+  "@groupBecomeGameMasterConfirmBody": {
+    "description": "Corps de la confirmation « Devenir MJ » (redevenir joueur n'est pas prévu).",
+    "placeholders": {"characterName": {"type": "String"}}
+  },
+  "groupBecomeGameMasterConfirmAction": "Devenir MJ",
+  "@groupBecomeGameMasterConfirmAction": {
+    "description": "Bouton de confirmation « Devenir MJ »."
+  },
+  "groupBecomeGameMasterCancel": "Annuler",
+  "@groupBecomeGameMasterCancel": {
+    "description": "Bouton d'annulation de la confirmation « Devenir MJ »."
+  },
+  "groupBecomeGameMasterSuccess": "Tu es maintenant MJ de ce groupe. Ton personnage reste dans ta liste.",
+  "@groupBecomeGameMasterSuccess": {
+    "description": "Message après « Devenir MJ » réussi."
+  },
+  "groupBecomeGameMasterCombatActive": "Impossible de devenir MJ pendant un combat en cours. Termine d'abord le combat.",
+  "@groupBecomeGameMasterCombatActive": {
+    "description": "Refus serveur `combat_active` de « Devenir MJ »."
+  },
+  "groupBecomeGameMasterGenericError": "Impossible de devenir MJ. Réessaie.",
+  "@groupBecomeGameMasterGenericError": {
+    "description": "Échec non reconnu de « Devenir MJ »."
+  },
+  "groupSettingsDissolveAction": "Dissoudre le groupe",
+  "@groupSettingsDissolveAction": {
+    "description": "Bouton de la zone dangereuse des paramètres du groupe."
+  },
+  "groupSettingsDissolveCaption": "Réservé au créateur du groupe. Retire tous les membres et supprime le butin commun, les carnets de notes des joueurs et l'historique des combats ; les personnages et leurs données restent intacts.",
+  "@groupSettingsDissolveCaption": {
+    "description": "Légende sous « Dissoudre le groupe » (D228 : suppressions en cascade de DeepCore)."
+  },
+  "groupDissolveSheetTitle": "DISSOUDRE LE GROUPE",
+  "@groupDissolveSheetTitle": {
+    "description": "Titre de la feuille de dissolution."
+  },
+  "groupDissolveWarning": "Cette action est irréversible. Elle supprimera définitivement, pour tous les membres :\n• le groupe et l'accès de tous ses membres ;\n• le butin commun ;\n• les carnets de notes des joueurs pour ce groupe (onglet Notes, toutes les entrées du journal comprises) ;\n• l'historique des combats du groupe.\n\nLes personnages des joueurs restent intacts : ils gardent toutes leurs données.\n\nCette action ne peut pas être annulée.",
+  "@groupDissolveWarning": {
+    "description": "Avertissement de la feuille de dissolution (D228) : cascades DeepCore vérifiées (`group_members`, `group_treasure`, `group_notes`, `group_journal_entries`, `combats`, `combat_participants`) ; aucune table de personnages ne dépend de `groups`."
+  },
+  "groupDissolveCancel": "Annuler",
+  "@groupDissolveCancel": {
+    "description": "Bouton d'annulation de la feuille de dissolution."
+  },
+  "groupDissolveContinue": "Continuer",
+  "@groupDissolveContinue": {
+    "description": "Passage à l'étape de confirmation de la feuille de dissolution."
+  },
+  "groupDissolveRetypeLabel": "RETAPE LE NOM DU GROUPE POUR CONFIRMER",
+  "@groupDissolveRetypeLabel": {
+    "description": "Libellé du champ de confirmation de la dissolution."
+  },
+  "groupDissolveRetypeHint": "Nom du groupe",
+  "@groupDissolveRetypeHint": {
+    "description": "Indication du champ de confirmation de la dissolution."
+  },
+  "groupDissolveConfirm": "Dissoudre définitivement",
+  "@groupDissolveConfirm": {
+    "description": "Bouton final de la dissolution."
+  },
+  "groupDissolveInProgress": "Dissolution en cours…",
+  "@groupDissolveInProgress": {
+    "description": "Bouton final de la dissolution pendant l'appel serveur."
+  },
+  "groupDissolveSuccess": "Groupe dissous.",
+  "@groupDissolveSuccess": {
+    "description": "Message après une dissolution réussie."
+  },
+  "groupDissolveGenericError": "Impossible de dissoudre le groupe. Réessayez.",
+  "@groupDissolveGenericError": {
+    "description": "Échec non reconnu de la dissolution."
+  },
+  "groupDissolveBlockedByCombat": "Tu ne peux pas dissoudre le groupe pendant un combat en cours. Termine d'abord le combat.",
+  "@groupDissolveBlockedByCombat": {
+    "description": "Dissolution refusée pendant un combat actif (garde cliente ou refus serveur `combat_active`, D224)."
+  },
   "creationAccessDeniedErrorMessage": "Vous n'avez pas accès à cette action.",
   "@creationAccessDeniedErrorMessage": {
     "description": "`CharacterCreationErrorCode.accessDenied` (D141)."

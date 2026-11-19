@@ -171,6 +171,10 @@ class _FakeGroupRepository implements GroupRepository {
   }
 
   @override
+  Future<void> becomeGroupGameMaster(String groupId) =>
+      throw UnimplementedError();
+
+  @override
   Future<bool> claimTreasureCurrency({
     required String groupId,
     required String characterId,

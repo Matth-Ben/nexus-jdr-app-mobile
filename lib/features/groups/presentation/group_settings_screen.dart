@@ -1,15 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/network/connectivity_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/alert_banner.dart';
+import '../../../core/widgets/compact_action_button.dart';
 import '../../../core/widgets/destructive_button.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../combat/presentation/providers/character_combat_provider.dart';
+import '../../combat/presentation/providers/combat_providers.dart';
 import '../domain/group_detail.dart';
 import '../domain/group_failure.dart';
 import 'providers/group_providers.dart';
@@ -51,6 +58,20 @@ const String _genericRenameErrorMessage =
 /// d'écran (`_submitRename`, logique reprise de `group_rename_sheet.dart`) —
 /// les autres actions (régénérer/quitter/dissoudre) restent immédiates au
 /// tap, comme sur l'ancienne sheet.
+///
+/// **« Devenir MJ »** (étape 3b, migration DeepCore `20261119090000`) :
+/// section « MAÎTRE DU JEU » affichée seulement au propriétaire qui joue un
+/// personnage dans ce groupe ([GroupDetail.canBecomeGameMaster]), cible du
+/// lien « Paramètres du groupe » du bandeau « Pas de combat sans MJ dans
+/// l'app » (`StartCombatSection`). Confirmation, puis RPC
+/// `become_group_game_master` (bouton bloqué pendant l'appel), puis relecture
+/// du groupe : la section disparaît et l'onglet Membres propose « Lancer un
+/// combat ». Action serveur : désactivée hors ligne, jamais mise en file
+/// d'attente.
+///
+/// **Dissolution pendant un combat (D224)** : garde cliente avant d'ouvrir
+/// la feuille ([_GroupSettingsScreenState._openDissolveSheet]) ; le serveur
+/// reste l'autorité (refus `combat_active` traduit par la feuille).
 class GroupSettingsScreen extends ConsumerStatefulWidget {
   const GroupSettingsScreen({required this.groupId, super.key});
 
@@ -67,6 +88,9 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
   String _initialName = '';
   bool _isSaving = false;
   String? _errorMessage;
+  bool _becomingGameMaster = false;
+  String? _gameMasterErrorMessage;
+  bool _dissolveGuardInFlight = false;
 
   @override
   void dispose() {
@@ -169,6 +193,140 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
     }
   }
 
+  bool get _isOffline => ref.read(connectivityStatusProvider).value == false;
+
+  /// « Dissoudre le groupe » — garde cliente (D224), même principe que la
+  /// garde de départ de `GroupScreen._confirmLeaveGroup` : on relit le combat
+  /// avant de décider (un état `loading`/périmé ne doit jamais laisser passer
+  /// un combat actif connu), puis on refuse pendant un combat actif. Hors
+  /// ligne, la relecture échoue et garde le dernier état connu ; sans état
+  /// connu, la feuille s'ouvre et la dissolution échouera de toute façon.
+  /// Le serveur reste l'autorité : son refus `combat_active` (état local
+  /// périmé, course) est traduit par la feuille elle-même.
+  Future<void> _openDissolveSheet(GroupDetail detail) async {
+    if (_dissolveGuardInFlight) return;
+    _dissolveGuardInFlight = true;
+    try {
+      await ref.read(combatProvider(widget.groupId).notifier).refresh();
+      if (!mounted) return;
+      if (ref.read(combatProvider(widget.groupId)).hasActiveCombat) {
+        _showSnackBar(
+          AppLocalizations.of(context)!.groupDissolveBlockedByCombat,
+        );
+        return;
+      }
+      await showGroupDissolveSheet(
+        context,
+        groupId: widget.groupId,
+        groupName: detail.name,
+      );
+    } finally {
+      _dissolveGuardInFlight = false;
+    }
+  }
+
+  /// « Devenir MJ » : confirmation, puis RPC `become_group_game_master`
+  /// (bouton bloqué pendant l'appel), puis relecture du groupe avant de
+  /// débloquer (la section disparaît dès que le rôle MJ est relu).
+  Future<void> _confirmBecomeGameMaster(GroupDetail detail) async {
+    if (_becomingGameMaster) return;
+    final l10n = AppLocalizations.of(context)!;
+    final characterName = detail.currentMember?.name ?? '';
+    final confirmed = await showGroupConfirmationDialog(
+      context,
+      title: l10n.groupBecomeGameMasterConfirmTitle(detail.name),
+      message: l10n.groupBecomeGameMasterConfirmBody(characterName),
+      confirmLabel: l10n.groupBecomeGameMasterConfirmAction,
+      cancelLabel: l10n.groupBecomeGameMasterCancel,
+      destructive: false,
+      focusCancelInitially: true,
+    );
+    if (confirmed != true || !mounted || _becomingGameMaster) return;
+    // Le réseau a pu tomber pendant la confirmation : jamais d'appel hors
+    // ligne, jamais de file d'attente (action serveur).
+    if (_isOffline) {
+      setState(
+        () => _gameMasterErrorMessage = l10n.groupBecomeGameMasterOffline,
+      );
+      return;
+    }
+
+    // Conteneur capturé avant l'appel : les caches sont invalidés même si
+    // l'écran a été quitté pendant l'appel (`ref` n'est alors plus utilisable).
+    final container = ProviderScope.containerOf(context, listen: false);
+    setState(() {
+      _becomingGameMaster = true;
+      _gameMasterErrorMessage = null;
+    });
+    try {
+      await container
+          .read(groupRepositoryProvider)
+          .becomeGroupGameMaster(widget.groupId);
+    } on GroupFailure catch (failure) {
+      _onBecomeGameMasterFailure(container, failure, l10n);
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _becomingGameMaster = false;
+        _gameMasterErrorMessage = l10n.groupBecomeGameMasterGenericError;
+      });
+      return;
+    }
+
+    // Le personnage a quitté le groupe : sa fiche ne doit plus afficher le
+    // bandeau de combat de ce groupe, et l'écran Groupe doit relire le rôle
+    // (Realtime n'écoute pas les mises à jour de `group_members`).
+    container
+      ..invalidate(characterGroupIdsProvider)
+      ..invalidate(groupDetailProvider(widget.groupId));
+    if (!mounted) return;
+    await _awaitGroupDetail();
+    if (!mounted) return;
+    setState(() => _becomingGameMaster = false);
+    _showSnackBar(l10n.groupBecomeGameMasterSuccess);
+  }
+
+  void _onBecomeGameMasterFailure(
+    ProviderContainer container,
+    GroupFailure failure,
+    AppLocalizations l10n,
+  ) {
+    switch (failure.code) {
+      case GroupErrorCode.combatActive:
+        // État local périmé : le serveur a vu un combat actif. On relit le
+        // combat pour que l'écran Groupe affiche son bandeau.
+        unawaited(
+          container.read(combatProvider(widget.groupId).notifier).refresh(),
+        );
+      case GroupErrorCode.mjAlreadyAssigned:
+        // L'autre MJ apparaît dans la liste des membres une fois relue.
+        container.invalidate(groupDetailProvider(widget.groupId));
+      default:
+        break;
+    }
+    if (!mounted) return;
+    setState(() {
+      _becomingGameMaster = false;
+      _gameMasterErrorMessage = failure.code == GroupErrorCode.generic
+          ? l10n.groupBecomeGameMasterGenericError
+          : failure.localizedWith(
+              l10n,
+              combatActiveMessage: l10n.groupBecomeGameMasterCombatActive,
+            );
+    });
+  }
+
+  /// Attend la relecture du détail du groupe (déjà invalidé). Un échec est
+  /// affiché par l'écran lui-même (état d'erreur + « Réessayer »).
+  Future<void> _awaitGroupDetail() async {
+    try {
+      await ref.read(groupDetailProvider(widget.groupId).future);
+    } on Object {
+      return;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final detailAsync = ref.watch(groupDetailProvider(widget.groupId));
@@ -215,6 +373,8 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
   }
 
   Widget _buildBody(GroupDetail detail) {
+    final l10n = AppLocalizations.of(context)!;
+    final offline = ref.watch(connectivityStatusProvider).value == false;
     return Column(
       children: [
         Expanded(
@@ -271,6 +431,10 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
                     color: AppColors.textMuted,
                   ),
                 ),
+                if (detail.canBecomeGameMaster) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  _buildGameMasterSection(detail, l10n, offline: offline),
+                ],
                 const SizedBox(height: AppSpacing.lg),
                 const Divider(color: AppColors.woodLight, thickness: 1),
                 const SizedBox(height: AppSpacing.lg),
@@ -284,19 +448,13 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 DestructiveButton(
-                  label: 'Dissoudre le groupe',
+                  label: l10n.groupSettingsDissolveAction,
                   icon: Icons.delete_outline,
-                  onPressed: () => showGroupDissolveSheet(
-                    context,
-                    groupId: widget.groupId,
-                    groupName: detail.name,
-                  ),
+                  onPressed: () => _openDissolveSheet(detail),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Réservé au créateur du groupe. Retire tous les membres et '
-                  'supprime le butin commun ; les personnages et leurs '
-                  'données restent intacts.',
+                  l10n.groupSettingsDissolveCaption,
                   style: AppTypography.body(
                     fontSize: 12,
                     color: AppColors.textMuted,
@@ -320,6 +478,65 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
             onPressed: _canSave ? _submitRename : null,
           ),
         ),
+      ],
+    );
+  }
+
+  /// Section « MAÎTRE DU JEU » (propriétaire qui joue un personnage) : même
+  /// gabarit que « CODE D'INVITATION » (titre 13/800 `textSecondary`,
+  /// légende 12 `textMuted`) ; `CompactActionButton` (même composant et même
+  /// icône que le lien « Paramètres du groupe » du bandeau « Pas de combat
+  /// sans MJ dans l'app », libellé long en police de texte, jamais tronqué).
+  /// Erreur affichée juste au-dessus du bouton (`AlertBanner`).
+  Widget _buildGameMasterSection(
+    GroupDetail detail,
+    AppLocalizations l10n, {
+    required bool offline,
+  }) {
+    final characterName = detail.currentMember?.name ?? '';
+    final error = _gameMasterErrorMessage;
+    return Column(
+      key: const Key('groupSettingsGameMasterSection'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.groupBecomeGameMasterSectionTitle,
+          style: AppTypography.body(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          l10n.groupBecomeGameMasterExplain(characterName),
+          style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (error != null) ...[
+          AlertBanner(message: error),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        CompactActionButton(
+          key: const Key('becomeGameMasterButton'),
+          icon: Icons.admin_panel_settings_outlined,
+          label: _becomingGameMaster
+              ? l10n.groupBecomeGameMasterInProgress
+              : l10n.groupBecomeGameMasterAction,
+          onTap: (offline || _becomingGameMaster)
+              ? null
+              : () => _confirmBecomeGameMaster(detail),
+        ),
+        if (offline) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l10n.groupBecomeGameMasterOffline,
+            style: AppTypography.body(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
       ],
     );
   }

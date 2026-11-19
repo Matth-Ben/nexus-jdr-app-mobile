@@ -118,14 +118,37 @@ abstract class GroupRepository {
   /// contrainte unique. Retourne le nouveau code.
   Future<String> regenerateInviteCode(String groupId);
 
-  /// "Dissoudre le groupe" (owner) — supprime la ligne `groups` (cascade
-  /// côté serveur vers `group_members`/`group_treasure`, hors périmètre de
-  /// ce dépôt).
+  /// "Dissoudre le groupe" (owner) — supprime la ligne `groups`. DeepCore
+  /// supprime en cascade `group_members`, `group_treasure`, `group_notes`,
+  /// `group_journal_entries`, `combats` et `combat_participants` ; aucune
+  /// table de personnages ne dépend de `groups` (les personnages restent
+  /// intacts). Refusé par le serveur pendant un combat actif : lève une
+  /// [GroupFailure] de code [GroupErrorCode.combatActive].
   Future<void> dissolveGroup(String groupId);
 
-  /// "Quitter le groupe" (membre non-owner) — supprime la propre ligne
-  /// `group_members` du joueur connecté pour ce groupe.
+  /// "Quitter le groupe" — supprime la propre ligne `group_members` du
+  /// joueur connecté pour ce groupe. Pour le **propriétaire**, refusé par le
+  /// serveur pendant un combat actif ([GroupErrorCode.combatActive]) ; un
+  /// autre membre peut toujours partir.
   Future<void> leaveGroup(String groupId);
+
+  /// RPC `become_group_game_master` — « Devenir MJ » (propriétaire qui joue
+  /// un personnage dans ce groupe) : sa ligne `group_members` passe en MJ
+  /// sans personnage (`is_game_master = true`, `character_id = null`). Le
+  /// personnage quitte le groupe et reste dans la liste du joueur ; rien
+  /// n'est supprimé. Idempotente (déjà MJ : aucune écriture). Action serveur,
+  /// jamais mise en file d'attente hors ligne.
+  ///
+  /// Lève une [GroupFailure] (le `message` du serveur est lu avant le code,
+  /// voir `mapGroupError`) : [GroupErrorCode.combatActive],
+  /// [GroupErrorCode.mjAlreadyAssigned] (un autre membre est déjà MJ, personne
+  /// n'est rétrogradé), [GroupErrorCode.notGroupOwner],
+  /// [GroupErrorCode.notMember], [GroupErrorCode.groupNotFound],
+  /// [GroupErrorCode.sessionExpired], [GroupErrorCode.transientConflict]
+  /// (`40P01`/`40001`), [GroupErrorCode.serverOutdated] (fonction absente :
+  /// migration DeepCore `20261119090000` pas encore appliquée) ou
+  /// [GroupErrorCode.network].
+  Future<void> becomeGroupGameMaster(String groupId);
 
   /// "Exclure {membre}" (owner) — supprime la ligne `group_members` de
   /// [userId] pour ce groupe. Identifié par `(group_id, user_id)` — unique
@@ -627,6 +650,22 @@ class SupabaseGroupRepository implements GroupRepository {
           .delete()
           .eq('group_id', groupId)
           .eq('user_id', ownerId);
+    } on PostgrestException catch (error) {
+      throw mapGroupError(error);
+    } catch (_) {
+      throw mapUnknownGroupError();
+    }
+  }
+
+  @override
+  Future<void> becomeGroupGameMaster(String groupId) async {
+    try {
+      // La ligne `group_members` renvoyée n'est pas exploitée : l'appelant
+      // relit le détail du groupe (source de vérité unique de l'écran).
+      await _client.rpc(
+        'become_group_game_master',
+        params: {'p_group_id': groupId},
+      );
     } on PostgrestException catch (error) {
       throw mapGroupError(error);
     } catch (_) {

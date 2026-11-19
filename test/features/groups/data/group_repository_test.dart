@@ -1247,6 +1247,180 @@ void main() {
       );
     });
   });
+
+  // RPC `become_group_game_master` (migration DeepCore `20261119090000`,
+  // PR #49) : contrat d'appel et correspondance de chaque erreur.
+  group('SupabaseGroupRepository.becomeGroupGameMaster', () {
+    test('POST /rpc/become_group_game_master avec {p_group_id}, aucune autre '
+        'requête', () async {
+      final requests = <http.Request>[];
+      final client = _buildFakeClient(
+        onRequest: requests.add,
+        responses: {
+          // Ligne `group_members` du propriétaire, désormais MJ.
+          'become_group_game_master': {
+            'id': 'membership-1',
+            'group_id': 'group-1',
+            'user_id': 'user-1',
+            'character_id': null,
+            'is_game_master': true,
+            'role': 'owner',
+          },
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await repository.becomeGroupGameMaster('group-1');
+
+      expect(requests, hasLength(1));
+      final request = requests.single;
+      expect(request.method, 'POST');
+      expect(
+        request.url.path,
+        endsWith('/rest/v1/rpc/become_group_game_master'),
+      );
+      expect(jsonDecode(request.body), {'p_group_id': 'group-1'});
+    });
+
+    // (statut HTTP, corps d'erreur PostgREST, code attendu)
+    const cases = <(int, Map<String, dynamic>, GroupErrorCode)>[
+      (
+        400,
+        {'code': 'P0001', 'message': 'combat_active'},
+        GroupErrorCode.combatActive,
+      ),
+      (
+        400,
+        {'code': 'P0001', 'message': 'mj_already_assigned'},
+        GroupErrorCode.mjAlreadyAssigned,
+      ),
+      (
+        403,
+        {'code': '42501', 'message': 'not_group_owner'},
+        GroupErrorCode.notGroupOwner,
+      ),
+      // `not_member` / `group_not_found` (P0002) arrivent en HTTP 500.
+      (
+        500,
+        {'code': 'P0002', 'message': 'not_member'},
+        GroupErrorCode.notMember,
+      ),
+      (
+        500,
+        {'code': 'P0002', 'message': 'group_not_found'},
+        GroupErrorCode.groupNotFound,
+      ),
+      (
+        401,
+        {'code': '28000', 'message': 'not_authenticated'},
+        GroupErrorCode.sessionExpired,
+      ),
+      (
+        500,
+        {'code': '40P01', 'message': 'deadlock detected'},
+        GroupErrorCode.transientConflict,
+      ),
+      (
+        500,
+        {
+          'code': '40001',
+          'message': 'could not serialize access due to concurrent update',
+        },
+        GroupErrorCode.transientConflict,
+      ),
+      // Migration pas encore appliquée : PostgREST ne trouve pas la fonction.
+      (
+        404,
+        {
+          'code': 'PGRST202',
+          'message':
+              'Could not find the function '
+              'public.become_group_game_master(p_group_id) in the schema '
+              'cache',
+          'hint': null,
+          'details': null,
+        },
+        GroupErrorCode.serverOutdated,
+      ),
+    ];
+    for (final (status, body, expected) in cases) {
+      test('HTTP $status « ${body['message']} » (${body['code']}) -> '
+          '$expected', () async {
+        final client = _buildFakeClient(
+          statusCode: status,
+          responses: {'become_group_game_master': body},
+        );
+        final repository = SupabaseGroupRepository(client);
+
+        await expectLater(
+          repository.becomeGroupGameMaster('group-1'),
+          throwsA(isA<GroupFailure>().having((f) => f.code, 'code', expected)),
+        );
+      });
+    }
+
+    test('pas de réseau -> GroupErrorCode.network', () async {
+      final client = _buildFakeClient(throwOnRequest: true);
+      final repository = SupabaseGroupRepository(client);
+
+      await expectLater(
+        repository.becomeGroupGameMaster('group-1'),
+        throwsA(
+          isA<GroupFailure>().having(
+            (f) => f.code,
+            'code',
+            GroupErrorCode.network,
+          ),
+        ),
+      );
+    });
+  });
+
+  // Gardes « combat actif » de DeepCore (triggers BEFORE DELETE) : le refus
+  // `combat_active` de la dissolution et du départ du propriétaire.
+  group('refus combat_active de la dissolution et du départ', () {
+    test('dissolveGroup : DELETE groups refusé -> combatActive', () async {
+      final client = _buildFakeClient(
+        statusCode: 400,
+        responses: {
+          'groups': {'code': 'P0001', 'message': 'combat_active'},
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await expectLater(
+        repository.dissolveGroup('group-1'),
+        throwsA(
+          isA<GroupFailure>().having(
+            (f) => f.code,
+            'code',
+            GroupErrorCode.combatActive,
+          ),
+        ),
+      );
+    });
+
+    test('leaveGroup : DELETE group_members refusé -> combatActive', () async {
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'user-1',
+        failingTables: const {'group_members'},
+        failingBody: const {'code': 'P0001', 'message': 'combat_active'},
+        failingStatus: 400,
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await expectLater(
+        repository.leaveGroup('group-1'),
+        throwsA(
+          isA<GroupFailure>().having(
+            (f) => f.code,
+            'code',
+            GroupErrorCode.combatActive,
+          ),
+        ),
+      );
+    });
+  });
 }
 
 /// Fabrique un `SupabaseClient` réel dont le transport HTTP est fabriqué de
@@ -1304,6 +1478,13 @@ Future<SupabaseClient> _buildSignedInFakeClient({
   // vue/table temporairement inaccessible pour le point 1 (résilience de
   // `fetchMyGroups` face à un échec de `group_character_status_overview`).
   Set<String> failingTables = const {},
+  // Corps et statut de l'erreur renvoyée pour [failingTables] (par défaut :
+  // vue temporairement indisponible, `PGRST000`, 500).
+  Map<String, dynamic> failingBody = const {
+    'message': 'Vue temporairement indisponible (double de test).',
+    'code': 'PGRST000',
+  },
+  int failingStatus = 500,
   void Function(http.Request request)? onRequest,
 }) async {
   Future<http.Response> handler(http.Request request) async {
@@ -1311,11 +1492,8 @@ Future<SupabaseClient> _buildSignedInFakeClient({
     final key = request.url.pathSegments.last;
     if (failingTables.contains(key)) {
       return http.Response(
-        jsonEncode({
-          'message': 'Vue temporairement indisponible (double de test).',
-          'code': 'PGRST000',
-        }),
-        500,
+        jsonEncode(failingBody),
+        failingStatus,
         request: request,
         headers: {'content-type': 'application/json'},
       );

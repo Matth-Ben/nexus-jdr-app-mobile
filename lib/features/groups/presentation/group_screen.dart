@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../combat/presentation/providers/character_combat_provider.dart';
 
 import 'package:flutter/material.dart';
@@ -100,12 +102,15 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
 
   Future<void> _confirmLeaveGroup(GroupDetail detail) async {
     // Garde du propriétaire : jamais de départ pendant un combat actif. Le
-    // serveur n'applique PAS cette règle, cette garde est la seule protection :
-    // on refetch le combat avant de décider (un état `loading`/`error`/périmé
-    // ne doit jamais laisser passer). Hors ligne, `refresh()` avale l'erreur et
-    // laisse l'état périmé : un combat actif déjà connu bloque ; sans état
-    // connu (`loading`/`none`) le départ passe, mais `leaveGroup` échouerait
-    // de toute façon hors ligne.
+    // serveur est l'autorité (DeepCore refuse la suppression de la ligne du
+    // propriétaire avec `combat_active`, migration `20261119090000`, traduit
+    // dans `_confirmLeaveGroupDialog`) ; cette garde cliente évite seulement
+    // un dialogue inutile : on refetch le combat avant de décider (un état
+    // `loading`/`error`/périmé ne doit jamais laisser passer un combat
+    // connu). Hors ligne, `refresh()` avale l'erreur et laisse l'état
+    // périmé : un combat actif déjà connu bloque ; sans état connu
+    // (`loading`/`none`) le départ passe, mais `leaveGroup` échouerait de
+    // toute façon hors ligne.
     if (_leaveInFlight) return;
     _leaveInFlight = true;
     try {
@@ -146,7 +151,18 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       context.go('/');
       _showSnackBar('Tu as quitté le groupe.');
     } on GroupFailure catch (failure) {
-      _showSnackBar(failure.localized(context));
+      if (!mounted) return;
+      if (failure.code == GroupErrorCode.combatActive) {
+        // Refus serveur (état local périmé) : on relit le combat pour que le
+        // bandeau « Combat en cours » apparaisse.
+        unawaited(ref.read(combatProvider(widget.groupId).notifier).refresh());
+      }
+      _showSnackBar(
+        failure.localized(
+          context,
+          combatActiveMessage: AppLocalizations.of(context)?.combatLeaveBlocked,
+        ),
+      );
     } catch (_) {
       _showSnackBar('Impossible de quitter le groupe. Réessayez.');
     }

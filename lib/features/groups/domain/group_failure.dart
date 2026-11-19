@@ -16,6 +16,32 @@ enum GroupErrorCode {
   /// Aucun code d'invitation libre trouvé après les tentatives.
   inviteCodeGenerationFailed,
 
+  /// `combat_active` (P0001) : un combat est en cours dans le groupe. Le
+  /// serveur refuse alors la dissolution, le départ du propriétaire et
+  /// « Devenir MJ » (migration DeepCore `20261119090000`). L'appelant affiche
+  /// le message propre à son action quand il en a un.
+  combatActive,
+
+  /// `mj_already_assigned` (P0001) : un autre membre est déjà MJ sans
+  /// personnage dans ce groupe. Personne n'est rétrogradé automatiquement.
+  mjAlreadyAssigned,
+
+  /// `not_group_owner` (42501) : action réservée au propriétaire du groupe.
+  notGroupOwner,
+
+  /// `not_member` (P0002) : le joueur connecté n'a plus de ligne
+  /// `group_members` dans ce groupe.
+  notMember,
+
+  /// Conflit transitoire de la base (`40P01` interblocage, `40001`
+  /// sérialisation) : la transaction a été annulée sans effet, il suffit de
+  /// réessayer.
+  transientConflict,
+
+  /// La fonction serveur appelée n'existe pas encore (`PGRST202` : migration
+  /// DeepCore pas encore appliquée sur ce projet).
+  serverOutdated,
+
   /// Tout le reste : [GroupFailure.message] (brut) fait foi.
   generic,
 }
