@@ -92,11 +92,20 @@ class GroupCampaignCard extends StatelessWidget {
 /// « Campagne : {titre} » : préfixe traduit en body 14 w700 `textSecondary`,
 /// titre (jamais traduit) en body 16 w800 `textPrimary`, sans limite de
 /// lignes. Partagé par [GroupCampaignCard] (avec icône) et l'aperçu
-/// d'invitation de `group_join_screen.dart` (sans icône).
+/// d'invitation de `group_join_screen.dart` (sans icône, variante
+/// [GroupCampaignTitleText.compact]).
 class GroupCampaignTitleText extends StatelessWidget {
-  const GroupCampaignTitleText({required this.title, super.key});
+  const GroupCampaignTitleText({required this.title, super.key})
+    : compact = false;
+
+  /// Titre en body 14 w700 `textPrimary` : sous le nom du groupe (16 w800)
+  /// de la carte d'aperçu d'invitation, sans lui faire concurrence (revue
+  /// direction-artistique de la PR #304).
+  const GroupCampaignTitleText.compact({required this.title, super.key})
+    : compact = true;
 
   final String title;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -114,8 +123,8 @@ class GroupCampaignTitleText extends StatelessWidget {
           TextSpan(
             text: title,
             style: AppTypography.body(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
+              fontSize: compact ? 14 : 16,
+              fontWeight: compact ? FontWeight.w700 : FontWeight.w800,
               color: AppColors.textPrimary,
             ),
           ),

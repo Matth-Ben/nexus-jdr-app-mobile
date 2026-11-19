@@ -6270,6 +6270,18 @@
   "@groupCampaignSummaryToggle": {
     "description": "En-tête repliable du résumé public de la campagne (carte « Campagne » de l'écran Groupe). Le résumé, écrit par le MJ, n'est jamais traduit."
   },
+  "groupInvitePreviewLoading": "Recherche du groupe…",
+  "@groupInvitePreviewLoading": {
+    "description": "État de chargement de l'aperçu d'invitation, sous le champ du code (écran « Rejoindre un groupe »)."
+  },
+  "groupJoinSeeGroupAction": "Voir le groupe",
+  "@groupJoinSeeGroupAction": {
+    "description": "Bouton principal de l'écran « Rejoindre un groupe » tant que l'aperçu du groupe n'est pas affiché : le toucher charge l'aperçu, sans rejoindre (décision n° 34)."
+  },
+  "groupJoinAction": "Rejoindre",
+  "@groupJoinAction": {
+    "description": "Bouton principal de l'écran « Rejoindre un groupe » une fois l'aperçu du groupe affiché : le toucher rejoint le groupe."
+  },
   "groupInvitePreviewMemberCount": "{count, plural, =1{{count} membre} other{{count} membres}}",
   "@groupInvitePreviewMemberCount": {
     "description": "Nombre de membres du groupe dans l'aperçu d'invitation (écran « Rejoindre un groupe »). `{count}` dans la branche `=1` (et non « 1 ») : en français, 0 relève aussi de cette branche et doit afficher « 0 membre ».",

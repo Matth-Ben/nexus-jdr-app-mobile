@@ -132,9 +132,18 @@ void main() {
           tester.getBottomLeft(find.byType(GroupCampaignCard)).dy,
       greaterThanOrEqualTo(16),
     );
-    // Titre sans limite de lignes.
+    // Titre sans limite de lignes, en 16 w800 (variante normale, la variante
+    // compacte est réservée à l'aperçu d'invitation).
     final paragraph = tester.renderObject<RenderParagraph>(_titleLine());
     expect(paragraph.maxLines, isNull);
+    final leaves = <TextSpan>[];
+    paragraph.text.visitChildren((span) {
+      if (span is TextSpan && span.text != null) leaves.add(span);
+      return true;
+    });
+    final titleSpan = leaves.singleWhere((span) => span.text == _title);
+    expect(titleSpan.style!.fontSize, 16);
+    expect(titleSpan.style!.fontWeight, FontWeight.w800);
   });
 
   testWidgets('en anglais : préfixe « Campaign: », titre non traduit', (

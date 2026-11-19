@@ -4740,6 +4740,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get groupCampaignSummaryToggle => 'Résumé de la campagne';
 
   @override
+  String get groupInvitePreviewLoading => 'Recherche du groupe…';
+
+  @override
+  String get groupJoinSeeGroupAction => 'Voir le groupe';
+
+  @override
+  String get groupJoinAction => 'Rejoindre';
+
+  @override
   String groupInvitePreviewMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

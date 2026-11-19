@@ -7625,6 +7625,24 @@ abstract class AppLocalizations {
   /// **'Résumé de la campagne'**
   String get groupCampaignSummaryToggle;
 
+  /// État de chargement de l'aperçu d'invitation, sous le champ du code (écran « Rejoindre un groupe »).
+  ///
+  /// In fr, this message translates to:
+  /// **'Recherche du groupe…'**
+  String get groupInvitePreviewLoading;
+
+  /// Bouton principal de l'écran « Rejoindre un groupe » tant que l'aperçu du groupe n'est pas affiché : le toucher charge l'aperçu, sans rejoindre (décision n° 34).
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le groupe'**
+  String get groupJoinSeeGroupAction;
+
+  /// Bouton principal de l'écran « Rejoindre un groupe » une fois l'aperçu du groupe affiché : le toucher rejoint le groupe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rejoindre'**
+  String get groupJoinAction;
+
   /// Nombre de membres du groupe dans l'aperçu d'invitation (écran « Rejoindre un groupe »). `{count}` dans la branche `=1` (et non « 1 ») : en français, 0 relève aussi de cette branche et doit afficher « 0 membre ».
   ///
   /// In fr, this message translates to:

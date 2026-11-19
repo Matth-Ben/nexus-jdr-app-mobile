@@ -600,11 +600,17 @@ bool _isPrimaryButtonEnabled(WidgetTester tester) {
 
 Finder _previewCard() => find.byKey(const ValueKey('groupInvitePreviewCard'));
 
+Finder _previewLoading() =>
+    find.byKey(const ValueKey('groupInvitePreviewLoading'));
+
+bool _isPrimaryButtonLoading(WidgetTester tester) =>
+    tester.widget<PrimaryButton>(find.byType(PrimaryButton)).isLoading;
+
 /// Décision n° 34 : « Rejoindre » ne rattache qu'à un groupe dont l'aperçu
-/// est affiché. Un code de 6 caractères n'est pas prévisualisé d'office : le
-/// premier toucher affiche l'aperçu, le suivant confirme.
+/// est affiché. Un code de 6 caractères n'est pas prévisualisé d'office :
+/// « Voir le groupe » affiche l'aperçu, puis « Rejoindre » confirme.
 Future<void> _showPreview(WidgetTester tester) async {
-  await tester.tap(find.text('REJOINDRE'));
+  await tester.tap(find.text('VOIR LE GROUPE'));
   await tester.pumpAndSettle();
   expect(_previewCard(), findsOneWidget);
 }
@@ -824,7 +830,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), 'ab3f7k');
       await tester.pump();
-      await tester.tap(find.text('REJOINDRE'));
+      await tester.tap(find.text('VOIR LE GROUPE'));
       await tester.pumpAndSettle();
 
       expect(
@@ -850,7 +856,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), 'ab3f7k');
       await tester.pump();
-      await tester.tap(find.text('REJOINDRE'));
+      await tester.tap(find.text('VOIR LE GROUPE'));
       await tester.pumpAndSettle();
 
       expect(
@@ -1254,8 +1260,8 @@ void main() {
       expect(_previewCard(), findsNothing);
     });
 
-    testWidgets('code de 6 caractères : le premier toucher affiche la carte '
-        'sans rejoindre, le second rejoint', (tester) async {
+    testWidgets('code de 6 caractères : « Voir le groupe » affiche la carte '
+        'sans rejoindre, « Rejoindre » rejoint', (tester) async {
       fakeGroupRepository.previewToReturn = campaignPreview;
       await tester.pumpWidget(buildWidget());
       await tester.pumpAndSettle();
@@ -1264,7 +1270,7 @@ void main() {
       expect(_previewCard(), findsNothing);
       expect(fakeGroupRepository.previewCallCount, 0);
 
-      await tester.tap(find.text('REJOINDRE'));
+      await tester.tap(find.text('VOIR LE GROUPE'));
       await tester.pumpAndSettle();
       expect(_previewCard(), findsOneWidget);
       expect(fakeGroupRepository.joinCallCount, 0);
@@ -1276,29 +1282,131 @@ void main() {
       expect(find.text('Écran Groupe group-1'), findsOneWidget);
     });
 
-    testWidgets('toucher « Rejoindre » pendant le chargement de l\'aperçu : '
-        'attend la carte, ne rejoint pas', (tester) async {
+    testWidgets('« Voir le groupe » pendant le chargement de l\'aperçu : '
+        'attend la carte sans voile ni « Rattachement », ne rejoint pas', (
+      tester,
+    ) async {
       fakeGroupRepository.previewCompleter = Completer<GroupPreview>();
       await tester.pumpWidget(buildWidget());
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), fullCode);
       await tester.pump();
 
-      await tester.tap(find.text('REJOINDRE'));
+      await tester.tap(find.text('VOIR LE GROUPE'));
       await tester.pump();
-      expect(find.text('Rattachement au groupe...'), findsOneWidget);
+      expect(find.text('Rattachement au groupe...'), findsNothing);
+      expect(_isPrimaryButtonLoading(tester), isTrue);
+      expect(_previewLoading(), findsOneWidget);
 
       fakeGroupRepository.previewCompleter!.complete(campaignPreview);
       await tester.pumpAndSettle();
 
       expect(_previewCard(), findsOneWidget);
+      expect(_previewLoading(), findsNothing);
+      expect(_isPrimaryButtonLoading(tester), isFalse);
+      expect(find.text('REJOINDRE'), findsOneWidget);
       expect(fakeGroupRepository.previewCallCount, 1);
       expect(fakeGroupRepository.joinCallCount, 0);
-      expect(find.text('Rattachement au groupe...'), findsNothing);
     });
 
-    testWidgets('code complet invalide : rien sous le champ avant le '
-        'toucher, puis la même erreur qu\'avant', (tester) async {
+    testWidgets('code de 6 caractères : « Voir le groupe » verrouille le '
+        'champ et le rôle sans voile, puis « Rejoindre » montre le voile', (
+      tester,
+    ) async {
+      fakeGroupRepository.previewCompleter = Completer<GroupPreview>();
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'ab3f7k');
+      await tester.pump();
+
+      await tester.tap(find.text('VOIR LE GROUPE'));
+      await tester.pump();
+      expect(find.text('Rattachement au groupe...'), findsNothing);
+      expect(_isPrimaryButtonLoading(tester), isTrue);
+      expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+      expect(_previewLoading(), findsOneWidget);
+
+      fakeGroupRepository.previewCompleter!.complete(campaignPreview);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+
+      fakeGroupRepository.joinCompleter = Completer<JoinedGroup>();
+      await tester.tap(find.text('REJOINDRE'));
+      await tester.pump();
+      expect(find.text('Rattachement au groupe...'), findsOneWidget);
+
+      fakeGroupRepository.joinCompleter!.complete(
+        const JoinedGroup(groupId: 'group-1', name: 'Les Lames'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Écran Groupe group-1'), findsOneWidget);
+    });
+
+    testWidgets('aperçu automatique en cours : « Recherche du groupe… » dans '
+        'l\'encadré, annoncé, sans verrouiller l\'écran', (tester) async {
+      fakeGroupRepository.previewCompleter = Completer<GroupPreview>();
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), fullCode);
+      await tester.pump();
+
+      expect(_previewLoading(), findsOneWidget);
+      expect(
+        find.descendant(
+          of: _previewLoading(),
+          matching: find.text('Recherche du groupe…'),
+        ),
+        findsOneWidget,
+      );
+      final spinner = find.descendant(
+        of: _previewLoading(),
+        matching: find.byType(CircularProgressIndicator),
+      );
+      expect(tester.getSize(spinner), const Size(16, 16));
+      expect(tester.widget<CircularProgressIndicator>(spinner).strokeWidth, 2);
+      expect(
+        find.ancestor(
+          of: _previewLoading(),
+          matching: find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.liveRegion == true,
+          ),
+        ),
+        findsOneWidget,
+      );
+      // Sous le champ, comme la carte.
+      expect(
+        tester.getTopLeft(_previewLoading()).dy,
+        greaterThan(tester.getBottomLeft(find.byType(TextField)).dy),
+      );
+      expect(_isPrimaryButtonLoading(tester), isFalse);
+      expect(find.text('VOIR LE GROUPE'), findsOneWidget);
+
+      fakeGroupRepository.previewCompleter!.complete(campaignPreview);
+      await tester.pumpAndSettle();
+      expect(_previewLoading(), findsNothing);
+      expect(_previewCard(), findsOneWidget);
+    });
+
+    testWidgets('en anglais : « Looking for the group… »', (tester) async {
+      fakeGroupRepository.previewCompleter = Completer<GroupPreview>();
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          groupRepository: fakeGroupRepository,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), fullCode);
+      await tester.pump();
+
+      expect(find.text('Looking for the group…'), findsOneWidget);
+      fakeGroupRepository.previewCompleter!.complete(campaignPreview);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('code complet invalide : l\'erreur s\'affiche aussitôt sous '
+        'le champ, sans toucher', (tester) async {
       fakeGroupRepository.previewErrorToThrow = const GroupInviteFailure(
         GroupInviteFailureKind.invalidCode,
       );
@@ -1307,9 +1415,15 @@ void main() {
       await enterFullCode(tester);
 
       expect(_previewCard(), findsNothing);
-      expect(find.text("Ce code d'invitation n'est pas valide."), findsNothing);
+      expect(_previewLoading(), findsNothing);
+      expect(
+        find.text("Ce code d'invitation n'est pas valide."),
+        findsOneWidget,
+      );
+      expect(fakeGroupRepository.previewCallCount, 1);
 
-      await tester.tap(find.text('REJOINDRE'));
+      // Le bouton relance la validation : même erreur, une seule fois.
+      await tester.tap(find.text('VOIR LE GROUPE'));
       await tester.pumpAndSettle();
 
       expect(
@@ -1320,8 +1434,26 @@ void main() {
       expect(fakeGroupRepository.joinCallCount, 0);
     });
 
-    testWidgets('aperçu automatique en échec réseau : « Rejoindre » le '
-        'relance et montre la carte, le joueur confirme ensuite', (
+    testWidgets('aperçu automatique en échec réseau : rien sous le champ ni '
+        'en bandeau avant le toucher', (tester) async {
+      fakeGroupRepository.previewErrorToThrow = const GroupInviteFailure(
+        GroupInviteFailureKind.generic,
+      );
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+      await enterFullCode(tester);
+
+      expect(_previewCard(), findsNothing);
+      expect(_previewLoading(), findsNothing);
+      expect(find.text("Ce code d'invitation n'est pas valide."), findsNothing);
+      expect(
+        find.text('Impossible de rejoindre ce groupe. Réessayez.'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('aperçu automatique en échec réseau : « Voir le groupe » '
+        'le relance et montre la carte, le joueur confirme ensuite', (
       tester,
     ) async {
       fakeGroupRepository.previewErrorToThrow = const GroupInviteFailure(
@@ -1335,7 +1467,7 @@ void main() {
       fakeGroupRepository
         ..previewErrorToThrow = null
         ..previewToReturn = campaignPreview;
-      await tester.tap(find.text('REJOINDRE'));
+      await tester.tap(find.text('VOIR LE GROUPE'));
       await tester.pumpAndSettle();
 
       expect(_previewCard(), findsOneWidget);
@@ -1357,7 +1489,7 @@ void main() {
       await tester.pumpAndSettle();
       await enterFullCode(tester);
 
-      await tester.tap(find.text('REJOINDRE'));
+      await tester.tap(find.text('VOIR LE GROUPE'));
       await tester.pumpAndSettle();
 
       expect(
@@ -1378,7 +1510,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'ab3f7k');
       await tester.pump();
-      await tester.tap(find.text('REJOINDRE'));
+      await tester.tap(find.text('VOIR LE GROUPE'));
       await tester.pumpAndSettle();
       expect(
         find.text("Ce code d'invitation n'est pas valide."),
@@ -1413,6 +1545,106 @@ void main() {
         findsOneWidget,
       );
       expect(_previewCard(), findsOneWidget);
+    });
+
+    testWidgets('le bandeau d\'échec disparaît quand le code change (pas de '
+        '« déjà membre » à côté de l\'aperçu d\'un autre groupe)', (
+      tester,
+    ) async {
+      fakeGroupRepository
+        ..previewToReturn = campaignPreview
+        ..joinErrorToThrow = const GroupInviteFailure(
+          GroupInviteFailureKind.alreadyInGroup,
+        );
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+      await enterFullCode(tester);
+      await tester.tap(find.text('REJOINDRE'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Ce personnage est déjà membre de ce groupe.'),
+        findsOneWidget,
+      );
+
+      fakeGroupRepository.previewToReturn = const GroupPreview(
+        name: 'Autre groupe',
+        memberCount: 2,
+      );
+      await tester.enterText(find.byType(TextField), 'zz9988xx');
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ce personnage est déjà membre de ce groupe.'),
+        findsNothing,
+      );
+      expect(find.text('Autre groupe'), findsOneWidget);
+    });
+
+    testWidgets('libellé du bouton : « Voir le groupe » tant que la carte '
+        'n\'est pas affichée, « Rejoindre » ensuite', (tester) async {
+      fakeGroupRepository.previewToReturn = campaignPreview;
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.text('VOIR LE GROUPE'), findsOneWidget);
+      expect(find.text('REJOINDRE'), findsNothing);
+
+      await enterFullCode(tester);
+      expect(find.text('REJOINDRE'), findsOneWidget);
+      expect(find.text('VOIR LE GROUPE'), findsNothing);
+
+      await tester.enterText(find.byType(TextField), 'ab3f7k2');
+      await tester.pumpAndSettle();
+      expect(find.text('VOIR LE GROUPE'), findsOneWidget);
+    });
+
+    testWidgets('libellé du bouton en anglais : « See the group » puis '
+        '« Join »', (tester) async {
+      fakeGroupRepository.previewToReturn = campaignPreview;
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          groupRepository: fakeGroupRepository,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('SEE THE GROUP'), findsOneWidget);
+      await enterFullCode(tester);
+      expect(find.text('JOIN'), findsOneWidget);
+    });
+
+    testWidgets('titre de la campagne en variante compacte (14 w700), sous le '
+        'nom du groupe (16 w800)', (tester) async {
+      fakeGroupRepository.previewToReturn = campaignPreview;
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+      await enterFullCode(tester);
+
+      final rich = tester.widget<RichText>(
+        find.descendant(
+          of: _previewCard(),
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is RichText &&
+                w.text.toPlainText().contains('La Mine perdue'),
+          ),
+        ),
+      );
+      final leaves = <TextSpan>[];
+      rich.text.visitChildren((span) {
+        if (span is TextSpan && span.text != null) leaves.add(span);
+        return true;
+      });
+      final title = leaves.singleWhere((span) => span.text == 'La Mine perdue');
+      expect(title.style!.fontSize, 14);
+      expect(title.style!.fontWeight, FontWeight.w700);
+      final name = tester.widget<Text>(
+        find.descendant(of: _previewCard(), matching: find.text('Les Lames')),
+      );
+      expect(name.style!.fontSize, 16);
+      expect(name.style!.fontWeight, FontWeight.w800);
     });
   });
 }
