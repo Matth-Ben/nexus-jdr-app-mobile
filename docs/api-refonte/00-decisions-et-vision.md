@@ -162,6 +162,12 @@ où ils le contredisent. Les tickets Project #7 portent la même numérotation (
     jamais bloquée.
 33. **Aperçu d'invitation** : avant de rejoindre un groupe, Nexus montre le **titre** de la campagne (pas le résumé
     public). `preview-group-invite` renvoie donc `story_title` (étape 4).
+34. **Aperçu d'invitation dans Nexus** : Nexus n'en avait pas (il rejoignait dès le code validé). Une **carte d'aperçu**
+    est ajoutée sous le champ du code : nom du groupe, nombre de membres, « Campagne : … » ; jamais le résumé.
+35. **Hors ligne** : l'étape 4 affiche la campagne **en ligne seulement** ; la mise en cache hors ligne de tout l'écran
+    Groupe (aujourd'hui en erreur sans réseau) devient un ticket séparé.
+36. **Titre identique au nom du groupe** (cas fréquent, « Générer un groupe » reprend le titre) : la ligne « Campagne : … »
+    n'est pas répétée ; le résumé public reste affiché s'il existe.
 
 **Abandonné** par rapport aux propositions de `05`/`09` : tables `adventure_*`, bucket d'images d'histoire,
 `generate_group_from_story`, `groups.adventure_id`, `game_events`, `combat_npc_state`, `add_monsters`, `revealed`,
