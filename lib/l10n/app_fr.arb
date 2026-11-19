@@ -6143,16 +6143,16 @@
   "@groupBecomeGameMasterSectionTitle": {
     "description": "Titre de la section « Devenir MJ » des paramètres du groupe (propriétaire qui joue un personnage)."
   },
-  "groupBecomeGameMasterExplain": "Tu joues {characterName} dans ce groupe. Pour lancer des combats dans l'app, le créateur du groupe doit en être le MJ, sans personnage.",
+  "groupBecomeGameMasterExplain": "Pour lancer les combats dans l'app, deviens-en le MJ : {characterName} quittera le groupe mais restera dans ta liste de personnages.",
   "@groupBecomeGameMasterExplain": {
     "description": "Explication sous le titre de la section « Devenir MJ ».",
     "placeholders": {"characterName": {"type": "String"}}
   },
-  "groupBecomeGameMasterAction": "Devenir MJ (ne plus jouer de personnage dans ce groupe)",
+  "groupBecomeGameMasterAction": "Devenir MJ",
   "@groupBecomeGameMasterAction": {
     "description": "Bouton « Devenir MJ » des paramètres du groupe."
   },
-  "groupBecomeGameMasterInProgress": "Passage en MJ en cours…",
+  "groupBecomeGameMasterInProgress": "Passage en MJ…",
   "@groupBecomeGameMasterInProgress": {
     "description": "Libellé du bouton « Devenir MJ » pendant l'appel serveur (bouton bloqué)."
   },
@@ -6165,7 +6165,7 @@
     "description": "Titre de la confirmation « Devenir MJ ».",
     "placeholders": {"groupName": {"type": "String"}}
   },
-  "groupBecomeGameMasterConfirmBody": "{characterName} quitte ce groupe mais reste dans ta liste de personnages, avec toutes ses données. Tu deviens MJ sans personnage et tu pourras lancer les combats. Retour en arrière impossible pour l'instant.",
+  "groupBecomeGameMasterConfirmBody": "{characterName} quittera ce groupe mais restera dans ta liste de personnages, avec toutes ses données. Tu deviendras MJ sans personnage et tu pourras lancer les combats. Impossible de revenir en arrière pour l'instant.",
   "@groupBecomeGameMasterConfirmBody": {
     "description": "Corps de la confirmation « Devenir MJ » (redevenir joueur n'est pas prévu).",
     "placeholders": {"characterName": {"type": "String"}}
@@ -6202,9 +6202,29 @@
   "@groupDissolveSheetTitle": {
     "description": "Titre de la feuille de dissolution."
   },
-  "groupDissolveWarning": "Cette action est irréversible. Elle supprimera définitivement, pour tous les membres :\n• le groupe et l'accès de tous ses membres ;\n• le butin commun ;\n• les carnets de notes des joueurs pour ce groupe (onglet Notes, toutes les entrées du journal comprises) ;\n• l'historique des combats du groupe.\n\nLes personnages des joueurs restent intacts : ils gardent toutes leurs données.\n\nCette action ne peut pas être annulée.",
-  "@groupDissolveWarning": {
-    "description": "Avertissement de la feuille de dissolution (D228) : cascades DeepCore vérifiées (`group_members`, `group_treasure`, `group_notes`, `group_journal_entries`, `combats`, `combat_participants`) ; aucune table de personnages ne dépend de `groups`."
+  "groupDissolveWarningIntro": "Cette action est irréversible. Elle supprimera définitivement, pour tous les membres :",
+  "@groupDissolveWarningIntro": {
+    "description": "Introduction de l'avertissement de dissolution (bandeau d'alerte), suivie de la liste des suppressions (D228)."
+  },
+  "groupDissolveWarningItemAccess": "le groupe et l'accès de tous ses membres ;",
+  "@groupDissolveWarningItemAccess": {
+    "description": "Élément de la liste des suppressions de la dissolution (`group_members`)."
+  },
+  "groupDissolveWarningItemTreasure": "le butin commun ;",
+  "@groupDissolveWarningItemTreasure": {
+    "description": "Élément de la liste des suppressions de la dissolution (`group_treasure`)."
+  },
+  "groupDissolveWarningItemNotes": "les carnets de notes des joueurs pour ce groupe (onglet Notes, toutes les entrées du journal comprises) ;",
+  "@groupDissolveWarningItemNotes": {
+    "description": "Élément de la liste des suppressions de la dissolution (`group_notes`, `group_journal_entries`)."
+  },
+  "groupDissolveWarningItemCombats": "l'historique des combats du groupe.",
+  "@groupDissolveWarningItemCombats": {
+    "description": "Élément de la liste des suppressions de la dissolution (`combats`, `combat_participants`)."
+  },
+  "groupDissolveWarningCharactersKept": "Les personnages des joueurs restent intacts : ils gardent toutes leurs données.",
+  "@groupDissolveWarningCharactersKept": {
+    "description": "Phrase finale de l'avertissement de dissolution : aucune table de personnages ne dépend de `groups`."
   },
   "groupDissolveCancel": "Annuler",
   "@groupDissolveCancel": {
@@ -6234,7 +6254,7 @@
   "@groupDissolveSuccess": {
     "description": "Message après une dissolution réussie."
   },
-  "groupDissolveGenericError": "Impossible de dissoudre le groupe. Réessayez.",
+  "groupDissolveGenericError": "Impossible de dissoudre le groupe. Réessaie.",
   "@groupDissolveGenericError": {
     "description": "Échec non reconnu de la dissolution."
   },

@@ -4590,12 +4590,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String groupBecomeGameMasterExplain(String characterName) {
-    return 'You play $characterName in this group. To start combats in the app, the group\'s creator must be its GM, without a character.';
+    return 'To start combats in the app, become its GM: $characterName will leave the group but stay in your character list.';
   }
 
   @override
-  String get groupBecomeGameMasterAction =>
-      'Become GM (stop playing a character in this group)';
+  String get groupBecomeGameMasterAction => 'Become GM';
 
   @override
   String get groupBecomeGameMasterInProgress => 'Becoming GM…';
@@ -4611,7 +4610,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String groupBecomeGameMasterConfirmBody(String characterName) {
-    return '$characterName leaves this group but stays in your character list, with all their data. You become a GM without a character and can start combats. This can\'t be undone for now.';
+    return '$characterName will leave this group but stay in your character list, with all their data. You\'ll become a GM without a character and will be able to start combats. You can\'t undo this for now.';
   }
 
   @override
@@ -4643,8 +4642,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupDissolveSheetTitle => 'DISSOLVE GROUP';
 
   @override
-  String get groupDissolveWarning =>
-      'This action is irreversible. It will permanently delete, for every member:\n• the group and every member\'s access to it;\n• the shared loot;\n• the players\' notebooks for this group (Notes tab, including every journal entry);\n• the group\'s combat history.\n\nThe players\' characters stay intact and keep all their data.\n\nThis action cannot be undone.';
+  String get groupDissolveWarningIntro =>
+      'This action is irreversible. It will permanently delete, for every member:';
+
+  @override
+  String get groupDissolveWarningItemAccess =>
+      'the group and every member\'s access to it;';
+
+  @override
+  String get groupDissolveWarningItemTreasure => 'the shared loot;';
+
+  @override
+  String get groupDissolveWarningItemNotes =>
+      'the players\' notebooks for this group (Notes tab, including every journal entry);';
+
+  @override
+  String get groupDissolveWarningItemCombats => 'the group\'s combat history.';
+
+  @override
+  String get groupDissolveWarningCharactersKept =>
+      'The players\' characters stay intact and keep all their data.';
 
   @override
   String get groupDissolveCancel => 'Cancel';

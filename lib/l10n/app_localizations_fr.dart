@@ -4629,15 +4629,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String groupBecomeGameMasterExplain(String characterName) {
-    return 'Tu joues $characterName dans ce groupe. Pour lancer des combats dans l\'app, le créateur du groupe doit en être le MJ, sans personnage.';
+    return 'Pour lancer les combats dans l\'app, deviens-en le MJ : $characterName quittera le groupe mais restera dans ta liste de personnages.';
   }
 
   @override
-  String get groupBecomeGameMasterAction =>
-      'Devenir MJ (ne plus jouer de personnage dans ce groupe)';
+  String get groupBecomeGameMasterAction => 'Devenir MJ';
 
   @override
-  String get groupBecomeGameMasterInProgress => 'Passage en MJ en cours…';
+  String get groupBecomeGameMasterInProgress => 'Passage en MJ…';
 
   @override
   String get groupBecomeGameMasterOffline =>
@@ -4650,7 +4649,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String groupBecomeGameMasterConfirmBody(String characterName) {
-    return '$characterName quitte ce groupe mais reste dans ta liste de personnages, avec toutes ses données. Tu deviens MJ sans personnage et tu pourras lancer les combats. Retour en arrière impossible pour l\'instant.';
+    return '$characterName quittera ce groupe mais restera dans ta liste de personnages, avec toutes ses données. Tu deviendras MJ sans personnage et tu pourras lancer les combats. Impossible de revenir en arrière pour l\'instant.';
   }
 
   @override
@@ -4682,8 +4681,27 @@ class AppLocalizationsFr extends AppLocalizations {
   String get groupDissolveSheetTitle => 'DISSOUDRE LE GROUPE';
 
   @override
-  String get groupDissolveWarning =>
-      'Cette action est irréversible. Elle supprimera définitivement, pour tous les membres :\n• le groupe et l\'accès de tous ses membres ;\n• le butin commun ;\n• les carnets de notes des joueurs pour ce groupe (onglet Notes, toutes les entrées du journal comprises) ;\n• l\'historique des combats du groupe.\n\nLes personnages des joueurs restent intacts : ils gardent toutes leurs données.\n\nCette action ne peut pas être annulée.';
+  String get groupDissolveWarningIntro =>
+      'Cette action est irréversible. Elle supprimera définitivement, pour tous les membres :';
+
+  @override
+  String get groupDissolveWarningItemAccess =>
+      'le groupe et l\'accès de tous ses membres ;';
+
+  @override
+  String get groupDissolveWarningItemTreasure => 'le butin commun ;';
+
+  @override
+  String get groupDissolveWarningItemNotes =>
+      'les carnets de notes des joueurs pour ce groupe (onglet Notes, toutes les entrées du journal comprises) ;';
+
+  @override
+  String get groupDissolveWarningItemCombats =>
+      'l\'historique des combats du groupe.';
+
+  @override
+  String get groupDissolveWarningCharactersKept =>
+      'Les personnages des joueurs restent intacts : ils gardent toutes leurs données.';
 
   @override
   String get groupDissolveCancel => 'Annuler';
@@ -4709,7 +4727,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get groupDissolveGenericError =>
-      'Impossible de dissoudre le groupe. Réessayez.';
+      'Impossible de dissoudre le groupe. Réessaie.';
 
   @override
   String get groupDissolveBlockedByCombat =>

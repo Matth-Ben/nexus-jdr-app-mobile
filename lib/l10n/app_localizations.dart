@@ -7442,19 +7442,19 @@ abstract class AppLocalizations {
   /// Explication sous le titre de la section « Devenir MJ ».
   ///
   /// In fr, this message translates to:
-  /// **'Tu joues {characterName} dans ce groupe. Pour lancer des combats dans l\'app, le créateur du groupe doit en être le MJ, sans personnage.'**
+  /// **'Pour lancer les combats dans l\'app, deviens-en le MJ : {characterName} quittera le groupe mais restera dans ta liste de personnages.'**
   String groupBecomeGameMasterExplain(String characterName);
 
   /// Bouton « Devenir MJ » des paramètres du groupe.
   ///
   /// In fr, this message translates to:
-  /// **'Devenir MJ (ne plus jouer de personnage dans ce groupe)'**
+  /// **'Devenir MJ'**
   String get groupBecomeGameMasterAction;
 
   /// Libellé du bouton « Devenir MJ » pendant l'appel serveur (bouton bloqué).
   ///
   /// In fr, this message translates to:
-  /// **'Passage en MJ en cours…'**
+  /// **'Passage en MJ…'**
   String get groupBecomeGameMasterInProgress;
 
   /// Indice sous le bouton « Devenir MJ » désactivé hors ligne (jamais mis en file d'attente).
@@ -7472,7 +7472,7 @@ abstract class AppLocalizations {
   /// Corps de la confirmation « Devenir MJ » (redevenir joueur n'est pas prévu).
   ///
   /// In fr, this message translates to:
-  /// **'{characterName} quitte ce groupe mais reste dans ta liste de personnages, avec toutes ses données. Tu deviens MJ sans personnage et tu pourras lancer les combats. Retour en arrière impossible pour l\'instant.'**
+  /// **'{characterName} quittera ce groupe mais restera dans ta liste de personnages, avec toutes ses données. Tu deviendras MJ sans personnage et tu pourras lancer les combats. Impossible de revenir en arrière pour l\'instant.'**
   String groupBecomeGameMasterConfirmBody(String characterName);
 
   /// Bouton de confirmation « Devenir MJ ».
@@ -7523,11 +7523,41 @@ abstract class AppLocalizations {
   /// **'DISSOUDRE LE GROUPE'**
   String get groupDissolveSheetTitle;
 
-  /// Avertissement de la feuille de dissolution (D228) : cascades DeepCore vérifiées (`group_members`, `group_treasure`, `group_notes`, `group_journal_entries`, `combats`, `combat_participants`) ; aucune table de personnages ne dépend de `groups`.
+  /// Introduction de l'avertissement de dissolution (bandeau d'alerte), suivie de la liste des suppressions (D228).
   ///
   /// In fr, this message translates to:
-  /// **'Cette action est irréversible. Elle supprimera définitivement, pour tous les membres :\n• le groupe et l\'accès de tous ses membres ;\n• le butin commun ;\n• les carnets de notes des joueurs pour ce groupe (onglet Notes, toutes les entrées du journal comprises) ;\n• l\'historique des combats du groupe.\n\nLes personnages des joueurs restent intacts : ils gardent toutes leurs données.\n\nCette action ne peut pas être annulée.'**
-  String get groupDissolveWarning;
+  /// **'Cette action est irréversible. Elle supprimera définitivement, pour tous les membres :'**
+  String get groupDissolveWarningIntro;
+
+  /// Élément de la liste des suppressions de la dissolution (`group_members`).
+  ///
+  /// In fr, this message translates to:
+  /// **'le groupe et l\'accès de tous ses membres ;'**
+  String get groupDissolveWarningItemAccess;
+
+  /// Élément de la liste des suppressions de la dissolution (`group_treasure`).
+  ///
+  /// In fr, this message translates to:
+  /// **'le butin commun ;'**
+  String get groupDissolveWarningItemTreasure;
+
+  /// Élément de la liste des suppressions de la dissolution (`group_notes`, `group_journal_entries`).
+  ///
+  /// In fr, this message translates to:
+  /// **'les carnets de notes des joueurs pour ce groupe (onglet Notes, toutes les entrées du journal comprises) ;'**
+  String get groupDissolveWarningItemNotes;
+
+  /// Élément de la liste des suppressions de la dissolution (`combats`, `combat_participants`).
+  ///
+  /// In fr, this message translates to:
+  /// **'l\'historique des combats du groupe.'**
+  String get groupDissolveWarningItemCombats;
+
+  /// Phrase finale de l'avertissement de dissolution : aucune table de personnages ne dépend de `groups`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les personnages des joueurs restent intacts : ils gardent toutes leurs données.'**
+  String get groupDissolveWarningCharactersKept;
 
   /// Bouton d'annulation de la feuille de dissolution.
   ///
@@ -7574,7 +7604,7 @@ abstract class AppLocalizations {
   /// Échec non reconnu de la dissolution.
   ///
   /// In fr, this message translates to:
-  /// **'Impossible de dissoudre le groupe. Réessayez.'**
+  /// **'Impossible de dissoudre le groupe. Réessaie.'**
   String get groupDissolveGenericError;
 
   /// Dissolution refusée pendant un combat actif (garde cliente ou refus serveur `combat_active`, D224).

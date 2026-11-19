@@ -16,7 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
-import 'package:personnages/core/widgets/compact_action_button.dart';
+import 'package:personnages/core/widgets/alert_banner.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
@@ -273,6 +273,7 @@ Widget _buildTestWidget(
   _FakeGroupRepository repository, {
   FakeCombatRepository? combatRepository,
   FakeConnectivityChecker? connectivity,
+  double scale = 1,
 }) {
   return ProviderScope(
     overrides: [
@@ -292,12 +293,27 @@ Widget _buildTestWidget(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('fr'),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(scale)),
+        child: child!,
+      ),
     ),
   );
 }
 
-const String _becomeGameMasterLabel =
-    'Devenir MJ (ne plus jouer de personnage dans ce groupe)';
+/// Surface de test en pixels logiques (ratio 1, voir D191).
+void _setSurface(WidgetTester tester, Size size) {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+}
+
+SecondaryButton _becomeGameMasterWidget(WidgetTester tester) =>
+    tester.widget<SecondaryButton>(_becomeGameMasterButton);
+
+const String _offlineHint =
+    'Indisponible hors ligne : cette action a besoin du serveur.';
 
 final Finder _becomeGameMasterButton = find.byKey(
   const Key('becomeGameMasterButton'),
@@ -481,15 +497,22 @@ void main() {
       expect(find.text('MAÎTRE DU JEU'), findsOneWidget);
       expect(
         find.text(
-          'Tu joues Sylvi dans ce groupe. Pour lancer des combats dans '
-          "l'app, le créateur du groupe doit en être le MJ, sans personnage.",
+          "Pour lancer les combats dans l'app, deviens-en le MJ : Sylvi "
+          'quittera le groupe mais restera dans ta liste de personnages.',
         ),
         findsOneWidget,
       );
-      expect(find.text(_becomeGameMasterLabel), findsOneWidget);
+      // Bouton secondaire parchemin pleine largeur, libellé court (revue
+      // direction-artistique de la PR #303).
+      final button = _becomeGameMasterWidget(tester);
+      expect(button.label, 'Devenir MJ');
+      expect(button.surface, SecondaryButtonSurface.parchment);
+      expect(button.icon, Icons.admin_panel_settings_outlined);
+      expect(button.onPressed, isNotNull);
+      expect(find.text('DEVENIR MJ'), findsOneWidget);
       expect(
-        tester.widget<CompactActionButton>(_becomeGameMasterButton).onTap,
-        isNotNull,
+        tester.getSize(_becomeGameMasterButton).width,
+        tester.getSize(_gameMasterSection).width,
       );
     });
 
@@ -500,7 +523,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(_gameMasterSection, findsNothing);
-      expect(find.text(_becomeGameMasterLabel), findsNothing);
+      expect(_becomeGameMasterButton, findsNothing);
     });
 
     testWidgets('propriétaire orphelin (personnage supprimé) : rien', (
@@ -552,6 +575,35 @@ void main() {
     });
   });
 
+  testWidgets('« Devenir MJ » à ×3,0 sur 320 dp : section et confirmation '
+      'sans débordement', (tester) async {
+    _setSurface(tester, const Size(320, 640));
+    fakeRepository.detailToReturn = _ownerDetail();
+    await tester.pumpWidget(_buildTestWidget(fakeRepository, scale: 3));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(_becomeGameMasterButton);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('DEVENIR MJ'), findsOneWidget);
+
+    await tester.tap(_becomeGameMasterButton);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(
+      find.text("Devenir MJ de « Les Lames de l'Aube » ?"),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) => widget is SecondaryButton && widget.label == 'Annuler',
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(fakeRepository.becomeGameMasterCalls, 0);
+  });
+
   group('« Devenir MJ » : confirmation et appel', () {
     testWidgets('la confirmation explique les conséquences ; Annuler '
         "n'appelle pas le serveur", (tester) async {
@@ -569,10 +621,10 @@ void main() {
       );
       expect(
         find.text(
-          'Sylvi quitte ce groupe mais reste dans ta liste de personnages, '
-          'avec toutes ses données. Tu deviens MJ sans personnage et tu '
-          'pourras lancer les combats. Retour en arrière impossible pour '
-          "l'instant.",
+          'Sylvi quittera ce groupe mais restera dans ta liste de '
+          'personnages, avec toutes ses données. Tu deviendras MJ sans '
+          'personnage et tu pourras lancer les combats. Impossible de '
+          "revenir en arrière pour l'instant.",
         ),
         findsOneWidget,
       );
@@ -606,11 +658,8 @@ void main() {
 
       // Appel en vol : libellé « en cours », bouton désactivé.
       expect(fakeRepository.becomeGameMasterCalls, 1);
-      expect(find.text('Passage en MJ en cours…'), findsOneWidget);
-      expect(
-        tester.widget<CompactActionButton>(_becomeGameMasterButton).onTap,
-        isNull,
-      );
+      expect(_becomeGameMasterWidget(tester).label, 'Passage en MJ…');
+      expect(_becomeGameMasterWidget(tester).onPressed, isNull);
       await tester.tap(_becomeGameMasterButton, warnIfMissed: false);
       await tester.pumpAndSettle();
       expect(
@@ -662,10 +711,7 @@ void main() {
       );
       expect(combatRepository.fetchCount, greaterThan(fetchesBefore));
       expect(_gameMasterSection, findsOneWidget);
-      expect(
-        tester.widget<CompactActionButton>(_becomeGameMasterButton).onTap,
-        isNotNull,
-      );
+      expect(_becomeGameMasterWidget(tester).onPressed, isNotNull);
     });
 
     testWidgets('refus mj_already_assigned : message, personne n\'est '
@@ -785,16 +831,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(
-        tester.widget<CompactActionButton>(_becomeGameMasterButton).onTap,
-        isNull,
-      );
-      expect(
-        find.text(
-          'Indisponible hors ligne : cette action a besoin du serveur.',
-        ),
-        findsOneWidget,
-      );
+      expect(_becomeGameMasterWidget(tester).onPressed, isNull);
+      expect(find.text(_offlineHint), findsOneWidget);
 
       await tester.tap(_becomeGameMasterButton, warnIfMissed: false);
       await tester.pumpAndSettle();
@@ -806,7 +844,8 @@ void main() {
     });
 
     testWidgets('réseau perdu pendant la confirmation : aucun appel, jamais '
-        'de file d\'attente', (tester) async {
+        'de file d\'attente ; message passager, rien ne reste après la '
+        'reconnexion', (tester) async {
       final connectivity = FakeConnectivityChecker();
       fakeRepository.detailToReturn = _ownerDetail();
 
@@ -823,27 +862,54 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(fakeRepository.becomeGameMasterCalls, 0);
+      // Une seule fois dans la section (indice sous le bouton), plus le
+      // SnackBar ; jamais de bandeau d'erreur dans la section.
       expect(
-        find.text(
-          'Indisponible hors ligne : cette action a besoin du serveur.',
+        find.descendant(
+          of: _gameMasterSection,
+          matching: find.text(_offlineHint),
         ),
-        findsWidgets,
+        findsOneWidget,
       );
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.text(_offlineHint),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: _gameMasterSection,
+          matching: find.byType(AlertBanner),
+        ),
+        findsNothing,
+      );
+
+      connectivity.goOnline();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      expect(find.text(_offlineHint), findsNothing);
+      expect(_becomeGameMasterWidget(tester).onPressed, isNotNull);
     });
   });
 
   group('dissolution (D224, D228)', () {
-    const warning =
+    const intro =
         'Cette action est irréversible. Elle supprimera définitivement, pour '
-        'tous les membres :\n'
-        "• le groupe et l'accès de tous ses membres ;\n"
-        '• le butin commun ;\n'
-        '• les carnets de notes des joueurs pour ce groupe (onglet Notes, '
-        'toutes les entrées du journal comprises) ;\n'
-        "• l'historique des combats du groupe.\n\n"
+        'tous les membres :';
+    const items = [
+      "le groupe et l'accès de tous ses membres ;",
+      'le butin commun ;',
+      'les carnets de notes des joueurs pour ce groupe (onglet Notes, '
+          'toutes les entrées du journal comprises) ;',
+      "l'historique des combats du groupe.",
+    ];
+    const charactersKept =
         'Les personnages des joueurs restent intacts : ils gardent toutes '
-        'leurs données.\n\n'
-        'Cette action ne peut pas être annulée.';
+        'leurs données.';
     const blocked =
         'Tu ne peux pas dissoudre le groupe pendant un combat en cours. '
         "Termine d'abord le combat.";
@@ -887,16 +953,70 @@ void main() {
 
       await openSheet(tester);
 
-      expect(find.text(warning), findsOneWidget);
-      for (final fragment in [
-        'butin commun',
-        'carnets de notes des joueurs',
-        'journal',
-        'historique des combats',
-        'personnages des joueurs restent intacts',
-      ]) {
-        expect(find.textContaining(fragment), findsWidgets, reason: fragment);
+      // Seule l'introduction est dans le bandeau d'alerte.
+      expect(
+        find.descendant(
+          of: find.byType(AlertBanner),
+          matching: find.text(intro),
+        ),
+        findsOneWidget,
+      );
+      // Un texte par élément, hors du bandeau, à droite de sa puce.
+      for (final item in items) {
+        expect(find.text(item), findsOneWidget, reason: item);
+        expect(
+          find.descendant(
+            of: find.byType(AlertBanner),
+            matching: find.text(item),
+          ),
+          findsNothing,
+          reason: item,
+        );
+        final row = find
+            .ancestor(of: find.text(item), matching: find.byType(Row))
+            .first;
+        final bullet = find.descendant(of: row, matching: find.text('•'));
+        expect(bullet, findsOneWidget, reason: item);
+        expect(
+          tester.getTopLeft(find.text(item)).dx,
+          greaterThan(tester.getTopRight(bullet).dx),
+          reason: item,
+        );
       }
+      expect(find.text(charactersKept), findsOneWidget);
+      expect(find.textContaining('ne peut pas être annulée'), findsNothing);
+    });
+
+    testWidgets("lecteur d'écran : chaque élément lu seul, jamais la puce", (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      fakeRepository.detailToReturn = _ownerDetail();
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+
+      await openSheet(tester);
+
+      expect(find.bySemanticsLabel(RegExp('•')), findsNothing);
+      for (final item in items) {
+        expect(find.bySemanticsLabel(item), findsOneWidget, reason: item);
+      }
+      expect(find.bySemanticsLabel(charactersKept), findsOneWidget);
+      semantics.dispose();
+    });
+
+    testWidgets('avertissement à ×3,0 sur 320 dp : aucun débordement', (
+      tester,
+    ) async {
+      _setSurface(tester, const Size(320, 640));
+      fakeRepository.detailToReturn = _ownerDetail();
+      await tester.pumpWidget(_buildTestWidget(fakeRepository, scale: 3));
+      await tester.pumpAndSettle();
+
+      await openSheet(tester);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text(items.first), findsOneWidget);
     });
 
     testWidgets('garde cliente : combat actif, la feuille ne s\'ouvre pas', (
@@ -996,7 +1116,7 @@ void main() {
       await confirmDissolution(tester);
 
       expect(
-        find.text('Impossible de dissoudre le groupe. Réessayez.'),
+        find.text('Impossible de dissoudre le groupe. Réessaie.'),
         findsOneWidget,
       );
       expect(find.text('erreur interne'), findsNothing);

@@ -176,9 +176,7 @@ class _GroupDissolveSheetContentState
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(AppSpacing.lg),
                     child: switch (_step) {
-                      _DissolveStep.warning => AlertBanner(
-                        message: l10n.groupDissolveWarning,
-                      ),
+                      _DissolveStep.warning => const _WarningStepBody(),
                       _DissolveStep.confirm => _ConfirmStepBody(
                         nameController: _nameController,
                         enabled: !_isDissolving,
@@ -245,6 +243,54 @@ class _GroupDissolveSheetContentState
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Avertissement de dissolution (D228, revue direction-artistique de la
+/// PR #303) : seule la phrase d'introduction est dans le bandeau d'alerte ;
+/// dessous, une ligne par suppression (puce exclue de la sémantique, texte
+/// en retrait qui se replie sous lui-même, jamais sous la puce), puis la
+/// phrase « personnages intacts ».
+class _WarningStepBody extends StatelessWidget {
+  const _WarningStepBody();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final items = [
+      l10n.groupDissolveWarningItemAccess,
+      l10n.groupDissolveWarningItemTreasure,
+      l10n.groupDissolveWarningItemNotes,
+      l10n.groupDissolveWarningItemCombats,
+    ];
+    // Valeurs par défaut du corps : 14/400 `textPrimary`.
+    final itemStyle = AppTypography.body();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AlertBanner(message: l10n.groupDissolveWarningIntro),
+        const SizedBox(height: AppSpacing.md),
+        for (final (index, item) in items.indexed) ...[
+          if (index > 0) const SizedBox(height: AppSpacing.xs),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ExcludeSemantics(child: Text('•', style: itemStyle)),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: Text(item, style: itemStyle)),
+            ],
+          ),
+        ],
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          l10n.groupDissolveWarningCharactersKept,
+          style: AppTypography.body(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -9,7 +9,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/alert_banner.dart';
-import '../../../core/widgets/compact_action_button.dart';
 import '../../../core/widgets/destructive_button.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
@@ -243,11 +242,11 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
     );
     if (confirmed != true || !mounted || _becomingGameMaster) return;
     // Le réseau a pu tomber pendant la confirmation : jamais d'appel hors
-    // ligne, jamais de file d'attente (action serveur).
+    // ligne, jamais de file d'attente (action serveur). Message passager :
+    // l'indice sous le bouton désactivé prend le relais tant que le réseau
+    // manque, rien ne reste affiché après la reconnexion.
     if (_isOffline) {
-      setState(
-        () => _gameMasterErrorMessage = l10n.groupBecomeGameMasterOffline,
-      );
+      _showSnackBar(l10n.groupBecomeGameMasterOffline);
       return;
     }
 
@@ -484,10 +483,11 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
 
   /// Section « MAÎTRE DU JEU » (propriétaire qui joue un personnage) : même
   /// gabarit que « CODE D'INVITATION » (titre 13/800 `textSecondary`,
-  /// légende 12 `textMuted`) ; `CompactActionButton` (même composant et même
-  /// icône que le lien « Paramètres du groupe » du bandeau « Pas de combat
-  /// sans MJ dans l'app », libellé long en police de texte, jamais tronqué).
-  /// Erreur affichée juste au-dessus du bouton (`AlertBanner`).
+  /// légende 12 `textMuted`, qui porte la conséquence) ; `SecondaryButton`
+  /// parchemin pleine largeur « Devenir MJ » (revue direction-artistique de la
+  /// PR #303 : ni brique, réservée à la zone dangereuse, rien n'est supprimé
+  /// ici ; ni or, réservé à « Enregistrer »). Erreur serveur affichée juste
+  /// au-dessus du bouton (`AlertBanner`).
   Widget _buildGameMasterSection(
     GroupDetail detail,
     AppLocalizations l10n, {
@@ -517,15 +517,19 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
           AlertBanner(message: error),
           const SizedBox(height: AppSpacing.sm),
         ],
-        CompactActionButton(
-          key: const Key('becomeGameMasterButton'),
-          icon: Icons.admin_panel_settings_outlined,
-          label: _becomingGameMaster
-              ? l10n.groupBecomeGameMasterInProgress
-              : l10n.groupBecomeGameMasterAction,
-          onTap: (offline || _becomingGameMaster)
-              ? null
-              : () => _confirmBecomeGameMaster(detail),
+        SizedBox(
+          width: double.infinity,
+          child: SecondaryButton(
+            key: const Key('becomeGameMasterButton'),
+            surface: SecondaryButtonSurface.parchment,
+            icon: Icons.admin_panel_settings_outlined,
+            label: _becomingGameMaster
+                ? l10n.groupBecomeGameMasterInProgress
+                : l10n.groupBecomeGameMasterAction,
+            onPressed: (offline || _becomingGameMaster)
+                ? null
+                : () => _confirmBecomeGameMaster(detail),
+          ),
         ),
         if (offline) ...[
           const SizedBox(height: AppSpacing.xs),
