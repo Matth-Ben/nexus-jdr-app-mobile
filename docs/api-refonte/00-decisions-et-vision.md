@@ -149,6 +149,20 @@ où ils le contredisent. Les tickets Project #7 portent la même numérotation (
     lecture publique et celle de ses traductions sont à restreindre ; Grimoire la télécharge avec une licence valide.
     Remplace « bestiaire uniquement dans Grimoire » (point 20).
 
+## Décisions des 18 et 19/11/2026 (réponses de Matthias)
+
+30. **Fusion des PR** : quand une PR est prête, Claude **demande à Matthias l'autorisation de merger** (une question par
+    PR) et ne merge qu'après son « oui ». Remplace « mergées par Matthias (jamais par Claude) » (point 27). Les sous-agents
+    ne mergent jamais ; Florian garde seul `main` de Grimoire ; les migrations restent appliquées par Matthias.
+31. **Devenir MJ, autre MJ déjà présent** : si un autre membre est déjà MJ du groupe, « Devenir MJ » est **refusé** avec un
+    message (`mj_already_assigned`) ; personne n'est rétrogradé. Le personnage du propriétaire quitte le groupe et reste
+    dans sa liste.
+32. **Combat actif** : la règle serveur « le propriétaire ne quitte ni ne dissout le groupe pendant un combat actif » est
+    livrée avec « Devenir MJ » (même PR DeepCore #49, contrôle partagé `combat_active`). La suppression d'un compte n'est
+    jamais bloquée.
+33. **Aperçu d'invitation** : avant de rejoindre un groupe, Nexus montre le **titre** de la campagne (pas le résumé
+    public). `preview-group-invite` renvoie donc `story_title` (étape 4).
+
 **Abandonné** par rapport aux propositions de `05`/`09` : tables `adventure_*`, bucket d'images d'histoire,
 `generate_group_from_story`, `groups.adventure_id`, `game_events`, `combat_npc_state`, `add_monsters`, `revealed`,
 export des catalogues autres que les objets et les monstres, utilisation des RPC de combat par l'outil. (Le 17/11, le
