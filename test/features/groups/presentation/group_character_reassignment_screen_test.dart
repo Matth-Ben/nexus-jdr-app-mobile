@@ -890,8 +890,12 @@ void main() {
       members: const [],
     );
 
-    Widget build({required bool owner, required bool combatActive}) {
-      final combatRepo = FakeCombatRepository();
+    Widget build({
+      required bool owner,
+      required bool combatActive,
+      FakeCombatRepository? combatRepository,
+    }) {
+      final combatRepo = combatRepository ?? FakeCombatRepository();
       if (combatActive) combatRepo.snapshot = fakeSnapshot();
       return _buildTestWidget(
         characterRepository: fakeCharacterRepository,
@@ -985,12 +989,25 @@ void main() {
       fakeGroupRepository.leaveGroupError = mapGroupError(
         const PostgrestException(message: 'combat_active', code: 'P0001'),
       );
-      await tester.pumpWidget(build(owner: true, combatActive: false));
+      final combatRepository = FakeCombatRepository();
+      await tester.pumpWidget(
+        build(
+          owner: true,
+          combatActive: false,
+          combatRepository: combatRepository,
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Quitter le groupe'));
       await tester.pumpAndSettle();
+      // Garde cliente passée (aucun combat connu) : nombre de relectures
+      // avant le refus serveur.
+      final fetchesBefore = combatRepository.fetchCount;
       await tester.tap(find.widgetWithText(DestructiveButton, 'Quitter'));
       await tester.pumpAndSettle();
+
+      // Le refus relance la lecture du combat (état local périmé).
+      expect(combatRepository.fetchCount, greaterThan(fetchesBefore));
 
       expect(fakeGroupRepository.leaveGroupCalled, isTrue);
       expect(

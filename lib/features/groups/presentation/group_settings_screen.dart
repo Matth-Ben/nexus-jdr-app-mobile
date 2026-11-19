@@ -274,11 +274,13 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
     }
 
     // Le personnage a quitté le groupe : sa fiche ne doit plus afficher le
-    // bandeau de combat de ce groupe, et l'écran Groupe doit relire le rôle
-    // (Realtime n'écoute pas les mises à jour de `group_members`).
+    // bandeau de combat de ce groupe, l'écran Groupe relit le rôle tout de
+    // suite (sans attendre l'évènement Realtime `UPDATE`) et la liste des
+    // groupes ses badges (morts / PV bas, calculés sur les personnages).
     container
       ..invalidate(characterGroupIdsProvider)
-      ..invalidate(groupDetailProvider(widget.groupId));
+      ..invalidate(groupDetailProvider(widget.groupId))
+      ..invalidate(myGroupsProvider);
     if (!mounted) return;
     await _awaitGroupDetail();
     if (!mounted) return;

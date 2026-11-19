@@ -20,6 +20,7 @@ import 'package:personnages/core/widgets/alert_banner.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
+import 'package:personnages/features/combat/presentation/providers/character_combat_provider.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
 import 'package:personnages/features/groups/data/group_error_mapper.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
@@ -45,9 +46,21 @@ import '../../../support/fake_connectivity_checker.dart';
 import '../../../support/fake_current_user.dart';
 
 class _FakeGroupRepository implements GroupRepository {
+  /// Réponses successives de `fetchGroupIdsForCharacter` (la dernière se
+  /// répète) ; vide : aucun groupe.
+  List<List<String>> groupIdsResponses = const [];
+  int groupIdsCalls = 0;
+
   @override
-  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async =>
-      const [];
+  Future<List<String>> fetchGroupIdsForCharacter(String characterId) async {
+    final index = groupIdsCalls++;
+    if (groupIdsResponses.isEmpty) return const [];
+    return groupIdsResponses[index < groupIdsResponses.length
+        ? index
+        : groupIdsResponses.length - 1];
+  }
+
+  int myGroupsCalls = 0;
 
   GroupDetail? detailToReturn;
   Object? detailErrorToThrow;
@@ -123,7 +136,10 @@ class _FakeGroupRepository implements GroupRepository {
   }
 
   @override
-  Future<List<GroupSummary>> fetchMyGroups() => throw UnimplementedError();
+  Future<List<GroupSummary>> fetchMyGroups() async {
+    myGroupsCalls++;
+    return const [];
+  }
 
   @override
   Future<CreatedGroup> createGroup({
@@ -681,6 +697,56 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('le cache des groupes du personnage est relu : son bandeau '
+        'de combat ne pointe plus vers ce groupe', (tester) async {
+      fakeRepository
+        ..detailToReturn = _ownerDetail()
+        ..detailAfterBecomeGameMaster = _ownerGameMasterDetail()
+        ..groupIdsResponses = const [
+          ['group-1'],
+          <String>[],
+        ];
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MaterialApp)),
+      );
+      container.listen(characterGroupIdsProvider('char-1'), (_, _) {});
+      await tester.pumpAndSettle();
+      expect(container.read(characterGroupIdsProvider('char-1')), ['group-1']);
+
+      await tester.tap(_becomeGameMasterButton);
+      await tester.pumpAndSettle();
+      await tester.tap(_confirmGameMasterButton);
+      await tester.pumpAndSettle();
+
+      expect(container.read(characterGroupIdsProvider('char-1')), isEmpty);
+      expect(fakeRepository.groupIdsCalls, 2);
+    });
+
+    testWidgets('la liste des groupes (badges) est relue', (tester) async {
+      fakeRepository
+        ..detailToReturn = _ownerDetail()
+        ..detailAfterBecomeGameMaster = _ownerGameMasterDetail();
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MaterialApp)),
+      );
+      container.listen(myGroupsProvider, (_, _) {});
+      await tester.pumpAndSettle();
+      expect(fakeRepository.myGroupsCalls, 1);
+
+      await tester.tap(_becomeGameMasterButton);
+      await tester.pumpAndSettle();
+      await tester.tap(_confirmGameMasterButton);
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.myGroupsCalls, 2);
     });
 
     testWidgets('refus combat_active : message clair, combat relu, bouton '

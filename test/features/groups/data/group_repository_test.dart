@@ -1376,6 +1376,97 @@ void main() {
     });
   });
 
+  // Abonnement Realtime (canal enregistreur, aucune connexion) : `INSERT` et
+  // `UPDATE` de `group_members` filtrés sur le groupe, `DELETE` sans filtre.
+  // L'`UPDATE` porte « Devenir MJ » (ligne du propriétaire modifiée) : sans
+  // lui, les écrans Groupe des coéquipiers restaient périmés.
+  group('SupabaseGroupRepository.subscribeToMemberUpdates', () {
+    test('UPDATE de group_members filtré sur le groupe : relecture', () {
+      final channel = _RecordingChannel();
+      final repository = SupabaseGroupRepository(_RecordingClient(channel));
+      var changes = 0;
+
+      repository.subscribeToMemberUpdates(
+        groupId: 'group-1',
+        characterIds: const ['char-1', 'char-2'],
+        isKnownMembershipId: (_) => false,
+        onChanged: () => changes++,
+      );
+
+      expect(channel.subscribed, isTrue);
+      final members = channel.bindings
+          .where((binding) => binding.table == 'group_members')
+          .toList();
+      expect(
+        members.map((binding) => binding.event),
+        containsAll([
+          PostgresChangeEvent.insert,
+          PostgresChangeEvent.update,
+          PostgresChangeEvent.delete,
+        ]),
+      );
+      for (final event in [
+        PostgresChangeEvent.insert,
+        PostgresChangeEvent.update,
+      ]) {
+        final binding = members.singleWhere((b) => b.event == event);
+        expect(binding.schema, 'public', reason: '$event');
+        expect(
+          binding.filter?.type,
+          PostgresChangeFilterType.eq,
+          reason: '$event',
+        );
+        expect(binding.filter?.column, 'group_id', reason: '$event');
+        expect(binding.filter?.value, 'group-1', reason: '$event');
+      }
+
+      // « Devenir MJ » du propriétaire, vu par un coéquipier.
+      members
+          .singleWhere((b) => b.event == PostgresChangeEvent.update)
+          .callback(
+            _payload(
+              PostgresChangeEvent.update,
+              newRecord: {
+                'id': 'membership-1',
+                'group_id': 'group-1',
+                'user_id': 'user-owner',
+                'character_id': null,
+                'is_game_master': true,
+              },
+              oldRecord: {'id': 'membership-1'},
+            ),
+          );
+      expect(changes, 1);
+    });
+
+    test('DELETE : relecture seulement pour un membre connu du groupe', () {
+      final channel = _RecordingChannel();
+      final repository = SupabaseGroupRepository(_RecordingClient(channel));
+      var changes = 0;
+
+      repository.subscribeToMemberUpdates(
+        groupId: 'group-1',
+        characterIds: const ['char-1'],
+        isKnownMembershipId: (id) => id == 'membership-1',
+        onChanged: () => changes++,
+      );
+
+      final delete = channel.bindings.singleWhere(
+        (b) =>
+            b.table == 'group_members' && b.event == PostgresChangeEvent.delete,
+      );
+      expect(delete.filter, isNull);
+      delete.callback(
+        _payload(PostgresChangeEvent.delete, oldRecord: {'id': 'autre-groupe'}),
+      );
+      expect(changes, 0);
+      delete.callback(
+        _payload(PostgresChangeEvent.delete, oldRecord: {'id': 'membership-1'}),
+      );
+      expect(changes, 1);
+    });
+  });
+
   // Gardes « combat actif » de DeepCore (triggers BEFORE DELETE) : le refus
   // `combat_active` de la dissolution et du départ du propriétaire.
   group('refus combat_active de la dissolution et du départ', () {
@@ -1422,6 +1513,95 @@ void main() {
     });
   });
 }
+
+/// Liaison `postgres_changes` enregistrée par [_RecordingChannel].
+class _RecordedBinding {
+  _RecordedBinding({
+    required this.event,
+    required this.schema,
+    required this.table,
+    required this.filter,
+    required this.callback,
+  });
+
+  final PostgresChangeEvent event;
+  final String? schema;
+  final String? table;
+  final PostgresChangeFilter? filter;
+  final void Function(PostgresChangePayload payload) callback;
+}
+
+/// Canal Realtime enregistreur : garde les liaisons déclarées, ne se connecte
+/// jamais (aucun WebSocket en test).
+class _RecordingChannel extends Fake implements RealtimeChannel {
+  final List<_RecordedBinding> bindings = [];
+  bool subscribed = false;
+
+  @override
+  RealtimeChannel onPostgresChanges({
+    required PostgresChangeEvent event,
+    String? schema,
+    String? table,
+    PostgresChangeFilter? filter,
+    List<PostgresChangeFilter>? filters,
+    List<String>? select,
+    required void Function(PostgresChangePayload payload) callback,
+  }) {
+    bindings.add(
+      _RecordedBinding(
+        event: event,
+        schema: schema,
+        table: table,
+        filter: filter,
+        callback: callback,
+      ),
+    );
+    return this;
+  }
+
+  @override
+  RealtimeChannel subscribe([
+    void Function(RealtimeSubscribeStatus status, Object? error)? callback,
+    Duration? timeout,
+  ]) {
+    subscribed = true;
+    return this;
+  }
+}
+
+/// `SupabaseClient` réel dont `channel` renvoie [_RecordingChannel].
+class _RecordingClient extends SupabaseClient {
+  _RecordingClient(this._channel)
+    : super(
+        'https://fake.supabase.test',
+        'fake-anon-key',
+        authOptions: const AuthClientOptions(
+          authFlowType: AuthFlowType.implicit,
+        ),
+      );
+
+  final _RecordingChannel _channel;
+
+  @override
+  RealtimeChannel channel(
+    String name, {
+    RealtimeChannelConfig opts = const RealtimeChannelConfig(),
+  }) => _channel;
+}
+
+PostgresChangePayload _payload(
+  PostgresChangeEvent event, {
+  Map<String, dynamic> newRecord = const {},
+  Map<String, dynamic> oldRecord = const {},
+}) => PostgresChangePayload(
+  schema: 'public',
+  table: 'group_members',
+  commitTimestamp: DateTime.utc(2026, 11, 19),
+  eventType: event,
+  newRecord: newRecord,
+  oldRecord: oldRecord,
+  errors: null,
+);
 
 /// Fabrique un `SupabaseClient` réel dont le transport HTTP est fabriqué de
 /// toutes pièces — [responses] associe un segment de chemin final (nom de

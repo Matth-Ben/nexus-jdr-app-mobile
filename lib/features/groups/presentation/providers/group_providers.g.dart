@@ -536,9 +536,10 @@ final class GroupInvitePreviewFamily extends $Family
 ///
 /// Depuis les corrections des bugs F07/F08 (`docs/retours-utilisateurs.md`),
 /// le même canal Realtime écoute aussi `group_members` (voir
-/// `GroupRepository.subscribeToMemberUpdates`) : `INSERT` filtré sur
-/// [groupId] (arrivée d'un membre, qui ne modifie jamais la table
-/// `characters` déjà surveillée), et `DELETE` **sans filtre `group_id`**
+/// `GroupRepository.subscribeToMemberUpdates`) : `INSERT` et `UPDATE` filtrés
+/// sur [groupId] (arrivée d'un membre, changement de rôle comme « Devenir
+/// MJ », qui ne modifient jamais la table `characters` déjà surveillée), et
+/// `DELETE` **sans filtre `group_id`**
 /// (départ/exclusion). Pourquoi : `group_members` est en REPLICA IDENTITY
 /// DEFAULT, l'ancienne ligne d'un `DELETE` ne contient que la clé primaire
 /// `id`, donc un filtre `group_id` ne correspondrait jamais ; REPLICA
@@ -579,9 +580,10 @@ final groupMembersRealtimeWatcherProvider =
 ///
 /// Depuis les corrections des bugs F07/F08 (`docs/retours-utilisateurs.md`),
 /// le même canal Realtime écoute aussi `group_members` (voir
-/// `GroupRepository.subscribeToMemberUpdates`) : `INSERT` filtré sur
-/// [groupId] (arrivée d'un membre, qui ne modifie jamais la table
-/// `characters` déjà surveillée), et `DELETE` **sans filtre `group_id`**
+/// `GroupRepository.subscribeToMemberUpdates`) : `INSERT` et `UPDATE` filtrés
+/// sur [groupId] (arrivée d'un membre, changement de rôle comme « Devenir
+/// MJ », qui ne modifient jamais la table `characters` déjà surveillée), et
+/// `DELETE` **sans filtre `group_id`**
 /// (départ/exclusion). Pourquoi : `group_members` est en REPLICA IDENTITY
 /// DEFAULT, l'ancienne ligne d'un `DELETE` ne contient que la clé primaire
 /// `id`, donc un filtre `group_id` ne correspondrait jamais ; REPLICA
@@ -621,9 +623,10 @@ final class GroupMembersRealtimeWatcherProvider
   ///
   /// Depuis les corrections des bugs F07/F08 (`docs/retours-utilisateurs.md`),
   /// le même canal Realtime écoute aussi `group_members` (voir
-  /// `GroupRepository.subscribeToMemberUpdates`) : `INSERT` filtré sur
-  /// [groupId] (arrivée d'un membre, qui ne modifie jamais la table
-  /// `characters` déjà surveillée), et `DELETE` **sans filtre `group_id`**
+  /// `GroupRepository.subscribeToMemberUpdates`) : `INSERT` et `UPDATE` filtrés
+  /// sur [groupId] (arrivée d'un membre, changement de rôle comme « Devenir
+  /// MJ », qui ne modifient jamais la table `characters` déjà surveillée), et
+  /// `DELETE` **sans filtre `group_id`**
   /// (départ/exclusion). Pourquoi : `group_members` est en REPLICA IDENTITY
   /// DEFAULT, l'ancienne ligne d'un `DELETE` ne contient que la clé primaire
   /// `id`, donc un filtre `group_id` ne correspondrait jamais ; REPLICA
@@ -714,9 +717,10 @@ String _$groupMembersRealtimeWatcherHash() =>
 ///
 /// Depuis les corrections des bugs F07/F08 (`docs/retours-utilisateurs.md`),
 /// le même canal Realtime écoute aussi `group_members` (voir
-/// `GroupRepository.subscribeToMemberUpdates`) : `INSERT` filtré sur
-/// [groupId] (arrivée d'un membre, qui ne modifie jamais la table
-/// `characters` déjà surveillée), et `DELETE` **sans filtre `group_id`**
+/// `GroupRepository.subscribeToMemberUpdates`) : `INSERT` et `UPDATE` filtrés
+/// sur [groupId] (arrivée d'un membre, changement de rôle comme « Devenir
+/// MJ », qui ne modifient jamais la table `characters` déjà surveillée), et
+/// `DELETE` **sans filtre `group_id`**
 /// (départ/exclusion). Pourquoi : `group_members` est en REPLICA IDENTITY
 /// DEFAULT, l'ancienne ligne d'un `DELETE` ne contient que la clé primaire
 /// `id`, donc un filtre `group_id` ne correspondrait jamais ; REPLICA
@@ -764,9 +768,10 @@ final class GroupMembersRealtimeWatcherFamily extends $Family
   ///
   /// Depuis les corrections des bugs F07/F08 (`docs/retours-utilisateurs.md`),
   /// le même canal Realtime écoute aussi `group_members` (voir
-  /// `GroupRepository.subscribeToMemberUpdates`) : `INSERT` filtré sur
-  /// [groupId] (arrivée d'un membre, qui ne modifie jamais la table
-  /// `characters` déjà surveillée), et `DELETE` **sans filtre `group_id`**
+  /// `GroupRepository.subscribeToMemberUpdates`) : `INSERT` et `UPDATE` filtrés
+  /// sur [groupId] (arrivée d'un membre, changement de rôle comme « Devenir
+  /// MJ », qui ne modifient jamais la table `characters` déjà surveillée), et
+  /// `DELETE` **sans filtre `group_id`**
   /// (départ/exclusion). Pourquoi : `group_members` est en REPLICA IDENTITY
   /// DEFAULT, l'ancienne ligne d'un `DELETE` ne contient que la clé primaire
   /// `id`, donc un filtre `group_id` ne correspondrait jamais ; REPLICA

@@ -277,6 +277,8 @@ abstract class GroupRepository {
   ///   personnages déjà membres (PV, statut...) ;
   /// - `INSERT` sur `group_members`, filtré à [groupId] : arrivée d'un
   ///   membre (bug F07, `docs/retours-utilisateurs.md`) ;
+  /// - `UPDATE` sur `group_members`, filtré à [groupId] : changement de rôle
+  ///   d'un membre, en particulier « Devenir MJ » du propriétaire (étape 3b) ;
   /// - `DELETE` sur `group_members`, **sans filtre `group_id`** : départ/
   ///   exclusion d'un membre (bug F08). `group_members` est en REPLICA
   ///   IDENTITY DEFAULT : l'ancienne ligne d'un `DELETE` ne porte que la clé
@@ -971,20 +973,29 @@ class SupabaseGroupRepository implements GroupRepository {
     }
     // Bug F07 (`docs/retours-utilisateurs.md`) : l'arrivée d'un membre n'est
     // détectable que sur `group_members` elle-même — un `INSERT` ne touche
-    // jamais la table `characters` déjà surveillée ci-dessus. Le nouvel
-    // enregistrement porte `group_id` : filtre serveur possible (et RLS
-    // appliquée par Realtime sur les INSERT).
-    channel.onPostgresChanges(
-      event: PostgresChangeEvent.insert,
-      schema: 'public',
-      table: 'group_members',
-      filter: PostgresChangeFilter(
-        type: PostgresChangeFilterType.eq,
-        column: 'group_id',
-        value: groupId,
-      ),
-      callback: (payload) => onChanged(),
-    );
+    // jamais la table `characters` déjà surveillée ci-dessus. « Devenir MJ »
+    // (étape 3b, RPC `become_group_game_master`) est un `UPDATE` de la ligne
+    // du propriétaire (`character_id` à null, `is_game_master` à true), lui
+    // aussi invisible sur `characters` : sans cet abonnement, les écrans
+    // Groupe des coéquipiers restaient périmés. Le nouvel enregistrement
+    // porte `group_id` dans les deux cas : filtre serveur possible (et RLS
+    // SELECT appliquée par Realtime).
+    for (final event in const [
+      PostgresChangeEvent.insert,
+      PostgresChangeEvent.update,
+    ]) {
+      channel.onPostgresChanges(
+        event: event,
+        schema: 'public',
+        table: 'group_members',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'group_id',
+          value: groupId,
+        ),
+        callback: (payload) => onChanged(),
+      );
+    }
     // Bug F08 : le départ (DELETE) ne peut PAS être filtré sur `group_id`.
     // `group_members` est en REPLICA IDENTITY DEFAULT : `oldRecord` ne
     // contient que la PK `id`, donc un filtre `group_id=eq.…` ne correspond
