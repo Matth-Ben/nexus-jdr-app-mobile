@@ -15,7 +15,10 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$GroupPreview {
 
- String get name; int get memberCount;
+ String get name; int get memberCount;/// Titre de la campagne associée (`story_title`), `null` sans campagne
+/// ou si le serveur ne le renvoie pas. Jamais de résumé dans l'aperçu
+/// (décision n° 33 du 19/11/2026).
+ String? get storyTitle;
 /// Create a copy of GroupPreview
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -26,16 +29,16 @@ $GroupPreviewCopyWith<GroupPreview> get copyWith => _$GroupPreviewCopyWithImpl<G
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupPreview&&(identical(other.name, name) || other.name == name)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupPreview&&(identical(other.name, name) || other.name == name)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&(identical(other.storyTitle, storyTitle) || other.storyTitle == storyTitle));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,name,memberCount);
+int get hashCode => Object.hash(runtimeType,name,memberCount,storyTitle);
 
 @override
 String toString() {
-  return 'GroupPreview(name: $name, memberCount: $memberCount)';
+  return 'GroupPreview(name: $name, memberCount: $memberCount, storyTitle: $storyTitle)';
 }
 
 
@@ -46,7 +49,7 @@ abstract mixin class $GroupPreviewCopyWith<$Res>  {
   factory $GroupPreviewCopyWith(GroupPreview value, $Res Function(GroupPreview) _then) = _$GroupPreviewCopyWithImpl;
 @useResult
 $Res call({
- String name, int memberCount
+ String name, int memberCount, String? storyTitle
 });
 
 
@@ -63,11 +66,12 @@ class _$GroupPreviewCopyWithImpl<$Res>
 
 /// Create a copy of GroupPreview
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? memberCount = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? memberCount = null,Object? storyTitle = freezed,}) {
   return _then(GroupPreview(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,memberCount: null == memberCount ? _self.memberCount : memberCount // ignore: cast_nullable_to_non_nullable
-as int,
+as int,storyTitle: freezed == storyTitle ? _self.storyTitle : storyTitle // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -152,10 +156,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  int memberCount)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  int memberCount,  String? storyTitle)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _GroupPreview() when $default != null:
-return $default(_that.name,_that.memberCount);case _:
+return $default(_that.name,_that.memberCount,_that.storyTitle);case _:
   return orElse();
 
 }
@@ -173,10 +177,10 @@ return $default(_that.name,_that.memberCount);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  int memberCount)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  int memberCount,  String? storyTitle)  $default,) {final _that = this;
 switch (_that) {
 case _GroupPreview():
-return $default(_that.name,_that.memberCount);case _:
+return $default(_that.name,_that.memberCount,_that.storyTitle);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -193,10 +197,10 @@ return $default(_that.name,_that.memberCount);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  int memberCount)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  int memberCount,  String? storyTitle)?  $default,) {final _that = this;
 switch (_that) {
 case _GroupPreview() when $default != null:
-return $default(_that.name,_that.memberCount);case _:
+return $default(_that.name,_that.memberCount,_that.storyTitle);case _:
   return null;
 
 }
@@ -207,12 +211,16 @@ return $default(_that.name,_that.memberCount);case _:
 /// @nodoc
 
 
-class _GroupPreview implements GroupPreview {
-  const _GroupPreview({required this.name, required this.memberCount});
+class _GroupPreview extends GroupPreview {
+  const _GroupPreview({required this.name, required this.memberCount, this.storyTitle}): super._();
   
 
 @override final  String name;
 @override final  int memberCount;
+/// Titre de la campagne associée (`story_title`), `null` sans campagne
+/// ou si le serveur ne le renvoie pas. Jamais de résumé dans l'aperçu
+/// (décision n° 33 du 19/11/2026).
+@override final  String? storyTitle;
 
 /// Create a copy of GroupPreview
 /// with the given fields replaced by the non-null parameter values.
@@ -224,16 +232,16 @@ _$GroupPreviewCopyWith<_GroupPreview> get copyWith => __$GroupPreviewCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupPreview&&(identical(other.name, name) || other.name == name)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupPreview&&(identical(other.name, name) || other.name == name)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&(identical(other.storyTitle, storyTitle) || other.storyTitle == storyTitle));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,name,memberCount);
+int get hashCode => Object.hash(runtimeType,name,memberCount,storyTitle);
 
 @override
 String toString() {
-  return 'GroupPreview(name: $name, memberCount: $memberCount)';
+  return 'GroupPreview(name: $name, memberCount: $memberCount, storyTitle: $storyTitle)';
 }
 
 
@@ -244,7 +252,7 @@ abstract mixin class _$GroupPreviewCopyWith<$Res> implements $GroupPreviewCopyWi
   factory _$GroupPreviewCopyWith(_GroupPreview value, $Res Function(_GroupPreview) _then) = __$GroupPreviewCopyWithImpl;
 @override @useResult
 $Res call({
- String name, int memberCount
+ String name, int memberCount, String? storyTitle
 });
 
 
@@ -261,11 +269,12 @@ class __$GroupPreviewCopyWithImpl<$Res>
 
 /// Create a copy of GroupPreview
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? memberCount = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? memberCount = null,Object? storyTitle = freezed,}) {
   return _then(_GroupPreview(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,memberCount: null == memberCount ? _self.memberCount : memberCount // ignore: cast_nullable_to_non_nullable
-as int,
+as int,storyTitle: freezed == storyTitle ? _self.storyTitle : storyTitle // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

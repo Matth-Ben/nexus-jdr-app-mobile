@@ -17,6 +17,7 @@ import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/group_character_reassignment_failure.dart';
 import 'package:personnages/features/groups/domain/group_failure.dart';
 import 'package:personnages/features/groups/domain/group_invite_failure.dart';
+import 'package:personnages/features/groups/domain/group_preview.dart';
 import 'package:personnages/features/groups/domain/group_treasure_item.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -142,6 +143,74 @@ void main() {
       expect(body, {'code': 'AB3F7K2M'});
       expect(preview.name, 'Les Lames');
       expect(preview.memberCount, 3);
+    });
+
+    // Étape 4 : `story_title` (décision n° 33), jamais le résumé.
+    test('mappe story_title quand la campagne est associée', () async {
+      final client = _buildFakeClient(
+        responses: {
+          'preview-group-invite': {
+            'name': 'Les Lames',
+            'member_count': 3,
+            'story_title': 'La Mine perdue',
+          },
+        },
+      );
+
+      final preview = await SupabaseGroupRepository(client)
+          .previewGroupInvite('AB3F7K2M');
+
+      expect(preview.storyTitle, 'La Mine perdue');
+    });
+
+    test('story_title null : aucune campagne', () async {
+      final client = _buildFakeClient(
+        responses: {
+          'preview-group-invite': {
+            'name': 'Les Lames',
+            'member_count': 3,
+            'story_title': null,
+          },
+        },
+      );
+
+      final preview = await SupabaseGroupRepository(client)
+          .previewGroupInvite('AB3F7K2M');
+
+      expect(preview.storyTitle, isNull);
+    });
+
+    test('story_title absent (fonction antérieure à l\'étape 4) : null, sans '
+        'erreur', () async {
+      final client = _buildFakeClient(
+        responses: {
+          'preview-group-invite': {'name': 'Les Lames', 'member_count': 3},
+        },
+      );
+
+      final preview = await SupabaseGroupRepository(client)
+          .previewGroupInvite('AB3F7K2M');
+
+      expect(preview, const GroupPreview(name: 'Les Lames', memberCount: 3));
+    });
+
+    test('un résumé renvoyé par erreur n\'est jamais exposé, une valeur non '
+        'textuelle est ignorée', () async {
+      final client = _buildFakeClient(
+        responses: {
+          'preview-group-invite': {
+            'name': 'Les Lames',
+            'member_count': 3,
+            'story_title': 42,
+            'story_summary_public': 'Résumé réservé aux membres.',
+          },
+        },
+      );
+
+      final preview = await SupabaseGroupRepository(client)
+          .previewGroupInvite('AB3F7K2M');
+
+      expect(preview, const GroupPreview(name: 'Les Lames', memberCount: 3));
     });
 
     test('404 invalid_code -> GroupInviteFailureKind.invalidCode', () async {
@@ -611,6 +680,145 @@ void main() {
       // 10 (base, sans armure) + 2 (dex) + 1 (bonus manuel).
       expect(member.armorClass, 13);
       expect(member.armorClassBonus, 1);
+    });
+
+    // Étape 4 : campagne associée (`story_title`, `story_summary_public`).
+    group('campagne associée', () {
+      Map<String, dynamic> groupRow([Map<String, dynamic> extra = const {}]) =>
+          {
+            'id': groupId,
+            'name': 'Les Lames',
+            'owner_id': ownerId,
+            'invite_code': 'AB3F7K2M',
+            ...extra,
+          };
+
+      bool isGroupsRequest(http.Request request) =>
+          request.url.path.endsWith('/groups');
+
+      test(
+        'sélectionne story_title/story_summary_public et les mappe',
+        () async {
+          final requests = <http.Request>[];
+          final client = await _buildSignedInFakeClient(
+            ownerId: ownerId,
+            onRequest: requests.add,
+            tableRows: {
+              'groups': [
+                groupRow({
+                  'story_title': 'La Mine perdue',
+                  'story_summary_public': 'Phandaline.\nUne mine.',
+                }),
+              ],
+            },
+          );
+
+          final detail = await SupabaseGroupRepository(client)
+              .fetchGroupDetail(groupId);
+
+          final select = requests
+              .firstWhere(isGroupsRequest)
+              .url
+              .queryParameters['select'];
+          expect(select, contains('story_title'));
+          expect(select, contains('story_summary_public'));
+          expect(detail.storyTitle, 'La Mine perdue');
+          expect(detail.storySummaryPublic, 'Phandaline.\nUne mine.');
+        },
+      );
+
+      test('colonnes à NULL : aucune campagne', () async {
+        final client = await _buildSignedInFakeClient(
+          ownerId: ownerId,
+          tableRows: {
+            'groups': [
+              groupRow({'story_title': null, 'story_summary_public': null}),
+            ],
+          },
+        );
+
+        final detail = await SupabaseGroupRepository(client)
+            .fetchGroupDetail(groupId);
+
+        expect(detail.storyTitle, isNull);
+        expect(detail.storySummaryPublic, isNull);
+        expect(detail.hasCampaignCard, isFalse);
+      });
+
+      test('colonnes absentes de la réponse : null, sans erreur', () async {
+        final client = await _buildSignedInFakeClient(
+          ownerId: ownerId,
+          tableRows: {
+            'groups': [groupRow()],
+          },
+        );
+
+        final detail = await SupabaseGroupRepository(client)
+            .fetchGroupDetail(groupId);
+
+        expect(detail.name, 'Les Lames');
+        expect(detail.storyTitle, isNull);
+        expect(detail.storySummaryPublic, isNull);
+      });
+
+      for (final (status, code) in const [(400, '42703'), (400, 'PGRST204')]) {
+        test('colonnes inexistantes côté DeepCore ($code, retour arrière) : '
+            'relit sans elles, l\'écran reste utilisable', () async {
+          final groupSelects = <String>[];
+          final client = await _buildSignedInFakeClient(
+            ownerId: ownerId,
+            tableRows: {
+              'groups': [groupRow()],
+            },
+            respond: (request) {
+              if (!isGroupsRequest(request)) return null;
+              final select = request.url.queryParameters['select'] ?? '';
+              groupSelects.add(select);
+              if (!select.contains('story_title')) return null;
+              return http.Response(
+                jsonEncode({
+                  'code': code,
+                  'message': 'column groups.story_title does not exist',
+                }),
+                status,
+                request: request,
+                headers: {'content-type': 'application/json'},
+              );
+            },
+          );
+
+          final detail = await SupabaseGroupRepository(client)
+              .fetchGroupDetail(groupId);
+
+          expect(groupSelects, hasLength(2));
+          expect(groupSelects.last, isNot(contains('story_title')));
+          expect(detail.name, 'Les Lames');
+          expect(detail.storyTitle, isNull);
+        });
+      }
+
+      test(
+        'une autre erreur sur groups n\'est pas masquée par le repli',
+        () async {
+          final requests = <http.Request>[];
+          final client = await _buildSignedInFakeClient(
+            ownerId: ownerId,
+            onRequest: requests.add,
+            failingTables: {'groups'},
+            failingBody: const {
+              'code': '42501',
+              'message': 'permission denied',
+            },
+            failingStatus: 403,
+          );
+
+          await expectLater(
+            SupabaseGroupRepository(client).fetchGroupDetail(groupId),
+            throwsA(isA<GroupFailure>()),
+          );
+          expect(requests.where(isGroupsRequest), hasLength(1));
+        },
+      );
     });
   });
 
@@ -1666,9 +1874,14 @@ Future<SupabaseClient> _buildSignedInFakeClient({
   },
   int failingStatus = 500,
   void Function(http.Request request)? onRequest,
+  // Réponse imposée pour une requête précise (ex. 42703 au `select` qui cite
+  // une colonne absente) ; `null` : réponse habituelle.
+  http.Response? Function(http.Request request)? respond,
 }) async {
   Future<http.Response> handler(http.Request request) async {
     onRequest?.call(request);
+    final imposed = respond?.call(request);
+    if (imposed != null) return imposed;
     final key = request.url.pathSegments.last;
     if (failingTables.contains(key)) {
       return http.Response(

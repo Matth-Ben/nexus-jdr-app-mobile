@@ -92,8 +92,10 @@ abstract class GroupRepository {
   Future<CreatedGroup> createGroup({required String name, String? characterId});
 
   /// `preview-group-invite` — étape 2/3 du flux "Rejoindre un groupe" :
-  /// résout [code] en un aperçu pur (nom + nombre de membres), sans jamais
-  /// créer d'adhésion. Lève une [GroupInviteFailure].
+  /// résout [code] en un aperçu pur (nom, nombre de membres et titre de la
+  /// campagne, `null` sans campagne ou si le serveur ne le renvoie pas), sans
+  /// jamais créer d'adhésion. Jamais le résumé (décision n° 33). Lève une
+  /// [GroupInviteFailure].
   Future<GroupPreview> previewGroupInvite(String code);
 
   /// `join-group` — étape 3/3 : crée l'adhésion `group_members`
@@ -105,7 +107,10 @@ abstract class GroupRepository {
   /// rejoint ce groupe en tant que MJ sans personnage).
   Future<JoinedGroup> joinGroup({required String code, String? characterId});
 
-  /// Détail complet d'un groupe (identité + membres) — écran "Groupe".
+  /// Détail complet d'un groupe (identité, campagne associée, membres) —
+  /// écran "Groupe". `groups` n'est pas diffusée en temps réel : le titre et
+  /// le résumé de la campagne sont relus à chaque lecture du détail
+  /// (ouverture de l'écran, rafraîchissement).
   Future<GroupDetail> fetchGroupDetail(String groupId);
 
   /// "Renommer le groupe" (owner) — écriture directe `UPDATE groups`, RLS
@@ -457,6 +462,8 @@ class SupabaseGroupRepository implements GroupRepository {
       return GroupPreview(
         name: (data['name'] as String?) ?? '',
         memberCount: (data['member_count'] as num?)?.toInt() ?? 0,
+        // Absent (fonction antérieure à l'étape 4) : traité comme `null`.
+        storyTitle: _optionalString(data['story_title']),
       );
     } on FunctionException catch (error) {
       throw mapGroupInviteError(error);
@@ -500,11 +507,7 @@ class SupabaseGroupRepository implements GroupRepository {
     final currentUserId = _requireOwnerId();
 
     try {
-      final groupRow = await _client
-          .from('groups')
-          .select('id, name, owner_id, invite_code')
-          .eq('id', groupId)
-          .maybeSingle();
+      final groupRow = await _selectGroupRow(groupId);
       if (groupRow == null) {
         throw const GroupFailure(
           'Groupe introuvable.',
@@ -582,6 +585,8 @@ class SupabaseGroupRepository implements GroupRepository {
         inviteCode: (groupRow['invite_code'] as String?) ?? '',
         currentUserId: currentUserId,
         members: members,
+        storyTitle: _optionalString(groupRow['story_title']),
+        storySummaryPublic: _optionalString(groupRow['story_summary_public']),
       );
     } on GroupFailure {
       rethrow;
@@ -590,6 +595,39 @@ class SupabaseGroupRepository implements GroupRepository {
     } catch (_) {
       throw mapUnknownGroupError();
     }
+  }
+
+  /// Lit la ligne `groups` avec la campagne associée (`story_title`,
+  /// `story_summary_public`, migration DeepCore `20261119120000`).
+  /// Tolérance de schéma, même patron que `_selectFeatsWithTags` du dépôt
+  /// des personnages : sur une base sans ces colonnes (retour arrière de
+  /// DeepCore, SQLSTATE 42703 ou PGRST204), relit sans elles ; l'écran
+  /// s'affiche alors sans carte « Campagne ».
+  Future<Map<String, dynamic>?> _selectGroupRow(String groupId) async {
+    try {
+      return await _selectFirstGroupRow(
+        groupId,
+        'id, name, owner_id, invite_code, story_title, story_summary_public',
+      );
+    } on PostgrestException catch (error) {
+      if (error.code != '42703' && error.code != 'PGRST204') rethrow;
+      return _selectFirstGroupRow(groupId, 'id, name, owner_id, invite_code');
+    }
+  }
+
+  /// `limit(1)` plutôt que `maybeSingle()` : avec `maybeSingle`, postgrest
+  /// (2.9) remplace le code SQLSTATE d'une erreur par le statut HTTP
+  /// (`'400'`), ce qui empêcherait de reconnaître 42703 ci-dessus.
+  Future<Map<String, dynamic>?> _selectFirstGroupRow(
+    String groupId,
+    String columns,
+  ) async {
+    final rows = await _client
+        .from('groups')
+        .select(columns)
+        .eq('id', groupId)
+        .limit(1);
+    return rows.isEmpty ? null : rows.first;
   }
 
   @override
@@ -1076,6 +1114,10 @@ class SupabaseGroupRepository implements GroupRepository {
 
   Map<String, dynamic> _asMap(Object? value) =>
       value is Map<String, dynamic> ? value : const {};
+
+  /// Valeur textuelle facultative : clé absente, `null` ou d'un autre type
+  /// donnent `null` (un retour arrière de DeepCore ne casse rien).
+  String? _optionalString(Object? value) => value is String ? value : null;
 }
 
 class _RealtimeChannelSubscription implements GroupRealtimeSubscription {
