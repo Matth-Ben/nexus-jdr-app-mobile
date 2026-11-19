@@ -42,6 +42,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
+import 'package:personnages/features/groups/data/group_error_mapper.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/created_group.dart';
 import 'package:personnages/features/groups/domain/group_character_reassignment_failure.dart';
@@ -55,6 +56,7 @@ import 'package:personnages/features/groups/domain/joined_group.dart';
 import 'package:personnages/features/groups/presentation/group_character_reassignment_screen.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
 import 'package:personnages/l10n/app_localizations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import '../../../support/combat_fixtures.dart';
 import '../../../support/fake_combat_repository.dart';
@@ -473,6 +475,10 @@ class _FakeGroupRepository implements GroupRepository {
   Future<void> dissolveGroup(String groupId) => throw UnimplementedError();
 
   @override
+  Future<void> becomeGroupGameMaster(String groupId) =>
+      throw UnimplementedError();
+
+  @override
   Future<void> removeMember({
     required String groupId,
     required String userId,
@@ -884,8 +890,12 @@ void main() {
       members: const [],
     );
 
-    Widget build({required bool owner, required bool combatActive}) {
-      final combatRepo = FakeCombatRepository();
+    Widget build({
+      required bool owner,
+      required bool combatActive,
+      FakeCombatRepository? combatRepository,
+    }) {
+      final combatRepo = combatRepository ?? FakeCombatRepository();
       if (combatActive) combatRepo.snapshot = fakeSnapshot();
       return _buildTestWidget(
         characterRepository: fakeCharacterRepository,
@@ -970,6 +980,44 @@ void main() {
       await tester.tap(find.text('Quitter le groupe'));
       await tester.pumpAndSettle();
       expect(find.text('Quitter ce groupe ?'), findsOneWidget);
+    });
+
+    // D224 : le serveur est l'autorité (trigger DeepCore, `combat_active`).
+    testWidgets('propriétaire, refus serveur combat_active (état local '
+        'périmé) : même message clair, pas de navigation', (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+      fakeGroupRepository.leaveGroupError = mapGroupError(
+        const PostgrestException(message: 'combat_active', code: 'P0001'),
+      );
+      final combatRepository = FakeCombatRepository();
+      await tester.pumpWidget(
+        build(
+          owner: true,
+          combatActive: false,
+          combatRepository: combatRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Quitter le groupe'));
+      await tester.pumpAndSettle();
+      // Garde cliente passée (aucun combat connu) : nombre de relectures
+      // avant le refus serveur.
+      final fetchesBefore = combatRepository.fetchCount;
+      await tester.tap(find.widgetWithText(DestructiveButton, 'Quitter'));
+      await tester.pumpAndSettle();
+
+      // Le refus relance la lecture du combat (état local périmé).
+      expect(combatRepository.fetchCount, greaterThan(fetchesBefore));
+
+      expect(fakeGroupRepository.leaveGroupCalled, isTrue);
+      expect(
+        find.text(
+          "Tu ne peux pas quitter le groupe pendant un combat en cours. "
+          "Termine d'abord le combat.",
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Écran Groupes'), findsNothing);
     });
   });
 

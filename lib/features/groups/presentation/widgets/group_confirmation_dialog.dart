@@ -46,19 +46,33 @@ Future<bool?> showGroupConfirmationDialog(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: AppTypography.body(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              message,
-              style: AppTypography.body(
-                fontSize: 13,
-                color: AppColors.textSecondary,
+            // Titre et message défilent quand ils ne tiennent pas (grande
+            // police, §7 de `10-design-system.md`) ; les boutons restent
+            // toujours visibles. À ×3,0 sur 320 dp, le titre seul dépasse la
+            // hauteur de l'écran : faire défiler le message seul ne suffit
+            // pas. Un contenu court garde exactement sa hauteur.
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.body(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      message,
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),

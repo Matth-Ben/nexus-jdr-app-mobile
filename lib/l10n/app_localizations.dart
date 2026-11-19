@@ -7397,6 +7397,222 @@ abstract class AppLocalizations {
   /// **'Impossible de générer un nouveau code. Réessayez.'**
   String get groupInviteCodeGenerationFailedErrorMessage;
 
+  /// `GroupErrorCode.combatActive` (refus serveur `combat_active`), texte par défaut quand l'action n'a pas de message dédié.
+  ///
+  /// In fr, this message translates to:
+  /// **'Action impossible pendant un combat en cours. Termine d\'abord le combat.'**
+  String get groupCombatActiveErrorMessage;
+
+  /// `GroupErrorCode.mjAlreadyAssigned` (refus serveur `mj_already_assigned` de « Devenir MJ ») : personne n'est rétrogradé (décision de Matthias du 19/11/2026).
+  ///
+  /// In fr, this message translates to:
+  /// **'Un autre membre est déjà MJ de ce groupe. Rien n\'a changé : il doit d\'abord quitter le groupe, ou tu peux l\'exclure depuis l\'onglet Membres.'**
+  String get groupMjAlreadyAssignedErrorMessage;
+
+  /// `GroupErrorCode.notGroupOwner` (refus serveur `not_group_owner`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Seul le créateur du groupe peut faire cela.'**
+  String get groupNotGroupOwnerErrorMessage;
+
+  /// `GroupErrorCode.notMember` (refus serveur `not_member`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu ne fais plus partie de ce groupe.'**
+  String get groupNotMemberErrorMessage;
+
+  /// `GroupErrorCode.transientConflict` (SQLSTATE `40P01` ou `40001`, transaction annulée sans effet).
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur était occupé : rien n\'a été modifié. Réessaie.'**
+  String get groupTransientConflictErrorMessage;
+
+  /// `GroupErrorCode.serverOutdated` (`PGRST202` : fonction serveur absente, migration DeepCore pas encore appliquée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action n\'est pas encore disponible sur le serveur. Réessaie plus tard.'**
+  String get groupServerOutdatedErrorMessage;
+
+  /// Titre de la section « Devenir MJ » des paramètres du groupe (propriétaire qui joue un personnage).
+  ///
+  /// In fr, this message translates to:
+  /// **'MAÎTRE DU JEU'**
+  String get groupBecomeGameMasterSectionTitle;
+
+  /// Explication sous le titre de la section « Devenir MJ ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour lancer les combats dans l\'app, deviens-en le MJ : {characterName} quittera le groupe mais restera dans ta liste de personnages.'**
+  String groupBecomeGameMasterExplain(String characterName);
+
+  /// Bouton « Devenir MJ » des paramètres du groupe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Devenir MJ'**
+  String get groupBecomeGameMasterAction;
+
+  /// Libellé du bouton « Devenir MJ » pendant l'appel serveur (bouton bloqué).
+  ///
+  /// In fr, this message translates to:
+  /// **'Passage en MJ…'**
+  String get groupBecomeGameMasterInProgress;
+
+  /// Indice sous le bouton « Devenir MJ » désactivé hors ligne (jamais mis en file d'attente).
+  ///
+  /// In fr, this message translates to:
+  /// **'Indisponible hors ligne : cette action a besoin du serveur.'**
+  String get groupBecomeGameMasterOffline;
+
+  /// Titre de la confirmation « Devenir MJ ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Devenir MJ de « {groupName} » ?'**
+  String groupBecomeGameMasterConfirmTitle(String groupName);
+
+  /// Corps de la confirmation « Devenir MJ » (redevenir joueur n'est pas prévu).
+  ///
+  /// In fr, this message translates to:
+  /// **'{characterName} quittera ce groupe mais restera dans ta liste de personnages, avec toutes ses données. Tu deviendras MJ sans personnage et tu pourras lancer les combats. Impossible de revenir en arrière pour l\'instant.'**
+  String groupBecomeGameMasterConfirmBody(String characterName);
+
+  /// Bouton de confirmation « Devenir MJ ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Devenir MJ'**
+  String get groupBecomeGameMasterConfirmAction;
+
+  /// Bouton d'annulation de la confirmation « Devenir MJ ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get groupBecomeGameMasterCancel;
+
+  /// Message après « Devenir MJ » réussi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu es maintenant MJ de ce groupe. Ton personnage reste dans ta liste.'**
+  String get groupBecomeGameMasterSuccess;
+
+  /// Refus serveur `combat_active` de « Devenir MJ ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de devenir MJ pendant un combat en cours. Termine d\'abord le combat.'**
+  String get groupBecomeGameMasterCombatActive;
+
+  /// Échec non reconnu de « Devenir MJ ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de devenir MJ. Réessaie.'**
+  String get groupBecomeGameMasterGenericError;
+
+  /// Bouton de la zone dangereuse des paramètres du groupe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dissoudre le groupe'**
+  String get groupSettingsDissolveAction;
+
+  /// Légende sous « Dissoudre le groupe » (D228 : suppressions en cascade de DeepCore).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réservé au créateur du groupe. Retire tous les membres et supprime le butin commun, les carnets de notes des joueurs et l\'historique des combats ; les personnages et leurs données restent intacts.'**
+  String get groupSettingsDissolveCaption;
+
+  /// Titre de la feuille de dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'DISSOUDRE LE GROUPE'**
+  String get groupDissolveSheetTitle;
+
+  /// Introduction de l'avertissement de dissolution (bandeau d'alerte), suivie de la liste des suppressions (D228).
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action est irréversible. Elle supprimera définitivement, pour tous les membres :'**
+  String get groupDissolveWarningIntro;
+
+  /// Élément de la liste des suppressions de la dissolution (`group_members`).
+  ///
+  /// In fr, this message translates to:
+  /// **'le groupe et l\'accès de tous ses membres ;'**
+  String get groupDissolveWarningItemAccess;
+
+  /// Élément de la liste des suppressions de la dissolution (`group_treasure`).
+  ///
+  /// In fr, this message translates to:
+  /// **'le butin commun ;'**
+  String get groupDissolveWarningItemTreasure;
+
+  /// Élément de la liste des suppressions de la dissolution (`group_notes`, `group_journal_entries`).
+  ///
+  /// In fr, this message translates to:
+  /// **'les carnets de notes des joueurs pour ce groupe (onglet Notes, toutes les entrées du journal comprises) ;'**
+  String get groupDissolveWarningItemNotes;
+
+  /// Élément de la liste des suppressions de la dissolution (`combats`, `combat_participants`).
+  ///
+  /// In fr, this message translates to:
+  /// **'l\'historique des combats du groupe.'**
+  String get groupDissolveWarningItemCombats;
+
+  /// Phrase finale de l'avertissement de dissolution : aucune table de personnages ne dépend de `groups`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les personnages des joueurs restent intacts : ils gardent toutes leurs données.'**
+  String get groupDissolveWarningCharactersKept;
+
+  /// Bouton d'annulation de la feuille de dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get groupDissolveCancel;
+
+  /// Passage à l'étape de confirmation de la feuille de dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get groupDissolveContinue;
+
+  /// Libellé du champ de confirmation de la dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'RETAPE LE NOM DU GROUPE POUR CONFIRMER'**
+  String get groupDissolveRetypeLabel;
+
+  /// Indication du champ de confirmation de la dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du groupe'**
+  String get groupDissolveRetypeHint;
+
+  /// Bouton final de la dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dissoudre définitivement'**
+  String get groupDissolveConfirm;
+
+  /// Bouton final de la dissolution pendant l'appel serveur.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dissolution en cours…'**
+  String get groupDissolveInProgress;
+
+  /// Message après une dissolution réussie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Groupe dissous.'**
+  String get groupDissolveSuccess;
+
+  /// Échec non reconnu de la dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de dissoudre le groupe. Réessaie.'**
+  String get groupDissolveGenericError;
+
+  /// Dissolution refusée pendant un combat actif (garde cliente ou refus serveur `combat_active`, D224).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu ne peux pas dissoudre le groupe pendant un combat en cours. Termine d\'abord le combat.'**
+  String get groupDissolveBlockedByCombat;
+
   /// `CharacterCreationErrorCode.accessDenied` (D141).
   ///
   /// In fr, this message translates to:

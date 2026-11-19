@@ -30,6 +30,7 @@ import 'package:personnages/features/groups/domain/group_treasure.dart';
 import 'package:personnages/features/groups/domain/group_treasure_item.dart';
 import 'package:personnages/features/groups/domain/joined_group.dart';
 import 'package:personnages/features/groups/presentation/group_screen.dart';
+import 'package:personnages/features/groups/presentation/group_settings_screen.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
 import 'package:personnages/l10n/app_localizations.dart';
 
@@ -170,6 +171,18 @@ class _FakeGroupRepository implements GroupRepository {
     if (dissolveError != null) throw dissolveError!;
   }
 
+  int becomeGameMasterCalls = 0;
+
+  /// Détail renvoyé par les lectures suivantes après « Devenir MJ ».
+  GroupDetail? detailAfterBecomeGameMaster;
+
+  @override
+  Future<void> becomeGroupGameMaster(String groupId) async {
+    becomeGameMasterCalls++;
+    final after = detailAfterBecomeGameMaster;
+    if (after != null) detailToReturn = after;
+  }
+
   @override
   Future<bool> claimTreasureCurrency({
     required String groupId,
@@ -287,7 +300,7 @@ GroupMember _member({
   );
 }
 
-GoRouter _buildTestRouter() {
+GoRouter _buildTestRouter({bool realSettings = false}) {
   return GoRouter(
     initialLocation: '/groups/group-1',
     routes: [
@@ -308,17 +321,24 @@ GoRouter _buildTestRouter() {
       // `group_settings_screen_test.dart`.
       GoRoute(
         path: '/groups/:id/settings',
-        builder: (context, state) => Scaffold(
-          body: Center(
-            child: Text('Paramètres du groupe ${state.pathParameters['id']}'),
-          ),
-        ),
+        builder: (context, state) => realSettings
+            ? GroupSettingsScreen(groupId: state.pathParameters['id']!)
+            : Scaffold(
+                body: Center(
+                  child: Text(
+                    'Paramètres du groupe ${state.pathParameters['id']}',
+                  ),
+                ),
+              ),
       ),
     ],
   );
 }
 
-Widget _buildTestWidget(_FakeGroupRepository repository) {
+Widget _buildTestWidget(
+  _FakeGroupRepository repository, {
+  bool realSettings = false,
+}) {
   return ProviderScope(
     overrides: [
       groupRepositoryProvider.overrideWithValue(repository),
@@ -328,7 +348,7 @@ Widget _buildTestWidget(_FakeGroupRepository repository) {
       currentUserFromTestOverride,
     ],
     child: MaterialApp.router(
-      routerConfig: _buildTestRouter(),
+      routerConfig: _buildTestRouter(realSettings: realSettings),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('fr'),
@@ -717,6 +737,61 @@ void main() {
         expect(find.textContaining('garde toutes ses données'), findsNothing);
       },
     );
+  });
+
+  // Parcours complet avec le vrai écran Paramètres : après « Devenir MJ »,
+  // l'onglet Membres propose « Lancer un combat » au lieu du bandeau.
+  testWidgets('après « Devenir MJ », l\'onglet Membres affiche « Lancer un '
+      'combat » au lieu de « Pas de combat sans MJ dans l\'app »', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    fakeRepository
+      ..detailToReturn = ownerViewDetail()
+      ..detailAfterBecomeGameMaster = ownerViewDetail().copyWith(
+        members: [
+          const GroupMember(
+            userId: 'user-1',
+            role: GroupRole.owner,
+            name: 'Matthias',
+            isGameMaster: true,
+          ),
+          unconsciousMember,
+          deadMember,
+        ],
+      );
+
+    await tester.pumpWidget(
+      _buildTestWidget(fakeRepository, realSettings: true),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text("Pas de combat sans MJ dans l'app."), findsOneWidget);
+    expect(find.text('LANCER UN COMBAT'), findsNothing);
+
+    // Lien du bandeau vers les paramètres.
+    await tester.tap(find.text('Paramètres du groupe'));
+    await tester.pumpAndSettle();
+    final becomeButton = find.byKey(const Key('becomeGameMasterButton'));
+    await tester.ensureVisible(becomeButton);
+    await tester.tap(becomeButton);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) => widget is PrimaryButton && widget.label == 'Devenir MJ',
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(fakeRepository.becomeGameMasterCalls, 1);
+
+    // Retour à l'écran Groupe.
+    GoRouter.of(tester.element(find.byType(GroupSettingsScreen))).pop();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GroupScreen), findsOneWidget);
+    expect(find.text("Pas de combat sans MJ dans l'app."), findsNothing);
+    expect(find.text('LANCER UN COMBAT'), findsOneWidget);
   });
 
   group('quitter le groupe (membre, icône du header)', () {

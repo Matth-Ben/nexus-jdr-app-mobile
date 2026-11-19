@@ -159,4 +159,93 @@ void main() {
 
     expect(detail.memberRowIds, {'row-1'});
   });
+
+  // « Devenir MJ » : propriétaire qui joue un personnage dans ce groupe,
+  // jamais un autre cas.
+  group('GroupDetail.canBecomeGameMaster', () {
+    GroupDetail detail({
+      required String currentUserId,
+      required List<GroupMember> members,
+    }) => GroupDetail(
+      id: 'group-1',
+      name: 'Les Lames',
+      ownerId: 'user-owner',
+      inviteCode: 'AB3F7K2M',
+      currentUserId: currentUserId,
+      members: members,
+    );
+
+    final ownerPlaying = _member(
+      characterId: 'char-owner',
+      userId: 'user-owner',
+      role: GroupRole.owner,
+    );
+    const ownerGameMaster = GroupMember(
+      userId: 'user-owner',
+      role: GroupRole.owner,
+      name: 'MJ',
+      isGameMaster: true,
+    );
+    const ownerOrphan = GroupMember(
+      userId: 'user-owner',
+      role: GroupRole.owner,
+      name: 'Orphelin',
+      isGameMaster: false,
+    );
+    final player = _member(
+      characterId: 'char-2',
+      userId: 'user-2',
+      role: GroupRole.membre,
+    );
+
+    test('propriétaire qui joue un personnage : vrai', () {
+      expect(
+        detail(
+          currentUserId: 'user-owner',
+          members: [ownerPlaying, player],
+        ).canBecomeGameMaster,
+        isTrue,
+      );
+    });
+
+    test('propriétaire déjà MJ sans personnage : faux', () {
+      expect(
+        detail(
+          currentUserId: 'user-owner',
+          members: [ownerGameMaster, player],
+        ).canBecomeGameMaster,
+        isFalse,
+      );
+    });
+
+    test('propriétaire orphelin (personnage supprimé) : faux', () {
+      expect(
+        detail(
+          currentUserId: 'user-owner',
+          members: [ownerOrphan],
+        ).canBecomeGameMaster,
+        isFalse,
+      );
+    });
+
+    test('propriétaire sans ligne membre (parti) : faux', () {
+      expect(
+        detail(
+          currentUserId: 'user-owner',
+          members: [player],
+        ).canBecomeGameMaster,
+        isFalse,
+      );
+    });
+
+    test('membre qui joue mais n\'est pas propriétaire : faux', () {
+      expect(
+        detail(
+          currentUserId: 'user-2',
+          members: [ownerPlaying, player],
+        ).canBecomeGameMaster,
+        isFalse,
+      );
+    });
+  });
 }

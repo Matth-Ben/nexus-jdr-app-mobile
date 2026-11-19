@@ -36,6 +36,20 @@ abstract class GroupDetail with _$GroupDetail {
 
   GroupRole get currentUserRole => currentMember?.role ?? GroupRole.membre;
 
+  /// « Devenir MJ » proposé : le joueur connecté est le **propriétaire** du
+  /// groupe et y **joue un personnage** (ligne `group_members` avec
+  /// personnage, donc pas MJ). Jamais pour un MJ (déjà MJ), un autre membre
+  /// (`not_group_owner`), ni un propriétaire orphelin ou sans ligne membre.
+  /// Le serveur reste l'autorité (`become_group_game_master`) : ce prédicat
+  /// ne sert qu'à afficher l'action.
+  bool get canBecomeGameMaster {
+    final member = currentMember;
+    return isOwner &&
+        member != null &&
+        member.characterId != null &&
+        !member.isGameMaster;
+  }
+
   /// Identifiants des lignes `group_members` ([GroupMember.membershipId])
   /// des membres actuels — voir `GroupRepository.subscribeToMemberUpdates`.
   Set<String> get memberRowIds => {

@@ -21,7 +21,9 @@ bool canEndCombat(GroupDetail group) => group.isOwner;
 /// Le propriétaire du groupe ne peut pas **quitter** le groupe pendant un
 /// combat actif (décision du 12/11/2026 : « MJ absent » = lecture seule pour
 /// tous). Un membre non propriétaire peut toujours partir (sa ligne
-/// participant est retirée côté serveur).
+/// participant est retirée côté serveur). Le serveur applique aussi cette
+/// règle, et la même pour la dissolution (`combat_active`, migration DeepCore
+/// `20261119090000`) : ce prédicat évite seulement un dialogue inutile.
 bool isLeaveBlockedByCombat({
   required bool isOwner,
   required bool hasActiveCombat,

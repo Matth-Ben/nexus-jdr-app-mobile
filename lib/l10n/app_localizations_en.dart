@@ -4562,6 +4562,137 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t generate a new code. Try again.';
 
   @override
+  String get groupCombatActiveErrorMessage =>
+      'Not possible during a combat. End the combat first.';
+
+  @override
+  String get groupMjAlreadyAssignedErrorMessage =>
+      'Another member is already the GM of this group. Nothing changed: they must leave the group first, or you can remove them from the Members tab.';
+
+  @override
+  String get groupNotGroupOwnerErrorMessage =>
+      'Only the group\'s creator can do this.';
+
+  @override
+  String get groupNotMemberErrorMessage =>
+      'You\'re no longer a member of this group.';
+
+  @override
+  String get groupTransientConflictErrorMessage =>
+      'The server was busy: nothing was changed. Try again.';
+
+  @override
+  String get groupServerOutdatedErrorMessage =>
+      'This action isn\'t available on the server yet. Try again later.';
+
+  @override
+  String get groupBecomeGameMasterSectionTitle => 'GAME MASTER';
+
+  @override
+  String groupBecomeGameMasterExplain(String characterName) {
+    return 'To start combats in the app, become its GM: $characterName will leave the group but stay in your character list.';
+  }
+
+  @override
+  String get groupBecomeGameMasterAction => 'Become GM';
+
+  @override
+  String get groupBecomeGameMasterInProgress => 'Becoming GM…';
+
+  @override
+  String get groupBecomeGameMasterOffline =>
+      'Unavailable offline: this action needs the server.';
+
+  @override
+  String groupBecomeGameMasterConfirmTitle(String groupName) {
+    return 'Become GM of “$groupName”?';
+  }
+
+  @override
+  String groupBecomeGameMasterConfirmBody(String characterName) {
+    return '$characterName will leave this group but stay in your character list, with all their data. You\'ll become a GM without a character and will be able to start combats. You can\'t undo this for now.';
+  }
+
+  @override
+  String get groupBecomeGameMasterConfirmAction => 'Become GM';
+
+  @override
+  String get groupBecomeGameMasterCancel => 'Cancel';
+
+  @override
+  String get groupBecomeGameMasterSuccess =>
+      'You\'re now the GM of this group. Your character stays in your list.';
+
+  @override
+  String get groupBecomeGameMasterCombatActive =>
+      'You can\'t become GM during a combat. End the combat first.';
+
+  @override
+  String get groupBecomeGameMasterGenericError =>
+      'Couldn\'t become GM. Try again.';
+
+  @override
+  String get groupSettingsDissolveAction => 'Dissolve group';
+
+  @override
+  String get groupSettingsDissolveCaption =>
+      'Group creator only. Removes every member and deletes the shared loot, the players\' notebooks and the combat history; characters and their data stay intact.';
+
+  @override
+  String get groupDissolveSheetTitle => 'DISSOLVE GROUP';
+
+  @override
+  String get groupDissolveWarningIntro =>
+      'This action is irreversible. It will permanently delete, for every member:';
+
+  @override
+  String get groupDissolveWarningItemAccess =>
+      'the group and every member\'s access to it;';
+
+  @override
+  String get groupDissolveWarningItemTreasure => 'the shared loot;';
+
+  @override
+  String get groupDissolveWarningItemNotes =>
+      'the players\' notebooks for this group (Notes tab, including every journal entry);';
+
+  @override
+  String get groupDissolveWarningItemCombats => 'the group\'s combat history.';
+
+  @override
+  String get groupDissolveWarningCharactersKept =>
+      'The players\' characters stay intact and keep all their data.';
+
+  @override
+  String get groupDissolveCancel => 'Cancel';
+
+  @override
+  String get groupDissolveContinue => 'Continue';
+
+  @override
+  String get groupDissolveRetypeLabel => 'RETYPE THE GROUP NAME TO CONFIRM';
+
+  @override
+  String get groupDissolveRetypeHint => 'Group name';
+
+  @override
+  String get groupDissolveConfirm => 'Dissolve permanently';
+
+  @override
+  String get groupDissolveInProgress => 'Dissolving…';
+
+  @override
+  String get groupDissolveSuccess => 'Group dissolved.';
+
+  @override
+  String get groupDissolveGenericError =>
+      'Couldn\'t dissolve the group. Try again.';
+
+  @override
+  String get groupDissolveBlockedByCombat =>
+      'You can\'t dissolve the group during a combat. End the combat first.';
+
+  @override
   String get creationAccessDeniedErrorMessage =>
       'You don\'t have access to this action.';
 
