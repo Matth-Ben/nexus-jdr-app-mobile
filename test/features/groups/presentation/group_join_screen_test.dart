@@ -9,6 +9,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:personnages/features/combat/presentation/providers/character_combat_provider.dart';
+import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -547,9 +548,9 @@ class _FakeGroupRepository implements GroupRepository {
       throw UnimplementedError();
 }
 
-GoRouter _buildTestRouter() {
+GoRouter _buildTestRouter({String initialLocation = '/groups/join'}) {
   return GoRouter(
-    initialLocation: '/groups/join',
+    initialLocation: initialLocation,
     routes: [
       GoRoute(
         path: '/',
@@ -577,6 +578,7 @@ Widget _buildTestWidget({
   required _FakeCharacterRepository characterRepository,
   required _FakeGroupRepository groupRepository,
   Locale locale = const Locale('fr'),
+  String initialLocation = '/groups/join',
 }) {
   return ProviderScope(
     overrides: [
@@ -588,7 +590,7 @@ Widget _buildTestWidget({
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: locale,
-      routerConfig: _buildTestRouter(),
+      routerConfig: _buildTestRouter(initialLocation: initialLocation),
     ),
   );
 }
@@ -599,6 +601,13 @@ bool _isPrimaryButtonEnabled(WidgetTester tester) {
 }
 
 Finder _previewCard() => find.byKey(const ValueKey('groupInvitePreviewCard'));
+
+/// « Rejoindre » est ignoré pendant [kDoubleTapTimeout] après l'apparition
+/// de la carte (garde anti double toucher) : attend ce délai, puis touche.
+Future<void> _tapJoin(WidgetTester tester) async {
+  await tester.pump(kDoubleTapTimeout);
+  await tester.tap(find.text('REJOINDRE'));
+}
 
 Finder _previewLoading() =>
     find.byKey(const ValueKey('groupInvitePreviewLoading'));
@@ -652,7 +661,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'ab3f7k');
     await tester.pump();
     await _showPreview(tester);
-    await tester.tap(find.text('REJOINDRE'));
+    await _tapJoin(tester);
     await tester.pumpAndSettle();
 
     expect(find.text('Écran Groupe group-1'), findsOneWidget);
@@ -881,7 +890,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'ab3f7k');
       await tester.pump();
       await _showPreview(tester);
-      await tester.tap(find.text('REJOINDRE'));
+      await _tapJoin(tester);
       await tester.pump();
 
       expect(find.text('Rattachement au groupe...'), findsOneWidget);
@@ -914,7 +923,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'ab3f7k');
       await tester.pump();
       await _showPreview(tester);
-      await tester.tap(find.text('REJOINDRE'));
+      await _tapJoin(tester);
       await tester.pumpAndSettle();
 
       expect(
@@ -1042,7 +1051,7 @@ void main() {
         await tester.enterText(find.byType(TextField), 'ab3f7k');
         await tester.pump();
         await _showPreview(tester);
-        await tester.tap(find.text('REJOINDRE'));
+        await _tapJoin(tester);
         await tester.pumpAndSettle();
 
         expect(fakeGroupRepository.lastJoinedCharacterId, isNull);
@@ -1071,7 +1080,7 @@ void main() {
         await tester.enterText(find.byType(TextField), 'ab3f7k');
         await tester.pump();
         await _showPreview(tester);
-        await tester.tap(find.text('REJOINDRE'));
+        await _tapJoin(tester);
         await tester.pumpAndSettle();
 
         expect(
@@ -1209,7 +1218,7 @@ void main() {
       await tester.pumpAndSettle();
       await enterFullCode(tester);
 
-      await tester.tap(find.text('REJOINDRE'));
+      await _tapJoin(tester);
       await tester.pumpAndSettle();
 
       expect(fakeGroupRepository.previewCallCount, 1);
@@ -1275,27 +1284,25 @@ void main() {
       expect(_previewCard(), findsOneWidget);
       expect(fakeGroupRepository.joinCallCount, 0);
 
-      await tester.tap(find.text('REJOINDRE'));
+      await _tapJoin(tester);
       await tester.pumpAndSettle();
       expect(fakeGroupRepository.previewCallCount, 1);
       expect(fakeGroupRepository.joinCallCount, 1);
       expect(find.text('Écran Groupe group-1'), findsOneWidget);
     });
 
-    testWidgets('« Voir le groupe » pendant le chargement de l\'aperçu : '
-        'attend la carte sans voile ni « Rattachement », ne rejoint pas', (
-      tester,
-    ) async {
+    testWidgets('aperçu automatique en cours : « Voir le groupe » inactif, '
+        'un toucher ne fait rien ; la carte arrive sans voile', (tester) async {
       fakeGroupRepository.previewCompleter = Completer<GroupPreview>();
       await tester.pumpWidget(buildWidget());
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), fullCode);
       await tester.pump();
 
-      await tester.tap(find.text('VOIR LE GROUPE'));
+      expect(_isPrimaryButtonEnabled(tester), isFalse);
+      await tester.tap(find.text('VOIR LE GROUPE'), warnIfMissed: false);
       await tester.pump();
       expect(find.text('Rattachement au groupe...'), findsNothing);
-      expect(_isPrimaryButtonLoading(tester), isTrue);
       expect(_previewLoading(), findsOneWidget);
 
       fakeGroupRepository.previewCompleter!.complete(campaignPreview);
@@ -1303,10 +1310,178 @@ void main() {
 
       expect(_previewCard(), findsOneWidget);
       expect(_previewLoading(), findsNothing);
-      expect(_isPrimaryButtonLoading(tester), isFalse);
+      expect(_isPrimaryButtonEnabled(tester), isTrue);
       expect(find.text('REJOINDRE'), findsOneWidget);
       expect(fakeGroupRepository.previewCallCount, 1);
       expect(fakeGroupRepository.joinCallCount, 0);
+    });
+
+    // Relecture de code de la PR #304, point bloquant : arrivée par un lien
+    // (personnage choisi d'office), appui sur « Voir le groupe » pendant
+    // l'aperçu automatique, réponse reçue pendant l'appui, doigt levé sur
+    // « Rejoindre » : jamais de rattachement sans confirmation.
+    testWidgets('appui commencé pendant l\'aperçu automatique, réponse reçue '
+        'avant de lever le doigt : aucun rattachement', (tester) async {
+      fakeGroupRepository.previewCompleter = Completer<GroupPreview>();
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          groupRepository: fakeGroupRepository,
+          initialLocation: '/groups/join?code=AB3F7K2M',
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(_previewLoading(), findsOneWidget);
+      expect(find.text('Borgan'), findsOneWidget);
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.text('VOIR LE GROUPE')),
+      );
+      fakeGroupRepository.previewCompleter!.complete(campaignPreview);
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('REJOINDRE'), findsOneWidget);
+
+      await gesture.up();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(fakeGroupRepository.joinCallCount, 0);
+      expect(find.text('Rattachement au groupe...'), findsNothing);
+      expect(_previewCard(), findsOneWidget);
+    });
+
+    testWidgets('appui commencé sur « Rejoindre » pour le groupe A, carte du '
+        'groupe B affichée avant de lever le doigt : aucun rattachement', (
+      tester,
+    ) async {
+      fakeGroupRepository.previewToReturn = campaignPreview;
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+      await enterFullCode(tester);
+      await tester.pump(kDoubleTapTimeout);
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.text('REJOINDRE')),
+      );
+      fakeGroupRepository.previewToReturn = const GroupPreview(
+        name: 'Groupe B',
+        memberCount: 2,
+      );
+      await tester.enterText(find.byType(TextField), 'zz9988xx');
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        find.descendant(of: _previewCard(), matching: find.text('Groupe B')),
+        findsOneWidget,
+      );
+
+      await gesture.up();
+      await tester.pump();
+
+      expect(fakeGroupRepository.joinCallCount, 0);
+    });
+
+    testWidgets('double toucher : « Rejoindre » ignoré 300 ms après '
+        'l\'apparition de la carte, accepté ensuite', (tester) async {
+      fakeGroupRepository.previewToReturn = campaignPreview;
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'ab3f7k');
+      await tester.pump();
+
+      await tester.tap(find.text('VOIR LE GROUPE'));
+      await tester.pump();
+      await tester.pump();
+      expect(_previewCard(), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.text('REJOINDRE'));
+      await tester.pump();
+      expect(fakeGroupRepository.joinCallCount, 0);
+      expect(find.text('Rattachement au groupe...'), findsNothing);
+
+      await tester.pump(kDoubleTapTimeout);
+      await tester.tap(find.text('REJOINDRE'));
+      await tester.pumpAndSettle();
+      expect(fakeGroupRepository.joinCallCount, 1);
+      expect(find.text('Écran Groupe group-1'), findsOneWidget);
+    });
+
+    testWidgets('double toucher : la garde vaut aussi pour la carte de '
+        'l\'aperçu automatique', (tester) async {
+      fakeGroupRepository.previewToReturn = campaignPreview;
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), fullCode);
+      await tester.pump();
+      await tester.pump();
+      expect(_previewCard(), findsOneWidget);
+
+      await tester.tap(find.text('REJOINDRE'));
+      await tester.pump();
+      expect(fakeGroupRepository.joinCallCount, 0);
+
+      await _tapJoin(tester);
+      await tester.pumpAndSettle();
+      expect(fakeGroupRepository.joinCallCount, 1);
+    });
+
+    testWidgets('code invalide sans toucher : l\'erreur est annoncée par le '
+        'lecteur d\'écran (liveRegion)', (tester) async {
+      fakeGroupRepository.previewErrorToThrow = const GroupInviteFailure(
+        GroupInviteFailureKind.invalidCode,
+      );
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+      await enterFullCode(tester);
+
+      final hint = find.text("Ce code d'invitation n'est pas valide.");
+      expect(hint, findsOneWidget);
+      expect(
+        find.ancestor(
+          of: hint,
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is Semantics &&
+                w.properties.liveRegion == true &&
+                w.container,
+          ),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('code régénéré entre l\'aperçu et le rattachement : la carte '
+        'de l\'ancien groupe disparaît, retour à « Voir le groupe »', (
+      tester,
+    ) async {
+      fakeGroupRepository.previewToReturn = campaignPreview;
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+      await enterFullCode(tester);
+      expect(_previewCard(), findsOneWidget);
+
+      fakeGroupRepository
+        ..joinErrorToThrow = const GroupInviteFailure(
+          GroupInviteFailureKind.invalidCode,
+        )
+        ..previewErrorToThrow = const GroupInviteFailure(
+          GroupInviteFailureKind.invalidCode,
+        );
+      await _tapJoin(tester);
+      await tester.pumpAndSettle();
+
+      expect(fakeGroupRepository.joinCallCount, 1);
+      expect(fakeGroupRepository.previewCallCount, 2, reason: 'relu');
+      expect(_previewCard(), findsNothing);
+      expect(find.text('REJOINDRE'), findsNothing);
+      expect(find.text('VOIR LE GROUPE'), findsOneWidget);
+      expect(
+        find.text("Ce code d'invitation n'est pas valide."),
+        findsOneWidget,
+      );
     });
 
     testWidgets('code de 6 caractères : « Voir le groupe » verrouille le '
@@ -1331,7 +1506,7 @@ void main() {
       expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
 
       fakeGroupRepository.joinCompleter = Completer<JoinedGroup>();
-      await tester.tap(find.text('REJOINDRE'));
+      await _tapJoin(tester);
       await tester.pump();
       expect(find.text('Rattachement au groupe...'), findsOneWidget);
 
@@ -1379,6 +1554,7 @@ void main() {
         greaterThan(tester.getBottomLeft(find.byType(TextField)).dy),
       );
       expect(_isPrimaryButtonLoading(tester), isFalse);
+      expect(_isPrimaryButtonEnabled(tester), isFalse);
       expect(find.text('VOIR LE GROUPE'), findsOneWidget);
 
       fakeGroupRepository.previewCompleter!.complete(campaignPreview);
@@ -1473,7 +1649,7 @@ void main() {
       expect(_previewCard(), findsOneWidget);
       expect(fakeGroupRepository.joinCallCount, 0);
 
-      await tester.tap(find.text('REJOINDRE'));
+      await _tapJoin(tester);
       await tester.pumpAndSettle();
       expect(fakeGroupRepository.joinCallCount, 1);
       expect(find.text('Écran Groupe group-1'), findsOneWidget);
@@ -1537,7 +1713,7 @@ void main() {
       await tester.pumpAndSettle();
       await enterFullCode(tester);
 
-      await tester.tap(find.text('REJOINDRE'));
+      await _tapJoin(tester);
       await tester.pumpAndSettle();
 
       expect(
@@ -1559,7 +1735,7 @@ void main() {
       await tester.pumpWidget(buildWidget());
       await tester.pumpAndSettle();
       await enterFullCode(tester);
-      await tester.tap(find.text('REJOINDRE'));
+      await _tapJoin(tester);
       await tester.pumpAndSettle();
       expect(
         find.text('Ce personnage est déjà membre de ce groupe.'),
@@ -1653,7 +1829,7 @@ void main() {
       expect(fakeGroupRepository.joinCallCount, 0);
       expect(fakeGroupRepository.previewedCodes, ['AB3F7K2M', 'ZZ9988XX']);
 
-      await tester.tap(find.text('REJOINDRE'));
+      await _tapJoin(tester);
       await tester.pumpAndSettle();
       expect(fakeGroupRepository.joinCallCount, 1);
       expect(fakeGroupRepository.lastJoinedCode, 'ZZ9988XX');
