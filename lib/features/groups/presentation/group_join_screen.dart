@@ -100,7 +100,8 @@ const String _invalidCodeMessage = "Ce code d'invitation n'est pas valide.";
 /// (relecture de code de la PR #304) : bouton inactif pendant l'aperçu
 /// automatique, action et clé du bouton tirées de ce qui est affiché (un
 /// appui en cours est annulé quand le bouton change de rôle), « Rejoindre »
-/// ignoré pendant [kDoubleTapTimeout] après l'apparition de la carte.
+/// inactif pendant [kDoubleTapTimeout] après l'affichage de la carte, carte
+/// masquée pendant toute relecture de l'aperçu.
 class GroupJoinScreen extends ConsumerStatefulWidget {
   const GroupJoinScreen({this.initialCode, super.key});
 
@@ -136,13 +137,18 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
   ProviderSubscription<AsyncValue<GroupPreview>>? _previewSubscription;
 
   /// Code dont la carte d'aperçu est affichée (`null` sans carte) : repère sa
-  /// première apparition pour [_joinGuardTimer].
+  /// première apparition pour [_joinGuarded].
   String? _shownPreviewCode;
 
-  /// Actif pendant [kDoubleTapTimeout] après la première apparition de la
-  /// carte d'un code : « Rejoindre » est alors ignoré, pour qu'un double
-  /// toucher sur « Voir le groupe » ne rejoigne pas le groupe (relecture de
-  /// code de la PR #304).
+  /// Vrai dès la première apparition de la carte d'un code, puis pendant
+  /// [kDoubleTapTimeout] après son affichage ([_joinGuardTimer]) :
+  /// « Rejoindre » est alors inactif (et ignoré), pour qu'un double toucher
+  /// sur « Voir le groupe » ne rejoigne pas le groupe (relecture de code de
+  /// la PR #304). L'état visuel du bouton suit la garde.
+  bool _joinGuarded = false;
+
+  /// Lève [_joinGuarded] (avec `setState`) [kDoubleTapTimeout] après
+  /// l'affichage de la carte. Annulé au démontage.
   Timer? _joinGuardTimer;
 
   @override
@@ -179,17 +185,28 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
   }
 
   /// Note la première apparition de la carte de [previewCode] (appelé par
-  /// `build` avec ce qui est affiché) et arme [_joinGuardTimer]. Sans carte,
-  /// le repère est effacé : une carte qui réapparaît réarme la garde.
+  /// `build` avec ce qui est affiché) : [_joinGuarded] passe à vrai pour
+  /// cette image, et [_joinGuardTimer] n'est armé qu'une fois l'image
+  /// affichée (`addPostFrameCallback`). Sans carte, le repère et la garde
+  /// sont effacés : une carte qui réapparaît réarme la garde.
   void _trackShownPreview(String? previewCode, {required bool shown}) {
     if (!shown) {
       _shownPreviewCode = null;
+      _joinGuarded = false;
+      _joinGuardTimer?.cancel();
       return;
     }
     if (previewCode == _shownPreviewCode) return;
     _shownPreviewCode = previewCode;
+    _joinGuarded = true;
     _joinGuardTimer?.cancel();
-    _joinGuardTimer = Timer(kDoubleTapTimeout, () {});
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _shownPreviewCode != previewCode) return;
+      _joinGuardTimer?.cancel();
+      _joinGuardTimer = Timer(kDoubleTapTimeout, () {
+        if (mounted) setState(() => _joinGuarded = false);
+      });
+    });
   }
 
   /// Auto-sélectionne le premier personnage de [characters] tant qu'aucun
@@ -327,14 +344,13 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
   /// « Rejoindre » : `joinGroup` pour [code], dont la carte d'aperçu est
   /// affichée (l'action est choisie par `build` d'après ce qui est affiché,
   /// décision n° 34 : le joueur voit le groupe, puis confirme). Ignoré pendant
-  /// [kDoubleTapTimeout] après la première apparition de la carte
-  /// ([_joinGuardTimer]). Voir la documentation de classe pour le routage des
-  /// 2 canaux d'erreur.
+  /// [kDoubleTapTimeout] après l'affichage de la carte ([_joinGuarded], le
+  /// bouton est alors inactif). Voir la documentation de classe pour le
+  /// routage des 2 canaux d'erreur.
   Future<void> _join(String code, List<CharacterSummary> characters) async {
     final character = _joinAsGameMaster ? null : _selectedCharacter(characters);
     final hasRole = _joinAsGameMaster || character != null;
-    final guarded = _joinGuardTimer?.isActive ?? false;
-    if (!hasRole || _isBusy || guarded) return;
+    if (!hasRole || _isBusy || _joinGuarded) return;
 
     setState(() {
       _isJoining = true;
@@ -370,7 +386,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
       // que la carte de l'ancien groupe ne reste pas affichée avec
       // « Rejoindre » (relecture de code de la PR #304).
       if (failure.kind == GroupInviteFailureKind.invalidCode) {
-        ref.invalidate(groupInvitePreviewProvider(code: code));
+        ref.invalidate(groupInvitePreviewProvider(code: code), asReload: true);
       }
     } catch (_) {
       if (!mounted) return;
@@ -405,7 +421,9 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
     try {
       // Aperçu automatique en échec : relancé (la lecture qui suit attend le
       // nouvel appel). En cours : la lecture attend l'appel déjà lancé.
-      if (subscription.read().hasError) ref.invalidate(provider);
+      if (subscription.read().hasError) {
+        ref.invalidate(provider, asReload: true);
+      }
       await ref.read(provider.future);
     } on GroupInviteFailure catch (failure) {
       if (failure.kind == GroupInviteFailureKind.invalidCode) {
@@ -450,8 +468,11 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
         ? null
         : ref.watch(groupInvitePreviewProvider(code: previewCode));
     // Seulement un aperçu établi : pendant une relecture (code régénéré, voir
-    // [_join]) ou après son échec, l'ancienne carte n'est plus montrée.
-    final preview = previewAsync is AsyncData<GroupPreview>
+    // [_join] ; Riverpod garde alors l'ancienne valeur, `isLoading` vrai) ou
+    // après son échec, l'ancienne carte n'est plus montrée. Cette valeur
+    // décide seule de la carte, du libellé et de l'action du bouton.
+    final preview =
+        previewAsync is AsyncData<GroupPreview> && !previewAsync.isLoading
         ? previewAsync.value
         : null;
     final isPreviewLoading =
@@ -573,7 +594,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
                         ? l10n.groupJoinSeeGroupAction
                         : l10n.groupJoinAction,
                     isLoading: _isBusy,
-                    onPressed: !canSubmit
+                    onPressed: !canSubmit || (preview != null && _joinGuarded)
                         ? null
                         : preview == null
                         ? () => _loadPreview(code)

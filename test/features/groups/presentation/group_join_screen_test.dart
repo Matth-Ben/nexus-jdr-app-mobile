@@ -1310,8 +1310,11 @@ void main() {
 
       expect(_previewCard(), findsOneWidget);
       expect(_previewLoading(), findsNothing);
-      expect(_isPrimaryButtonEnabled(tester), isTrue);
       expect(find.text('REJOINDRE'), findsOneWidget);
+      // Garde anti double toucher : inactif, puis actif après 300 ms.
+      expect(_isPrimaryButtonEnabled(tester), isFalse);
+      await tester.pump(kDoubleTapTimeout);
+      expect(_isPrimaryButtonEnabled(tester), isTrue);
       expect(fakeGroupRepository.previewCallCount, 1);
       expect(fakeGroupRepository.joinCallCount, 0);
     });
@@ -1396,13 +1399,20 @@ void main() {
       await tester.pump();
       expect(_previewCard(), findsOneWidget);
 
+      // Garde armée à l'affichage : bouton inactif, toucher sans effet.
+      expect(_isPrimaryButtonEnabled(tester), isFalse);
       await tester.pump(const Duration(milliseconds: 100));
+      expect(_isPrimaryButtonEnabled(tester), isFalse);
       await tester.tap(find.text('REJOINDRE'));
       await tester.pump();
       expect(fakeGroupRepository.joinCallCount, 0);
       expect(find.text('Rattachement au groupe...'), findsNothing);
 
-      await tester.pump(kDoubleTapTimeout);
+      // L'expiration reconstruit l'écran : le bouton redevient actif seul.
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(_isPrimaryButtonEnabled(tester), isFalse);
+      await tester.pump(const Duration(milliseconds: 160));
+      expect(_isPrimaryButtonEnabled(tester), isTrue);
       await tester.tap(find.text('REJOINDRE'));
       await tester.pumpAndSettle();
       expect(fakeGroupRepository.joinCallCount, 1);
@@ -1418,6 +1428,7 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(_previewCard(), findsOneWidget);
+      expect(_isPrimaryButtonEnabled(tester), isFalse);
 
       await tester.tap(find.text('REJOINDRE'));
       await tester.pump();
@@ -1451,6 +1462,46 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('code régénéré : pendant la relecture de l\'aperçu, ni carte '
+        'de l\'ancien groupe ni « Rejoindre », « Recherche du groupe… »', (
+      tester,
+    ) async {
+      fakeGroupRepository.previewToReturn = campaignPreview;
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+      await enterFullCode(tester);
+      expect(_previewCard(), findsOneWidget);
+
+      final reread = Completer<GroupPreview>();
+      fakeGroupRepository
+        ..joinErrorToThrow = const GroupInviteFailure(
+          GroupInviteFailureKind.invalidCode,
+        )
+        ..previewCompleter = reread;
+      await _tapJoin(tester);
+      await tester.pump();
+      await tester.pump();
+
+      expect(fakeGroupRepository.joinCallCount, 1);
+      expect(fakeGroupRepository.previewCallCount, 2, reason: 'relecture');
+      expect(_previewCard(), findsNothing);
+      expect(find.text('REJOINDRE'), findsNothing);
+      expect(_previewLoading(), findsOneWidget);
+      expect(_isPrimaryButtonEnabled(tester), isFalse);
+      expect(
+        find.text("Ce code d'invitation n'est pas valide."),
+        findsOneWidget,
+      );
+
+      reread.completeError(
+        const GroupInviteFailure(GroupInviteFailureKind.invalidCode),
+      );
+      await tester.pumpAndSettle();
+      expect(_previewLoading(), findsNothing);
+      expect(_previewCard(), findsNothing);
+      expect(find.text('VOIR LE GROUPE'), findsOneWidget);
     });
 
     testWidgets('code régénéré entre l\'aperçu et le rattachement : la carte '
