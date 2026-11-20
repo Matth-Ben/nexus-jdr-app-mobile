@@ -32,6 +32,7 @@ import 'package:personnages/features/groups/domain/joined_group.dart';
 import 'package:personnages/features/groups/presentation/group_screen.dart';
 import 'package:personnages/features/groups/presentation/group_settings_screen.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
+import 'package:personnages/features/groups/presentation/widgets/group_campaign_card.dart';
 import 'package:personnages/l10n/app_localizations.dart';
 
 import '../../../support/fake_combat_repository.dart';
@@ -1423,5 +1424,49 @@ void main() {
         expect(find.text('Paramètres du groupe group-1'), findsOneWidget);
       },
     );
+  });
+
+  // Étape 4 : `groups` n'est pas diffusée en temps réel, la campagne est
+  // relue à chaque lecture du détail (ouverture, rafraîchissement).
+  testWidgets('campagne : carte dans l\'onglet Membres, titre changé dans '
+      'Grimoire visible à la relecture, retirée quand elle est dissociée', (
+    tester,
+  ) async {
+    fakeRepository.detailToReturn = ownerViewDetail().copyWith(
+      storyTitle: 'La Mine perdue',
+      storySummaryPublic: 'Phandaline est menacée.',
+    );
+    await tester.pumpWidget(_buildTestWidget(fakeRepository));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GroupCampaignCard), findsOneWidget);
+    expect(
+      find.text('Campagne\u00a0: La Mine perdue', findRichText: true),
+      findsOneWidget,
+    );
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(GroupScreen)),
+    );
+    fakeRepository.detailToReturn = ownerViewDetail().copyWith(
+      storyTitle: 'Le Dragon de Glace',
+    );
+    container.invalidate(groupDetailProvider('group-1'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Campagne\u00a0: Le Dragon de Glace', findRichText: true),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('La Mine perdue', findRichText: true),
+      findsNothing,
+    );
+
+    fakeRepository.detailToReturn = ownerViewDetail();
+    container.invalidate(groupDetailProvider('group-1'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GroupCampaignCard), findsNothing);
   });
 }

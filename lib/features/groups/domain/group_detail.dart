@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'group_campaign_label.dart';
 import 'group_member.dart';
 import 'group_role.dart';
 
@@ -19,9 +20,35 @@ abstract class GroupDetail with _$GroupDetail {
     required String inviteCode,
     required String currentUserId,
     required List<GroupMember> members,
+
+    /// `groups.story_title` brut : titre de la campagne associée, écrit par
+    /// Grimoire. `null` : aucune campagne (ou colonne absente de DeepCore).
+    String? storyTitle,
+
+    /// `groups.story_summary_public` brut : résumé public de la campagne,
+    /// lisible par les membres seulement. `null` : aucun résumé.
+    String? storySummaryPublic,
   }) = _GroupDetail;
 
   bool get isOwner => ownerId == currentUserId;
+
+  /// Titre affiché par la carte « Campagne » : `null` sans campagne ou
+  /// s'il répète le nom du groupe (voir [GroupCampaignLabel.displayedTitle]).
+  String? get campaignTitle => GroupCampaignLabel.displayedTitle(
+    storyTitle: storyTitle,
+    groupName: name,
+  );
+
+  /// Résumé affiché par la carte « Campagne » : `null` s'il est vide ou
+  /// sans titre (voir [GroupCampaignLabel.displayedSummary]).
+  String? get campaignSummary => GroupCampaignLabel.displayedSummary(
+    storyTitle: storyTitle,
+    storySummary: storySummaryPublic,
+  );
+
+  /// Carte « Campagne » affichée : un titre à montrer, ou à défaut un résumé
+  /// (titre identique au nom du groupe, décision n° 36).
+  bool get hasCampaignCard => campaignTitle != null || campaignSummary != null;
 
   /// `null` si le joueur connecté n'est plus membre de ce groupe (ne devrait
   /// pas arriver en pratique tant que cet écran reste ouvert : la RLS ne

@@ -1,5 +1,8 @@
 import '../../combat/presentation/providers/character_combat_provider.dart';
 
+import 'dart:async';
+
+import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,7 +20,9 @@ import '../../characters/domain/character_failure.dart';
 import '../../characters/domain/character_summary.dart';
 import '../../characters/presentation/providers/character_providers.dart';
 import '../domain/group_invite_failure.dart';
+import '../domain/group_preview.dart';
 import 'providers/group_providers.dart';
+import 'widgets/group_campaign_card.dart';
 import '../../characters/presentation/character_failure_l10n.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -33,6 +38,8 @@ const int _rawCodeMinLength = 6;
 
 const String _genericJoinErrorMessage =
     'Impossible de rejoindre ce groupe. Réessayez.';
+
+const String _invalidCodeMessage = "Ce code d'invitation n'est pas valide.";
 
 /// Écran unique "REJOINDRE UN GROUPE", route `/groups/join` — recettage
 /// direction-artistique du 13/09/2026 (`docs/cahier-des-charges/
@@ -62,8 +69,9 @@ const String _genericJoinErrorMessage =
 /// encore choisi par l'edge function `preview-group-invite`, même remarque
 /// que l'ancienne étape 2/3), puis le rattachement par
 /// `GroupRepository.joinGroup` (peut, lui, lever les 4 natures d'échec). Les
-/// deux appels sont maintenant orchestrés l'un après l'autre par [_submit]
-/// plutôt que répartis sur 2 routes séparées.
+/// deux appels sont orchestrés ([_loadPreview], [_join]) sur ce seul écran
+/// plutôt que répartis sur 2 routes séparées (voir « Aperçu avant de
+/// rejoindre » ci-dessous).
 ///
 /// **Affichage des erreurs, 2 canaux distincts** (spec de la tâche) :
 /// - code invalide (`GroupInviteFailureKind.invalidCode`, qu'il vienne de
@@ -76,6 +84,24 @@ const String _genericJoinErrorMessage =
 /// - tout le reste (`alreadyInGroup`/`mjAlreadyAssigned`/`generic`, échec
 ///   réseau) → [AlertBanner] en tête d'écran, même composant que l'ancienne
 ///   étape 3/3.
+///
+/// **Aperçu avant de rejoindre** (étape 4, décisions n° 33, 34 et 36 du
+/// 19/11/2026) : une carte sous le champ code ([_GroupInvitePreviewCard])
+/// montre le nom du groupe, son nombre de membres et le titre de sa
+/// campagne (jamais le résumé). Un code complet ([_rawCodeLength]
+/// caractères, la longueur de tous les codes générés) est prévisualisé dès sa
+/// saisie (`groupInvitePreviewProvider`, en ligne seulement), avec un état
+/// « Recherche du groupe… » ([_GroupInvitePreviewLoading]) ; un code
+/// invalide s'affiche aussitôt sous le champ, une erreur réseau seulement au
+/// toucher du bouton. Le bouton principal ne rattache qu'à un groupe dont la
+/// carte est affichée (« Rejoindre ») : sinon il s'intitule « Voir le
+/// groupe » et charge l'aperçu (même validation du code et mêmes canaux
+/// d'erreur qu'avant), sans voile ; le joueur confirme ensuite. Garde-fous
+/// (relecture de code de la PR #304) : bouton inactif pendant l'aperçu
+/// automatique, action et clé du bouton tirées de ce qui est affiché (un
+/// appui en cours est annulé quand le bouton change de rôle), « Rejoindre »
+/// inactif pendant [kDoubleTapTimeout] après l'affichage de la carte, carte
+/// masquée pendant toute relecture de l'aperçu.
 class GroupJoinScreen extends ConsumerStatefulWidget {
   const GroupJoinScreen({this.initialCode, super.key});
 
@@ -94,17 +120,50 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
   String? _selectedCharacterId;
   bool _joinAsGameMaster = false;
   bool _isJoining = false;
+
+  /// Aperçu demandé par « Voir le groupe » en cours ([_loadPreview]) : mêmes
+  /// verrous que [_isJoining], mais sans voile (rien n'est rattaché).
+  bool _isLoadingPreview = false;
   String? _codeErrorMessage;
   String? _bannerMessage;
 
+  /// Code incomplet (6 ou 7 caractères) dont le joueur a demandé l'aperçu en
+  /// touchant « Voir le groupe » ; un code complet est prévisualisé d'office.
+  String? _requestedPreviewCode;
+
+  /// Garde en vie l'aperçu demandé par [_loadPreview] (provider
+  /// `autoDispose`) pendant l'attente, avant que `build` ne l'écoute.
+  /// Fermé automatiquement au démontage de l'écran.
+  ProviderSubscription<AsyncValue<GroupPreview>>? _previewSubscription;
+
+  /// Code dont la carte d'aperçu est affichée (`null` sans carte) : repère sa
+  /// première apparition pour [_joinGuarded].
+  String? _shownPreviewCode;
+
+  /// Vrai dès la première apparition de la carte d'un code, puis pendant
+  /// [kDoubleTapTimeout] après son affichage ([_joinGuardTimer]) :
+  /// « Rejoindre » est alors inactif (et ignoré), pour qu'un double toucher
+  /// sur « Voir le groupe » ne rejoigne pas le groupe (relecture de code de
+  /// la PR #304). L'état visuel du bouton suit la garde.
+  bool _joinGuarded = false;
+
+  /// Lève [_joinGuarded] (avec `setState`) [kDoubleTapTimeout] après
+  /// l'affichage de la carte. Annulé au démontage.
+  Timer? _joinGuardTimer;
+
   @override
   void dispose() {
+    _joinGuardTimer?.cancel();
     _codeController.dispose();
     super.dispose();
   }
 
+  /// Rattachement ou aperçu demandé en cours : champ, rôle, bouton et retour
+  /// verrouillés.
+  bool get _isBusy => _isJoining || _isLoadingPreview;
+
   void _goBack() {
-    if (_isJoining) return;
+    if (_isBusy) return;
     if (context.canPop()) {
       context.pop();
     } else {
@@ -113,6 +172,42 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
   }
 
   String get _rawCurrentCode => _rawCode(_codeController.text);
+
+  /// Code dont l'aperçu est chargé et affiché sous le champ : le code saisi
+  /// s'il est complet, ou s'il est celui que le joueur a demandé
+  /// ([_requestedPreviewCode]) ; `null` sinon.
+  String? get _previewCode {
+    final code = _rawCurrentCode;
+    if (code.length == _rawCodeLength || code == _requestedPreviewCode) {
+      return code;
+    }
+    return null;
+  }
+
+  /// Note la première apparition de la carte de [previewCode] (appelé par
+  /// `build` avec ce qui est affiché) : [_joinGuarded] passe à vrai pour
+  /// cette image, et [_joinGuardTimer] n'est armé qu'une fois l'image
+  /// affichée (`addPostFrameCallback`). Sans carte, le repère et la garde
+  /// sont effacés : une carte qui réapparaît réarme la garde.
+  void _trackShownPreview(String? previewCode, {required bool shown}) {
+    if (!shown) {
+      _shownPreviewCode = null;
+      _joinGuarded = false;
+      _joinGuardTimer?.cancel();
+      return;
+    }
+    if (previewCode == _shownPreviewCode) return;
+    _shownPreviewCode = previewCode;
+    _joinGuarded = true;
+    _joinGuardTimer?.cancel();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _shownPreviewCode != previewCode) return;
+      _joinGuardTimer?.cancel();
+      _joinGuardTimer = Timer(kDoubleTapTimeout, () {
+        if (mounted) setState(() => _joinGuarded = false);
+      });
+    });
+  }
 
   /// Auto-sélectionne le premier personnage de [characters] tant qu'aucun
   /// personnage n'a été explicitement choisi — comportement hérité, inchangé
@@ -126,7 +221,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
   }
 
   void _selectCharacter(String characterId) {
-    if (_isJoining) return;
+    if (_isBusy) return;
     setState(() {
       _selectedCharacterId = characterId;
       _joinAsGameMaster = false;
@@ -136,7 +231,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
   /// Sélectionne le rôle "MJ — sans personnage" — mutuellement exclusif avec
   /// [_selectCharacter] (voir la doc de classe).
   void _selectGameMaster() {
-    if (_isJoining) return;
+    if (_isBusy) return;
     setState(() {
       _joinAsGameMaster = true;
       _selectedCharacterId = null;
@@ -229,55 +324,39 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
     );
   }
 
-  /// `true` si le bouton "Rejoindre" peut être activé — **jamais gaté par
+  /// `true` si le bouton principal (« Voir le groupe » ou « Rejoindre ») peut
+  /// être activé — **jamais gaté par
   /// l'état de [charactersAsync] quand [_joinAsGameMaster] est vrai** (voir
-  /// la doc de classe).
-  bool _canSubmit(AsyncValue<List<CharacterSummary>> charactersAsync) {
-    if (_isJoining) return false;
+  /// la doc de classe). Faux pendant l'aperçu automatique
+  /// ([isPreviewLoading], « Recherche du groupe… ») : un toucher ne doit pas
+  /// croiser la réponse (relecture de code de la PR #304).
+  bool _canSubmit(
+    AsyncValue<List<CharacterSummary>> charactersAsync, {
+    required bool isPreviewLoading,
+  }) {
+    if (_isBusy || isPreviewLoading) return false;
     if (_rawCurrentCode.length < _rawCodeMinLength) return false;
     if (_joinAsGameMaster) return true;
     final characters = charactersAsync.value;
     return characters != null && _selectedCharacter(characters) != null;
   }
 
-  /// Enchaîne `previewGroupInvite` (validation/résolution du code) puis
-  /// `joinGroup` (rattachement) — voir la documentation de classe pour le
-  /// détail de la migration et le routage des 2 canaux d'erreur.
-  Future<void> _submit(List<CharacterSummary> characters) async {
-    final code = _rawCurrentCode;
+  /// « Rejoindre » : `joinGroup` pour [code], dont la carte d'aperçu est
+  /// affichée (l'action est choisie par `build` d'après ce qui est affiché,
+  /// décision n° 34 : le joueur voit le groupe, puis confirme). Ignoré pendant
+  /// [kDoubleTapTimeout] après l'affichage de la carte ([_joinGuarded], le
+  /// bouton est alors inactif). Voir la documentation de classe pour le
+  /// routage des 2 canaux d'erreur.
+  Future<void> _join(String code, List<CharacterSummary> characters) async {
     final character = _joinAsGameMaster ? null : _selectedCharacter(characters);
     final hasRole = _joinAsGameMaster || character != null;
-    if (code.length < _rawCodeMinLength || !hasRole || _isJoining) {
-      return;
-    }
+    if (!hasRole || _isBusy || _joinGuarded) return;
 
     setState(() {
       _isJoining = true;
       _codeErrorMessage = null;
       _bannerMessage = null;
     });
-
-    try {
-      await ref.read(groupRepositoryProvider).previewGroupInvite(code);
-    } on GroupInviteFailure catch (failure) {
-      if (!mounted) return;
-      setState(() {
-        _isJoining = false;
-        if (failure.kind == GroupInviteFailureKind.invalidCode) {
-          _codeErrorMessage = "Ce code d'invitation n'est pas valide.";
-        } else {
-          _bannerMessage = _genericJoinErrorMessage;
-        }
-      });
-      return;
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _isJoining = false;
-        _bannerMessage = _genericJoinErrorMessage;
-      });
-      return;
-    }
 
     try {
       final result = await ref
@@ -294,7 +373,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
         _isJoining = false;
         switch (failure.kind) {
           case GroupInviteFailureKind.invalidCode:
-            _codeErrorMessage = "Ce code d'invitation n'est pas valide.";
+            _codeErrorMessage = _invalidCodeMessage;
           case GroupInviteFailureKind.alreadyInGroup:
             _bannerMessage = 'Ce personnage est déjà membre de ce groupe.';
           case GroupInviteFailureKind.mjAlreadyAssigned:
@@ -303,6 +382,12 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
             _bannerMessage = _genericJoinErrorMessage;
         }
       });
+      // Code régénéré entre l'aperçu et la jonction : relit l'aperçu, pour
+      // que la carte de l'ancien groupe ne reste pas affichée avec
+      // « Rejoindre » (relecture de code de la PR #304).
+      if (failure.kind == GroupInviteFailureKind.invalidCode) {
+        ref.invalidate(groupInvitePreviewProvider(code: code), asReload: true);
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -310,6 +395,63 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
         _bannerMessage = _genericJoinErrorMessage;
       });
     }
+  }
+
+  /// « Voir le groupe » : charge l'aperçu de [code] (`preview-group-invite`,
+  /// qui valide aussi le code) sans rejoindre ni voile (le bouton montre son
+  /// indicateur, la zone de l'aperçu « Recherche du groupe… ») ; la carte
+  /// apparaît sous le champ et le joueur confirme par « Rejoindre ». Aperçu
+  /// en cours : attendu ; en échec : relancé. Mêmes canaux d'erreur qu'avant
+  /// l'étape 4 (code invalide sous le champ, tout le reste en bandeau).
+  Future<void> _loadPreview(String code) async {
+    if (_isBusy) return;
+    final provider = groupInvitePreviewProvider(code: code);
+    setState(() {
+      _isLoadingPreview = true;
+      _codeErrorMessage = null;
+      _bannerMessage = null;
+      _requestedPreviewCode = code;
+    });
+    _previewSubscription?.close();
+    final subscription = ref.listenManual(provider, (_, _) {});
+    _previewSubscription = subscription;
+
+    String? codeError;
+    String? banner;
+    try {
+      // Aperçu automatique en échec : relancé (la lecture qui suit attend le
+      // nouvel appel). En cours : la lecture attend l'appel déjà lancé.
+      if (subscription.read().hasError) {
+        ref.invalidate(provider, asReload: true);
+      }
+      await ref.read(provider.future);
+    } on GroupInviteFailure catch (failure) {
+      if (failure.kind == GroupInviteFailureKind.invalidCode) {
+        codeError = _invalidCodeMessage;
+      } else {
+        banner = _genericJoinErrorMessage;
+      }
+    } catch (_) {
+      banner = _genericJoinErrorMessage;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isLoadingPreview = false;
+      _codeErrorMessage = codeError;
+      _bannerMessage = banner;
+    });
+  }
+
+  /// Erreur « code invalide » de l'aperçu automatique, connue sans toucher le
+  /// bouton : affichée aussitôt sous le champ. Les autres échecs (réseau)
+  /// restent silencieux jusqu'au toucher de « Voir le groupe ». Rien pendant
+  /// une relance en cours.
+  static bool _isInvalidCodeError(AsyncValue<GroupPreview>? previewAsync) {
+    if (previewAsync == null || previewAsync.isLoading) return false;
+    final error = previewAsync.error;
+    return error is GroupInviteFailure &&
+        error.kind == GroupInviteFailureKind.invalidCode;
   }
 
   @override
@@ -320,6 +462,30 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
         ? null
         : (characters != null ? _selectedCharacter(characters) : null);
     final hasResolvedEmptyList = characters != null && characters.isEmpty;
+    final l10n = AppLocalizations.of(context)!;
+    final previewCode = _previewCode;
+    final previewAsync = previewCode == null
+        ? null
+        : ref.watch(groupInvitePreviewProvider(code: previewCode));
+    // Seulement un aperçu établi : pendant une relecture (code régénéré, voir
+    // [_join] ; Riverpod garde alors l'ancienne valeur, `isLoading` vrai) ou
+    // après son échec, l'ancienne carte n'est plus montrée. Cette valeur
+    // décide seule de la carte, du libellé et de l'action du bouton.
+    final preview =
+        previewAsync is AsyncData<GroupPreview> && !previewAsync.isLoading
+        ? previewAsync.value
+        : null;
+    final isPreviewLoading =
+        preview == null && (previewAsync?.isLoading ?? false);
+    final codeErrorMessage =
+        _codeErrorMessage ??
+        (_isInvalidCodeError(previewAsync) ? _invalidCodeMessage : null);
+    _trackShownPreview(previewCode, shown: preview != null);
+    final code = _rawCurrentCode;
+    final canSubmit = _canSubmit(
+      charactersAsync,
+      isPreviewLoading: isPreviewLoading,
+    );
 
     return Scaffold(
       body: Stack(
@@ -353,12 +519,25 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
                         const SizedBox(height: AppSpacing.xs),
                         _CodeField(
                           controller: _codeController,
-                          enabled: !_isJoining,
-                          onChanged: (_) => setState(() {}),
+                          enabled: !_isBusy,
+                          // Code modifié : l'erreur de code et le bandeau
+                          // portaient sur l'ancien code (sinon ils
+                          // resteraient à côté de l'aperçu du nouveau).
+                          onChanged: (_) => setState(() {
+                            _codeErrorMessage = null;
+                            _bannerMessage = null;
+                          }),
                         ),
-                        if (_codeErrorMessage != null) ...[
+                        if (codeErrorMessage != null) ...[
                           const SizedBox(height: AppSpacing.xs),
-                          _CodeErrorHint(message: _codeErrorMessage!),
+                          _CodeErrorHint(message: codeErrorMessage),
+                        ],
+                        if (preview != null) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          _GroupInvitePreviewCard(preview: preview),
+                        ] else if (isPreviewLoading) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          const _GroupInvitePreviewLoading(),
                         ],
                         const SizedBox(height: AppSpacing.lg),
                         const _SectionLabel(
@@ -384,7 +563,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
                           character: selectedCharacter,
                           isGameMaster: _joinAsGameMaster,
                           hasResolvedEmptyList: hasResolvedEmptyList,
-                          enabled: !_isJoining,
+                          enabled: !_isBusy,
                           onTap: () => _openRolePicker(charactersAsync),
                         ),
                       ],
@@ -401,13 +580,28 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
                     AppSpacing.lg,
                     AppSpacing.lg,
                   ),
+                  // Décision n° 34 : rejoindre seulement un groupe vu. Rôle
+                  // et action choisis d'après ce qui est affiché ; la clé
+                  // change avec le rôle (et avec le code du groupe affiché) :
+                  // un appui commencé sur « Voir le groupe » est annulé si le
+                  // bouton devient « Rejoindre » avant que le doigt se lève
+                  // (relecture de code de la PR #304).
                   child: PrimaryButton(
-                    label: 'Rejoindre',
-                    isLoading: _isJoining,
-                    onPressed: _canSubmit(charactersAsync)
-                        ? () =>
-                              _submit(characters ?? const <CharacterSummary>[])
-                        : null,
+                    key: ValueKey(
+                      preview == null ? 'see' : 'join-$previewCode',
+                    ),
+                    label: preview == null
+                        ? l10n.groupJoinSeeGroupAction
+                        : l10n.groupJoinAction,
+                    isLoading: _isBusy,
+                    onPressed: !canSubmit || (preview != null && _joinGuarded)
+                        ? null
+                        : preview == null
+                        ? () => _loadPreview(code)
+                        : () => _join(
+                            code,
+                            characters ?? const <CharacterSummary>[],
+                          ),
                   ),
                 ),
               ),
@@ -507,6 +701,12 @@ class _CodeErrorHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Annoncé par le lecteur d'écran : l'erreur peut apparaître seule, sans
+    // toucher, via l'aperçu automatique (relecture de code de la PR #304).
+    return Semantics(liveRegion: true, container: true, child: _buildContent());
+  }
+
+  Widget _buildContent() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -530,13 +730,127 @@ class _CodeErrorHint extends StatelessWidget {
   }
 }
 
+/// Carte d'aperçu du groupe visé par le code (décision n° 34) : nom, nombre
+/// de membres, puis « Campagne : … » sans icône (décision n° 33 : le titre
+/// seul, jamais le résumé), omis sans campagne ou si le titre répète le nom
+/// du groupe (décision n° 36, [GroupPreview.campaignTitle]). Même encadré
+/// que [_RoleSelectorTile]. `liveRegion` : son apparition est annoncée par
+/// le lecteur d'écran.
+class _GroupInvitePreviewCard extends StatelessWidget {
+  const _GroupInvitePreviewCard({required this.preview});
+
+  final GroupPreview preview;
+
+  @override
+  Widget build(BuildContext context) {
+    final campaignTitle = preview.campaignTitle;
+
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: _PreviewFrame(
+        key: const ValueKey('groupInvitePreviewCard'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              preview.name,
+              style: AppTypography.body(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            Text(
+              AppLocalizations.of(context)!
+                  .groupInvitePreviewMemberCount(preview.memberCount),
+              style: AppTypography.body(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            if (campaignTitle != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              // Variante compacte : ne concurrence pas le nom du groupe.
+              GroupCampaignTitleText.compact(title: campaignTitle),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Chargement de l'aperçu (revue direction-artistique de la PR #304) : même
+/// emplacement et même encadré que [_GroupInvitePreviewCard], indicateur
+/// 16×16 et « Recherche du groupe… », annoncé par le lecteur d'écran.
+class _GroupInvitePreviewLoading extends StatelessWidget {
+  const _GroupInvitePreviewLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: _PreviewFrame(
+        key: const ValueKey('groupInvitePreviewLoading'),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.woodMedium,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                AppLocalizations.of(context)!.groupInvitePreviewLoading,
+                style: AppTypography.body(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Encadré commun de l'aperçu et de son chargement : même encadré que
+/// [_RoleSelectorTile] (`parchmentCard`, bordure `woodLight`, `AppRadius.md`).
+class _PreviewFrame extends StatelessWidget {
+  const _PreviewFrame({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.parchmentCard,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
+      ),
+      child: child,
+    );
+  }
+}
+
 /// Tuile affichant le rôle actuellement sélectionné : le personnage choisi
 /// (portrait, nom, "Race · Classe · Niv. X"), le rôle "MJ — sans personnage"
 /// si [isGameMaster], ou un état neutre selon que [character] est `null`
 /// parce que rien n'est encore résolu (placeholder générique) ou parce que
 /// la liste de personnages est confirmée vide ([hasResolvedEmptyList]).
 ///
-/// **Toujours tappable** ([enabled] ne dépend que de `!_isJoining`, jamais
+/// **Toujours tappable** ([enabled] ne dépend que de `!_isBusy`, jamais
 /// de l'état de `charactersProvider`) — voir la doc de classe de
 /// [GroupJoinScreen] pour le rationale du correctif. Tap ouvre "CHOISIR TON
 /// RÔLE" (voir `GroupJoinScreen._openRolePicker`).
@@ -918,9 +1232,10 @@ class _RadioIndicator extends StatelessWidget {
 
 /// Overlay de rattachement en cours — calque exact de l'ancien
 /// `_JoinSavingOverlay` (`group_join_character_step_screen.dart`, retiré par
-/// cette tâche), affiché pendant `previewGroupInvite` ET `joinGroup` (les 2
-/// appels de [_GroupJoinScreenState._submit]) : le joueur n'a pas besoin de
-/// distinguer les 2 phases, le libellé reste générique.
+/// cette tâche), affiché pendant `joinGroup` seulement : l'aperçu (« Voir le
+/// groupe », `previewGroupInvite`) ne rattache rien et n'a pas de voile, son
+/// attente se lit sur le bouton et dans la zone de l'aperçu (revue
+/// direction-artistique de la PR #304).
 class _JoinSavingOverlay extends StatelessWidget {
   const _JoinSavingOverlay();
 
