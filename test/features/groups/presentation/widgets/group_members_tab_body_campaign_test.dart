@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/theme/app_spacing.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/features/groups/domain/group_member.dart';
 import 'package:personnages/features/groups/domain/group_role.dart';
@@ -104,6 +105,15 @@ Finder _titleLine() => find.textContaining(_title, findRichText: true);
 
 Finder _summaryToggle() => find.byKey(const ValueKey('groupCampaignSummary'));
 
+/// « Mis à jour en direct » est le premier élément de la liste : son haut est
+/// exactement à la marge intérieure de la liste (`AppSpacing.lg`) du haut de
+/// la `ListView`, donc aucun espace n'est laissé à la place de la carte.
+void _expectLiveIndicatorAtListTop(WidgetTester tester) {
+  final listTop = tester.getTopLeft(find.byType(ListView)).dy;
+  final indicatorTop = tester.getTopLeft(find.text('Mis à jour en direct')).dy;
+  expect(indicatorTop - listTop, AppSpacing.lg);
+}
+
 Future<void> _expandSummary(WidgetTester tester) async {
   await tester.ensureVisible(find.text('Résumé de la campagne'));
   await tester.pumpAndSettle();
@@ -162,12 +172,10 @@ void main() {
   testWidgets('sans campagne : ni carte ni espace, « Mis à jour en direct » '
       'reste en tête', (tester) async {
     await _pump(tester, _detail());
-    final withoutCampaignTop = tester
-        .getTopLeft(find.text('Mis à jour en direct'))
-        .dy;
 
     expect(find.byType(GroupCampaignCard), findsNothing);
     expect(find.textContaining('Campagne', findRichText: true), findsNothing);
+    _expectLiveIndicatorAtListTop(tester);
 
     await _pump(tester, _detail(storySummaryPublic: _summary));
     expect(
@@ -175,10 +183,7 @@ void main() {
       findsNothing,
       reason: 'un résumé sans titre ne s\'affiche pas',
     );
-    expect(
-      tester.getTopLeft(find.text('Mis à jour en direct')).dy,
-      withoutCampaignTop,
-    );
+    _expectLiveIndicatorAtListTop(tester);
   });
 
   testWidgets('titre identique au nom du groupe avec un résumé : pas de '
@@ -203,6 +208,7 @@ void main() {
     await _pump(tester, _detail(storyTitle: _groupName));
 
     expect(find.byType(GroupCampaignCard), findsNothing);
+    _expectLiveIndicatorAtListTop(tester);
   });
 
   testWidgets('sans résumé : titre seul, aucune section repliable', (

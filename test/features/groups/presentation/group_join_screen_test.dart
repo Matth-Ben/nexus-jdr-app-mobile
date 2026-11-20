@@ -1580,6 +1580,85 @@ void main() {
       expect(find.text('Autre groupe'), findsOneWidget);
     });
 
+    testWidgets('pluriel : « 0 membre » en français (0 relève du singulier)', (
+      tester,
+    ) async {
+      fakeGroupRepository.previewToReturn = const GroupPreview(
+        name: 'Groupe vide',
+        memberCount: 0,
+      );
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+
+      await enterFullCode(tester);
+
+      expect(find.text('0 membre'), findsOneWidget);
+      expect(find.text('1 membre'), findsNothing);
+    });
+
+    testWidgets('pluriel : « 1 member » en anglais', (tester) async {
+      fakeGroupRepository.previewToReturn = const GroupPreview(
+        name: 'Les Lames',
+        memberCount: 1,
+      );
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          groupRepository: fakeGroupRepository,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await enterFullCode(tester);
+
+      expect(find.text('1 member'), findsOneWidget);
+    });
+
+    testWidgets('carte du groupe A affichée, puis code complet du groupe B '
+        'dont l\'aperçu est en attente : le bouton ne rejoint ni A ni B', (
+      tester,
+    ) async {
+      fakeGroupRepository.previewToReturn = campaignPreview;
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+      await enterFullCode(tester);
+      expect(
+        find.descendant(of: _previewCard(), matching: find.text('Les Lames')),
+        findsOneWidget,
+      );
+      expect(find.text('REJOINDRE'), findsOneWidget);
+
+      final groupB = Completer<GroupPreview>();
+      fakeGroupRepository.previewCompleter = groupB;
+      await tester.enterText(find.byType(TextField), 'zz9988xx');
+      await tester.pump();
+
+      expect(_previewCard(), findsNothing, reason: 'jamais la carte de A');
+      expect(_previewLoading(), findsOneWidget);
+      expect(find.text('VOIR LE GROUPE'), findsOneWidget);
+
+      await tester.tap(find.text('VOIR LE GROUPE'));
+      await tester.pump();
+      expect(fakeGroupRepository.joinCallCount, 0);
+      expect(find.text('Rattachement au groupe...'), findsNothing);
+
+      groupB.complete(const GroupPreview(name: 'Groupe B', memberCount: 2));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(of: _previewCard(), matching: find.text('Groupe B')),
+        findsOneWidget,
+      );
+      expect(fakeGroupRepository.joinCallCount, 0);
+      expect(fakeGroupRepository.previewedCodes, ['AB3F7K2M', 'ZZ9988XX']);
+
+      await tester.tap(find.text('REJOINDRE'));
+      await tester.pumpAndSettle();
+      expect(fakeGroupRepository.joinCallCount, 1);
+      expect(fakeGroupRepository.lastJoinedCode, 'ZZ9988XX');
+    });
+
     testWidgets('libellé du bouton : « Voir le groupe » tant que la carte '
         'n\'est pas affichée, « Rejoindre » ensuite', (tester) async {
       fakeGroupRepository.previewToReturn = campaignPreview;

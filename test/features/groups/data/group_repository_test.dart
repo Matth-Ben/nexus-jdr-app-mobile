@@ -745,6 +745,30 @@ void main() {
         expect(detail.hasCampaignCard, isFalse);
       });
 
+      test('aucune ligne (groupe supprimé ou RLS) : groupNotFound, requête '
+          'limitée à une ligne', () async {
+        final requests = <http.Request>[];
+        final client = await _buildSignedInFakeClient(
+          ownerId: ownerId,
+          onRequest: requests.add,
+        );
+
+        await expectLater(
+          SupabaseGroupRepository(client).fetchGroupDetail(groupId),
+          throwsA(
+            isA<GroupFailure>().having(
+              (f) => f.code,
+              'code',
+              GroupErrorCode.groupNotFound,
+            ),
+          ),
+        );
+        final groupRequests = requests.where(isGroupsRequest).toList();
+        expect(groupRequests, hasLength(1));
+        expect(groupRequests.single.url.queryParameters['limit'], '1');
+        expect(groupRequests.single.url.queryParameters['id'], 'eq.$groupId');
+      });
+
       test('colonnes absentes de la réponse : null, sans erreur', () async {
         final client = await _buildSignedInFakeClient(
           ownerId: ownerId,
