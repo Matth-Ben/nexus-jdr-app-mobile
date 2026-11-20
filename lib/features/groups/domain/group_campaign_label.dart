@@ -19,6 +19,8 @@ abstract final class GroupCampaignLabel {
 
   static final RegExp _edgeBlanks = RegExp('^$_blank+|$_blank+\$');
 
+  static final RegExp _blankRuns = RegExp('$_blank+');
+
   static final RegExp _carriageReturns = RegExp(r'\r\n?');
 
   /// [raw] rogné, ou `null` s'il est absent ou ne contient que des blancs.
@@ -29,7 +31,11 @@ abstract final class GroupCampaignLabel {
   }
 
   /// Titre à afficher pour le groupe [groupName] : `null` sans campagne, ou
-  /// quand le titre répète le nom du groupe (décision n° 36).
+  /// quand le titre répète le nom du groupe (décision n° 36). Comparaison
+  /// sans tenir compte de la casse ni de la forme des blancs (toute suite de
+  /// blancs de [_blank] vaut une espace : « Les  Lames » égale « Les
+  /// Lames ») ; le titre affiché, lui, est inchangé. Pas de normalisation
+  /// Unicode (NFC) : elle demanderait une dépendance de plus.
   static String? displayedTitle({
     required String? storyTitle,
     required String groupName,
@@ -37,8 +43,13 @@ abstract final class GroupCampaignLabel {
     final title = clean(storyTitle);
     if (title == null) return null;
     final name = clean(groupName) ?? '';
-    return title.toLowerCase() == name.toLowerCase() ? null : title;
+    return _comparable(title) == _comparable(name) ? null : title;
   }
+
+  /// Forme de comparaison : suites de blancs ramenées à une espace, casse
+  /// ignorée.
+  static String _comparable(String text) =>
+      text.replaceAll(_blankRuns, ' ').toLowerCase();
 
   /// Résumé à afficher : `null` s'il est vide ou s'il n'y a pas de titre
   /// (même identique au nom du groupe, le titre reste requis). Les retours à

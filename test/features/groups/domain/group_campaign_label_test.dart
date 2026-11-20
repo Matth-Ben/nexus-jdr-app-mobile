@@ -59,6 +59,39 @@ void main() {
       );
     });
 
+    test('suites de blancs ramenées à une espace pour la comparaison, titre '
+        'affiché inchangé', () {
+      expect(
+        GroupCampaignLabel.displayedTitle(
+          storyTitle: 'Les  Lames',
+          groupName: 'Les Lames',
+        ),
+        isNull,
+      );
+      expect(
+        GroupCampaignLabel.displayedTitle(
+          storyTitle: 'Les\u00a0\u200bLames',
+          groupName: 'les\tlames',
+        ),
+        isNull,
+      );
+      expect(
+        GroupCampaignLabel.displayedTitle(
+          storyTitle: 'La  Mine\u00a0perdue',
+          groupName: 'Les Lames',
+        ),
+        'La  Mine\u00a0perdue',
+      );
+      expect(
+        GroupCampaignLabel.displayedTitle(
+          storyTitle: 'LesLames',
+          groupName: 'Les Lames',
+        ),
+        'LesLames',
+        reason: 'une espace manquante reste une différence',
+      );
+    });
+
     test('titre qui contient le nom sans lui être identique : affiché', () {
       expect(
         GroupCampaignLabel.displayedTitle(
