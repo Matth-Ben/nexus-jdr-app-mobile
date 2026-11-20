@@ -168,6 +168,10 @@ où ils le contredisent. Les tickets Project #7 portent la même numérotation (
     Groupe (aujourd'hui en erreur sans réseau) devient un ticket séparé.
 36. **Titre identique au nom du groupe** (cas fréquent, « Générer un groupe » reprend le titre) : la ligne « Campagne : … »
     n'est pas répétée ; le résumé public reste affiché s'il existe.
+37. **Deux armures ou deux boucliers équipés** (étape 5, 20/11/2026) : Nexus **empêche** d'équiper une seconde armure ou un
+    second bouclier ; pour une fiche qui en aurait déjà deux, la **meilleure CA** s'applique, dans Nexus comme dans le calcul
+    SQL de DeepCore (0 fiche concernée en production au 20/11). Le reste du calcul SQL de la CA reproduit Nexus **tel quel**
+    (« la fiche mobile fait foi »), écarts RAW compris (D234), à corriger plus tard des deux côtés en même temps.
 
 **Abandonné** par rapport aux propositions de `05`/`09` : tables `adventure_*`, bucket d'images d'histoire,
 `generate_group_from_story`, `groups.adventure_id`, `game_events`, `combat_npc_state`, `add_monsters`, `revealed`,
