@@ -68,6 +68,10 @@ enum CharacterErrorCode {
   /// Un autre bouclier est déjà équipé : un seul à la fois (décision n° 37).
   shieldAlreadyEquipped,
 
+  /// Un objet personnalisé équipé ne change pas de type (règle P7, vérifiée
+  /// aussi par le dépôt, voir `domain/custom_item_edit_rules.dart`).
+  customItemKindChangeBlocked,
+
   /// Tout le reste : code Postgrest non mappé explicitement, ou erreur sans
   /// code exploitable, ou `CharacterFailure` construite directement par un
   /// appelant qui ne précise pas [code]. [CharacterFailure.message] reste

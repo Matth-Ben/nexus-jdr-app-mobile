@@ -39,6 +39,8 @@ extension CharacterFailureL10n on CharacterFailure {
         return l10n.characterArmorAlreadyEquippedErrorMessage;
       case CharacterErrorCode.shieldAlreadyEquipped:
         return l10n.characterShieldAlreadyEquippedErrorMessage;
+      case CharacterErrorCode.customItemKindChangeBlocked:
+        return l10n.customItemKindChangeBlockedEquipped;
       case CharacterErrorCode.generic:
         return message;
     }

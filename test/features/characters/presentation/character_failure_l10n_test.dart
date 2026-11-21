@@ -79,6 +79,10 @@ void main() {
             'un autre.',
         "You're already using a shield: unequip it first to equip another.",
       ),
+      CharacterErrorCode.customItemKindChangeBlocked: (
+        "Déséquipez l'objet avant de changer son type",
+        'Unequip the item before changing its type',
+      ),
     };
 
     test('chaque code (hors generic) a un texte FR et EN attendu', () {

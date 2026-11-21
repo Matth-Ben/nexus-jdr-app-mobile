@@ -157,6 +157,11 @@ class FakeRepository implements CharacterRepository {
     setEquippedCallOrder.add(inventoryId);
     lastInventoryId = inventoryId;
     lastEquipped = equipped;
+    final failure = failNextSetEquipped;
+    if (failure != null) {
+      failNextSetEquipped = null;
+      throw failure;
+    }
     if (outcomeToReturn == WriteOutcome.rejectedOffline) return outcomeToReturn;
     current = current.copyWith(
       inventory: [
@@ -188,6 +193,11 @@ class FakeRepository implements CharacterRepository {
     );
     return outcomeToReturn;
   }
+
+  /// Échec levé par le *prochain* appel à [setInventoryItemEquipped]
+  /// (consommé après usage) — simule le refus du dépôt quand la vérification
+  /// de l'écran est passée (course, décision n° 37).
+  CharacterFailure? failNextSetEquipped;
 
   /// Fait échouer le *prochain* appel à [equipWeaponToSlot] (consommé après
   /// usage) — simule un échec réseau une fois la séquence de déséquipement
@@ -1793,6 +1803,30 @@ void main() {
       expect(find.text(shieldMessage), findsOneWidget);
       expect(repository.setEquippedCallCount, 0);
       expect(isEquipped(repository, 'inv-egide'), isFalse);
+    });
+
+    testWidgets('T3 : vérification de l\'écran passée mais refus du dépôt '
+        '(course) : la SnackBar affiche le message TRADUIT, jamais le texte '
+        'brut', (tester) async {
+      final repository = await pumpDetail(
+        tester,
+        initialDetail: detail.copyWith(inventory: [leather]),
+      );
+      repository.failNextSetEquipped = const CharacterFailure(
+        'brut serveur',
+        code: CharacterErrorCode.armorAlreadyEquipped,
+      );
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Armure de cuir'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Équiper'));
+      await tester.pumpAndSettle();
+
+      expect(repository.setEquippedCallCount, 1, reason: 'écran passé');
+      expect(find.text(armorMessage), findsOneWidget);
+      expect(find.text('brut serveur'), findsNothing);
+      expect(isEquipped(repository, 'inv-cuir'), isFalse);
     });
 
     testWidgets('une armure et un bouclier ensemble : équipement permis', (

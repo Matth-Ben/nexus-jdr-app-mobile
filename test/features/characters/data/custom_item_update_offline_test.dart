@@ -209,6 +209,9 @@ void main() {
 
     test('armure -> arme : custom_ac_base et custom_armor_category '
         'envoyés à NULL (jamais omis)', () async {
+      // P7 (vérifiée aussi par le dépôt depuis la décision n° 37) : un objet
+      // équipé ne change pas de type ; le joueur le déséquipe d'abord.
+      rows.single['equipped'] = false;
       await reopen();
 
       await update(
@@ -357,6 +360,9 @@ void main() {
     test(
       'hors ligne, armure -> arme : la superposition n\'a plus de CA',
       () async {
+        // P7 (vérifiée aussi par le dépôt depuis la décision n° 37) : un
+        // objet équipé ne change pas de type ; le joueur le déséquipe d'abord.
+        rows.single['equipped'] = false;
         await reopen();
         goOffline();
 
@@ -377,6 +383,9 @@ void main() {
 
     test('une 2e modification REMPLACE la 1re : une seule ligne en file, '
         'une seule requête au rejeu, dernière écriture gagnante', () async {
+      // P7 (vérifiée aussi par le dépôt depuis la décision n° 37) : un objet
+      // équipé ne change pas de type ; le joueur le déséquipe d'abord.
+      rows.single['equipped'] = false;
       await reopen();
       goOffline();
       await update(_heavyArmor, name: 'Première');
@@ -407,6 +416,9 @@ void main() {
     test(
       'rejeu : UPDATE avec NULL explicites, cache de la fiche à jour',
       () async {
+        // P7 (vérifiée aussi par le dépôt depuis la décision n° 37) : un
+        // objet équipé ne change pas de type ; le joueur le déséquipe d'abord.
+        rows.single['equipped'] = false;
         await reopen();
         goOffline();
         await update(

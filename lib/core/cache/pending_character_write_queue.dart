@@ -306,8 +306,22 @@ class PendingCharacterWriteQueue {
     required PendingCharacterWriteKind kind,
     required String targetId,
     required Future<T> Function() action,
-  }) async {
-    final key = '$characterId|${kind.storageKey}|$targetId';
+  }) => _runExclusive('$characterId|${kind.storageKey}|$targetId', action);
+
+  /// Exécute [action] en exclusivité pour un **périmètre** [scope] couvrant
+  /// plusieurs cibles d'un même personnage (ex. les emplacements d'armure et
+  /// de bouclier, décision n° 37 : deux objets différents qui ne doivent pas
+  /// être équipés en même temps). Même FIFO que [runExclusive], clé distincte
+  /// (`#` ne commence jamais un `storageKey`) : n'attend jamais un verrou de
+  /// [runExclusive], et inversement. Non réentrant : l'appelant ne doit jamais
+  /// reprendre le même périmètre dans [action].
+  Future<T> runExclusiveScope<T>({
+    required String characterId,
+    required String scope,
+    required Future<T> Function() action,
+  }) => _runExclusive('$characterId|#$scope', action);
+
+  Future<T> _runExclusive<T>(String key, Future<T> Function() action) async {
     final previous = _writeLocks[key];
     final gate = Completer<void>();
     _writeLocks[key] = gate.future;

@@ -418,4 +418,208 @@ void main() {
       expect(await equip('inv-cuir'), WriteOutcome.queued);
     });
   });
+
+  // T1 (relecture QA de la PR #305) : deux équipements CONCURRENTS de deux
+  // objets différents. Le verrou de la ligne ne suffit pas (une ligne chacun) :
+  // sans le verrou des emplacements du personnage, les deux lisent un
+  // emplacement libre et passent (`[synced, synced]` / `[queued, queued]`).
+  group('T1 : équipements concurrents (Future.wait)', () {
+    Future<Object> attempt(Future<WriteOutcome> call) async {
+      try {
+        return await call;
+      } on CharacterFailure catch (failure) {
+        return failure;
+      }
+    }
+
+    void expectOneWinner(
+      List<Object> results,
+      WriteOutcome success,
+      CharacterErrorCode refusal,
+    ) {
+      expect(results.whereType<WriteOutcome>().toList(), [success]);
+      expect(
+        results.whereType<CharacterFailure>().map((f) => f.code).toList(),
+        [refusal],
+      );
+    }
+
+    for (final (label, ids, code) in [
+      (
+        'deux armures',
+        ['inv-cotte', 'inv-plate'],
+        CharacterErrorCode.armorAlreadyEquipped,
+      ),
+      (
+        'deux boucliers',
+        ['inv-bouclier', 'inv-egide'],
+        CharacterErrorCode.shieldAlreadyEquipped,
+      ),
+    ]) {
+      test('$label en ligne : exactement un succès et un refus, une seule '
+          'ligne équipée en base', () async {
+        await setUpServer(chainMailEquipped: false);
+        await reopen();
+
+        final results = await Future.wait([
+          for (final id in ids) attempt(equip(id)),
+        ]);
+
+        expectOneWinner(results, WriteOutcome.synced, code);
+        expect(ids.where((id) => row(id)['equipped'] == true), hasLength(1));
+        expect(inventoryWrites(), hasLength(1));
+        expect(await queue.allForOwner(_ownerA), isEmpty);
+      });
+
+      test('$label hors ligne : exactement un succès et un refus, une seule '
+          'ligne en file', () async {
+        await setUpServer(chainMailEquipped: false);
+        await reopen();
+        goOffline();
+
+        final results = await Future.wait([
+          for (final id in ids) attempt(equip(id)),
+        ]);
+
+        expectOneWinner(results, WriteOutcome.queued, code);
+        final lines = await queued(PendingCharacterWriteKind.inventoryState);
+        expect(lines, hasLength(1));
+        expect(ids, contains(lines.single.targetId));
+        final detail = await reopen();
+        expect(
+          detail.inventory.where((i) => ids.contains(i.id) && i.equipped),
+          hasLength(1),
+        );
+      });
+    }
+  });
+
+  // T2 (relecture QA de la PR #305) : la modification d'un objet personnalisé
+  // ÉQUIPÉ ne doit pas en faire une seconde armure. Identifiants UUID :
+  // `updateCustomInventoryItem` les exige.
+  group('T2 : modification d\'un objet personnalisé équipé', () {
+    const weaponId = '33333333-3333-4333-8333-333333333333';
+    const legacyArmorId = '44444444-4444-4444-8444-444444444444';
+    const heavyArmor = CustomItemEnrichment(
+      kind: CustomItemKinds.armor,
+      acBase: 18,
+      armorCategory: CustomArmorCategories.heavy,
+    );
+
+    Map<String, dynamic> equippedWeapon() => {
+      'id': weaponId,
+      'character_id': _characterId,
+      'item_id': null,
+      'custom_name': 'Épée runique',
+      'quantity': 1,
+      'equipped': true,
+      'weapon_slot': 'principal',
+      'is_attuned': false,
+      'custom_kind': CustomItemKinds.weapon,
+      'custom_damage_dice': '1d8',
+      'custom_damage_type': 'tranchant',
+    };
+
+    // Ancienne armure personnalisée sans catégorie (avant la contrainte de
+    // DeepCore) : équipée mais hors CA, faute de propriétés d'armure.
+    Map<String, dynamic> equippedLegacyArmor() => _customRow(
+      legacyArmorId,
+      kind: CustomItemKinds.armor,
+      acBase: 15,
+      equipped: true,
+    );
+
+    Future<WriteOutcome> update(String id, CustomItemEnrichment enrichment) =>
+        repository.updateCustomInventoryItem(
+          characterId: _characterId,
+          inventoryId: id,
+          customName: 'Modifié',
+          enrichment: enrichment,
+        );
+
+    for (final offline in [false, true]) {
+      final mode = offline ? 'hors ligne' : 'en ligne';
+
+      test('$mode : arme équipée transformée en armure lourde 18 alors '
+          'qu\'une cotte est équipée -> refus (P7), rien écrit ni en '
+          'file', () async {
+        rows.add(equippedWeapon());
+        await reopen();
+        if (offline) goOffline();
+
+        await expectLater(
+          update(weaponId, heavyArmor),
+          _refused(CharacterErrorCode.customItemKindChangeBlocked),
+        );
+
+        expect(inventoryWrites(), isEmpty);
+        expect(await queue.allForOwner(_ownerA), isEmpty);
+        expect(row(weaponId)['custom_kind'], CustomItemKinds.weapon);
+        if (offline) goOnline();
+        expect((await reopen()).armorClass, 16);
+      });
+
+      test('$mode : armure équipée sans catégorie qui en reçoit une alors '
+          'qu\'une cotte est équipée -> refus armorAlreadyEquipped, rien '
+          'écrit ni en file', () async {
+        rows.add(equippedLegacyArmor());
+        await reopen();
+        if (offline) goOffline();
+
+        await expectLater(
+          update(
+            legacyArmorId,
+            const CustomItemEnrichment(
+              kind: CustomItemKinds.armor,
+              acBase: 15,
+              armorCategory: CustomArmorCategories.heavy,
+            ),
+          ),
+          _refused(CharacterErrorCode.armorAlreadyEquipped),
+        );
+
+        expect(inventoryWrites(), isEmpty);
+        expect(await queue.allForOwner(_ownerA), isEmpty);
+        expect(row(legacyArmorId)['custom_armor_category'], isNull);
+      });
+    }
+
+    test('même armure sans catégorie, cotte NON équipée : modification '
+        'permise', () async {
+      await setUpServer(chainMailEquipped: false);
+      rows.add(equippedLegacyArmor());
+      await reopen();
+
+      expect(
+        await update(
+          legacyArmorId,
+          const CustomItemEnrichment(
+            kind: CustomItemKinds.armor,
+            acBase: 15,
+            armorCategory: CustomArmorCategories.heavy,
+          ),
+        ),
+        WriteOutcome.synced,
+      );
+      expect((await reopen()).armorClass, 15);
+    });
+
+    test('armure personnalisée équipée seule : la modifier sans changer de '
+        'type reste permis', () async {
+      await setUpServer(chainMailEquipped: false);
+      rows.add(
+        _customRow(
+          legacyArmorId,
+          kind: CustomItemKinds.armor,
+          acBase: 16,
+          category: CustomArmorCategories.heavy,
+          equipped: true,
+        ),
+      );
+      await reopen();
+
+      expect(await update(legacyArmorId, heavyArmor), WriteOutcome.synced);
+      expect((await reopen()).armorClass, 18);
+    });
+  });
 }
