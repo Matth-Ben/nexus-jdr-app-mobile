@@ -14,6 +14,7 @@ import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/features/groups/domain/group_member.dart';
 import 'package:personnages/features/groups/domain/group_role.dart';
 import 'package:personnages/features/groups/presentation/widgets/group_members_tab_body.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 import '../../../../core/widgets/display_scale_helpers.dart';
 
@@ -88,7 +89,15 @@ Future<void> _pump(WidgetTester tester, GroupDetail detail) async {
       ),
     ],
   );
-  await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+  await tester.pumpWidget(
+    MaterialApp.router(
+      // « Exclure » est localisé (D232).
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('fr'),
+      routerConfig: router,
+    ),
+  );
   await tester.pumpAndSettle();
 }
 

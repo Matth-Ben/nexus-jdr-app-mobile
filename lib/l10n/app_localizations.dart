@@ -7763,6 +7763,24 @@ abstract class AppLocalizations {
   /// **'Ce groupe a déjà un MJ sans personnage.'**
   String get groupJoinGameMasterAlreadyAssignedError;
 
+  /// Texte du lien « Exclure » en pied de la carte d'un membre, à partir de la taille de texte ×1,4 (onglet Membres, D232). Le lecteur d'écran lit `groupMemberRemoveLabel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure'**
+  String get groupMemberRemoveAction;
+
+  /// Libellé du lecteur d'écran et info-bulle de la commande qui exclut un membre du groupe (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure {name}'**
+  String groupMemberRemoveLabel(String name);
+
+  /// Libellé du lecteur d'écran de la commande « Exclure » désactivée pendant l'exclusion du membre (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclusion de {name} en cours'**
+  String groupMemberRemoveInProgress(String name);
+
   /// `CharacterCreationErrorCode.accessDenied` (D141).
   ///
   /// In fr, this message translates to:

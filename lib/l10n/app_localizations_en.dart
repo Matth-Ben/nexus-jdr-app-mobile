@@ -4783,6 +4783,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'This group already has a GM without a character.';
 
   @override
+  String get groupMemberRemoveAction => 'Remove';
+
+  @override
+  String groupMemberRemoveLabel(String name) {
+    return 'Remove $name';
+  }
+
+  @override
+  String groupMemberRemoveInProgress(String name) {
+    return 'Removing $name';
+  }
+
+  @override
   String get creationAccessDeniedErrorMessage =>
       'You don\'t have access to this action.';
 

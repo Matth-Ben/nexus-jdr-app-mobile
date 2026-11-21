@@ -6367,6 +6367,28 @@
   "@groupJoinGameMasterAlreadyAssignedError": {
     "description": "Rattachement en MJ refusé : le groupe a déjà un MJ sans personnage (bandeau, écran « Rejoindre un groupe », D233)."
   },
+  "groupMemberRemoveAction": "Exclure",
+  "@groupMemberRemoveAction": {
+    "description": "Texte du lien « Exclure » en pied de la carte d'un membre, à partir de la taille de texte ×1,4 (onglet Membres, D232). Le lecteur d'écran lit `groupMemberRemoveLabel`."
+  },
+  "groupMemberRemoveLabel": "Exclure {name}",
+  "@groupMemberRemoveLabel": {
+    "description": "Libellé du lecteur d'écran et info-bulle de la commande qui exclut un membre du groupe (onglet Membres, D232).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupMemberRemoveInProgress": "Exclusion de {name} en cours",
+  "@groupMemberRemoveInProgress": {
+    "description": "Libellé du lecteur d'écran de la commande « Exclure » désactivée pendant l'exclusion du membre (onglet Membres, D232).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "creationAccessDeniedErrorMessage": "Vous n'avez pas accès à cette action.",
   "@creationAccessDeniedErrorMessage": {
     "description": "`CharacterCreationErrorCode.accessDenied` (D141)."

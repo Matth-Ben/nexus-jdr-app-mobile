@@ -255,16 +255,11 @@ void main() {
     expect(longSummary.runes.length, 500);
     expect('\n'.allMatches(longSummary).length, greaterThanOrEqualTo(8));
 
-    // Le joueur seul dans son groupe : la carte d'un coéquipier que le
-    // propriétaire peut exclure déborde déjà à ×3,0 sur 320 dp, sans
-    // campagne (ligne PV à côté du bouton « Exclure », hors périmètre).
+    // Avec un coéquipier que le propriétaire peut exclure : sa carte ne
+    // déborde plus à ×3,0 sur 320 dp (D232).
     await _pump(
       tester,
-      _detail(
-        storyTitle: longTitle,
-        storySummaryPublic: longSummary,
-        members: const [_me],
-      ),
+      _detail(storyTitle: longTitle, storySummaryPublic: longSummary),
       scale: 3,
       surface: const Size(320, 640),
     );

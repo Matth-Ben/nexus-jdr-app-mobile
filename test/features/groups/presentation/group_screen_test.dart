@@ -64,6 +64,10 @@ class _FakeGroupRepository implements GroupRepository {
   Object? removeMemberError;
   String? lastRemovedUserId;
 
+  /// Exclusion en attente (D232) : `removeMember` ne se termine qu'à sa
+  /// complétion.
+  Completer<void>? removeMemberCompleter;
+
   bool leaveGroupCalled = false;
   Object? leaveGroupError;
 
@@ -136,6 +140,7 @@ class _FakeGroupRepository implements GroupRepository {
     required String userId,
   }) async {
     lastRemovedUserId = userId;
+    if (removeMemberCompleter != null) await removeMemberCompleter!.future;
     if (removeMemberError != null) throw removeMemberError!;
   }
 
@@ -641,6 +646,83 @@ void main() {
         expect(find.textContaining('exclu du groupe'), findsOneWidget);
       },
     );
+
+    // D232 : aucun retour visuel pendant l'exclusion jusqu'ici.
+    for (final fails in [false, true]) {
+      testWidgets(
+        'exclusion en cours : « Exclure » désactivé avec indicateur '
+        'et libellé dédié, rétabli à la fin (${fails ? 'échec' : 'succès'})',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          fakeRepository
+            ..detailToReturn = ownerViewDetail()
+            ..removeMemberCompleter = Completer<void>()
+            ..removeMemberError = fails ? Exception('réseau') : null;
+
+          await tester.pumpWidget(_buildTestWidget(fakeRepository));
+          await tester.pumpAndSettle();
+
+          final borgan = find.byKey(const ValueKey('removeMember-user-2'));
+          final ithil = find.byKey(const ValueKey('removeMember-user-3'));
+          await tester.tap(borgan);
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Exclure'));
+          await tester.pump();
+          await tester.pump();
+
+          expect(
+            find.descendant(
+              of: borgan,
+              matching: find.byType(CircularProgressIndicator),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(
+              of: borgan,
+              matching: find.byIcon(Icons.person_remove_outlined),
+            ),
+            findsNothing,
+          );
+          expect(
+            tester.getSemantics(borgan),
+            isSemantics(
+              label: 'Exclusion de Borgan en cours',
+              isButton: true,
+              hasEnabledState: true,
+              isEnabled: false,
+            ),
+          );
+          // L'autre membre reste excluable.
+          expect(
+            tester.getSemantics(ithil),
+            isSemantics(
+              label: 'Exclure Ithil',
+              isButton: true,
+              hasEnabledState: true,
+              isEnabled: true,
+              hasTapAction: true,
+            ),
+          );
+
+          fakeRepository.removeMemberCompleter!.complete();
+          await tester.pumpAndSettle();
+
+          expect(find.byType(CircularProgressIndicator), findsNothing);
+          expect(
+            tester.getSemantics(borgan),
+            isSemantics(
+              label: 'Exclure Borgan',
+              isButton: true,
+              hasEnabledState: true,
+              isEnabled: true,
+              hasTapAction: true,
+            ),
+          );
+          handle.dispose();
+        },
+      );
+    }
   });
 
   group('Exclure un membre : message de confirmation distinct selon la nature '

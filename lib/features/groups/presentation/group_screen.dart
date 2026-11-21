@@ -80,6 +80,10 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
   bool _isWritingTreasure = false;
   bool _leaveInFlight = false;
 
+  /// Membre dont l'exclusion est en cours (D232) : transmis à l'onglet
+  /// Membres, qui désactive sa commande « Exclure » et montre un indicateur.
+  String? _removingUserId;
+
   void _goBack() {
     if (context.canPop()) {
       context.pop();
@@ -177,6 +181,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     );
     if (confirmed != true || !mounted) return;
 
+    setState(() => _removingUserId = member.userId);
     try {
       await ref
           .read(groupRepositoryProvider)
@@ -188,6 +193,11 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       _showSnackBar(failure.localized(context));
     } catch (_) {
       _showSnackBar("Impossible d'exclure ce membre. Réessayez.");
+    } finally {
+      // Seulement si une autre exclusion n'a pas pris le relais entre-temps.
+      if (mounted && _removingUserId == member.userId) {
+        setState(() => _removingUserId = null);
+      }
     }
   }
 
@@ -485,6 +495,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       GroupTab.members => GroupMembersTabBody(
         detail: detail,
         onRemoveMember: _confirmRemoveMember,
+        removingUserId: _removingUserId,
         onLeaveGroup: () => _confirmLeaveGroup(detail),
         combatSection: StartCombatSection(
           detail: detail,

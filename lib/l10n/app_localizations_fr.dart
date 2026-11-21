@@ -4828,6 +4828,19 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ce groupe a déjà un MJ sans personnage.';
 
   @override
+  String get groupMemberRemoveAction => 'Exclure';
+
+  @override
+  String groupMemberRemoveLabel(String name) {
+    return 'Exclure $name';
+  }
+
+  @override
+  String groupMemberRemoveInProgress(String name) {
+    return 'Exclusion de $name en cours';
+  }
+
+  @override
   String get creationAccessDeniedErrorMessage =>
       'Vous n\'avez pas accès à cette action.';
 
