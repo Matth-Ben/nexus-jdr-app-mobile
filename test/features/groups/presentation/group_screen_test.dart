@@ -344,6 +344,7 @@ GoRouter _buildTestRouter({bool realSettings = false}) {
 Widget _buildTestWidget(
   _FakeGroupRepository repository, {
   bool realSettings = false,
+  Locale locale = const Locale('fr'),
 }) {
   return ProviderScope(
     overrides: [
@@ -357,7 +358,7 @@ Widget _buildTestWidget(
       routerConfig: _buildTestRouter(realSettings: realSettings),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('fr'),
+      locale: locale,
     ),
   );
 }
@@ -687,7 +688,7 @@ void main() {
           expect(
             tester.getSemantics(borgan),
             isSemantics(
-              label: 'Exclusion de Borgan en cours',
+              label: 'Borgan : exclusion en cours',
               isButton: true,
               hasEnabledState: true,
               isEnabled: false,
@@ -722,6 +723,54 @@ void main() {
           handle.dispose();
         },
       );
+    }
+
+    // Messages de fin d'exclusion localisés, au tutoiement (D232).
+    test('messages d\'exclusion au tutoiement en français', () {
+      final fr = lookupAppLocalizations(const Locale('fr'));
+      expect(
+        fr.groupMemberRemovedSuccess('Borgan'),
+        'Borgan a été exclu du groupe.',
+      );
+      expect(
+        fr.groupMemberRemoveGenericError,
+        "Impossible d'exclure ce membre. Réessaie.",
+      );
+    });
+
+    for (final locale in const [Locale('fr'), Locale('en')]) {
+      final l10n = lookupAppLocalizations(locale);
+      for (final fails in [false, true]) {
+        testWidgets('[${locale.languageCode}] fin d\'exclusion '
+            '(${fails ? 'échec' : 'succès'}) : message de sa clé', (
+          tester,
+        ) async {
+          fakeRepository
+            ..detailToReturn = ownerViewDetail()
+            ..removeMemberError = fails ? Exception('réseau') : null;
+
+          await tester.pumpWidget(
+            _buildTestWidget(fakeRepository, locale: locale),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.byKey(const ValueKey('removeMember-user-2')));
+          await tester.pumpAndSettle();
+          // Bouton de confirmation de la boîte (texte encore en dur, hors
+          // périmètre) : le dernier bouton affiché.
+          await tester.tap(find.text('Exclure').last);
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(
+              fails
+                  ? l10n.groupMemberRemoveGenericError
+                  : l10n.groupMemberRemovedSuccess('Borgan'),
+            ),
+            findsOneWidget,
+          );
+        });
+      }
     }
   });
 

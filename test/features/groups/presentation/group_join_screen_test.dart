@@ -893,7 +893,7 @@ void main() {
       await _tapJoin(tester);
       await tester.pump();
 
-      expect(find.text('Rattachement au groupe...'), findsOneWidget);
+      expect(find.text('Rattachement au groupe…'), findsOneWidget);
 
       fakeGroupRepository.joinCompleter!.complete(
         const JoinedGroup(groupId: 'group-1', name: 'Les Lames'),
@@ -1302,7 +1302,7 @@ void main() {
       expect(_isPrimaryButtonEnabled(tester), isFalse);
       await tester.tap(find.text('VOIR LE GROUPE'), warnIfMissed: false);
       await tester.pump();
-      expect(find.text('Rattachement au groupe...'), findsNothing);
+      expect(find.text('Rattachement au groupe…'), findsNothing);
       expect(_previewLoading(), findsOneWidget);
 
       fakeGroupRepository.previewCompleter!.complete(campaignPreview);
@@ -1350,7 +1350,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(fakeGroupRepository.joinCallCount, 0);
-      expect(find.text('Rattachement au groupe...'), findsNothing);
+      expect(find.text('Rattachement au groupe…'), findsNothing);
       expect(_previewCard(), findsOneWidget);
     });
 
@@ -1406,7 +1406,7 @@ void main() {
       await tester.tap(find.text('REJOINDRE'));
       await tester.pump();
       expect(fakeGroupRepository.joinCallCount, 0);
-      expect(find.text('Rattachement au groupe...'), findsNothing);
+      expect(find.text('Rattachement au groupe…'), findsNothing);
 
       // L'expiration reconstruit l'écran : le bouton redevient actif seul.
       await tester.pump(const Duration(milliseconds: 150));
@@ -1547,7 +1547,7 @@ void main() {
 
       await tester.tap(find.text('VOIR LE GROUPE'));
       await tester.pump();
-      expect(find.text('Rattachement au groupe...'), findsNothing);
+      expect(find.text('Rattachement au groupe…'), findsNothing);
       expect(_isPrimaryButtonLoading(tester), isTrue);
       expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
       expect(_previewLoading(), findsOneWidget);
@@ -1559,7 +1559,7 @@ void main() {
       fakeGroupRepository.joinCompleter = Completer<JoinedGroup>();
       await _tapJoin(tester);
       await tester.pump();
-      expect(find.text('Rattachement au groupe...'), findsOneWidget);
+      expect(find.text('Rattachement au groupe…'), findsOneWidget);
 
       fakeGroupRepository.joinCompleter!.complete(
         const JoinedGroup(groupId: 'group-1', name: 'Les Lames'),
@@ -1868,7 +1868,7 @@ void main() {
       await tester.tap(find.text('VOIR LE GROUPE'));
       await tester.pump();
       expect(fakeGroupRepository.joinCallCount, 0);
-      expect(find.text('Rattachement au groupe...'), findsNothing);
+      expect(find.text('Rattachement au groupe…'), findsNothing);
 
       groupB.complete(const GroupPreview(name: 'Groupe B', memberCount: 2));
       await tester.pumpAndSettle();

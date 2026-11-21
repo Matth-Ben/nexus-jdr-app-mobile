@@ -7667,10 +7667,10 @@ abstract class AppLocalizations {
   /// **'REJOINDRE UN GROUPE'**
   String get groupJoinTitle;
 
-  /// Texte d'introduction de l'écran « Rejoindre un groupe » (D233). Tutoiement ; « vous » désigne le groupe que le personnage rejoint.
+  /// Texte d'introduction de l'écran « Rejoindre un groupe » (D233). Tutoiement.
   ///
   /// In fr, this message translates to:
-  /// **'Demande le code d\'invitation à un membre du groupe, puis choisis le personnage qui vous rejoindra.'**
+  /// **'Demande le code d\'invitation à un membre du groupe, puis choisis le personnage qui rejoindra le groupe.'**
   String get groupJoinIntro;
 
   /// Libellé de section au-dessus du champ du code (écran « Rejoindre un groupe », D233).
@@ -7736,7 +7736,7 @@ abstract class AppLocalizations {
   /// Voile affiché pendant le rattachement au groupe (écran « Rejoindre un groupe », D233).
   ///
   /// In fr, this message translates to:
-  /// **'Rattachement au groupe...'**
+  /// **'Rattachement au groupe…'**
   String get groupJoinInProgress;
 
   /// Code invalide, à l'aperçu ou au rattachement : texte d'aide sous le champ du code (écran « Rejoindre un groupe », D233).
@@ -7775,11 +7775,23 @@ abstract class AppLocalizations {
   /// **'Exclure {name}'**
   String groupMemberRemoveLabel(String name);
 
-  /// Libellé du lecteur d'écran de la commande « Exclure » désactivée pendant l'exclusion du membre (onglet Membres, D232).
+  /// Libellé du lecteur d'écran de la commande « Exclure » désactivée pendant l'exclusion du membre (onglet Membres, D232). Nom en tête : évite « de Eldrin ».
   ///
   /// In fr, this message translates to:
-  /// **'Exclusion de {name} en cours'**
+  /// **'{name} : exclusion en cours'**
   String groupMemberRemoveInProgress(String name);
+
+  /// Message après l'exclusion d'un membre par le propriétaire (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a été exclu du groupe.'**
+  String groupMemberRemovedSuccess(String name);
+
+  /// Échec non reconnu de l'exclusion d'un membre (onglet Membres, D232). Tutoiement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'exclure ce membre. Réessaie.'**
+  String get groupMemberRemoveGenericError;
 
   /// `CharacterCreationErrorCode.accessDenied` (D141).
   ///

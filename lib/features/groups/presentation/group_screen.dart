@@ -188,11 +188,16 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
           .removeMember(groupId: widget.groupId, userId: member.userId);
       ref.invalidate(groupDetailProvider(widget.groupId));
       if (!mounted) return;
-      _showSnackBar('${member.name} a été exclu du groupe.');
+      _showSnackBar(
+        AppLocalizations.of(context)!.groupMemberRemovedSuccess(member.name),
+      );
     } on GroupFailure catch (failure) {
       _showSnackBar(failure.localized(context));
     } catch (_) {
-      _showSnackBar("Impossible d'exclure ce membre. Réessayez.");
+      if (!mounted) return;
+      _showSnackBar(
+        AppLocalizations.of(context)!.groupMemberRemoveGenericError,
+      );
     } finally {
       // Seulement si une autre exclusion n'a pas pris le relais entre-temps.
       if (mounted && _removingUserId == member.userId) {

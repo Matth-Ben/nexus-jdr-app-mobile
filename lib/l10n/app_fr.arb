@@ -6303,9 +6303,9 @@
   "@groupJoinTitle": {
     "description": "Titre de l'en-tête de l'écran « Rejoindre un groupe » (D233)."
   },
-  "groupJoinIntro": "Demande le code d'invitation à un membre du groupe, puis choisis le personnage qui vous rejoindra.",
+  "groupJoinIntro": "Demande le code d'invitation à un membre du groupe, puis choisis le personnage qui rejoindra le groupe.",
   "@groupJoinIntro": {
-    "description": "Texte d'introduction de l'écran « Rejoindre un groupe » (D233). Tutoiement ; « vous » désigne le groupe que le personnage rejoint."
+    "description": "Texte d'introduction de l'écran « Rejoindre un groupe » (D233). Tutoiement."
   },
   "groupJoinCodeLabel": "Code d'invitation",
   "@groupJoinCodeLabel": {
@@ -6347,7 +6347,7 @@
   "@groupJoinSuccess": {
     "description": "Message après un rattachement réussi (écran « Rejoindre un groupe », D233)."
   },
-  "groupJoinInProgress": "Rattachement au groupe...",
+  "groupJoinInProgress": "Rattachement au groupe…",
   "@groupJoinInProgress": {
     "description": "Voile affiché pendant le rattachement au groupe (écran « Rejoindre un groupe », D233)."
   },
@@ -6380,14 +6380,27 @@
       }
     }
   },
-  "groupMemberRemoveInProgress": "Exclusion de {name} en cours",
+  "groupMemberRemoveInProgress": "{name} : exclusion en cours",
   "@groupMemberRemoveInProgress": {
-    "description": "Libellé du lecteur d'écran de la commande « Exclure » désactivée pendant l'exclusion du membre (onglet Membres, D232).",
+    "description": "Libellé du lecteur d'écran de la commande « Exclure » désactivée pendant l'exclusion du membre (onglet Membres, D232). Nom en tête : évite « de Eldrin ».",
     "placeholders": {
       "name": {
         "type": "String"
       }
     }
+  },
+  "groupMemberRemovedSuccess": "{name} a été exclu du groupe.",
+  "@groupMemberRemovedSuccess": {
+    "description": "Message après l'exclusion d'un membre par le propriétaire (onglet Membres, D232).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupMemberRemoveGenericError": "Impossible d'exclure ce membre. Réessaie.",
+  "@groupMemberRemoveGenericError": {
+    "description": "Échec non reconnu de l'exclusion d'un membre (onglet Membres, D232). Tutoiement."
   },
   "creationAccessDeniedErrorMessage": "Vous n'avez pas accès à cette action.",
   "@creationAccessDeniedErrorMessage": {

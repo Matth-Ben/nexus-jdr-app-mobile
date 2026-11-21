@@ -813,7 +813,11 @@ class _RemoveMemberButton extends StatelessWidget {
                     style: AppTypography.body(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.accentBrick,
+                      // Désactivé pendant l'exclusion : plus en couleur
+                      // d'action.
+                      color: isRemoving
+                          ? AppColors.textMuted
+                          : AppColors.accentBrick,
                     ),
                   ),
                 ),
@@ -1090,6 +1094,8 @@ class _LeaveGroupLinkLabel extends StatelessWidget {
         Flexible(
           child: Text(
             'Quitter le groupe',
+            // Sur deux lignes à ×3,0 : centrées comme le lien.
+            textAlign: TextAlign.center,
             style: AppTypography.body(
               fontSize: 13,
               fontWeight: FontWeight.w700,

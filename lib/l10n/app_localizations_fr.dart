@@ -4772,7 +4772,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get groupJoinIntro =>
-      'Demande le code d\'invitation à un membre du groupe, puis choisis le personnage qui vous rejoindra.';
+      'Demande le code d\'invitation à un membre du groupe, puis choisis le personnage qui rejoindra le groupe.';
 
   @override
   String get groupJoinCodeLabel => 'Code d\'invitation';
@@ -4809,7 +4809,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get groupJoinSuccess => 'Groupe rejoint !';
 
   @override
-  String get groupJoinInProgress => 'Rattachement au groupe...';
+  String get groupJoinInProgress => 'Rattachement au groupe…';
 
   @override
   String get groupJoinInvalidCodeError =>
@@ -4837,8 +4837,17 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String groupMemberRemoveInProgress(String name) {
-    return 'Exclusion de $name en cours';
+    return '$name : exclusion en cours';
   }
+
+  @override
+  String groupMemberRemovedSuccess(String name) {
+    return '$name a été exclu du groupe.';
+  }
+
+  @override
+  String get groupMemberRemoveGenericError =>
+      'Impossible d\'exclure ce membre. Réessaie.';
 
   @override
   String get creationAccessDeniedErrorMessage =>

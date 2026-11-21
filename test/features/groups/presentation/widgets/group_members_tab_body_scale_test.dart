@@ -523,6 +523,39 @@ void main() {
         handle.dispose();
       });
     }
+
+    // Cartes MJ et orpheline à ×1 : bouton en haut à droite, lu après la
+    // carte (aucun état sur ces cartes).
+    testWidgets('x1.0 : cartes MJ et orpheline, « Exclure » après la carte', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await useScaledView(tester, scale: 1, width: 320, height: 6000);
+      await _pump(
+        tester,
+        _detail(ownerView: true, members: const [_owner, _gameMaster, _orphan]),
+      );
+
+      final labels = _readingOrder(tester);
+      final gameMaster = _indexOf(labels, 'MJ - Oswald');
+      expect(
+        labels[gameMaster],
+        'MJ - Oswald\nNe suit pas ses PV ici.',
+        reason: '$labels',
+      );
+      final removeGameMaster = _indexOf(labels, 'Exclure Oswald');
+      final orphan = _indexOf(labels, 'Orphée');
+      expect(
+        labels[orphan],
+        "Orphée\nEn attente d'un personnage",
+        reason: '$labels',
+      );
+      final removeOrphan = _indexOf(labels, 'Exclure Orphée');
+      expect(removeGameMaster, greaterThan(gameMaster), reason: '$labels');
+      expect(orphan, greaterThan(removeGameMaster), reason: '$labels');
+      expect(removeOrphan, greaterThan(orphan), reason: '$labels');
+      handle.dispose();
+    });
   });
 
   group('exclusion en cours', () {
@@ -563,10 +596,24 @@ void main() {
           ),
           findsNothing,
         );
+        if (scale >= 2) {
+          // Texte du lien atténué pendant l'exclusion, rouge sinon.
+          Color? linkColor(GroupMember member) => tester
+              .widget<Text>(
+                find.descendant(
+                  of: _removeButton(member),
+                  matching: find.text('Exclure'),
+                ),
+              )
+              .style
+              ?.color;
+          expect(linkColor(_hurt), AppColors.textMuted);
+          expect(linkColor(_tough), AppColors.accentBrick);
+        }
         expect(
           tester.getSemantics(button),
           isSemantics(
-            label: 'Exclusion de Eldrin en cours',
+            label: 'Eldrin : exclusion en cours',
             isButton: true,
             hasEnabledState: true,
             isEnabled: false,

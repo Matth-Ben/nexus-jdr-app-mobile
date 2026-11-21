@@ -4766,7 +4766,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupJoinSuccess => 'Group joined!';
 
   @override
-  String get groupJoinInProgress => 'Joining the group...';
+  String get groupJoinInProgress => 'Joining the group…';
 
   @override
   String get groupJoinInvalidCodeError => 'This invitation code isn\'t valid.';
@@ -4794,6 +4794,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String groupMemberRemoveInProgress(String name) {
     return 'Removing $name';
   }
+
+  @override
+  String groupMemberRemovedSuccess(String name) {
+    return '$name was removed from the group.';
+  }
+
+  @override
+  String get groupMemberRemoveGenericError =>
+      'Couldn\'t remove this member. Try again.';
 
   @override
   String get creationAccessDeniedErrorMessage =>
