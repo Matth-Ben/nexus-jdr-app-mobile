@@ -61,6 +61,13 @@ enum CharacterErrorCode {
   /// `SupabaseCharacterRepository.fetchCharacterDetail`.
   detailNotCachedOffline,
 
+  /// Une autre armure est déjà équipée : une seule à la fois (décision
+  /// n° 37, voir `domain/armor_slot_rules.dart`).
+  armorAlreadyEquipped,
+
+  /// Un autre bouclier est déjà équipé : un seul à la fois (décision n° 37).
+  shieldAlreadyEquipped,
+
   /// Tout le reste : code Postgrest non mappé explicitement, ou erreur sans
   /// code exploitable, ou `CharacterFailure` construite directement par un
   /// appelant qui ne précise pas [code]. [CharacterFailure.message] reste

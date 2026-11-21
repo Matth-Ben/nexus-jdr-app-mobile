@@ -69,6 +69,16 @@ void main() {
         'This sheet has never been opened on this device. It will be '
             'available offline after you open it once while online.',
       ),
+      CharacterErrorCode.armorAlreadyEquipped: (
+        "Vous portez déjà une armure : déséquipez-la d'abord pour en équiper "
+            'une autre.',
+        "You're already wearing armor: unequip it first to equip another.",
+      ),
+      CharacterErrorCode.shieldAlreadyEquipped: (
+        "Vous portez déjà un bouclier : déséquipez-le d'abord pour en équiper "
+            'un autre.',
+        "You're already using a shield: unequip it first to equip another.",
+      ),
     };
 
     test('chaque code (hors generic) a un texte FR et EN attendu', () {
