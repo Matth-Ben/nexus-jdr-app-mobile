@@ -233,15 +233,16 @@ void main() {
     });
   });
 
+  // Décision n° 37 (20/11/2026) : la meilleure combinaison, quel que soit
+  // l'ordre (avant : la première armure de la liste seulement).
   group('plusieurs objets', () {
-    test('deux armures équipées : la première seulement (comportement '
-        'du catalogue)', () {
+    test('deux armures équipées : la meilleure, dans les deux ordres', () {
       expect(
         _ac([
           _armor(CustomArmorCategories.light, 11, id: 'a'),
           _armor(CustomArmorCategories.heavy, 18, id: 'b'),
         ]),
-        14,
+        18,
       );
       expect(
         _ac([
@@ -252,18 +253,37 @@ void main() {
       );
     });
 
-    test('le bonus magique de la seconde armure n\'est pas compté', () {
-      expect(
-        _ac([
+    test('deux armures de même base : le bonus magique décide, compté une '
+        'seule fois', () {
+      // 16 contre 16 + 3 : la magique est retenue (19), jamais 16 + 3 + 3.
+      for (final inventory in [
+        [
           _armor(CustomArmorCategories.heavy, 16, id: 'a'),
           _armor(CustomArmorCategories.heavy, 16, id: 'b', magic: 3),
+        ],
+        [
+          _armor(CustomArmorCategories.heavy, 16, id: 'b', magic: 3),
+          _armor(CustomArmorCategories.heavy, 16, id: 'a'),
+        ],
+      ]) {
+        expect(_ac(inventory), 19);
+      }
+    });
+
+    test('armure non retenue : son bonus magique ne compte pas', () {
+      // Lourde 18 (retenue) contre lourde 14 +3 (17) : 18, pas 21.
+      expect(
+        _ac([
+          _armor(CustomArmorCategories.heavy, 14, id: 'a', magic: 3),
+          _armor(CustomArmorCategories.heavy, 18, id: 'b'),
         ]),
-        16,
+        18,
       );
     });
 
-    test('deux boucliers équipés : le premier seulement', () {
-      expect(_ac([_shield(), _shield(bonus: 5)]), 15);
+    test('deux boucliers équipés : le meilleur seulement, jamais la somme', () {
+      expect(_ac([_shield(), _shield(bonus: 5)]), 18); // 10 + 3 + 5
+      expect(_ac([_shield(bonus: 5), _shield()]), 18);
     });
 
     test('armure personnalisée + bouclier du catalogue : 11 + 3 + 2 = 16', () {

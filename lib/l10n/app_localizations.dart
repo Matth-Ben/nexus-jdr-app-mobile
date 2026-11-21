@@ -7373,6 +7373,18 @@ abstract class AppLocalizations {
   /// **'Session expirée. Reconnectez-vous.'**
   String get characterSessionExpiredErrorMessage;
 
+  /// `CharacterErrorCode.armorAlreadyEquipped` : refus d'équiper une seconde armure (décision n° 37, `domain/armor_slot_rules.dart`), en ligne comme hors ligne. Vouvoiement, comme les autres messages de l'inventaire.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous portez déjà une armure : déséquipez-la d\'abord pour en équiper une autre.'**
+  String get characterArmorAlreadyEquippedErrorMessage;
+
+  /// `CharacterErrorCode.shieldAlreadyEquipped` : refus d'équiper un second bouclier (décision n° 37), même formulation que `characterArmorAlreadyEquippedErrorMessage`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous portez déjà un bouclier : déséquipez-le d\'abord pour en équiper un autre.'**
+  String get characterShieldAlreadyEquippedErrorMessage;
+
   /// `GroupErrorCode.accessDenied` (D141).
   ///
   /// In fr, this message translates to:

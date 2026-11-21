@@ -4547,6 +4547,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Session expired. Please sign in again.';
 
   @override
+  String get characterArmorAlreadyEquippedErrorMessage =>
+      'You\'re already wearing armor: unequip it first to equip another.';
+
+  @override
+  String get characterShieldAlreadyEquippedErrorMessage =>
+      'You\'re already using a shield: unequip it first to equip another.';
+
+  @override
   String get groupAccessDeniedErrorMessage =>
       'You don\'t have access to this group.';
 

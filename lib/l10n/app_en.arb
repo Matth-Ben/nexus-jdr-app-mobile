@@ -1410,6 +1410,8 @@
   "characterNoteAlreadyDeletedErrorMessage": "This note was already deleted.",
   "characterNotOwnedErrorMessage": "This character can't be found or no longer belongs to you.",
   "characterSessionExpiredErrorMessage": "Session expired. Please sign in again.",
+  "characterArmorAlreadyEquippedErrorMessage": "You're already wearing armor: unequip it first to equip another.",
+  "characterShieldAlreadyEquippedErrorMessage": "You're already using a shield: unequip it first to equip another.",
   "groupAccessDeniedErrorMessage": "You don't have access to this group.",
   "groupNotFoundErrorMessage": "Group not found.",
   "groupSessionExpiredErrorMessage": "Session expired. Sign in again to continue.",

@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/features/characters/domain/custom_armor_properties.dart';
 import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/l10n/app_localizations.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
@@ -156,6 +157,11 @@ class FakeRepository implements CharacterRepository {
     setEquippedCallOrder.add(inventoryId);
     lastInventoryId = inventoryId;
     lastEquipped = equipped;
+    final failure = failNextSetEquipped;
+    if (failure != null) {
+      failNextSetEquipped = null;
+      throw failure;
+    }
     if (outcomeToReturn == WriteOutcome.rejectedOffline) return outcomeToReturn;
     current = current.copyWith(
       inventory: [
@@ -187,6 +193,11 @@ class FakeRepository implements CharacterRepository {
     );
     return outcomeToReturn;
   }
+
+  /// Échec levé par le *prochain* appel à [setInventoryItemEquipped]
+  /// (consommé après usage) — simule le refus du dépôt quand la vérification
+  /// de l'écran est passée (course, décision n° 37).
+  CharacterFailure? failNextSetEquipped;
 
   /// Fait échouer le *prochain* appel à [equipWeaponToSlot] (consommé après
   /// usage) — simule un échec réseau une fois la séquence de déséquipement
@@ -1666,6 +1677,209 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Déséquipé : Cotte de mailles.'), findsOneWidget);
+    });
+  });
+
+  group('décision n° 37 : une seule armure et un seul bouclier équipés', () {
+    const armorMessage =
+        "Vous portez déjà une armure : déséquipez-la d'abord pour en équiper "
+        'une autre.';
+    const shieldMessage =
+        "Vous portez déjà un bouclier : déséquipez-le d'abord pour en équiper "
+        'un autre.';
+
+    const chainMail = CharacterInventoryItem(
+      id: 'inv-cotte',
+      itemId: 104,
+      name: 'Cotte de mailles',
+      category: 'armure',
+      quantity: 1,
+      equipped: true,
+      armorProperties: CharacterInventoryArmorProperties(
+        acBase: 16,
+        acDexBonus: 'aucun',
+        stealthDisadvantage: true,
+      ),
+    );
+    const leather = CharacterInventoryItem(
+      id: 'inv-cuir',
+      itemId: 101,
+      name: 'Armure de cuir',
+      category: 'armure',
+      quantity: 1,
+      equipped: false,
+      armorProperties: CharacterInventoryArmorProperties(
+        acBase: 11,
+        acDexBonus: 'illimite',
+        stealthDisadvantage: false,
+      ),
+    );
+    CharacterInventoryItem shield({required bool equipped}) =>
+        CharacterInventoryItem(
+          id: 'inv-bouclier',
+          itemId: 106,
+          name: 'Bouclier',
+          category: 'bouclier',
+          quantity: 1,
+          equipped: equipped,
+          armorProperties: const CharacterInventoryArmorProperties(
+            acBase: 2,
+            acDexBonus: 'illimite',
+            stealthDisadvantage: false,
+          ),
+        );
+    // Bouclier personnalisé, propriétés construites comme par le mapper.
+    final customShield = CharacterInventoryItem(
+      id: 'inv-egide',
+      name: 'Égide',
+      quantity: 1,
+      equipped: false,
+      customKind: CustomItemKinds.shield,
+      customAcBase: 3,
+      armorProperties: customArmorPropertiesOf(
+        kind: CustomItemKinds.shield,
+        acBase: 3,
+        armorCategory: null,
+      ),
+    );
+
+    bool isEquipped(FakeRepository repository, String id) =>
+        repository.current.inventory.singleWhere((i) => i.id == id).equipped;
+
+    testWidgets('seconde armure (feuille d\'actions) : message, aucun '
+        'équipement effectué', (tester) async {
+      final repository = await pumpDetail(
+        tester,
+        initialDetail: detail.copyWith(inventory: [chainMail, leather]),
+      );
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Armure de cuir'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Équiper'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(armorMessage), findsOneWidget);
+      expect(repository.setEquippedCallCount, 0);
+      expect(isEquipped(repository, 'inv-cuir'), isFalse);
+      expect(isEquipped(repository, 'inv-cotte'), isTrue);
+    });
+
+    testWidgets('seconde armure (panneau « Infos ») : même refus', (
+      tester,
+    ) async {
+      final repository = await pumpDetail(
+        tester,
+        initialDetail: detail.copyWith(inventory: [chainMail, leather]),
+      );
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Armure de cuir'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Infos'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'ÉQUIPER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(armorMessage), findsOneWidget);
+      expect(repository.setEquippedCallCount, 0);
+    });
+
+    testWidgets('second bouclier (personnalisé face au catalogue) : message, '
+        'aucun équipement effectué', (tester) async {
+      final repository = await pumpDetail(
+        tester,
+        initialDetail: detail.copyWith(
+          inventory: [shield(equipped: true), customShield],
+        ),
+      );
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Égide'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Équiper'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(shieldMessage), findsOneWidget);
+      expect(repository.setEquippedCallCount, 0);
+      expect(isEquipped(repository, 'inv-egide'), isFalse);
+    });
+
+    testWidgets('T3 : vérification de l\'écran passée mais refus du dépôt '
+        '(course) : la SnackBar affiche le message TRADUIT, jamais le texte '
+        'brut', (tester) async {
+      final repository = await pumpDetail(
+        tester,
+        initialDetail: detail.copyWith(inventory: [leather]),
+      );
+      repository.failNextSetEquipped = const CharacterFailure(
+        'brut serveur',
+        code: CharacterErrorCode.armorAlreadyEquipped,
+      );
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Armure de cuir'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Équiper'));
+      await tester.pumpAndSettle();
+
+      expect(repository.setEquippedCallCount, 1, reason: 'écran passé');
+      expect(find.text(armorMessage), findsOneWidget);
+      expect(find.text('brut serveur'), findsNothing);
+      expect(isEquipped(repository, 'inv-cuir'), isFalse);
+    });
+
+    testWidgets('une armure et un bouclier ensemble : équipement permis', (
+      tester,
+    ) async {
+      final repository = await pumpDetail(
+        tester,
+        initialDetail: detail.copyWith(
+          inventory: [chainMail, shield(equipped: false)],
+        ),
+      );
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Bouclier'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Équiper'));
+      await tester.pumpAndSettle();
+
+      expect(repository.setEquippedCallCount, 1);
+      expect(repository.lastInventoryId, 'inv-bouclier');
+      expect(find.text('Équipé : Bouclier.'), findsOneWidget);
+      expect(find.text(shieldMessage), findsNothing);
+    });
+
+    testWidgets('déséquiper puis équiper l\'autre armure : permis', (
+      tester,
+    ) async {
+      final repository = await pumpDetail(
+        tester,
+        initialDetail: detail.copyWith(inventory: [chainMail, leather]),
+      );
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Cotte de mailles'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Déséquiper'));
+      await tester.pumpAndSettle();
+      expect(repository.lastEquipped, isFalse);
+      // Laisse disparaître le premier snackbar avant le second.
+      await tester.pump(const Duration(seconds: 6));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Armure de cuir'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Équiper'));
+      await tester.pumpAndSettle();
+
+      expect(repository.setEquippedCallCount, 2);
+      expect(repository.setEquippedCallOrder, ['inv-cotte', 'inv-cuir']);
+      expect(find.text('Équipé : Armure de cuir.'), findsOneWidget);
+      expect(find.text(armorMessage), findsNothing);
+      expect(isEquipped(repository, 'inv-cuir'), isTrue);
+      expect(isEquipped(repository, 'inv-cotte'), isFalse);
     });
   });
 }

@@ -6099,6 +6099,14 @@
   "@characterSessionExpiredErrorMessage": {
     "description": "`CharacterErrorCode.sessionExpired` (D141)."
   },
+  "characterArmorAlreadyEquippedErrorMessage": "Vous portez déjà une armure : déséquipez-la d'abord pour en équiper une autre.",
+  "@characterArmorAlreadyEquippedErrorMessage": {
+    "description": "`CharacterErrorCode.armorAlreadyEquipped` : refus d'équiper une seconde armure (décision n° 37, `domain/armor_slot_rules.dart`), en ligne comme hors ligne. Vouvoiement, comme les autres messages de l'inventaire."
+  },
+  "characterShieldAlreadyEquippedErrorMessage": "Vous portez déjà un bouclier : déséquipez-le d'abord pour en équiper un autre.",
+  "@characterShieldAlreadyEquippedErrorMessage": {
+    "description": "`CharacterErrorCode.shieldAlreadyEquipped` : refus d'équiper un second bouclier (décision n° 37), même formulation que `characterArmorAlreadyEquippedErrorMessage`."
+  },
   "groupAccessDeniedErrorMessage": "Vous n'avez pas accès à ce groupe.",
   "@groupAccessDeniedErrorMessage": {
     "description": "`GroupErrorCode.accessDenied` (D141)."

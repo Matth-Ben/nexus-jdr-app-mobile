@@ -17,6 +17,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
 import '../../xml_export/presentation/character_xml_export_action.dart';
 import '../data/character_repository.dart';
+import '../domain/armor_slot_rules.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
@@ -1534,15 +1535,35 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
-  /// Action "Équiper"/"Déséquiper" (sheet d'actions d'objet) : bascule
-  /// [item.equipped], aucune confirmation. Ne touche à aucun champ de
-  /// classe d'armure (n'existe nulle part dans [CharacterDetail], voir la
-  /// spec de la tâche).
+  /// Action "Équiper"/"Déséquiper" (sheet d'actions d'objet ou panneau
+  /// "Infos") : bascule [item.equipped], aucune confirmation.
+  ///
+  /// Décision n° 37 : équiper une seconde armure ou un second bouclier est
+  /// refusé ici, avant tout appel, sur la fiche affichée (état effectif, file
+  /// hors ligne comprise) — message qui invite à déséquiper l'autre d'abord,
+  /// aucune écriture. Le dépôt refait la même vérification (filet de
+  /// sécurité, voir `CharacterRepository.setInventoryItemEquipped`).
   Future<void> _toggleInventoryItemEquipped(CharacterInventoryItem item) async {
     // Capturé avant le premier `await` — voir la doc de
     // [_offlineQueuedMessage].
     final l10n = AppLocalizations.of(context)!;
     final newEquipped = !item.equipped;
+    if (newEquipped) {
+      final inventory =
+          ref
+              .read(characterDetailProvider(widget.characterId))
+              .value
+              ?.inventory ??
+          [item];
+      final conflict = ArmorSlotRules.equipConflict(
+        inventory: inventory,
+        inventoryId: item.id,
+      );
+      if (conflict != null) {
+        _showSnackBar(conflict.localizedWith(l10n));
+        return;
+      }
+    }
     setState(() => _isWritingInventory = true);
     try {
       final outcome = await ref

@@ -774,6 +774,153 @@ void main() {
     });
   });
 
+  // Décision n° 37 : verrou par personnage d'un périmètre couvrant plusieurs
+  // cibles (emplacements d'armure et de bouclier).
+  group('PendingCharacterWriteQueue.runExclusiveScope (décision n° 37)', () {
+    late AppDatabase db;
+    late PendingCharacterWriteQueue queue;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      queue = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('même personnage et même périmètre : sérialisés (FIFO), puis la clé '
+        'est retirée de la table', () async {
+      final events = <String>[];
+      final gate = Completer<void>();
+
+      final first = queue.runExclusiveScope(
+        characterId: 'char-1',
+        scope: 'armorSlots',
+        action: () async {
+          events.add('premier: debut');
+          await gate.future;
+          events.add('premier: fin');
+        },
+      );
+      await pumpEventQueue();
+      final second = queue.runExclusiveScope(
+        characterId: 'char-1',
+        scope: 'armorSlots',
+        action: () async => events.add('second'),
+      );
+      await pumpEventQueue();
+      expect(events, ['premier: debut']);
+      expect(queue.heldLockCount, 1);
+
+      gate.complete();
+      await Future.wait([first, second]);
+
+      expect(events, ['premier: debut', 'premier: fin', 'second']);
+      expect(queue.heldLockCount, 0, reason: 'clé retirée après le dernier');
+    });
+
+    test('un appel qui échoue libère le verrou, retire la clé et remonte '
+        'son erreur', () async {
+      await expectLater(
+        queue.runExclusiveScope(
+          characterId: 'char-1',
+          scope: 'armorSlots',
+          action: () async => throw Exception('échec de test'),
+        ),
+        throwsA(isA<Exception>()),
+      );
+      expect(queue.heldLockCount, 0);
+
+      final events = <String>[];
+      await queue.runExclusiveScope(
+        characterId: 'char-1',
+        scope: 'armorSlots',
+        action: () async => events.add('suivant'),
+      );
+      expect(events, ['suivant']);
+      expect(queue.heldLockCount, 0);
+    });
+
+    test(
+      'aucune collision avec runExclusive (même personnage, même chaîne '
+      'en kind/targetId), ni avec un autre personnage ou périmètre',
+      () async {
+        final events = <String>[];
+        final gate = Completer<void>();
+
+        final held = queue.runExclusiveScope(
+          characterId: 'char-1',
+          scope: 'armorSlots',
+          action: () async {
+            events.add('périmètre: debut');
+            await gate.future;
+          },
+        );
+        await pumpEventQueue();
+
+        // Aucune de ces clés ne doit attendre le périmètre tenu ci-dessus.
+        for (final kind in PendingCharacterWriteKind.values) {
+          await queue.runExclusive(
+            characterId: 'char-1',
+            kind: kind,
+            targetId: 'armorSlots',
+            action: () async => events.add(kind.storageKey),
+          );
+        }
+        await queue.runExclusiveScope(
+          characterId: 'char-2',
+          scope: 'armorSlots',
+          action: () async => events.add('autre personnage'),
+        );
+        await queue.runExclusiveScope(
+          characterId: 'char-1',
+          scope: 'autre',
+          action: () async => events.add('autre périmètre'),
+        );
+
+        expect(events, [
+          'périmètre: debut',
+          for (final kind in PendingCharacterWriteKind.values) kind.storageKey,
+          'autre personnage',
+          'autre périmètre',
+        ]);
+
+        gate.complete();
+        await held;
+        expect(queue.heldLockCount, 0);
+      },
+    );
+
+    test('runExclusive tenu : le périmètre du même personnage ne l\'attend '
+        'pas', () async {
+      final events = <String>[];
+      final gate = Completer<void>();
+
+      final held = queue.runExclusive(
+        characterId: 'char-1',
+        kind: PendingCharacterWriteKind.inventoryItem,
+        targetId: 'inv-1',
+        action: () async {
+          events.add('ligne: debut');
+          await gate.future;
+        },
+      );
+      await pumpEventQueue();
+
+      await queue.runExclusiveScope(
+        characterId: 'char-1',
+        scope: 'armorSlots',
+        action: () async => events.add('périmètre'),
+      );
+      expect(events, ['ligne: debut', 'périmètre']);
+
+      gate.complete();
+      await held;
+      expect(queue.heldLockCount, 0);
+    });
+  });
+
   // D34 : compteur d'échecs, seuil d'abandon, consommation des messages.
   group('PendingCharacterWriteQueue.recordNonRetryableFailure/'
       'consumeAbandonedMessages (D34)', () {
