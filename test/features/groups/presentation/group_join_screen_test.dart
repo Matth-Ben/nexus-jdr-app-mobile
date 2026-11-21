@@ -1975,16 +1975,31 @@ void main() {
         fr.groupJoinGameMasterAlreadyAssignedError,
         'Ce groupe a déjà un MJ sans personnage.',
       );
+      // Tous les textes de l'écran : jamais de vouvoiement.
       for (final text in [
+        fr.groupJoinTitle,
+        fr.groupJoinIntro,
+        fr.groupJoinCodeLabel,
+        fr.groupJoinRoleLabel,
+        fr.groupJoinRoleHelp,
+        fr.groupJoinRolePickerTitle,
+        fr.groupJoinGameMasterRoleTitle,
+        fr.groupJoinGameMasterRoleSubtitle,
+        fr.groupJoinNoCharacter,
+        fr.groupJoinChooseRolePlaceholder,
+        fr.groupJoinCharactersRetryButton,
+        fr.groupJoinSuccess,
+        fr.groupJoinInProgress,
         fr.groupJoinGenericError,
         fr.groupJoinInvalidCodeError,
         fr.groupJoinAlreadyInGroupError,
         fr.groupJoinGameMasterAlreadyAssignedError,
-        fr.groupJoinNoCharacter,
-        fr.groupJoinRoleHelp,
-        fr.groupJoinRoleLabel,
       ]) {
-        expect(text, isNot(matches(RegExp(r'\b(Réessayez|votre|vos)\b'))));
+        expect(
+          text,
+          isNot(matches(RegExp(r'\b(Réessayez|vous|votre|vos)\b'))),
+          reason: text,
+        );
       }
     });
 

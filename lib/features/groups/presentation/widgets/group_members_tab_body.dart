@@ -46,14 +46,14 @@ class GroupMembersTabBody extends StatelessWidget {
     required this.onRemoveMember,
     required this.onLeaveGroup,
     this.combatSection,
-    this.removingUserId,
+    this.removingUserIds = const {},
     super.key,
   });
 
-  /// Membre ([GroupMember.userId]) dont l'exclusion est en cours, fourni par
-  /// `group_screen.dart` (D232) : sa commande « Exclure » est désactivée et
-  /// montre un indicateur. `null` hors exclusion.
-  final String? removingUserId;
+  /// Membres ([GroupMember.userId]) dont l'exclusion est en cours, fournis
+  /// par `group_screen.dart` (D232) : leur commande « Exclure » est
+  /// désactivée et montre un indicateur. Vide hors exclusion.
+  final Set<String> removingUserIds;
 
   /// Entrée « Lancer un combat » / bandeau « Pas de combat sans MJ » (voir
   /// `StartCombatSection`), fournie par `group_screen.dart` pour que cet
@@ -156,7 +156,7 @@ class GroupMembersTabBody extends StatelessWidget {
                         : '/groups/${detail.id}/members/${member.characterId}',
                   ),
             canRemove: detail.isOwner && member.userId != detail.currentUserId,
-            isRemoving: member.userId == removingUserId,
+            isRemoving: removingUserIds.contains(member.userId),
             onRemove: () => onRemoveMember(member),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -704,9 +704,9 @@ class _MemberCard extends StatelessWidget {
 /// nom, ou, en grande taille de texte ([asLink]), lien de pied de carte calqué
 /// sur [_LeaveGroupLink] (icône 24, écart `xs`, « Exclure » en `body`
 /// 13/700 `accentBrick`, cible d'au moins 48×48). Lecteur d'écran :
-/// « Exclure {nom} », ou « Exclusion de {nom} en cours » pendant
-/// l'exclusion ([isRemoving]) : commande désactivée, indicateur de 20 dp à la
-/// place de l'icône, sans changer l'emprise.
+/// « Exclure {nom} », ou « {nom} : exclusion en cours » pendant l'exclusion
+/// ([isRemoving]) : commande désactivée (texte du lien en `textMuted`),
+/// indicateur de 20 dp à la place de l'icône, sans changer l'emprise.
 class _RemoveMemberButton extends StatelessWidget {
   const _RemoveMemberButton({
     required this.memberName,

@@ -80,9 +80,12 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
   bool _isWritingTreasure = false;
   bool _leaveInFlight = false;
 
-  /// Membre dont l'exclusion est en cours (D232) : transmis à l'onglet
-  /// Membres, qui désactive sa commande « Exclure » et montre un indicateur.
-  String? _removingUserId;
+  /// Membres dont l'exclusion est en cours (D232) : transmis à l'onglet
+  /// Membres, qui désactive leur commande « Exclure » et montre un
+  /// indicateur. Un ensemble, pas un seul membre : exclure un second membre
+  /// pendant la première exclusion ne doit pas réactiver le premier bouton
+  /// (relecture QA de la PR #306, sinon second `removeMember` en double).
+  final Set<String> _removingUserIds = {};
 
   void _goBack() {
     if (context.canPop()) {
@@ -173,15 +176,20 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
   }
 
   Future<void> _confirmRemoveMember(GroupMember member) async {
+    // Exclusion déjà en cours pour ce membre : jamais un second appel.
+    if (_removingUserIds.contains(member.userId)) return;
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showGroupConfirmationDialog(
       context,
-      title: 'Exclure ${member.name} du groupe ?',
-      message: _removeMemberMessage(member),
-      confirmLabel: 'Exclure',
+      title: l10n.groupMemberRemoveConfirmTitle(member.name),
+      message: _removeMemberMessage(l10n, member),
+      confirmLabel: l10n.groupMemberRemoveConfirmAction,
+      cancelLabel: l10n.groupMemberRemoveCancel,
     );
     if (confirmed != true || !mounted) return;
+    if (_removingUserIds.contains(member.userId)) return;
 
-    setState(() => _removingUserId = member.userId);
+    setState(() => _removingUserIds.add(member.userId));
     try {
       await ref
           .read(groupRepositoryProvider)
@@ -199,9 +207,11 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         AppLocalizations.of(context)!.groupMemberRemoveGenericError,
       );
     } finally {
-      // Seulement si une autre exclusion n'a pas pris le relais entre-temps.
-      if (mounted && _removingUserId == member.userId) {
-        setState(() => _removingUserId = null);
+      // Ce membre seulement : les autres exclusions en cours le restent.
+      if (mounted) {
+        setState(() => _removingUserIds.remove(member.userId));
+      } else {
+        _removingUserIds.remove(member.userId);
       }
     }
   }
@@ -211,16 +221,14 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
   /// membre orphelin (`GroupMember.isAwaitingCharacter`, personnage supprimé
   /// entre-temps) : les deux ont `characterId == null`, mais la situation
   /// n'est pas la même (voir la doc de classe de `GroupMember`).
-  String _removeMemberMessage(GroupMember member) {
+  String _removeMemberMessage(AppLocalizations l10n, GroupMember member) {
     if (member.isGameMaster) {
-      return 'Il/elle quitte immédiatement le groupe.';
+      return l10n.groupMemberRemoveConfirmBodyGameMaster;
     }
     if (member.isAwaitingCharacter) {
-      return "Son personnage a déjà été supprimé ; il/elle quitte "
-          'immédiatement le groupe.';
+      return l10n.groupMemberRemoveConfirmBodyAwaitingCharacter;
     }
-    return 'Son personnage garde toutes ses données, mais quitte '
-        'immédiatement le groupe.';
+    return l10n.groupMemberRemoveConfirmBodyCharacter;
   }
 
   int _treasureAmountOf(GroupTreasure treasure, CurrencyKind currency) =>
@@ -500,7 +508,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       GroupTab.members => GroupMembersTabBody(
         detail: detail,
         onRemoveMember: _confirmRemoveMember,
-        removingUserId: _removingUserId,
+        removingUserIds: Set.unmodifiable(_removingUserIds),
         onLeaveGroup: () => _confirmLeaveGroup(detail),
         combatSection: StartCombatSection(
           detail: detail,

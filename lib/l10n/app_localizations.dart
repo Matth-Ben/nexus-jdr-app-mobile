@@ -7793,6 +7793,42 @@ abstract class AppLocalizations {
   /// **'Impossible d\'exclure ce membre. Réessaie.'**
   String get groupMemberRemoveGenericError;
 
+  /// Titre de la boîte de confirmation de l'exclusion d'un membre (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure {name} du groupe ?'**
+  String groupMemberRemoveConfirmTitle(String name);
+
+  /// Texte de la boîte de confirmation de l'exclusion d'un membre avec personnage (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Son personnage garde toutes ses données, mais quitte immédiatement le groupe.'**
+  String get groupMemberRemoveConfirmBodyCharacter;
+
+  /// Texte de la boîte de confirmation de l'exclusion d'un MJ sans personnage (onglet Membres, D232). Jamais le texte du membre orphelin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il/elle quitte immédiatement le groupe.'**
+  String get groupMemberRemoveConfirmBodyGameMaster;
+
+  /// Texte de la boîte de confirmation de l'exclusion d'un membre orphelin, dont le personnage a été supprimé (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Son personnage a déjà été supprimé ; il/elle quitte immédiatement le groupe.'**
+  String get groupMemberRemoveConfirmBodyAwaitingCharacter;
+
+  /// Bouton de confirmation de la boîte d'exclusion d'un membre (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure'**
+  String get groupMemberRemoveConfirmAction;
+
+  /// Bouton d'annulation de la boîte d'exclusion d'un membre (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get groupMemberRemoveCancel;
+
   /// `CharacterCreationErrorCode.accessDenied` (D141).
   ///
   /// In fr, this message translates to:

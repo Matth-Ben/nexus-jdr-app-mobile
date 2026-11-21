@@ -68,6 +68,12 @@ class _FakeGroupRepository implements GroupRepository {
   /// complétion.
   Completer<void>? removeMemberCompleter;
 
+  /// Exclusions en attente par membre (deux exclusions simultanées).
+  final Map<String, Completer<void>> removeMemberCompleters = {};
+
+  /// Tous les appels à `removeMember`, dans l'ordre.
+  final List<String> removedUserIds = [];
+
   bool leaveGroupCalled = false;
   Object? leaveGroupError;
 
@@ -140,6 +146,9 @@ class _FakeGroupRepository implements GroupRepository {
     required String userId,
   }) async {
     lastRemovedUserId = userId;
+    removedUserIds.add(userId);
+    final pending = removeMemberCompleters[userId];
+    if (pending != null) await pending.future;
     if (removeMemberCompleter != null) await removeMemberCompleter!.future;
     if (removeMemberError != null) throw removeMemberError!;
   }
@@ -725,6 +734,79 @@ void main() {
       );
     }
 
+    // Relecture QA de la PR #306 : avec un seul membre « en cours », exclure
+    // Ithil pendant l'exclusion de Borgan réactivait le bouton de Borgan, et
+    // un second toucher renvoyait `removeMember(user-2)`.
+    testWidgets('deux exclusions simultanées : aucun appel en double, chaque '
+        'bouton reste désactivé jusqu\'à la fin de sa propre exclusion', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      fakeRepository
+        ..detailToReturn = ownerViewDetail()
+        ..removeMemberCompleters['user-2'] = Completer<void>()
+        ..removeMemberCompleters['user-3'] = Completer<void>();
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+
+      final borgan = find.byKey(const ValueKey('removeMember-user-2'));
+      final ithil = find.byKey(const ValueKey('removeMember-user-3'));
+
+      /// Laisse passer l'animation de la boîte sans attendre l'indicateur,
+      /// qui tourne sans fin.
+      Future<void> settleDialog() async {
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+
+      /// Touche [button], puis confirme si la boîte s'ouvre.
+      Future<void> removeVia(Finder button) async {
+        await tester.tap(button);
+        await settleDialog();
+        final confirm = find.text('Exclure');
+        if (confirm.evaluate().isNotEmpty) {
+          await tester.tap(confirm.last);
+          await settleDialog();
+        }
+      }
+
+      Matcher disabled(String name) => isSemantics(
+        label: '$name : exclusion en cours',
+        isButton: true,
+        hasEnabledState: true,
+        isEnabled: false,
+      );
+      Matcher enabled(String name) => isSemantics(
+        label: 'Exclure $name',
+        isButton: true,
+        hasEnabledState: true,
+        isEnabled: true,
+        hasTapAction: true,
+      );
+
+      await removeVia(borgan);
+      await removeVia(ithil);
+      // Nouveau toucher sur Borgan, toujours en cours : rien ne se passe.
+      await removeVia(borgan);
+
+      expect(fakeRepository.removedUserIds, ['user-2', 'user-3']);
+      expect(tester.getSemantics(borgan), disabled('Borgan'));
+      expect(tester.getSemantics(ithil), disabled('Ithil'));
+
+      fakeRepository.removeMemberCompleters['user-3']!.complete();
+      await settleDialog();
+      expect(tester.getSemantics(borgan), disabled('Borgan'));
+      expect(tester.getSemantics(ithil), enabled('Ithil'));
+
+      fakeRepository.removeMemberCompleters['user-2']!.complete();
+      await tester.pumpAndSettle();
+      expect(tester.getSemantics(borgan), enabled('Borgan'));
+      expect(tester.getSemantics(ithil), enabled('Ithil'));
+      expect(fakeRepository.removedUserIds, ['user-2', 'user-3']);
+      handle.dispose();
+    });
+
     // Messages de fin d'exclusion localisés, au tutoiement (D232).
     test('messages d\'exclusion au tutoiement en français', () {
       final fr = lookupAppLocalizations(const Locale('fr'));
@@ -736,7 +818,70 @@ void main() {
         fr.groupMemberRemoveGenericError,
         "Impossible d'exclure ce membre. Réessaie.",
       );
+      expect(
+        fr.groupMemberRemoveConfirmTitle('Borgan'),
+        'Exclure Borgan du groupe ?',
+      );
+      expect(fr.groupMemberRemoveConfirmAction, 'Exclure');
+      for (final text in [
+        fr.groupMemberRemovedSuccess('Borgan'),
+        fr.groupMemberRemoveGenericError,
+        fr.groupMemberRemoveConfirmTitle('Borgan'),
+        fr.groupMemberRemoveConfirmBodyCharacter,
+        fr.groupMemberRemoveConfirmBodyGameMaster,
+        fr.groupMemberRemoveConfirmBodyAwaitingCharacter,
+      ]) {
+        expect(text, isNot(matches(RegExp(r'\b(Réessayez|vous|votre|vos)\b'))));
+      }
     });
+
+    // Textes de la boîte selon la nature du membre, en anglais (le français
+    // est couvert par le groupe « message de confirmation distinct… »).
+    for (final (member, body) in [
+      (
+        const GroupMember(
+          userId: 'user-mj',
+          role: GroupRole.membre,
+          name: 'Brunhilde',
+          isGameMaster: true,
+        ),
+        'They leave the group immediately.',
+      ),
+      (
+        const GroupMember(
+          userId: 'user-orphan',
+          role: GroupRole.membre,
+          name: 'Eldrin',
+          isGameMaster: false,
+        ),
+        'Their character was already deleted; they leave the group '
+            'immediately.',
+      ),
+    ]) {
+      testWidgets('[en] boîte d\'exclusion de ${member.name} : « $body »', (
+        tester,
+      ) async {
+        fakeRepository.detailToReturn = ownerViewDetail().copyWith(
+          members: [owner, member],
+        );
+        await tester.pumpWidget(
+          _buildTestWidget(fakeRepository, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(ValueKey('removeMember-${member.userId}')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Remove ${member.name} from the group?'),
+          findsOneWidget,
+        );
+        expect(find.text(body), findsOneWidget);
+        await tester.tap(find.text('CANCEL'));
+        await tester.pumpAndSettle();
+        expect(fakeRepository.removedUserIds, isEmpty);
+      });
+    }
 
     for (final locale in const [Locale('fr'), Locale('en')]) {
       final l10n = lookupAppLocalizations(locale);
@@ -756,9 +901,20 @@ void main() {
 
           await tester.tap(find.byKey(const ValueKey('removeMember-user-2')));
           await tester.pumpAndSettle();
-          // Bouton de confirmation de la boîte (texte encore en dur, hors
-          // périmètre) : le dernier bouton affiché.
-          await tester.tap(find.text('Exclure').last);
+          // Boîte de confirmation : textes de leurs clés.
+          expect(
+            find.text(l10n.groupMemberRemoveConfirmTitle('Borgan')),
+            findsOneWidget,
+          );
+          expect(
+            find.text(l10n.groupMemberRemoveConfirmBodyCharacter),
+            findsOneWidget,
+          );
+          expect(
+            find.text(l10n.groupMemberRemoveCancel.toUpperCase()),
+            findsOneWidget,
+          );
+          await tester.tap(find.text(l10n.groupMemberRemoveConfirmAction));
           await tester.pumpAndSettle();
 
           expect(

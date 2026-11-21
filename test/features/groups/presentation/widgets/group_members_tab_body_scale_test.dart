@@ -162,7 +162,7 @@ Future<void> _pump(
             detail: detail,
             onRemoveMember: onRemoveMember ?? (_) {},
             onLeaveGroup: () {},
-            removingUserId: removingUserId,
+            removingUserIds: {?removingUserId},
           ),
         ),
       ),
@@ -433,7 +433,112 @@ void main() {
         ),
       );
     });
+
+    testWidgets('x$scale sur 320 dp : cartes MJ et orpheline, lien « Exclure » '
+        'aligné à droite, texte visible', (tester) async {
+      await useScaledView(tester, scale: scale, width: 320, height: 6000);
+      await _pump(tester, _detail(ownerView: true));
+
+      final screen = Offset.zero & tester.view.physicalSize;
+      for (final (member, anchor) in [
+        (_gameMaster, find.text('Ne suit pas ses PV ici.')),
+        (_orphan, find.text("En attente d'un personnage")),
+      ]) {
+        final cardRect = tester.getRect(_cardOf(anchor));
+        final link = tester.getRect(_removeButton(member));
+        expect(
+          cardRect.right - link.right,
+          lessThanOrEqualTo(AppSpacing.md + 2 + 0.5),
+          reason: '${member.name} : « Exclure » pas aligné à droite',
+        );
+        final label = find.descendant(
+          of: _removeButton(member),
+          matching: find.text('Exclure'),
+        );
+        expect(label, findsOneWidget, reason: member.name);
+        final paragraph = tester.renderObject<RenderParagraph>(
+          find.descendant(of: label, matching: find.byType(RichText)),
+        );
+        expect(paragraph.didExceedMaxLines, isFalse, reason: member.name);
+        _expectInside(tester.getRect(label), cardRect, '${member.name} : lien');
+        _expectInside(cardRect, screen, '${member.name} : carte');
+      }
+      expect(tester.takeException(), isNull);
+    });
   }
+
+  // Seuil partagé `AppTypography.isLargeText` (×1,4, D192).
+  for (final (scale, largeText) in [(1.3, false), (1.4, true)]) {
+    testWidgets('x$scale sur 320 dp : « Exclure » '
+        '${largeText ? 'en lien de pied de carte' : 'en icône sur la rangée '
+                  'du nom'}', (tester) async {
+      await useScaledView(tester, scale: scale, width: 320, height: 6000);
+      await _pump(tester, _detail(ownerView: true));
+
+      expect(tester.takeException(), isNull);
+      for (final member in _removable) {
+        final button = tester.getRect(_removeButton(member));
+        final name = tester.getRect(_name(member));
+        final onNameRow = button.top < name.bottom && button.bottom > name.top;
+        expect(onNameRow, !largeText, reason: member.name);
+        expect(
+          find.descendant(
+            of: _removeButton(member),
+            matching: find.text('Exclure'),
+          ),
+          largeText ? findsOneWidget : findsNothing,
+          reason: member.name,
+        );
+      }
+      for (final member in _withHp) {
+        final fraction = tester.getRect(_fraction(member));
+        final gauge = tester.getRect(_gaugeOf(_cardOf(_fraction(member))));
+        if (largeText) {
+          expect(fraction.top, greaterThanOrEqualTo(gauge.bottom));
+        } else {
+          expect(fraction.left, greaterThan(gauge.right));
+        }
+      }
+    });
+  }
+
+  testWidgets('x3 sur 320 dp, vue joueur : « Quitter le groupe » entier et '
+      'dans l\'écran, centré', (tester) async {
+    await useScaledView(tester, scale: 3, width: 320, height: 6000);
+    await _pump(tester, _detail(ownerView: false));
+
+    expect(tester.takeException(), isNull);
+    final finder = find.text('Quitter le groupe');
+    expect(finder, findsOneWidget);
+    final paragraph = tester.renderObject<RenderParagraph>(
+      find.descendant(of: finder, matching: find.byType(RichText)),
+    );
+    expect(paragraph.didExceedMaxLines, isFalse);
+    expect(paragraph.textAlign, TextAlign.center);
+    // Chaque mot tient sur une ligne : aucun mot coupé.
+    for (final word in ['Quitter', 'le', 'groupe']) {
+      final painter = TextPainter(
+        text: TextSpan(text: word, style: paragraph.text.style),
+        textDirection: TextDirection.ltr,
+        textScaler: paragraph.textScaler,
+      )..layout();
+      expect(
+        paragraph.size.width,
+        greaterThanOrEqualTo(painter.width - 0.5),
+        reason: word,
+      );
+      painter.dispose();
+    }
+    final rect = tester.getRect(finder);
+    _expectInside(
+      rect,
+      Offset.zero & tester.view.physicalSize,
+      '« Quitter le groupe »',
+    );
+    // Sous les marges de la liste (`AppSpacing.lg`).
+    expect(rect.left, greaterThanOrEqualTo(AppSpacing.lg - 0.5));
+    expect(rect.right, lessThanOrEqualTo(320 - AppSpacing.lg + 0.5));
+  });
 
   testWidgets('x3 sur 320 dp : toucher « Exclure » appelle onRemoveMember', (
     tester,
@@ -524,38 +629,43 @@ void main() {
       });
     }
 
-    // Cartes MJ et orpheline à ×1 : bouton en haut à droite, lu après la
-    // carte (aucun état sur ces cartes).
-    testWidgets('x1.0 : cartes MJ et orpheline, « Exclure » après la carte', (
-      tester,
-    ) async {
-      final handle = tester.ensureSemantics();
-      await useScaledView(tester, scale: 1, width: 320, height: 6000);
-      await _pump(
-        tester,
-        _detail(ownerView: true, members: const [_owner, _gameMaster, _orphan]),
-      );
+    // Cartes MJ et orpheline : à ×1, bouton en haut à droite ; à ×3, lien en
+    // pied de carte. Lu après la carte dans les deux cas (aucun état sur ces
+    // cartes).
+    for (final scale in [1.0, 3.0]) {
+      testWidgets('x$scale : cartes MJ et orpheline, « Exclure » après la '
+          'carte', (tester) async {
+        final handle = tester.ensureSemantics();
+        await useScaledView(tester, scale: scale, width: 320, height: 6000);
+        await _pump(
+          tester,
+          _detail(
+            ownerView: true,
+            members: const [_owner, _gameMaster, _orphan],
+          ),
+        );
 
-      final labels = _readingOrder(tester);
-      final gameMaster = _indexOf(labels, 'MJ - Oswald');
-      expect(
-        labels[gameMaster],
-        'MJ - Oswald\nNe suit pas ses PV ici.',
-        reason: '$labels',
-      );
-      final removeGameMaster = _indexOf(labels, 'Exclure Oswald');
-      final orphan = _indexOf(labels, 'Orphée');
-      expect(
-        labels[orphan],
-        "Orphée\nEn attente d'un personnage",
-        reason: '$labels',
-      );
-      final removeOrphan = _indexOf(labels, 'Exclure Orphée');
-      expect(removeGameMaster, greaterThan(gameMaster), reason: '$labels');
-      expect(orphan, greaterThan(removeGameMaster), reason: '$labels');
-      expect(removeOrphan, greaterThan(orphan), reason: '$labels');
-      handle.dispose();
-    });
+        final labels = _readingOrder(tester);
+        final gameMaster = _indexOf(labels, 'MJ - Oswald');
+        expect(
+          labels[gameMaster],
+          'MJ - Oswald\nNe suit pas ses PV ici.',
+          reason: '$labels',
+        );
+        final removeGameMaster = _indexOf(labels, 'Exclure Oswald');
+        final orphan = _indexOf(labels, 'Orphée');
+        expect(
+          labels[orphan],
+          "Orphée\nEn attente d'un personnage",
+          reason: '$labels',
+        );
+        final removeOrphan = _indexOf(labels, 'Exclure Orphée');
+        expect(removeGameMaster, greaterThan(gameMaster), reason: '$labels');
+        expect(orphan, greaterThan(removeGameMaster), reason: '$labels');
+        expect(removeOrphan, greaterThan(orphan), reason: '$labels');
+        handle.dispose();
+      });
+    }
   });
 
   group('exclusion en cours', () {

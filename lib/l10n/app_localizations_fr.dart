@@ -4850,6 +4850,29 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible d\'exclure ce membre. Réessaie.';
 
   @override
+  String groupMemberRemoveConfirmTitle(String name) {
+    return 'Exclure $name du groupe ?';
+  }
+
+  @override
+  String get groupMemberRemoveConfirmBodyCharacter =>
+      'Son personnage garde toutes ses données, mais quitte immédiatement le groupe.';
+
+  @override
+  String get groupMemberRemoveConfirmBodyGameMaster =>
+      'Il/elle quitte immédiatement le groupe.';
+
+  @override
+  String get groupMemberRemoveConfirmBodyAwaitingCharacter =>
+      'Son personnage a déjà été supprimé ; il/elle quitte immédiatement le groupe.';
+
+  @override
+  String get groupMemberRemoveConfirmAction => 'Exclure';
+
+  @override
+  String get groupMemberRemoveCancel => 'Annuler';
+
+  @override
   String get creationAccessDeniedErrorMessage =>
       'Vous n\'avez pas accès à cette action.';
 

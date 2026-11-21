@@ -4805,6 +4805,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t remove this member. Try again.';
 
   @override
+  String groupMemberRemoveConfirmTitle(String name) {
+    return 'Remove $name from the group?';
+  }
+
+  @override
+  String get groupMemberRemoveConfirmBodyCharacter =>
+      'Their character keeps all its data, but leaves the group immediately.';
+
+  @override
+  String get groupMemberRemoveConfirmBodyGameMaster =>
+      'They leave the group immediately.';
+
+  @override
+  String get groupMemberRemoveConfirmBodyAwaitingCharacter =>
+      'Their character was already deleted; they leave the group immediately.';
+
+  @override
+  String get groupMemberRemoveConfirmAction => 'Remove';
+
+  @override
+  String get groupMemberRemoveCancel => 'Cancel';
+
+  @override
   String get creationAccessDeniedErrorMessage =>
       'You don\'t have access to this action.';
 

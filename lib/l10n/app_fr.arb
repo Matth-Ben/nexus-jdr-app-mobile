@@ -6402,6 +6402,35 @@
   "@groupMemberRemoveGenericError": {
     "description": "Échec non reconnu de l'exclusion d'un membre (onglet Membres, D232). Tutoiement."
   },
+  "groupMemberRemoveConfirmTitle": "Exclure {name} du groupe ?",
+  "@groupMemberRemoveConfirmTitle": {
+    "description": "Titre de la boîte de confirmation de l'exclusion d'un membre (onglet Membres, D232).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupMemberRemoveConfirmBodyCharacter": "Son personnage garde toutes ses données, mais quitte immédiatement le groupe.",
+  "@groupMemberRemoveConfirmBodyCharacter": {
+    "description": "Texte de la boîte de confirmation de l'exclusion d'un membre avec personnage (onglet Membres, D232)."
+  },
+  "groupMemberRemoveConfirmBodyGameMaster": "Il/elle quitte immédiatement le groupe.",
+  "@groupMemberRemoveConfirmBodyGameMaster": {
+    "description": "Texte de la boîte de confirmation de l'exclusion d'un MJ sans personnage (onglet Membres, D232). Jamais le texte du membre orphelin."
+  },
+  "groupMemberRemoveConfirmBodyAwaitingCharacter": "Son personnage a déjà été supprimé ; il/elle quitte immédiatement le groupe.",
+  "@groupMemberRemoveConfirmBodyAwaitingCharacter": {
+    "description": "Texte de la boîte de confirmation de l'exclusion d'un membre orphelin, dont le personnage a été supprimé (onglet Membres, D232)."
+  },
+  "groupMemberRemoveConfirmAction": "Exclure",
+  "@groupMemberRemoveConfirmAction": {
+    "description": "Bouton de confirmation de la boîte d'exclusion d'un membre (onglet Membres, D232)."
+  },
+  "groupMemberRemoveCancel": "Annuler",
+  "@groupMemberRemoveCancel": {
+    "description": "Bouton d'annulation de la boîte d'exclusion d'un membre (onglet Membres, D232)."
+  },
   "creationAccessDeniedErrorMessage": "Vous n'avez pas accès à cette action.",
   "@creationAccessDeniedErrorMessage": {
     "description": "`CharacterCreationErrorCode.accessDenied` (D141)."
