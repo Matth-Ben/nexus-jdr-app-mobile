@@ -17,6 +17,7 @@ import '../../../core/network/transport_failure.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
 import '../../character_creation/domain/spell_selection_resolver.dart';
 import '../../character_creation/domain/spellcasting_rules.dart';
+import '../domain/armor_slot_rules.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
@@ -498,6 +499,12 @@ abstract class CharacterRepository {
   /// [inventoryId], dernière valeur gagnante) hors ligne ou sur erreur de
   /// transport — [WriteOutcome.queued] ; un refus ou zéro ligne affectée est
   /// un échec, jamais mis en file.
+  ///
+  /// Décision n° 37 : équiper une seconde armure ou un second bouclier lève
+  /// une [CharacterFailure] (`armorAlreadyEquipped`/`shieldAlreadyEquipped`)
+  /// sans rien écrire ni mettre en file, en ligne comme hors ligne, vérifié
+  /// sur l'état effectif de la fiche (cache + file, voir
+  /// `domain/armor_slot_rules.dart`). L'écran le vérifie aussi avant l'appel.
   Future<WriteOutcome> setInventoryItemEquipped({
     required String characterId,
     required String inventoryId,
@@ -2986,6 +2993,31 @@ class SupabaseCharacterRepository implements CharacterRepository {
     }
   }
 
+  /// Décision n° 37 : refuse d'équiper une seconde armure ou un second
+  /// bouclier ([ArmorSlotRules.equipConflict]), vérifié sur l'état
+  /// **effectif** (cache + file) **en ligne comme hors ligne** : une armure
+  /// équipée hors ligne (encore en file) bloque la suivante, et une armure
+  /// déséquipée hors ligne libère sa place, exactement comme l'affiche la
+  /// fiche. Jamais revérifié au rejeu de la file (l'ordre de rejeu de deux
+  /// objets distincts n'est pas celui d'un échange). Fail-open si la fiche
+  /// n'est pas en cache ou si l'objet n'y figure pas.
+  Future<void> _enforceArmorSlotFree({
+    required String ownerId,
+    required String characterId,
+    required String inventoryId,
+  }) async {
+    final detail = await _effectiveDetailFromCache(
+      ownerId: ownerId,
+      characterId: characterId,
+    );
+    if (detail == null) return;
+    final conflict = ArmorSlotRules.equipConflict(
+      inventory: detail.inventory,
+      inventoryId: inventoryId,
+    );
+    if (conflict != null) throw conflict;
+  }
+
   /// Écrit l'état d'un sort ([patch] : préparé). La limite de
   /// préparation n'est vérifiée que si [enforceLimit] : le rejeu de la file
   /// ne la revérifie jamais (elle l'a été à la mise en file, et une
@@ -3125,6 +3157,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// `UPDATE` sur zéro ligne échouerait ; la ligne part à la prochaine
   /// synchro ([WriteOutcome.queued]). Si un retrait de la ligne est en file,
   /// le réglage est refusé. Sinon : réglage d'état absolu habituel.
+  ///
+  /// Équiper ([InventoryStatePatch.equipped] vrai) une seconde armure ou un
+  /// second bouclier est refusé avant toute écriture ou mise en file, sur
+  /// tous ces chemins ([_enforceArmorSlotFree], décision n° 37).
   Future<WriteOutcome> _writeInventoryState({
     required String characterId,
     required String inventoryId,
@@ -3137,6 +3173,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
         kind: PendingCharacterWriteKind.inventoryItem,
         targetId: inventoryId,
         action: () async {
+          if (change.equipped == true) {
+            await _enforceArmorSlotFree(
+              ownerId: ownerId,
+              characterId: characterId,
+              inventoryId: inventoryId,
+            );
+          }
           final pending = await _pendingWriteBeforeOnlineWrite(
             characterId: characterId,
             ownerId: ownerId,
