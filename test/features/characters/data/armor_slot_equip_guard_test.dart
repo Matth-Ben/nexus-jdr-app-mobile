@@ -5,6 +5,8 @@
 // toute écriture ou mise en file. Dépôt réel + file drift en mémoire +
 // synchroniseur réel + faux serveur PostgREST du harnais (`test/support/`).
 
+import 'dart:async';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/cache/app_database.dart'
@@ -16,6 +18,7 @@ import 'package:personnages/features/characters/data/pending_character_write_syn
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
+import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 
 import '../../../support/fake_character_write_server.dart';
@@ -664,5 +667,74 @@ void main() {
       expect(await update(legacyArmorId, heavyArmor), WriteOutcome.synced);
       expect((await reopen()).armorClass, 18);
     });
+  });
+
+  // Relecture de code (suggestion retenue) : équiper un objet hors
+  // emplacement (arme, anneau) garde le comportement d'avant la décision
+  // n° 37, sans attendre le verrou des emplacements d'armure ; une armure,
+  // elle, l'attend. Le test TIENT ce verrou et observe qui passe.
+  group('objets hors emplacement : chemin d\'avant la décision n° 37', () {
+    Future<void> Function() holdArmorSlots(Completer<void> gate) {
+      final held = queue.runExclusiveScope(
+        characterId: _characterId,
+        scope: SupabaseCharacterRepository.armorSlotsLockScope,
+        action: () => gate.future,
+      );
+      return () async {
+        gate.complete();
+        await held;
+      };
+    }
+
+    for (final offline in [false, true]) {
+      final mode = offline ? 'hors ligne' : 'en ligne';
+
+      test('$mode : anneau, arme et déséquipement passent pendant que le '
+          'verrou des emplacements est tenu ; une armure l\'attend', () async {
+        rows.add(
+          _catalogRow('inv-epee', 120, {
+            'category': 'arme',
+            'requires_attunement': false,
+            'weapon_properties': {
+              'damage_dice': '1d8',
+              'damage_type': 'tranchant',
+              'properties': <String>[],
+            },
+          }),
+        );
+        await reopen();
+        if (offline) goOffline();
+        final expected = offline ? WriteOutcome.queued : WriteOutcome.synced;
+        final release = holdArmorSlots(Completer<void>());
+
+        const limit = Duration(seconds: 5);
+        expect(await equip('inv-anneau').timeout(limit), expected);
+        expect(
+          await repository
+              .equipWeaponToSlot(
+                characterId: _characterId,
+                inventoryId: 'inv-epee',
+                slot: WeaponSlot.principal,
+              )
+              .timeout(limit),
+          expected,
+        );
+        expect(
+          await equip('inv-cotte', equipped: false).timeout(limit),
+          expected,
+        );
+
+        var armorDone = false;
+        final armor = equip('inv-plate').then((outcome) {
+          armorDone = true;
+          return outcome;
+        });
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        expect(armorDone, isFalse, reason: 'l\'armure attend le verrou');
+
+        await release();
+        expect(await armor.timeout(limit), expected);
+      });
+    }
   });
 }

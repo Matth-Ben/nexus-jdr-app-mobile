@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'app_database.dart';
 import 'app_database.dart' as drift_rows show PendingCharacterWrite;
@@ -320,6 +321,12 @@ class PendingCharacterWriteQueue {
     required String scope,
     required Future<T> Function() action,
   }) => _runExclusive('$characterId|#$scope', action);
+
+  /// Nombre de clés de verrou actuellement tenues ou attendues (toutes clés
+  /// confondues) : 0 une fois tous les appels terminés, l'entrée de chaque
+  /// clé étant retirée par le dernier appelant.
+  @visibleForTesting
+  int get heldLockCount => _writeLocks.length;
 
   Future<T> _runExclusive<T>(String key, Future<T> Function() action) async {
     final previous = _writeLocks[key];

@@ -3025,8 +3025,61 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }
 
   /// Périmètre du verrou des emplacements d'armure et de bouclier d'un
-  /// personnage (décision n° 37), voir [_withArmorSlotsLock].
-  static const String _armorSlotsLockScope = 'armorSlots';
+  /// personnage (décision n° 37), voir [_withArmorSlotsLock]. Public pour que
+  /// les tests puissent tenir ce verrou et vérifier qui l'attend.
+  static const String armorSlotsLockScope = 'armorSlots';
+
+  /// Équiper [inventoryId] peut-il occuper un emplacement d'armure ou de
+  /// bouclier ? Décision à bas coût, avant le verrou des emplacements et la
+  /// vérification complète ([_enforceArmorSlotFree], qui reconstruit toute la
+  /// fiche) : seule la ligne brute du cache est relue et passée au même
+  /// mapper que la fiche, donc à la même règle ([ArmorSlotRules.slotOf]).
+  ///
+  /// Prudente : `true` (vérification complète) dès que la ligne en cache ne
+  /// suffit pas — un ajout ou une modification de cette ligne en file (son
+  /// type effectif peut différer du cache), ligne ou fiche absente du cache.
+  /// `false` seulement pour une ligne en cache qui n'est ni armure ni
+  /// bouclier : comportement d'avant la décision n° 37.
+  Future<bool> _mayOccupyArmorSlot({
+    required String ownerId,
+    required String characterId,
+    required String inventoryId,
+  }) async {
+    final pending = await _pendingWriteBeforeOnlineWrite(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: PendingCharacterWriteKind.inventoryItem,
+      targetId: inventoryId,
+    );
+    final pendingOp = pending == null
+        ? null
+        : parseInventoryItemPayload(pending.payload)?.op;
+    if (pendingOp == InventoryItemOp.add ||
+        pendingOp == InventoryItemOp.updateCustom) {
+      return true;
+    }
+    try {
+      final row = await _detailCache.readRow(
+        ownerId: ownerId,
+        characterId: characterId,
+      );
+      final lines = row?['character_inventory'];
+      if (lines is! List) return true;
+      for (final line in lines) {
+        if (line is Map && line['id'] == inventoryId) {
+          final items = CharacterInventoryRowMapper.toCharacterInventoryItems(
+            [Map<String, dynamic>.from(line)],
+            names: const <String, String>{},
+            descriptions: const <String, String>{},
+          );
+          return items.isEmpty || ArmorSlotRules.slotOf(items.single) != null;
+        }
+      }
+    } catch (_) {
+      // Ligne en cache illisible : vérification complète (prudence).
+    }
+    return true;
+  }
 
   /// Exécute [action] sous le verrou des emplacements d'armure et de bouclier
   /// de [characterId] (`PendingCharacterWriteQueue.runExclusiveScope`) : la
@@ -3039,19 +3092,21 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// (`inventoryItem`, X) → emplacements du personnage → état de la ligne
   /// (`inventoryState`, X, pris par l'écriture en ligne de
   /// [_writeAbsoluteState] ou par [_clearPendingAttunement]). Pris seulement
-  /// par [_writeInventoryState] (équiper) et [updateCustomInventoryItem], qui
-  /// tiennent déjà le verrou de leur ligne ; sous ce verrou, on ne prend
+  /// par [_writeInventoryState] (équiper un objet qui peut occuper un
+  /// emplacement, voir [_mayOccupyArmorSlot]) et [updateCustomInventoryItem],
+  /// qui tiennent déjà le verrou de leur ligne ; sous ce verrou, on ne prend
   /// jamais le verrou d'une autre ligne ni de nouveau ce périmètre. Aucun
   /// détenteur d'un verrou `inventoryState` (rejeu du synchroniseur, purge,
   /// harmonisation) ne demande ce périmètre ni un verrou `inventoryItem` :
-  /// aucun cycle d'attente possible. L'harmonisation (`attuned` seul) et le
-  /// déséquipement ne le prennent pas (ils ne peuvent pas créer un doublon).
+  /// aucun cycle d'attente possible. L'harmonisation (`attuned` seul), le
+  /// déséquipement et l'équipement d'un objet hors emplacement (arme,
+  /// anneau...) ne le prennent pas (ils ne peuvent pas créer un doublon).
   Future<T> _withArmorSlotsLock<T>(
     String characterId,
     Future<T> Function() action,
   ) => _pendingWrites.runExclusiveScope(
     characterId: characterId,
-    scope: _armorSlotsLockScope,
+    scope: armorSlotsLockScope,
     action: action,
   );
 
@@ -3257,7 +3312,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// vérification ET l'écriture (en ligne, cache compris) ou la mise en file
   /// se font sous le verrou des emplacements d'armure du personnage
   /// ([_withArmorSlotsLock]) : deux équipements concurrents de deux objets
-  /// différents ne peuvent pas lire tous deux un emplacement libre.
+  /// différents ne peuvent pas lire tous deux un emplacement libre. Un objet
+  /// qui n'occupe aucun emplacement ([_mayOccupyArmorSlot], lecture de sa
+  /// seule ligne en cache) garde le chemin d'avant : ni verrou ni relecture.
   Future<WriteOutcome> _writeInventoryState({
     required String characterId,
     required String inventoryId,
@@ -3270,7 +3327,17 @@ class SupabaseCharacterRepository implements CharacterRepository {
         kind: PendingCharacterWriteKind.inventoryItem,
         targetId: inventoryId,
         action: () async {
-          if (change.equipped != true) {
+          // Déséquiper, harmoniser, ou équiper un objet qui n'occupe aucun
+          // emplacement d'armure (arme, anneau...) : comportement d'avant la
+          // décision n° 37, sans verrou des emplacements ni relecture de la
+          // fiche. Décidé sous le verrou de la ligne : son type ne peut pas
+          // changer pendant ce temps.
+          if (change.equipped != true ||
+              !await _mayOccupyArmorSlot(
+                ownerId: ownerId,
+                characterId: characterId,
+                inventoryId: inventoryId,
+              )) {
             return _writeInventoryStateLocked(
               ownerId: ownerId,
               characterId: characterId,
