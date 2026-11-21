@@ -4727,6 +4727,62 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get groupJoinTitle => 'JOIN A GROUP';
+
+  @override
+  String get groupJoinIntro =>
+      'Ask a group member for the invitation code, then choose the character who will join the group.';
+
+  @override
+  String get groupJoinCodeLabel => 'Invitation code';
+
+  @override
+  String get groupJoinRoleLabel => 'Who represents you in this group?';
+
+  @override
+  String get groupJoinRoleHelp =>
+      'Choose your character, or select “GM — no character” if you run the game without a sheet.';
+
+  @override
+  String get groupJoinRolePickerTitle => 'CHOOSE YOUR ROLE';
+
+  @override
+  String get groupJoinGameMasterRoleTitle => 'GM — no character';
+
+  @override
+  String get groupJoinGameMasterRoleSubtitle =>
+      'Follows the group without a character sheet.';
+
+  @override
+  String get groupJoinNoCharacter => 'You don\'t have a character to link yet.';
+
+  @override
+  String get groupJoinChooseRolePlaceholder => 'Choose a character or a role';
+
+  @override
+  String get groupJoinCharactersRetryButton => 'Try again';
+
+  @override
+  String get groupJoinSuccess => 'Group joined!';
+
+  @override
+  String get groupJoinInProgress => 'Joining the group...';
+
+  @override
+  String get groupJoinInvalidCodeError => 'This invitation code isn\'t valid.';
+
+  @override
+  String get groupJoinGenericError => 'Couldn\'t join this group. Try again.';
+
+  @override
+  String get groupJoinAlreadyInGroupError =>
+      'This character is already a member of this group.';
+
+  @override
+  String get groupJoinGameMasterAlreadyAssignedError =>
+      'This group already has a GM without a character.';
+
+  @override
   String get creationAccessDeniedErrorMessage =>
       'You don\'t have access to this action.';
 
