@@ -807,6 +807,155 @@ void main() {
       handle.dispose();
     });
 
+    // Relecture de code de la PR #306 : `GroupRepository.removeMember` lève
+    // toujours une `GroupFailure` (réseau compris), et l'écran peut avoir été
+    // quitté entre-temps.
+    group('exclusion en échec ou suivie d\'un rechargement', () {
+      const networkFailure = GroupFailure(
+        'Erreur réseau.',
+        code: GroupErrorCode.network,
+      );
+      final borgan = find.byKey(const ValueKey('removeMember-user-2'));
+
+      /// Exclut Borgan (toucher + confirmation), sans attendre la fin de
+      /// l'indicateur, qui tourne sans fin.
+      Future<void> removeBorgan(WidgetTester tester) async {
+        await tester.tap(borgan);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Exclure'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+
+      for (final locale in const [Locale('fr'), Locale('en')]) {
+        testWidgets('[${locale.languageCode}] échec réseau (GroupFailure) : '
+            'message de la clé characterNetworkErrorMessage', (tester) async {
+          fakeRepository
+            ..detailToReturn = ownerViewDetail()
+            ..removeMemberError = networkFailure;
+          await tester.pumpWidget(
+            _buildTestWidget(fakeRepository, locale: locale),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(borgan);
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.text(
+              lookupAppLocalizations(locale).groupMemberRemoveConfirmAction,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          // Clé partagée, encore au vouvoiement en français (D136, D237).
+          expect(
+            find.text(
+              lookupAppLocalizations(locale).characterNetworkErrorMessage,
+            ),
+            findsOneWidget,
+          );
+          expect(fakeRepository.removedUserIds, ['user-2']);
+        });
+      }
+
+      testWidgets('quitter l\'écran pendant une exclusion qui échoue : '
+          'aucune erreur', (tester) async {
+        fakeRepository
+          ..detailToReturn = ownerViewDetail()
+          ..removeMemberCompleters['user-2'] = Completer<void>()
+          ..removeMemberError = networkFailure;
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+        await removeBorgan(tester);
+
+        GoRouter.of(tester.element(find.byType(GroupScreen))).go('/');
+        await tester.pumpAndSettle();
+        expect(find.byType(GroupScreen), findsNothing);
+
+        fakeRepository.removeMemberCompleters['user-2']!.complete();
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(fakeRepository.removedUserIds, ['user-2']);
+      });
+
+      testWidgets('succès : « Exclure » reste désactivé jusqu\'à la fin du '
+          'rechargement du groupe', (tester) async {
+        final handle = tester.ensureSemantics();
+        fakeRepository
+          ..detailToReturn = ownerViewDetail()
+          ..removeMemberCompleters['user-2'] = Completer<void>();
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+        await removeBorgan(tester);
+
+        final reload = Completer<GroupDetail>();
+        fakeRepository.detailCompleter = reload;
+        fakeRepository.removeMemberCompleters['user-2']!.complete();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        // Ancien détail toujours affiché, Borgan encore « en cours ».
+        expect(find.text('Borgan a été exclu du groupe.'), findsOneWidget);
+        expect(
+          tester.getSemantics(borgan),
+          isSemantics(
+            label: 'Borgan : exclusion en cours',
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: false,
+          ),
+        );
+
+        reload.complete(
+          ownerViewDetail().copyWith(members: [owner, deadMember]),
+        );
+        await tester.pumpAndSettle();
+        expect(borgan, findsNothing);
+        expect(tester.takeException(), isNull);
+        handle.dispose();
+      });
+
+      testWidgets('succès puis rechargement en échec : Borgan n\'est plus '
+          '« en cours » une fois le groupe relu', (tester) async {
+        final handle = tester.ensureSemantics();
+        fakeRepository
+          ..detailToReturn = ownerViewDetail()
+          ..removeMemberCompleters['user-2'] = Completer<void>();
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+        await removeBorgan(tester);
+
+        final reload = Completer<GroupDetail>();
+        fakeRepository.detailCompleter = reload;
+        fakeRepository.removeMemberCompleters['user-2']!.complete();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        reload.completeError(networkFailure);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+
+        // Relecture réussie (Borgan encore membre côté serveur) : son
+        // « Exclure » est de nouveau actif.
+        fakeRepository.detailCompleter = null;
+        if (find.text('RÉESSAYER').evaluate().isNotEmpty) {
+          await tester.tap(find.text('RÉESSAYER'));
+          await tester.pumpAndSettle();
+        }
+        expect(
+          tester.getSemantics(borgan),
+          isSemantics(
+            label: 'Exclure Borgan',
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: true,
+            hasTapAction: true,
+          ),
+        );
+        handle.dispose();
+      });
+    });
+
     // Messages de fin d'exclusion localisés, au tutoiement (D232).
     test('messages d\'exclusion au tutoiement en français', () {
       final fr = lookupAppLocalizations(const Locale('fr'));

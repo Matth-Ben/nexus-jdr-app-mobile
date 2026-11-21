@@ -194,12 +194,22 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       await ref
           .read(groupRepositoryProvider)
           .removeMember(groupId: widget.groupId, userId: member.userId);
-      ref.invalidate(groupDetailProvider(widget.groupId));
       if (!mounted) return;
       _showSnackBar(
         AppLocalizations.of(context)!.groupMemberRemovedSuccess(member.name),
       );
+      // Le membre reste « en cours » jusqu'à la relecture du groupe : sinon
+      // l'ancien détail, encore affiché, réactiverait son « Exclure ».
+      final detail = groupDetailProvider(widget.groupId);
+      ref.invalidate(detail);
+      try {
+        await ref.read(detail.future);
+      } catch (_) {
+        // L'exclusion a réussi ; l'échec de la relecture s'affiche dans
+        // l'état d'erreur de l'écran (bouton « Réessayer »).
+      }
     } on GroupFailure catch (failure) {
+      if (!mounted) return;
       _showSnackBar(failure.localized(context));
     } catch (_) {
       if (!mounted) return;
