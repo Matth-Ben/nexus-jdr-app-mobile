@@ -582,6 +582,49 @@ void main() {
         expect(await queue.allForOwner(_ownerA), isEmpty);
         expect(row(legacyArmorId)['custom_armor_category'], isNull);
       });
+
+      // Relecture de code : une fiche ancienne qui porte DÉJÀ deux armures
+      // (décision n° 37) reste modifiable tant que l'emplacement ne change pas.
+      test('$mode : fiche ancienne à deux armures (perso légère + cotte) : '
+          'renommer l\'armure perso et changer son bonus magique reste '
+          'permis', () async {
+        rows.add(
+          _customRow(
+            legacyArmorId,
+            kind: CustomItemKinds.armor,
+            acBase: 12,
+            category: CustomArmorCategories.light,
+            equipped: true,
+          ),
+        );
+        await reopen();
+        if (offline) goOffline();
+
+        expect(
+          await update(
+            legacyArmorId,
+            const CustomItemEnrichment(
+              kind: CustomItemKinds.armor,
+              acBase: 12,
+              armorCategory: CustomArmorCategories.light,
+              magicBonus: 1,
+            ),
+          ),
+          offline ? WriteOutcome.queued : WriteOutcome.synced,
+        );
+
+        if (offline) {
+          final line = (await queued(PendingCharacterWriteKind.inventoryItem))
+              .single;
+          expect(line.payload['customName'], 'Modifié');
+          goOnline();
+          expect(await syncer.sync(), {_characterId});
+        }
+        expect(row(legacyArmorId)['custom_name'], 'Modifié');
+        expect(row(legacyArmorId)['custom_magic_bonus'], 1);
+        // Meilleure combinaison : cotte 16 contre 12 + 2 + 1 = 15.
+        expect((await reopen()).armorClass, 16);
+      });
     }
 
     test('même armure sans catégorie, cotte NON équipée : modification '

@@ -3064,7 +3064,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// 2. décision n° 37 sur le **résultat** : si, sans changer de type, la
   ///    modification fait entrer l'objet dans un emplacement d'armure ou de
   ///    bouclier déjà occupé (ancienne armure personnalisée sans catégorie qui
-  ///    en reçoit une), refus [ArmorSlotRules.equipConflict].
+  ///    en reçoit une), refus [ArmorSlotRules.equipConflict]. Seulement si
+  ///    l'emplacement **change** : une fiche ancienne qui porte déjà deux
+  ///    armures (décision n° 37) reste modifiable (nom, description, bonus
+  ///    magique...) sans déséquiper.
   /// Objet non équipé, absent du cache ou fiche non mise en cache : rien à
   /// vérifier.
   Future<void> _enforceEquippedCustomItemUpdate({
@@ -3093,6 +3096,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
       );
     }
     final updated = _withCustomUpdate(current, characterId, update);
+    // L'objet n'entre dans aucun nouvel emplacement : rien à refuser, même si
+    // la fiche porte déjà deux armures (données anciennes, décision n° 37).
+    if (ArmorSlotRules.slotOf(updated) == ArmorSlotRules.slotOf(current)) {
+      return;
+    }
     final conflict = ArmorSlotRules.equipConflict(
       inventory: [
         for (final item in detail.inventory)
