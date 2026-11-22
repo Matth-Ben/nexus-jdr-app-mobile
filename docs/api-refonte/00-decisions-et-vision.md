@@ -181,6 +181,9 @@ où ils le contredisent. Les tickets Project #7 portent la même numérotation (
 39. **Corrections RGPD avant l'étape 6** : R2, R3, R4 (Grimoire) et R5 (DeepCore) sont traités avant de lancer l'étape 6.
 40. **Textes d'information** (R1) : le chef de projet rédige une proposition (politique de Nexus et du site, texte pour le
     MJ dans Grimoire) ; Matthias la relit et la valide, avec Florian pour Grimoire, avant toute mise en ligne.
+41. **R14 traité avant l'étape 6**, comme R13 : la suppression d'un compte efface ses fichiers dans tous les espaces de
+    stockage (PR DeepCore #53). Une image d'un compte supprimé que quelqu'un d'autre aurait collée par son adresse dans
+    son propre texte **disparaît aussi** : le droit à l'effacement du propriétaire prime.
 
 **Abandonné** par rapport aux propositions de `05`/`09` : tables `adventure_*`, bucket d'images d'histoire,
 `generate_group_from_story`, `groups.adventure_id`, `game_events`, `combat_npc_state`, `add_monsters`, `revealed`,
