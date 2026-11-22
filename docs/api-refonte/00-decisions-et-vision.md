@@ -185,6 +185,14 @@ où ils le contredisent. Les tickets Project #7 portent la même numérotation (
     stockage (PR DeepCore #53). Une image d'un compte supprimé que quelqu'un d'autre aurait collée par son adresse dans
     son propre texte **disparaît aussi** : le droit à l'effacement du propriétaire prime.
 
+## Décisions du 22/11/2026 (étape 6 de Grimoire, écrans joueur sur tablette, PR Grimoire #10)
+
+42. **Gestes sur la tablette d'un joueur** : seulement voir le plateau, recevoir le plateau montré par le MJ et déplacer
+    les jetons de héros. Ouvrir le détail d'un objet, ouvrir un trésor (révélation) et tourner un héros restent des gestes
+    du MJ.
+43. **PV des ennemis** : quand les barres de vie des ennemis sont masquées, aucun écran joueur (HDMI ou tablette)
+    n'affiche rien de leurs PV, y compris les « −N » de dégâts (retirés de l'écran HDMI).
+
 **Abandonné** par rapport aux propositions de `05`/`09` : tables `adventure_*`, bucket d'images d'histoire,
 `generate_group_from_story`, `groups.adventure_id`, `game_events`, `combat_npc_state`, `add_monsters`, `revealed`,
 export des catalogues autres que les objets et les monstres, utilisation des RPC de combat par l'outil. (Le 17/11, le
