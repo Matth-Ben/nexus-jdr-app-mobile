@@ -173,6 +173,15 @@ où ils le contredisent. Les tickets Project #7 portent la même numérotation (
     SQL de DeepCore (0 fiche concernée en production au 20/11). Le reste du calcul SQL de la CA reproduit Nexus **tel quel**
     (« la fiche mobile fait foi »), écarts RAW compris (D234), à corriger plus tard des deux côtés en même temps.
 
+## Décisions du 22/11/2026 (avis RGPD de l'étape 5, `docs/rgpd-registre.md`)
+
+38. **Conservation hors ligne dans Grimoire** des données des joueurs (pseudo, résumé de fiche, portrait) : **30 jours**
+    depuis la dernière lecture réussie, plus effacement immédiat si le groupe est perdu, si le compte n'est plus
+    propriétaire ou si la session est révoquée (R3).
+39. **Corrections RGPD avant l'étape 6** : R2, R3, R4 (Grimoire) et R5 (DeepCore) sont traités avant de lancer l'étape 6.
+40. **Textes d'information** (R1) : le chef de projet rédige une proposition (politique de Nexus et du site, texte pour le
+    MJ dans Grimoire) ; Matthias la relit et la valide, avec Florian pour Grimoire, avant toute mise en ligne.
+
 **Abandonné** par rapport aux propositions de `05`/`09` : tables `adventure_*`, bucket d'images d'histoire,
 `generate_group_from_story`, `groups.adventure_id`, `game_events`, `combat_npc_state`, `add_monsters`, `revealed`,
 export des catalogues autres que les objets et les monstres, utilisation des RPC de combat par l'outil. (Le 17/11, le
