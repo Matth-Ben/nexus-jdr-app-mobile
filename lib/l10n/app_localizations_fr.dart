@@ -4768,6 +4768,111 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get groupJoinTitle => 'REJOINDRE UN GROUPE';
+
+  @override
+  String get groupJoinIntro =>
+      'Demande le code d\'invitation à un membre du groupe, puis choisis le personnage qui rejoindra le groupe.';
+
+  @override
+  String get groupJoinCodeLabel => 'Code d\'invitation';
+
+  @override
+  String get groupJoinRoleLabel => 'Qui te représente dans ce groupe ?';
+
+  @override
+  String get groupJoinRoleHelp =>
+      'Choisis ton personnage, ou sélectionne « MJ — sans personnage » si tu animes la partie sans fiche.';
+
+  @override
+  String get groupJoinRolePickerTitle => 'CHOISIR TON RÔLE';
+
+  @override
+  String get groupJoinGameMasterRoleTitle => 'MJ — sans personnage';
+
+  @override
+  String get groupJoinGameMasterRoleSubtitle =>
+      'Suit le groupe sans fiche de personnage.';
+
+  @override
+  String get groupJoinNoCharacter =>
+      'Tu n\'as pas encore de personnage à rattacher.';
+
+  @override
+  String get groupJoinChooseRolePlaceholder =>
+      'Choisir un personnage ou un rôle';
+
+  @override
+  String get groupJoinCharactersRetryButton => 'Réessayer';
+
+  @override
+  String get groupJoinSuccess => 'Groupe rejoint !';
+
+  @override
+  String get groupJoinInProgress => 'Rattachement au groupe…';
+
+  @override
+  String get groupJoinInvalidCodeError =>
+      'Ce code d\'invitation n\'est pas valide.';
+
+  @override
+  String get groupJoinGenericError =>
+      'Impossible de rejoindre ce groupe. Réessaie.';
+
+  @override
+  String get groupJoinAlreadyInGroupError =>
+      'Ce personnage est déjà membre de ce groupe.';
+
+  @override
+  String get groupJoinGameMasterAlreadyAssignedError =>
+      'Ce groupe a déjà un MJ sans personnage.';
+
+  @override
+  String get groupMemberRemoveAction => 'Exclure';
+
+  @override
+  String groupMemberRemoveLabel(String name) {
+    return 'Exclure $name';
+  }
+
+  @override
+  String groupMemberRemoveInProgress(String name) {
+    return '$name : exclusion en cours';
+  }
+
+  @override
+  String groupMemberRemovedSuccess(String name) {
+    return '$name a été exclu du groupe.';
+  }
+
+  @override
+  String get groupMemberRemoveGenericError =>
+      'Impossible d\'exclure ce membre. Réessaie.';
+
+  @override
+  String groupMemberRemoveConfirmTitle(String name) {
+    return 'Exclure $name du groupe ?';
+  }
+
+  @override
+  String get groupMemberRemoveConfirmBodyCharacter =>
+      'Son personnage garde toutes ses données, mais quitte immédiatement le groupe.';
+
+  @override
+  String get groupMemberRemoveConfirmBodyGameMaster =>
+      'Il/elle quitte immédiatement le groupe.';
+
+  @override
+  String get groupMemberRemoveConfirmBodyAwaitingCharacter =>
+      'Son personnage a déjà été supprimé ; il/elle quitte immédiatement le groupe.';
+
+  @override
+  String get groupMemberRemoveConfirmAction => 'Exclure';
+
+  @override
+  String get groupMemberRemoveCancel => 'Annuler';
+
+  @override
   String get creationAccessDeniedErrorMessage =>
       'Vous n\'avez pas accès à cette action.';
 

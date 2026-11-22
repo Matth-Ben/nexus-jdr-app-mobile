@@ -1291,7 +1291,7 @@
 
   "characterLevelAbbreviation": "Niv. {level}",
   "@characterLevelAbbreviation": {
-    "description": "Segment \"Niv. X\" du résumé \"Race · Classe · Niv. X\" d'un personnage — partagé entre `character_card.dart::_summaryLine` et `character_card_action_sheet.dart::_CardActionSheetContent._summaryLine` (copie intentionnellement dupliquée entre ces deux fichiers, voir leur doc respective, mais la clé `.arb` elle-même est réutilisée).",
+    "description": "Segment \"Niv. X\" du résumé \"Race · Classe · Niv. X\" d'un personnage — partagé entre `character_card.dart::_summaryLine`, `character_card_action_sheet.dart::_CardActionSheetContent._summaryLine` et `group_join_screen.dart::_RoleSelectorTile._summaryLine` (copie intentionnellement dupliquée entre ces fichiers, voir leur doc respective, mais la clé `.arb` elle-même est réutilisée).",
     "placeholders": {
       "level": {
         "type": "int"
@@ -6298,6 +6298,138 @@
         "type": "int"
       }
     }
+  },
+  "groupJoinTitle": "REJOINDRE UN GROUPE",
+  "@groupJoinTitle": {
+    "description": "Titre de l'en-tête de l'écran « Rejoindre un groupe » (D233)."
+  },
+  "groupJoinIntro": "Demande le code d'invitation à un membre du groupe, puis choisis le personnage qui rejoindra le groupe.",
+  "@groupJoinIntro": {
+    "description": "Texte d'introduction de l'écran « Rejoindre un groupe » (D233). Tutoiement."
+  },
+  "groupJoinCodeLabel": "Code d'invitation",
+  "@groupJoinCodeLabel": {
+    "description": "Libellé de section au-dessus du champ du code (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinRoleLabel": "Qui te représente dans ce groupe ?",
+  "@groupJoinRoleLabel": {
+    "description": "Libellé de section au-dessus du choix du rôle (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinRoleHelp": "Choisis ton personnage, ou sélectionne « MJ — sans personnage » si tu animes la partie sans fiche.",
+  "@groupJoinRoleHelp": {
+    "description": "Aide sous « Qui te représente dans ce groupe ? » (correctif F01, D233). Le rôle cité doit reprendre exactement `groupJoinGameMasterRoleTitle`."
+  },
+  "groupJoinRolePickerTitle": "CHOISIR TON RÔLE",
+  "@groupJoinRolePickerTitle": {
+    "description": "Titre de la feuille de choix du rôle (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinGameMasterRoleTitle": "MJ — sans personnage",
+  "@groupJoinGameMasterRoleTitle": {
+    "description": "Rôle « MJ sans personnage » : tuile du rôle choisi et ligne de la feuille de choix (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinGameMasterRoleSubtitle": "Suit le groupe sans fiche de personnage.",
+  "@groupJoinGameMasterRoleSubtitle": {
+    "description": "Sous-titre du rôle « MJ — sans personnage » (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinNoCharacter": "Tu n'as pas encore de personnage à rattacher.",
+  "@groupJoinNoCharacter": {
+    "description": "Liste de personnages vide : tuile du rôle et feuille de choix (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinChooseRolePlaceholder": "Choisir un personnage ou un rôle",
+  "@groupJoinChooseRolePlaceholder": {
+    "description": "Tuile du rôle tant que rien n'est choisi ni chargé (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinCharactersRetryButton": "Réessayer",
+  "@groupJoinCharactersRetryButton": {
+    "description": "Relance du chargement des personnages dans la feuille de choix du rôle (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinSuccess": "Groupe rejoint !",
+  "@groupJoinSuccess": {
+    "description": "Message après un rattachement réussi (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinInProgress": "Rattachement au groupe…",
+  "@groupJoinInProgress": {
+    "description": "Voile affiché pendant le rattachement au groupe (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinInvalidCodeError": "Ce code d'invitation n'est pas valide.",
+  "@groupJoinInvalidCodeError": {
+    "description": "Code invalide, à l'aperçu ou au rattachement : texte d'aide sous le champ du code (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinGenericError": "Impossible de rejoindre ce groupe. Réessaie.",
+  "@groupJoinGenericError": {
+    "description": "Échec non reconnu ou réseau, à l'aperçu ou au rattachement : bandeau en tête d'écran (écran « Rejoindre un groupe », D233). Tutoiement."
+  },
+  "groupJoinAlreadyInGroupError": "Ce personnage est déjà membre de ce groupe.",
+  "@groupJoinAlreadyInGroupError": {
+    "description": "Rattachement refusé : le personnage est déjà dans ce groupe (bandeau, écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinGameMasterAlreadyAssignedError": "Ce groupe a déjà un MJ sans personnage.",
+  "@groupJoinGameMasterAlreadyAssignedError": {
+    "description": "Rattachement en MJ refusé : le groupe a déjà un MJ sans personnage (bandeau, écran « Rejoindre un groupe », D233)."
+  },
+  "groupMemberRemoveAction": "Exclure",
+  "@groupMemberRemoveAction": {
+    "description": "Texte du lien « Exclure » en pied de la carte d'un membre, à partir de la taille de texte ×1,4 (onglet Membres, D232). Le lecteur d'écran lit `groupMemberRemoveLabel`."
+  },
+  "groupMemberRemoveLabel": "Exclure {name}",
+  "@groupMemberRemoveLabel": {
+    "description": "Libellé du lecteur d'écran et info-bulle de la commande qui exclut un membre du groupe (onglet Membres, D232).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupMemberRemoveInProgress": "{name} : exclusion en cours",
+  "@groupMemberRemoveInProgress": {
+    "description": "Libellé du lecteur d'écran de la commande « Exclure » désactivée pendant l'exclusion du membre (onglet Membres, D232). Nom en tête : évite « de Eldrin ».",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupMemberRemovedSuccess": "{name} a été exclu du groupe.",
+  "@groupMemberRemovedSuccess": {
+    "description": "Message après l'exclusion d'un membre par le propriétaire (onglet Membres, D232).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupMemberRemoveGenericError": "Impossible d'exclure ce membre. Réessaie.",
+  "@groupMemberRemoveGenericError": {
+    "description": "Échec non reconnu de l'exclusion d'un membre (onglet Membres, D232). Tutoiement."
+  },
+  "groupMemberRemoveConfirmTitle": "Exclure {name} du groupe ?",
+  "@groupMemberRemoveConfirmTitle": {
+    "description": "Titre de la boîte de confirmation de l'exclusion d'un membre (onglet Membres, D232).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupMemberRemoveConfirmBodyCharacter": "Son personnage garde toutes ses données, mais quitte immédiatement le groupe.",
+  "@groupMemberRemoveConfirmBodyCharacter": {
+    "description": "Texte de la boîte de confirmation de l'exclusion d'un membre avec personnage (onglet Membres, D232)."
+  },
+  "groupMemberRemoveConfirmBodyGameMaster": "Il/elle quitte immédiatement le groupe.",
+  "@groupMemberRemoveConfirmBodyGameMaster": {
+    "description": "Texte de la boîte de confirmation de l'exclusion d'un MJ sans personnage (onglet Membres, D232). Jamais le texte du membre orphelin."
+  },
+  "groupMemberRemoveConfirmBodyAwaitingCharacter": "Son personnage a déjà été supprimé ; il/elle quitte immédiatement le groupe.",
+  "@groupMemberRemoveConfirmBodyAwaitingCharacter": {
+    "description": "Texte de la boîte de confirmation de l'exclusion d'un membre orphelin, dont le personnage a été supprimé (onglet Membres, D232)."
+  },
+  "groupMemberRemoveConfirmAction": "Exclure",
+  "@groupMemberRemoveConfirmAction": {
+    "description": "Bouton de confirmation de la boîte d'exclusion d'un membre (onglet Membres, D232)."
+  },
+  "groupMemberRemoveCancel": "Annuler",
+  "@groupMemberRemoveCancel": {
+    "description": "Bouton d'annulation de la boîte d'exclusion d'un membre (onglet Membres, D232)."
   },
   "creationAccessDeniedErrorMessage": "Vous n'avez pas accès à cette action.",
   "@creationAccessDeniedErrorMessage": {

@@ -869,7 +869,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Impossible de rejoindre ce groupe. Réessayez.'),
+        find.text('Impossible de rejoindre ce groupe. Réessaie.'),
         findsOneWidget,
       );
     },
@@ -893,7 +893,7 @@ void main() {
       await _tapJoin(tester);
       await tester.pump();
 
-      expect(find.text('Rattachement au groupe...'), findsOneWidget);
+      expect(find.text('Rattachement au groupe…'), findsOneWidget);
 
       fakeGroupRepository.joinCompleter!.complete(
         const JoinedGroup(groupId: 'group-1', name: 'Les Lames'),
@@ -1302,7 +1302,7 @@ void main() {
       expect(_isPrimaryButtonEnabled(tester), isFalse);
       await tester.tap(find.text('VOIR LE GROUPE'), warnIfMissed: false);
       await tester.pump();
-      expect(find.text('Rattachement au groupe...'), findsNothing);
+      expect(find.text('Rattachement au groupe…'), findsNothing);
       expect(_previewLoading(), findsOneWidget);
 
       fakeGroupRepository.previewCompleter!.complete(campaignPreview);
@@ -1350,7 +1350,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(fakeGroupRepository.joinCallCount, 0);
-      expect(find.text('Rattachement au groupe...'), findsNothing);
+      expect(find.text('Rattachement au groupe…'), findsNothing);
       expect(_previewCard(), findsOneWidget);
     });
 
@@ -1406,7 +1406,7 @@ void main() {
       await tester.tap(find.text('REJOINDRE'));
       await tester.pump();
       expect(fakeGroupRepository.joinCallCount, 0);
-      expect(find.text('Rattachement au groupe...'), findsNothing);
+      expect(find.text('Rattachement au groupe…'), findsNothing);
 
       // L'expiration reconstruit l'écran : le bouton redevient actif seul.
       await tester.pump(const Duration(milliseconds: 150));
@@ -1547,7 +1547,7 @@ void main() {
 
       await tester.tap(find.text('VOIR LE GROUPE'));
       await tester.pump();
-      expect(find.text('Rattachement au groupe...'), findsNothing);
+      expect(find.text('Rattachement au groupe…'), findsNothing);
       expect(_isPrimaryButtonLoading(tester), isTrue);
       expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
       expect(_previewLoading(), findsOneWidget);
@@ -1559,7 +1559,7 @@ void main() {
       fakeGroupRepository.joinCompleter = Completer<JoinedGroup>();
       await _tapJoin(tester);
       await tester.pump();
-      expect(find.text('Rattachement au groupe...'), findsOneWidget);
+      expect(find.text('Rattachement au groupe…'), findsOneWidget);
 
       fakeGroupRepository.joinCompleter!.complete(
         const JoinedGroup(groupId: 'group-1', name: 'Les Lames'),
@@ -1674,7 +1674,7 @@ void main() {
       expect(_previewLoading(), findsNothing);
       expect(find.text("Ce code d'invitation n'est pas valide."), findsNothing);
       expect(
-        find.text('Impossible de rejoindre ce groupe. Réessayez.'),
+        find.text('Impossible de rejoindre ce groupe. Réessaie.'),
         findsNothing,
       );
     });
@@ -1720,7 +1720,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Impossible de rejoindre ce groupe. Réessayez.'),
+        find.text('Impossible de rejoindre ce groupe. Réessaie.'),
         findsOneWidget,
       );
       expect(_previewCard(), findsNothing);
@@ -1868,7 +1868,7 @@ void main() {
       await tester.tap(find.text('VOIR LE GROUPE'));
       await tester.pump();
       expect(fakeGroupRepository.joinCallCount, 0);
-      expect(find.text('Rattachement au groupe...'), findsNothing);
+      expect(find.text('Rattachement au groupe…'), findsNothing);
 
       groupB.complete(const GroupPreview(name: 'Groupe B', memberCount: 2));
       await tester.pumpAndSettle();
@@ -1952,5 +1952,228 @@ void main() {
       expect(name.style!.fontSize, 16);
       expect(name.style!.fontWeight, FontWeight.w800);
     });
+  });
+
+  // D233 : plus aucun texte en dur sur cet écran ; chaque texte affiché est
+  // celui de sa clé `.arb`, en français (tutoiement) comme en anglais.
+  group('textes localisés (D233)', () {
+    test('messages d\'erreur au tutoiement en français', () {
+      final fr = lookupAppLocalizations(const Locale('fr'));
+      expect(
+        fr.groupJoinGenericError,
+        'Impossible de rejoindre ce groupe. Réessaie.',
+      );
+      expect(
+        fr.groupJoinInvalidCodeError,
+        "Ce code d'invitation n'est pas valide.",
+      );
+      expect(
+        fr.groupJoinAlreadyInGroupError,
+        'Ce personnage est déjà membre de ce groupe.',
+      );
+      expect(
+        fr.groupJoinGameMasterAlreadyAssignedError,
+        'Ce groupe a déjà un MJ sans personnage.',
+      );
+      // Tous les textes de l'écran : jamais de vouvoiement.
+      for (final text in [
+        fr.groupJoinTitle,
+        fr.groupJoinIntro,
+        fr.groupJoinCodeLabel,
+        fr.groupJoinRoleLabel,
+        fr.groupJoinRoleHelp,
+        fr.groupJoinRolePickerTitle,
+        fr.groupJoinGameMasterRoleTitle,
+        fr.groupJoinGameMasterRoleSubtitle,
+        fr.groupJoinNoCharacter,
+        fr.groupJoinChooseRolePlaceholder,
+        fr.groupJoinCharactersRetryButton,
+        fr.groupJoinSuccess,
+        fr.groupJoinInProgress,
+        fr.groupJoinGenericError,
+        fr.groupJoinInvalidCodeError,
+        fr.groupJoinAlreadyInGroupError,
+        fr.groupJoinGameMasterAlreadyAssignedError,
+      ]) {
+        expect(
+          text,
+          isNot(matches(RegExp(r'\b(Réessayez|vous|votre|vos)\b'))),
+          reason: text,
+        );
+      }
+    });
+
+    for (final locale in const [Locale('fr'), Locale('en')]) {
+      final l10n = lookupAppLocalizations(locale);
+      final lang = locale.languageCode;
+
+      Widget buildIn() => _buildTestWidget(
+        characterRepository: fakeCharacterRepository,
+        groupRepository: fakeGroupRepository,
+        locale: locale,
+      );
+
+      /// Touche le bouton principal (« Voir le groupe » ou « Rejoindre »),
+      /// quelle que soit la langue, après la garde anti double toucher.
+      Future<void> tapPrimary(WidgetTester tester) async {
+        await tester.pump(kDoubleTapTimeout);
+        await tester.tap(find.byType(PrimaryButton));
+      }
+
+      testWidgets('[$lang] textes fixes de l\'écran et de la feuille de rôle', (
+        tester,
+      ) async {
+        fakeCharacterRepository.charactersToReturn = const [];
+        await tester.pumpWidget(buildIn());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.groupJoinTitle), findsOneWidget);
+        expect(find.text(l10n.groupJoinIntro), findsOneWidget);
+        expect(find.text(l10n.groupJoinCodeLabel), findsOneWidget);
+        expect(find.text(l10n.groupJoinRoleLabel), findsOneWidget);
+        expect(find.text(l10n.groupJoinRoleHelp), findsOneWidget);
+        expect(find.text(l10n.groupJoinNoCharacter), findsOneWidget);
+
+        await tester.tap(find.text(l10n.groupJoinNoCharacter));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.groupJoinRolePickerTitle), findsOneWidget);
+        expect(find.text(l10n.groupJoinGameMasterRoleTitle), findsOneWidget);
+        expect(find.text(l10n.groupJoinGameMasterRoleSubtitle), findsOneWidget);
+        // Tuile du rôle et note sous la ligne MJ.
+        expect(find.text(l10n.groupJoinNoCharacter), findsNWidgets(2));
+
+        await tester.tap(find.text(l10n.groupJoinGameMasterRoleTitle));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.groupJoinRolePickerTitle), findsNothing);
+        expect(find.text(l10n.groupJoinGameMasterRoleTitle), findsOneWidget);
+        expect(find.text(l10n.groupJoinGameMasterRoleSubtitle), findsOneWidget);
+      });
+
+      testWidgets('[$lang] résumé du personnage : niveau localisé', (
+        tester,
+      ) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(
+            id: '1',
+            name: 'Halltesse',
+            level: 5,
+            xp: 7000,
+            className: 'Magicien',
+          ),
+        ];
+        await tester.pumpWidget(buildIn());
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Magicien · ${l10n.characterLevelAbbreviation(5)}'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('[$lang] personnages en échec : choix du rôle et bouton '
+          'de relance', (tester) async {
+        fakeCharacterRepository.charactersErrorToThrow = Exception('réseau');
+        await tester.pumpWidget(buildIn());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.groupJoinChooseRolePlaceholder), findsOneWidget);
+        await tester.tap(find.text(l10n.groupJoinChooseRolePlaceholder));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.characterLoadFailedErrorMessage), findsOneWidget);
+        expect(find.text(l10n.groupJoinCharactersRetryButton), findsOneWidget);
+      });
+
+      testWidgets('[$lang] aperçu : code invalide sous le champ, échec '
+          'générique en bandeau', (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
+        ];
+        fakeGroupRepository.previewErrorToThrow = const GroupInviteFailure(
+          GroupInviteFailureKind.invalidCode,
+        );
+        await tester.pumpWidget(buildIn());
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'ab3f7k');
+        await tester.pump();
+        await tapPrimary(tester);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.groupJoinInvalidCodeError), findsOneWidget);
+
+        fakeGroupRepository.previewErrorToThrow = const GroupInviteFailure(
+          GroupInviteFailureKind.generic,
+        );
+        await tester.enterText(find.byType(TextField), 'cd9912');
+        await tester.pump();
+        await tapPrimary(tester);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.groupJoinGenericError), findsOneWidget);
+        expect(find.text(l10n.groupJoinInvalidCodeError), findsNothing);
+
+        // Aperçu automatique d'un code complet invalide : même texte.
+        fakeGroupRepository.previewErrorToThrow = const GroupInviteFailure(
+          GroupInviteFailureKind.invalidCode,
+        );
+        await tester.enterText(find.byType(TextField), 'ab3f7k2m');
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.groupJoinInvalidCodeError), findsOneWidget);
+      });
+
+      final joinFailures = <Object, String>{
+        const GroupInviteFailure(GroupInviteFailureKind.alreadyInGroup):
+            l10n.groupJoinAlreadyInGroupError,
+        const GroupInviteFailure(GroupInviteFailureKind.mjAlreadyAssigned):
+            l10n.groupJoinGameMasterAlreadyAssignedError,
+        const GroupInviteFailure(GroupInviteFailureKind.generic):
+            l10n.groupJoinGenericError,
+        const GroupInviteFailure(GroupInviteFailureKind.invalidCode):
+            l10n.groupJoinInvalidCodeError,
+        Exception('réseau'): l10n.groupJoinGenericError,
+      };
+      for (final entry in joinFailures.entries) {
+        testWidgets('[$lang] rattachement en échec (${entry.key}) : '
+            '« ${entry.value} »', (tester) async {
+          fakeCharacterRepository.charactersToReturn = const [
+            CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
+          ];
+          fakeGroupRepository.joinErrorToThrow = entry.key;
+          await tester.pumpWidget(buildIn());
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(TextField), 'ab3f7k');
+          await tester.pump();
+          await tapPrimary(tester);
+          await tester.pumpAndSettle();
+          expect(_previewCard(), findsOneWidget);
+          await tapPrimary(tester);
+          await tester.pumpAndSettle();
+
+          expect(find.text(entry.value), findsOneWidget);
+        });
+      }
+
+      testWidgets('[$lang] rattachement : voile puis message de réussite', (
+        tester,
+      ) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
+        ];
+        fakeGroupRepository.joinCompleter = Completer<JoinedGroup>();
+        await tester.pumpWidget(buildIn());
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'ab3f7k');
+        await tester.pump();
+        await tapPrimary(tester);
+        await tester.pumpAndSettle();
+        await tapPrimary(tester);
+        await tester.pump();
+
+        expect(find.text(l10n.groupJoinInProgress), findsOneWidget);
+
+        fakeGroupRepository.joinCompleter!.complete(
+          const JoinedGroup(groupId: 'group-1', name: 'Les Lames'),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.groupJoinSuccess), findsOneWidget);
+      });
+    }
   });
 }

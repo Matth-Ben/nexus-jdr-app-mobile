@@ -1952,7 +1952,7 @@ abstract class AppLocalizations {
   /// **'Capture d\'écran jointe'**
   String get profileReportBugAttachedImageSemanticLabel;
 
-  /// Segment "Niv. X" du résumé "Race · Classe · Niv. X" d'un personnage — partagé entre `character_card.dart::_summaryLine` et `character_card_action_sheet.dart::_CardActionSheetContent._summaryLine` (copie intentionnellement dupliquée entre ces deux fichiers, voir leur doc respective, mais la clé `.arb` elle-même est réutilisée).
+  /// Segment "Niv. X" du résumé "Race · Classe · Niv. X" d'un personnage — partagé entre `character_card.dart::_summaryLine`, `character_card_action_sheet.dart::_CardActionSheetContent._summaryLine` et `group_join_screen.dart::_RoleSelectorTile._summaryLine` (copie intentionnellement dupliquée entre ces fichiers, voir leur doc respective, mais la clé `.arb` elle-même est réutilisée).
   ///
   /// In fr, this message translates to:
   /// **'Niv. {level}'**
@@ -7660,6 +7660,174 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{count, plural, =1{{count} membre} other{{count} membres}}'**
   String groupInvitePreviewMemberCount(int count);
+
+  /// Titre de l'en-tête de l'écran « Rejoindre un groupe » (D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'REJOINDRE UN GROUPE'**
+  String get groupJoinTitle;
+
+  /// Texte d'introduction de l'écran « Rejoindre un groupe » (D233). Tutoiement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande le code d\'invitation à un membre du groupe, puis choisis le personnage qui rejoindra le groupe.'**
+  String get groupJoinIntro;
+
+  /// Libellé de section au-dessus du champ du code (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Code d\'invitation'**
+  String get groupJoinCodeLabel;
+
+  /// Libellé de section au-dessus du choix du rôle (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Qui te représente dans ce groupe ?'**
+  String get groupJoinRoleLabel;
+
+  /// Aide sous « Qui te représente dans ce groupe ? » (correctif F01, D233). Le rôle cité doit reprendre exactement `groupJoinGameMasterRoleTitle`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis ton personnage, ou sélectionne « MJ — sans personnage » si tu animes la partie sans fiche.'**
+  String get groupJoinRoleHelp;
+
+  /// Titre de la feuille de choix du rôle (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'CHOISIR TON RÔLE'**
+  String get groupJoinRolePickerTitle;
+
+  /// Rôle « MJ sans personnage » : tuile du rôle choisi et ligne de la feuille de choix (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'MJ — sans personnage'**
+  String get groupJoinGameMasterRoleTitle;
+
+  /// Sous-titre du rôle « MJ — sans personnage » (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Suit le groupe sans fiche de personnage.'**
+  String get groupJoinGameMasterRoleSubtitle;
+
+  /// Liste de personnages vide : tuile du rôle et feuille de choix (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu n\'as pas encore de personnage à rattacher.'**
+  String get groupJoinNoCharacter;
+
+  /// Tuile du rôle tant que rien n'est choisi ni chargé (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un personnage ou un rôle'**
+  String get groupJoinChooseRolePlaceholder;
+
+  /// Relance du chargement des personnages dans la feuille de choix du rôle (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get groupJoinCharactersRetryButton;
+
+  /// Message après un rattachement réussi (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Groupe rejoint !'**
+  String get groupJoinSuccess;
+
+  /// Voile affiché pendant le rattachement au groupe (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Rattachement au groupe…'**
+  String get groupJoinInProgress;
+
+  /// Code invalide, à l'aperçu ou au rattachement : texte d'aide sous le champ du code (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code d\'invitation n\'est pas valide.'**
+  String get groupJoinInvalidCodeError;
+
+  /// Échec non reconnu ou réseau, à l'aperçu ou au rattachement : bandeau en tête d'écran (écran « Rejoindre un groupe », D233). Tutoiement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de rejoindre ce groupe. Réessaie.'**
+  String get groupJoinGenericError;
+
+  /// Rattachement refusé : le personnage est déjà dans ce groupe (bandeau, écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce personnage est déjà membre de ce groupe.'**
+  String get groupJoinAlreadyInGroupError;
+
+  /// Rattachement en MJ refusé : le groupe a déjà un MJ sans personnage (bandeau, écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce groupe a déjà un MJ sans personnage.'**
+  String get groupJoinGameMasterAlreadyAssignedError;
+
+  /// Texte du lien « Exclure » en pied de la carte d'un membre, à partir de la taille de texte ×1,4 (onglet Membres, D232). Le lecteur d'écran lit `groupMemberRemoveLabel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure'**
+  String get groupMemberRemoveAction;
+
+  /// Libellé du lecteur d'écran et info-bulle de la commande qui exclut un membre du groupe (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure {name}'**
+  String groupMemberRemoveLabel(String name);
+
+  /// Libellé du lecteur d'écran de la commande « Exclure » désactivée pendant l'exclusion du membre (onglet Membres, D232). Nom en tête : évite « de Eldrin ».
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} : exclusion en cours'**
+  String groupMemberRemoveInProgress(String name);
+
+  /// Message après l'exclusion d'un membre par le propriétaire (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a été exclu du groupe.'**
+  String groupMemberRemovedSuccess(String name);
+
+  /// Échec non reconnu de l'exclusion d'un membre (onglet Membres, D232). Tutoiement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'exclure ce membre. Réessaie.'**
+  String get groupMemberRemoveGenericError;
+
+  /// Titre de la boîte de confirmation de l'exclusion d'un membre (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure {name} du groupe ?'**
+  String groupMemberRemoveConfirmTitle(String name);
+
+  /// Texte de la boîte de confirmation de l'exclusion d'un membre avec personnage (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Son personnage garde toutes ses données, mais quitte immédiatement le groupe.'**
+  String get groupMemberRemoveConfirmBodyCharacter;
+
+  /// Texte de la boîte de confirmation de l'exclusion d'un MJ sans personnage (onglet Membres, D232). Jamais le texte du membre orphelin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il/elle quitte immédiatement le groupe.'**
+  String get groupMemberRemoveConfirmBodyGameMaster;
+
+  /// Texte de la boîte de confirmation de l'exclusion d'un membre orphelin, dont le personnage a été supprimé (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Son personnage a déjà été supprimé ; il/elle quitte immédiatement le groupe.'**
+  String get groupMemberRemoveConfirmBodyAwaitingCharacter;
+
+  /// Bouton de confirmation de la boîte d'exclusion d'un membre (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure'**
+  String get groupMemberRemoveConfirmAction;
+
+  /// Bouton d'annulation de la boîte d'exclusion d'un membre (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get groupMemberRemoveCancel;
 
   /// `CharacterCreationErrorCode.accessDenied` (D141).
   ///
