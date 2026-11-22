@@ -27,7 +27,14 @@ Contexte : depuis l'étape 5 (PR DeepCore #51, PR Grimoire #8), Grimoire lit l'i
 | R8 | `nexus_hero_links` abandonnée mais pas vidée (`db.ts:322-328`). | La supprimer par une migration. | `dev-grimoire` | C | À faire |
 | R9 | Chaque UPDATE temps réel de `characters` transmet la ligne complète à la mémoire de Grimoire (`party-realtime.ts:49`), même si rien n'en est gardé. | Signal sans contenu (Broadcast), puis relecture de l'instantané. | `dev-backend-supabase` | C | À faire |
 | R10 | La désinstallation (NSIS) n'efface pas les données (`electron-builder.yml:36`). | Bouton « Effacer les données Nexus » dans Grimoire. | `dev-grimoire` | C | À faire |
-| R11 | Un propriétaire qui a quitté son groupe reçoit encore l'instantané (`contrat-lecture-grimoire.md:20-23`). | Le dire dans les textes (R1). | chef de projet | C | À faire |
+| R11 | Un propriétaire qui a quitté son groupe reçoit encore l'instantané (`contrat-lecture-grimoire.md:20-23`). | Le dire dans les textes (R1). | chef de projet | C | À faire (intégré à la proposition de textes) |
+| R12 | Relevé le 22/11/2026 par `rgpd` (revue de la PR Grimoire #9) : les liens héros ↔ personnage (identifiants seulement) d'une base de compte qui n'est plus jamais rouverte (déconnexion définitive, compte du MJ supprimé) ne sont jamais purgés ; la promesse « effacés 30 jours après `seen_at` » est fausse dans ce cas. | Purger les liens des autres bases de compte au démarrage, ou le dire dans les textes. | `dev-grimoire` | C | À faire |
+
+**Suivi du 22/11/2026 (revue de clôture `rgpd` de la PR Grimoire #9)** : R2, R3, R4, R6, R7 et R8 **refermés dans la PR
+Grimoire #9** (`fix/rgpd-cache-nexus`, commits `3ac4f5e`, `543c14d`, `7445695`), sous réserve du merge. Règle exacte de
+conservation et limites (fichier non relancé, sauvegardes du système, liens R12, tolérance d'un jour) : voir
+`docs/rgpd-textes-proposition.md`. Restent bloquants pour la diffusion de Grimoire : **R1** (validation et mise en ligne
+des textes, nom du responsable) ; puis R5 (B), R9, R10, R11, R12 (C).
 
 **Rien à signaler** : journaux (codes et identifiants de groupe seulement, 1 Mo avec rotation), session chiffrée par le
 système, exports `grimoire-mj`, brief envoyé à l'IA, portraits à adresse externe (jamais téléchargés).
