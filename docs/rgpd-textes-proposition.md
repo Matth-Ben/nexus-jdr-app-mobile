@@ -21,9 +21,17 @@ au bout de 30 jours » (le fichier peut rester sur le disque d'un MJ qui ne rela
 > pseudo et d'un résumé de la fiche du personnage que tu rattaches à ce groupe (nom, portrait, race, classes et niveaux,
 > points de vie, états, classe d'armure) est conservée sur l'ordinateur du MJ, pour qu'il puisse préparer et mener ses
 > parties même sans connexion. Cette copie ne sert qu'à ce groupe : elle n'est ni envoyée ailleurs, ni transmise à un
-> service d'intelligence artificielle, ni incluse dans les exports du MJ. Elle est effacée quand tu quittes le groupe,
-> quand le groupe est dissous ou détaché de la campagne du MJ, et elle n'est plus jamais affichée si Grimoire n'a pas pu
-> la mettre à jour depuis 30 jours ; elle est alors effacée au plus tard au lancement suivant de Grimoire.
+> service d'intelligence artificielle, ni incluse dans les exports ou les sauvegardes du MJ. Elle est effacée quand tu
+> quittes le groupe, quand le groupe est dissous ou détaché de la campagne du MJ, quand le MJ se déconnecte de son compte,
+> et elle n'est plus jamais affichée si Grimoire n'a pas pu la mettre à jour depuis 30 jours ; elle est alors effacée au
+> plus tard au lancement suivant de Grimoire.
+
+**Règle finale de Grimoire (PR #9, `fix/rgpd-cache-nexus`), source de ces textes** : « Grimoire garde les données des
+joueurs de Nexus (pseudo, résumé de fiche, portrait) au plus 30 jours après sa dernière lecture réussie dans DeepCore, et
+seulement pour le compte Nexus qui les a lues ; il les efface aussitôt si le groupe est introuvable ou n'appartient plus
+au MJ, à la déconnexion, si la session est révoquée ou le compte supprimé, et ne les copie jamais dans ses sauvegardes ni
+dans une base reprise. » Réserve : les sauvegardes créées **avant** cette version ne sont pas réécrites (nettoyage unique
+ou bouton à décider).
 
 ### Section 6 (`profilePrivacyPolicySection6Para1`), texte proposé
 > • Compte, contenu de jeu et photos : tant que ton compte existe. Ils sont supprimés définitivement de nos serveurs dès
