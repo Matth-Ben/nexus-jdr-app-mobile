@@ -33,7 +33,8 @@ Contexte : depuis l'étape 5 (PR DeepCore #51, PR Grimoire #8), Grimoire lit l'i
 **Suivi du 22/11/2026 (revue de clôture `rgpd` de la PR Grimoire #9)** : R2, R3, R4, R6, R7 et R8 **refermés dans la PR
 Grimoire #9** (`fix/rgpd-cache-nexus`, commits `3ac4f5e`, `543c14d`, `7445695`), sous réserve du merge. Règle exacte de
 conservation et limites (fichier non relancé, sauvegardes du système, liens R12, tolérance d'un jour) : voir
-`docs/rgpd-textes-proposition.md`. Restent bloquants pour la diffusion de Grimoire : **R1** (validation et mise en ligne
+`docs/rgpd-textes-proposition.md`. **PR Grimoire #9 mergée le 22/11/2026 (`852e24e`)** : R2, R3, R4, R6, R7, R8
+corrigés. Restent bloquants pour la diffusion de Grimoire : **R1** (validation et mise en ligne
 des textes, nom du responsable) ; puis R5 (B), R9, R10, R11, R12 (C).
 
 **Rien à signaler** : journaux (codes et identifiants de groupe seulement, 1 Mo avec rotation), session chiffrée par le
