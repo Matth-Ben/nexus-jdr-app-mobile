@@ -202,6 +202,18 @@ où ils le contredisent. Les tickets Project #7 portent la même numérotation (
     lien avec Nexus (initiatives, tours, notifications) reste réservé au compte.
 46. **Lanceur de dés dans l'étape 7** : initiative des monstres tirée par Grimoire (d20 + bonus) et bouton pour lancer
     l'attaque et les dégâts lus dans la fiche du PNJ.
+47. **Interrupteur dédié** « Combat et révélations du MJ » dans les réglages de notification de Nexus (préférence dans
+    DeepCore, respectée par `notify-group`), en plus de l'interrupteur général.
+48. **Limites** : `notify-group` 10 par minute par groupe et MJ, 300 par 24 h par MJ ; messages des joueurs vers le MJ
+    20 par minute par membre. Réglables plus tard.
+49. **Présence pendant un combat** : seul le MJ voit quels joueurs ont le combat ouvert (minimisation) ; les autres
+    joueurs ne la voient pas.
+50. **Joueur exclu** : son accès aux messages du MJ doit être **coupé immédiatement**, pas après l'expiration de son jeton
+    (jusqu'à 1 h). Faisabilité à établir par `dev-backend-supabase` (piste du chef de projet : sujet renouvelé à chaque
+    départ d'un membre).
+
+Choix technique du chef de projet (23/11) : la langue des notifications est lue dans `user_metadata.locale` (déjà lu
+par DeepCore) ; Nexus l'écrit à la connexion et au changement de langue (partie Nexus de l'étape 7) ; à défaut, français.
 
 **Abandonné** par rapport aux propositions de `05`/`09` : tables `adventure_*`, bucket d'images d'histoire,
 `generate_group_from_story`, `groups.adventure_id`, `game_events`, `combat_npc_state`, `add_monsters`, `revealed`,
