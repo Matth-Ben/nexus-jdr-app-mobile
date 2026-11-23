@@ -414,3 +414,12 @@ Niveau **parchemin** (même écran que le combat natif).
 - **Q7** (chef de projet) : le badge « Mort » lit `characters.is_dead`, le même champ que Grimoire (cache de l'étape 5,
   décision 58) ; aucun changement de contrat.
 - Badge « Inconscient » : hors périmètre.
+- **Questions de `dev-flutter` (PR #307), chef de projet** :
+  - le bandeau de la fiche s'abonne aussi au sujet `:gm` des groupes du personnage, comme pour le combat natif
+    (sinon « MJ hors ligne » à tort une fois l'écran Groupe fermé) : **gardé** ;
+  - l'attente de 5 s après un réabonnement s'applique aussi à l'expiration à 10 min (pas de « Pas de nouvelles du MJ »
+    éclair au retour d'arrière-plan) : **validé** ;
+  - deux clés ajoutées hors §11 (`combatStartBlockedByGrimoire`, libellé lecteur d'écran du bandeau de fiche « Envoie
+    ton initiative ») : à faire valider par `direction-artistique` à la revue de conformité ;
+  - clés `profileNotificationsGmCombat*` placées dans le bloc `profileNotifications` (un test exige que le bloc `combat`
+    reste en fin de fichier) : **validé**.
