@@ -234,6 +234,13 @@ combat, et un participant hérite de l'état caché de son jeton ; l'édition et
 exports JSON ; le 20 et le 1 naturels restent affichés sans CA connue ; score fixe : +5 avec avantage, −5 avec
 désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.175, selon `regles-dnd`).
 
+59. **Partie Nexus de l'étape 7 avant les tickets « Combat V2 »** (combat mené dans Nexus sans Grimoire) : ce qui est
+    commun (surlignage du tour, ouverture du combat depuis une notification) est construit de façon réutilisable ; les
+    tickets V2 viennent ensuite et réutilisent ce socle.
+60. **Un seul interrupteur de notification pour le combat** : « Combat et révélations du MJ »
+    (`push_gm_combat_and_reveals`) couvre aussi le combat natif de Nexus (la préférence « rappel de tour » prévue pour
+    la V2 n'est pas créée).
+
 Précision du chef de projet (23/11, PR Grimoire #12) : « rien n'est montré avant le début réel » porte sur le
 **contenu** du combat (participants, ordre) ; l'**annonce** (`combat_start`) et la demande d'initiative, sans aucun
 participant, partent dès « Préparer » pour que les joueurs puissent envoyer leur initiative. La notification
