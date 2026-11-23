@@ -234,6 +234,13 @@ combat, et un participant hérite de l'état caché de son jeton ; l'édition et
 exports JSON ; le 20 et le 1 naturels restent affichés sans CA connue ; score fixe : +5 avec avantage, −5 avec
 désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.175, selon `regles-dnd`).
 
+Précision du chef de projet (23/11, PR Grimoire #12) : « rien n'est montré avant le début réel » porte sur le
+**contenu** du combat (participants, ordre) ; l'**annonce** (`combat_start`) et la demande d'initiative, sans aucun
+participant, partent dès « Préparer » pour que les joueurs puissent envoyer leur initiative. La notification
+`combat_start` ne part qu'aux joueurs absents (contrat DeepCore). Exigences pour la partie Nexus : « À toi de jouer »
+seulement sur un message `turn` (jamais sur `state` ou `order`) ; règle d'expiration d'un combat dont Nexus ne reçoit
+plus rien (Grimoire n'est pas abonné hors combat).
+
 Choix par défaut du chef de projet (23/11, recommandations de `regles-dnd`) : égalités comme dans Nexus (PJ avant PNJ,
 puis ordre d'arrivée, le MJ réordonne) ; « touche/rate » indicatif, confirmé par le MJ (la CA de Nexus ne compte ni
 Bouclier ni abri) ; lecture des dégâts acceptant `7 (2d6+3)`, « plus » et « et », refusant « ou » ; modificateur de DEX
