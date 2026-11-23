@@ -235,40 +235,42 @@ class _CombatHeaderState extends State<CombatHeader>
                 '${l10n.combatInitiativeProgress(widget.initiativeEntered, widget.initiativeTotal)}',
       style: AppTypography.body(fontSize: 15, fontWeight: FontWeight.w700),
     );
-    final Widget second = widget.mode == CombatHeaderMode.yourTurn
-        // Même hauteur qu'en mode normal (la liste ne bouge pas) : la ligne
-        // « Tour de X » reste mesurée, invisible et muette.
-        ? Stack(
-            children: [
-              Visibility(
-                visible: false,
-                maintainSize: true,
-                maintainAnimation: true,
-                maintainState: true,
-                child: standard,
-              ),
-              Row(
-                children: [
-                  const PixelIcon(
-                    matrix: kCombatSwordsMatrix,
-                    size: 16,
-                    color: AppColors.accentTeal,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Flexible(
-                    child: Text(
-                      l10n.combatYourTurn,
-                      style: AppTypography.body(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          )
-        : standard;
+    final yourTurnLine = Row(
+      children: [
+        const PixelIcon(
+          matrix: kCombatSwordsMatrix,
+          size: 16,
+          color: AppColors.accentTeal,
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Flexible(
+          child: Text(
+            l10n.combatYourTurn,
+            style: AppTypography.body(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    );
+    final yourTurn = widget.mode == CombatHeaderMode.yourTurn;
+    // Même hauteur dans les deux modes (la liste ne bouge pas) : les deux
+    // lignes sont toujours mesurées, la hauteur retenue est celle de la plus
+    // haute ; celle qui n'est pas affichée est invisible et muette.
+    Widget layer(Widget child, {required bool visible}) => Visibility(
+      visible: visible,
+      maintainSize: true,
+      maintainAnimation: true,
+      maintainState: true,
+      child: child,
+    );
+    final Widget second = Stack(
+      children: [
+        layer(standard, visible: !yourTurn),
+        layer(yourTurnLine, visible: yourTurn),
+      ],
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

@@ -436,6 +436,7 @@ class _GrimoireCombatBodyState extends ConsumerState<GrimoireCombatBody> {
 
     Widget rowFor(GrimoireParticipant participant, int index, {Key? key}) {
       final mine = GrimoireCombatView.isMine(participant, me);
+      final isDead = isGrimoireParticipantDead(participant, dead);
       final sentLabel =
           mine &&
           (initiative.status == GrimoireInitiativeStatus.sending ||
@@ -451,12 +452,15 @@ class _GrimoireCombatBodyState extends ConsumerState<GrimoireCombatBody> {
         rank: participant.initiative == null ? null : index + 1,
         isCurrent: current?.id == participant.id,
         isYou: mine,
-        isDead: isGrimoireParticipantDead(participant, dead),
-        pendingLabel: sentLabel ? l10n.combatInitiativeSentLabel : null,
+        isDead: isDead,
+        // Héros mort : aucun bloc d'initiative dans sa ligne.
+        pendingLabel: sentLabel && !isDead
+            ? l10n.combatInitiativeSentLabel
+            : null,
         note: mine && corrected != null
             ? l10n.combatInitiativeCorrected(corrected)
             : null,
-        onFill: mine && initiative.canSend ? _sendInitiative : null,
+        onFill: mine && !isDead && initiative.canSend ? _sendInitiative : null,
         actionsEnabled: unavailable == null,
         disabledHint: unavailable,
       );

@@ -401,6 +401,29 @@ void main() {
       expect(find.textContaining('Round'), findsNothing);
     });
 
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('×$scale, nom court : même hauteur en mode normal et « À toi '
+          'de jouer »', (tester) async {
+        CombatHeader header(CombatHeaderMode mode) => CombatHeader(
+          mode: mode,
+          round: 2,
+          turnName: 'Al',
+          initiativeEntered: 2,
+          initiativeTotal: 3,
+          sourceLabel: 'Mené depuis Grimoire',
+        );
+        await _pump(tester, header(CombatHeaderMode.standard), scale: scale);
+        final standard = tester.getSize(find.byKey(const Key('combatHeader')));
+        expect(find.text('Tour de Al').hitTestable(), findsOneWidget);
+        expect(find.text('À toi de jouer').hitTestable(), findsNothing);
+        await _pump(tester, header(CombatHeaderMode.yourTurn), scale: scale);
+        final yourTurn = tester.getSize(find.byKey(const Key('combatHeader')));
+        expect(find.text('À toi de jouer').hitTestable(), findsOneWidget);
+        expect(find.text('Tour de Al').hitTestable(), findsNothing);
+        expect(yourTurn.height, standard.height);
+      });
+    }
+
     testWidgets('sans ligne de source : en-tête natif inchangé', (
       tester,
     ) async {
@@ -494,6 +517,39 @@ void main() {
       expect(name.maxLines, isNull);
       expect(find.text('Mort'), findsOneWidget);
     });
+
+    for (final scale in [1.0, 3.0]) {
+      testWidgets('×$scale, pire cas (mort, « Toi », sans initiative, '
+          '`onFill` fourni) : aucun bloc d\'initiative, dans la fourchette', (
+        tester,
+      ) async {
+        await _pump(
+          tester,
+          InitiativeRow(
+            participant: fakeParticipant(
+              'p-aria',
+              name: 'Aria',
+              characterId: 'c-player',
+            ),
+            rank: null,
+            isYou: true,
+            isDead: true,
+            pendingLabel: 'Envoyée au MJ',
+            onFill: () {},
+          ),
+          scale: scale,
+        );
+        expect(tester.takeException(), isNull);
+        expect(find.text('Mort'), findsOneWidget);
+        expect(find.text('Toi'), findsOneWidget);
+        expect(find.text('Tour sauté'), findsOneWidget);
+        expect(find.text('Initiative à saisir'), findsNothing);
+        expect(find.text('Envoyée au MJ'), findsNothing);
+        expect(find.text('Renseigner'), findsNothing);
+        final height = tester.getSize(find.byType(InitiativeRow)).height;
+        expect(height, lessThanOrEqualTo(scale == 1 ? 96 : 320));
+      });
+    }
 
     testWidgets('surbrillance sur un héros mort : le tour l\'emporte', (
       tester,

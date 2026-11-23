@@ -355,7 +355,9 @@ class InitiativeRow extends StatelessWidget {
   }
 
   Widget _tags(AppLocalizations l10n) {
-    final noInitiative = participant.initiative == null && !_removed;
+    // Un héros mort n'a pas de bloc d'initiative (ni libellé ni bouton) :
+    // son tour est sauté ; la carte d'initiative reste la seule entrée.
+    final noInitiative = participant.initiative == null && !_removed && !isDead;
     return _clamped(
       Wrap(
         spacing: AppSpacing.xs,
