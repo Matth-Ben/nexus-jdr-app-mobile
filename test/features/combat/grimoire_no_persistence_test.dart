@@ -6,7 +6,16 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// Fichiers du suivi Grimoire (domaine, données, fournisseurs, écran).
+/// Fichiers qui lisent ou affichent le combat Grimoire.
+const _consumers = [
+  'lib/features/combat/presentation/combat_screen.dart',
+  'lib/features/combat/presentation/widgets/combat_banner.dart',
+  'lib/features/combat/presentation/widgets/combat_sheet_banner.dart',
+  'lib/features/combat/presentation/providers/character_combat_provider.dart',
+];
+
+/// Fichiers du suivi Grimoire (domaine, données, fournisseurs, écran), plus
+/// ceux qui le lisent ou l'affichent.
 List<File> _grimoireSources() => [
   for (final entity in Directory(
     'lib/features/combat',
@@ -15,6 +24,7 @@ List<File> _grimoireSources() => [
         entity.path.endsWith('.dart') &&
         entity.uri.pathSegments.last.startsWith('grimoire_'))
       entity,
+  for (final path in _consumers) File(path),
 ];
 
 const _forbidden = [
@@ -43,6 +53,10 @@ void main() {
         'grimoire_combat_providers.dart',
         'grimoire_banner_provider.dart',
         'grimoire_combat_body.dart',
+        'combat_screen.dart',
+        'combat_banner.dart',
+        'combat_sheet_banner.dart',
+        'character_combat_provider.dart',
       ]),
     );
   });
