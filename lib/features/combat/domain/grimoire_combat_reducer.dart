@@ -79,7 +79,8 @@ GrimoireStep _unchanged(GrimoireCombatView view, {bool requestState = false}) =>
 ///   sauf `combat_start` ou `state`, qui remplacent la vue.
 /// - Même combat : `seq` inférieur ou égal au dernier appliqué ignoré (sauf
 ///   `state` à `seq` égal), mais **compté** pour l'expiration ; un trou de
-///   `seq` redemande l'état complet (le message est quand même appliqué).
+///   `seq` redemande l'état complet (le message est quand même appliqué),
+///   sauf sur un `state`, complet par définition.
 /// - Combat terminé : plus rien n'est appliqué.
 ///
 /// [receivedAt] : horloge de Nexus à la réception (jamais `sent_at`).
@@ -127,7 +128,9 @@ GrimoireStep applyGrimoireMessage(
         requestState: false,
       );
     }
-    requestState = message.seq > last + 1;
+    // Un trou de `seq` redemande l'état complet, sauf si le message est
+    // lui-même un `state` : complet, il comble le trou.
+    requestState = !isState && message.seq > last + 1;
     base = revived;
   } else {
     // Nouveau combat : la vue repart de zéro (initiative comprise).

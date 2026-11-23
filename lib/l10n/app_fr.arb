@@ -7356,5 +7356,7 @@
   "combatAnnounceGmBack": "Le MJ est de retour.",
   "@combatAnnounceGmBack": {"description": "Annonce polie au retour des messages du MJ."},
   "combatStartBlockedByGrimoire": "Un combat est mené depuis Grimoire.",
-  "@combatStartBlockedByGrimoire": {"description": "Indice de « Lancer un combat » désactivé pendant un combat Grimoire vivant (décision 61)."}
+  "@combatStartBlockedByGrimoire": {"description": "Indice de « Lancer un combat » désactivé pendant un combat Grimoire vivant (décision 61)."},
+  "combatBackHome": "Retour à l'accueil",
+  "@combatBackHome": {"description": "Bouton de l'écran Combat quand le joueur ne fait plus partie du groupe (décision 50) : retour à l'accueil."}
 }

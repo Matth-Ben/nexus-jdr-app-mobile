@@ -75,6 +75,16 @@ abstract class GrimoireCombatSession with _$GrimoireCombatSession {
     return since.add(kGrimoireResyncGrace);
   }
 
+  /// Le silence du MJ peut-il être jugé ? Jamais au repos (app en
+  /// arrière-plan, personne n'écoute) ni après une exclusion : au retour,
+  /// l'attente de 5 s s'applique d'abord, puis l'expiration si rien n'arrive.
+  bool get evaluatesSilence =>
+      link != GrimoireLinkStatus.idle && link != GrimoireLinkStatus.lost;
+
+  /// `group_not_found` : le joueur ne fait plus partie du groupe (exclu ou
+  /// parti, décision 50). Canal fermé, vue effacée.
+  bool get isExcluded => link == GrimoireLinkStatus.lost;
+
   /// Le canal est-il inutilisable (pas `SUBSCRIBED`, hors ouverture en cours) ?
   bool get linkDown =>
       link == GrimoireLinkStatus.down ||

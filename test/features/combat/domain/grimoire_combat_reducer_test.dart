@@ -114,6 +114,18 @@ void main() {
       expect(result.requestState, isTrue);
     });
 
+    test('state après un trou : complet, il comble le trou sans redemander '
+        'l\'état', () {
+      final view = revealed();
+      final result = step(
+        view,
+        gState(9, participants: grimoireRoster(), current: 'p-brun'),
+      );
+      expect(result.view.lastSeq, 9);
+      expect(result.view.currentParticipantId, 'p-brun');
+      expect(result.requestState, isFalse);
+    });
+
     test('suite sans trou : aucune demande d\'état', () {
       final view = revealed();
       expect(step(view, gTurn(3, 'p-brun')).requestState, isFalse);

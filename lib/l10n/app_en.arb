@@ -1785,5 +1785,6 @@
   "combatAnnounceOrderRevealed": "The initiative order is revealed.",
   "combatAnnounceGmOffline": "The GM seems to be offline. The last view stays on screen.",
   "combatAnnounceGmBack": "The GM is back.",
-  "combatStartBlockedByGrimoire": "A combat is being run from Grimoire."
+  "combatStartBlockedByGrimoire": "A combat is being run from Grimoire.",
+  "combatBackHome": "Back to home"
 }

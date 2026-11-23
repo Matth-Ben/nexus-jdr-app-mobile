@@ -5978,4 +5978,7 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get combatStartBlockedByGrimoire =>
       'Un combat est mené depuis Grimoire.';
+
+  @override
+  String get combatBackHome => 'Retour à l\'accueil';
 }

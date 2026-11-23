@@ -77,6 +77,7 @@ const _keys = [
   'combatAnnounceGmOffline',
   'combatAnnounceGmBack',
   'combatStartBlockedByGrimoire',
+  'combatBackHome',
   'profileNotificationsGmCombat',
   'profileNotificationsGmCombatSubtitle',
 ];

@@ -402,12 +402,12 @@ void main() {
       final header = find.byKey(const Key('combatHeader'));
       final before = tester.getSize(header).height;
       await emit(tester, h, [gTurn(3, 'p-aria', round: 2)]);
-      expect(find.text('À toi de jouer'), findsOneWidget);
+      expect(find.text('À toi de jouer').hitTestable(), findsOneWidget);
       expect(tester.getSize(header).height, before);
       expect(h.assertiveAnnouncements, ['C\'est ton tour.']);
       expect(haptics, ['HapticFeedbackType.mediumImpact']);
       await emit(tester, h, [gTurn(4, 'p-brun', round: 2)]);
-      expect(find.text('À toi de jouer'), findsNothing);
+      expect(find.text('À toi de jouer').hitTestable(), findsNothing);
       expect(find.text('Tour de Brun'), findsOneWidget);
       await close(tester, h);
     });
@@ -421,7 +421,7 @@ void main() {
         gOrder(2, grimoireRoster(), current: 'p-aria'),
         gState(3, participants: grimoireRoster(), current: 'p-aria'),
       ]);
-      expect(find.text('À toi de jouer'), findsNothing);
+      expect(find.text('À toi de jouer').hitTestable(), findsNothing);
       expect(find.text('Tour de Aria'), findsOneWidget);
       expect(h.assertiveAnnouncements, isEmpty);
       await close(tester, h);
@@ -477,6 +477,29 @@ void main() {
       await close(tester, h);
     });
 
+    testWidgets('téléphone hors ligne : carte « Indisponible hors ligne », '
+        'bouton désactivé', (tester) async {
+      final h = await open(tester);
+      await emit(tester, h, [
+        gCombatStart(1),
+        gInitiativeRequest(2, ['c-player']),
+      ]);
+      h.connectivity.goOffline();
+      await tester.pumpAndSettle();
+      expect(find.text('Le MJ demande ton initiative'), findsOneWidget);
+      expect(find.text('Indisponible hors ligne'), findsOneWidget);
+      expect(
+        tester
+            .widget<PrimaryButton>(
+              find.byKey(const Key('combatSendInitiative')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(find.textContaining('MJ semble hors ligne'), findsNothing);
+      await close(tester, h);
+    });
+
     testWidgets('téléphone hors ligne : jamais « MJ hors ligne »', (
       tester,
     ) async {
@@ -522,6 +545,59 @@ void main() {
       ]);
       expect(find.text('Pas de nouvelles du MJ'), findsNothing);
       expect(find.text('Tour de Gobelin'), findsOneWidget);
+      await close(tester, h);
+    });
+  });
+
+  group('joueur exclu (décision 50)', () {
+    testWidgets('group_not_found à l\'envoi : état final neutre, annonce, '
+        'retour à l\'accueil', (tester) async {
+      final h = await open(tester);
+      h.grimoire.failures['initiative'] = const GrimoireFailure(
+        GrimoireFailureKind.groupNotFound,
+      );
+      await emit(tester, h, [
+        gCombatStart(1),
+        gInitiativeRequest(2, ['c-player']),
+      ]);
+      final link = h.grimoire.lastLink;
+      await tester.tap(find.text('ENVOYER MON INITIATIVE'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('combatInitiativeField')),
+        '9',
+      );
+      await tester.pump();
+      await tester.tap(find.text('ENVOYER AU MJ'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('combatExcluded')), findsOneWidget);
+      expect(find.text('Tu ne fais plus partie de ce groupe.'), findsOneWidget);
+      expect(find.byIcon(Icons.group_off_outlined), findsOneWidget);
+      // Ton neutre : ni brique, ni texte dessous, ni ancienne vue.
+      expect(find.byIcon(Icons.error_outline), findsNothing);
+      expect(find.text('Combat !'), findsNothing);
+      expect(find.text('Mené depuis Grimoire'), findsNothing);
+      expect(link.closeRequested, isTrue);
+      await tester.pump(const Duration(seconds: 1));
+      expect(h.announcements, contains('Tu ne fais plus partie de ce groupe.'));
+
+      await tester.tap(find.text('Retour à l\'accueil'.toUpperCase()));
+      await tester.pumpAndSettle();
+      expect(find.text('ACCUEIL'), findsOneWidget);
+      await close(tester, h);
+    });
+
+    testWidgets('group_not_found à la lecture des sujets : état final', (
+      tester,
+    ) async {
+      final h = CombatHarness(detail: _detail(), extraOverrides: dex());
+      h.grimoire.topicsFailure = const GrimoireFailure(
+        GrimoireFailureKind.groupNotFound,
+      );
+      await h.pumpScreen(tester);
+      expect(find.text('Tu ne fais plus partie de ce groupe.'), findsOneWidget);
+      expect(h.grimoire.links, isEmpty);
       await close(tester, h);
     });
   });

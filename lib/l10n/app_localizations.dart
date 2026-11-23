@@ -9548,6 +9548,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Un combat est mené depuis Grimoire.'**
   String get combatStartBlockedByGrimoire;
+
+  /// Bouton de l'écran Combat quand le joueur ne fait plus partie du groupe (décision 50) : retour à l'accueil.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour à l\'accueil'**
+  String get combatBackHome;
 }
 
 class _AppLocalizationsDelegate

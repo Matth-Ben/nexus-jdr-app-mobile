@@ -168,6 +168,10 @@ class CombatHarness {
           path: '/groups/:id',
           builder: (context, state) => const Scaffold(body: Text('GROUPE')),
         ),
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const Scaffold(body: Text('ACCUEIL')),
+        ),
       ],
     );
     addTearDown(container.dispose);

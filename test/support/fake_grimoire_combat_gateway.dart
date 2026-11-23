@@ -10,16 +10,28 @@ class FakeGrimoireGmLink implements GrimoireGmLink {
     this.topic,
     this.presenceKey,
     this._onBroadcast,
-    this._onSignal,
-  );
+    this._onSignal, {
+    this.closeGate,
+  });
 
   final String topic;
   final String presenceKey;
   final void Function(Map<String, dynamic>) _onBroadcast;
   final void Function(GrimoireChannelSignal) _onSignal;
 
+  /// Si posé, la fermeture (`removeChannel`) attend ce signal.
+  final Completer<void>? closeGate;
+
   int tracks = 0;
+
+  /// Fermeture demandée (canal quitté côté client).
+  bool closeRequested = false;
+
+  /// Fermeture terminée.
   bool closed = false;
+
+  /// Canal encore actif côté serveur avec une présence annoncée.
+  bool get presenceActive => tracks > 0 && !closeRequested;
 
   void emit(Map<String, dynamic> message) => _onBroadcast({
     'type': 'broadcast',
@@ -33,7 +45,12 @@ class FakeGrimoireGmLink implements GrimoireGmLink {
   Future<void> trackPresence() async => tracks++;
 
   @override
-  Future<void> close() async => closed = true;
+  Future<void> close() async {
+    closeRequested = true;
+    final gate = closeGate;
+    if (gate != null) await gate.future;
+    closed = true;
+  }
 }
 
 /// Envoi enregistré vers le meneur.
@@ -52,14 +69,17 @@ class FakeGrimoireCombatGateway implements GrimoireCombatGateway {
   /// Le canal passe `SUBSCRIBED` dès son ouverture.
   bool autoSubscribe;
 
-  GrimoireLiveTopics topics = (
-    epoch: 1,
-    gmTopic: 'grimoire:v1:group:group-1:e1:gm',
-    isLeader: false,
-  );
+  /// Sujets renvoyés ; `null` : sujet propre au groupe lu, époque 1.
+  GrimoireLiveTopics? topics;
+
+  /// Si posé, chaque fermeture de canal attend ce signal (fermeture lente).
+  Completer<void>? closeGate;
 
   /// Échec de `group_live_channels` (ex. `group_not_found`).
   GrimoireFailure? topicsFailure;
+
+  /// Si posé, la lecture des sujets attend ce signal (réseau lent).
+  Completer<void>? topicsGate;
   int topicsReads = 0;
 
   final List<FakeGrimoireGmLink> links = [];
@@ -83,10 +103,21 @@ class FakeGrimoireCombatGateway implements GrimoireCombatGateway {
   @override
   Future<GrimoireLiveTopics> fetchLiveChannels(String groupId) async {
     topicsReads++;
+    final gate = topicsGate;
+    if (gate != null) await gate.future;
     final failure = topicsFailure;
     if (failure != null) throw failure;
-    return topics;
+    return topics ??
+        (
+          epoch: 1,
+          gmTopic: 'grimoire:v1:group:$groupId:e1:gm',
+          isLeader: false,
+        );
   }
+
+  /// Dernier canal ouvert sur un sujet du groupe [groupId].
+  FakeGrimoireGmLink linkFor(String groupId) =>
+      links.lastWhere((link) => link.topic.contains(':group:$groupId:'));
 
   @override
   GrimoireGmLink openGmChannel({
@@ -95,11 +126,19 @@ class FakeGrimoireCombatGateway implements GrimoireCombatGateway {
     required void Function(Map<String, dynamic> payload) onBroadcast,
     required void Function(GrimoireChannelSignal signal) onSignal,
   }) {
-    final link = FakeGrimoireGmLink(topic, presenceKey, onBroadcast, onSignal);
+    final link = FakeGrimoireGmLink(
+      topic,
+      presenceKey,
+      onBroadcast,
+      onSignal,
+      closeGate: closeGate,
+    );
     links.add(link);
     if (autoSubscribe) {
       scheduleMicrotask(() {
-        if (!link.closed) link.signal(GrimoireChannelSignal.subscribed);
+        if (!link.closeRequested) {
+          link.signal(GrimoireChannelSignal.subscribed);
+        }
       });
     }
     return link;

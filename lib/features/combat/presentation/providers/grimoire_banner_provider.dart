@@ -21,7 +21,8 @@ typedef GrimoireBannerInfo = ({
 
 /// Bandeau du combat Grimoire du groupe [groupId] : `null` sans combat
 /// **vivant** (aucun, terminé, ou expiré après 10 min sans message : le
-/// bandeau est alors retiré). Priorité d'affichage du §7 : téléphone hors
+/// bandeau est alors retiré) ou si le joueur ne fait plus partie du
+/// groupe. Priorité d'affichage du §7 : téléphone hors
 /// ligne ou canal coupé (« Hors ligne · état de… »), puis MJ hors ligne.
 final grimoireBannerProvider = Provider.family<GrimoireBannerInfo?, String>((
   ref,
@@ -29,7 +30,9 @@ final grimoireBannerProvider = Provider.family<GrimoireBannerInfo?, String>((
 ) {
   final session = ref.watch(grimoireCombatProvider(groupId));
   final view = session.view;
-  if (!view.isAlive) return null;
+  // Joueur exclu (`group_not_found`) : bandeau retiré tout de suite, sans
+  // texte (décision 50).
+  if (session.isExcluded || !view.isAlive) return null;
   final online = ref.watch(connectivityStatusProvider).value != false;
   final liveness = session.displayLiveness(phoneOnline: online);
   final lastState = view.lastSentAt ?? view.lastReceivedAt;

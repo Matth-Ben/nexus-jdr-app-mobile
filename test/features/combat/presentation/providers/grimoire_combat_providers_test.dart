@@ -323,18 +323,69 @@ void main() {
         expect(read().link, GrimoireLinkStatus.subscribed);
       });
     }
+  });
 
-    grimoireTest('échec group_not_found : lien perdu', (tester) async {
-      await requested(tester);
+  group('joueur exclu : group_not_found (décision 50)', () {
+    /// Combat dévoilé et vivant, bandeau affiché.
+    Future<void> running(WidgetTester tester) async {
+      await connect(tester);
+      gateway.lastLink
+        ..emit(gCombatStart(1))
+        ..emit(gInitiativeRequest(2, ['c-player']))
+        ..emit(gOrder(3, grimoireRoster(), current: 'p-gob'));
+      expect(container.read(grimoireBannerProvider(groupId)), isNotNull);
+    }
+
+    void expectExcluded() {
+      expect(read().isExcluded, isTrue);
+      expect(read().view, const GrimoireCombatView());
+      expect(gateway.lastLink.closeRequested, isTrue);
+      expect(gateway.lastLink.presenceActive, isFalse);
+      expect(container.read(grimoireBannerProvider(groupId)), isNull);
+      expect(container.read(grimoireCombatAliveProvider(groupId)), isFalse);
+    }
+
+    grimoireTest('à l\'envoi d\'initiative : canal fermé, vue effacée', (
+      tester,
+    ) async {
+      await running(tester);
       gateway.failures['initiative'] = const GrimoireFailure(
         GrimoireFailureKind.groupNotFound,
       );
       await notifier().sendInitiative(9);
-      expect(
-        read().view.initiative.failure?.kind,
+      await tester.pump(const Duration(milliseconds: 10));
+      expectExcluded();
+      // Plus aucun message appliqué, plus aucun essai.
+      gateway.lastLink.emit(gState(9, participants: grimoireRoster()));
+      expect(read().view, const GrimoireCombatView());
+      await elapse(tester, const Duration(minutes: 1));
+      expect(gateway.links, hasLength(1));
+      expect(gateway.topicsReads, 1);
+    });
+
+    grimoireTest('en réponse à state_request : canal fermé, vue effacée', (
+      tester,
+    ) async {
+      await running(tester);
+      gateway.failures['state_request'] = const GrimoireFailure(
         GrimoireFailureKind.groupNotFound,
       );
-      expect(read().link, GrimoireLinkStatus.lost);
+      await elapse(tester, kGrimoireStateRequestGap);
+      gateway.lastLink.emit(gTurn(9, 'p-brun'));
+      await tester.pump(const Duration(milliseconds: 10));
+      expectExcluded();
+    });
+
+    grimoireTest('à la lecture des sujets (réabonnement)', (tester) async {
+      await running(tester);
+      gateway.topicsFailure = const GrimoireFailure(
+        GrimoireFailureKind.groupNotFound,
+      );
+      gateway.lastLink.emit(gRotated());
+      await tester.pump(const Duration(milliseconds: 10));
+      await tester.pump(const Duration(milliseconds: 10));
+      expectExcluded();
+      expect(gateway.links, hasLength(1));
     });
   });
 
@@ -371,6 +422,268 @@ void main() {
       await elapse(tester, kGrimoireExpireAfter);
       expect(container.read(grimoireBannerProvider(groupId)), isNull);
       expect(container.read(grimoireCombatAliveProvider(groupId)), isFalse);
+    });
+  });
+
+  group('arrière-plan et retour (défaut B de la QA)', () {
+    Future<void> settle(WidgetTester tester) async {
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+    }
+
+    grimoireTest('arrière-plan 11 min puis retour : aucun état expiré '
+        'intermédiaire', (tester) async {
+      final binding = tester.binding;
+      addTearDown(
+        () => binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed),
+      );
+      await connect(tester);
+      gateway.lastLink
+        ..emit(gCombatStart(1))
+        ..emit(gOrder(2, grimoireRoster(), current: 'p-gob'));
+      final seen = <GrimoireCombatSession>[];
+      container.listen(
+        grimoireCombatProvider(groupId),
+        (_, next) => seen.add(next),
+      );
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await settle(tester);
+      expect(gateway.lastLink.closeRequested, isTrue);
+      await elapse(tester, const Duration(minutes: 11));
+      expect(read().view.liveness, GrimoireLiveness.live);
+
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await settle(tester);
+      await elapse(tester, const Duration(seconds: 1));
+      expect(read().view.isAlive, isTrue);
+      // Réponse au `state_request` du réabonnement.
+      gateway.lastLink.emit(
+        gState(3, participants: grimoireRoster(), current: 'p-gob'),
+      );
+      await elapse(tester, const Duration(seconds: 10));
+      expect(seen, isNotEmpty);
+      expect(
+        seen.map((session) => session.view.liveness),
+        isNot(contains(GrimoireLiveness.expired)),
+      );
+      expect(seen.every((session) => session.view.isAlive), isTrue);
+      expect(
+        seen.map((session) => container.read(grimoireBannerProvider(groupId))),
+        everyElement(isNotNull),
+      );
+    });
+
+    grimoireTest('retour sans réponse : expiré seulement après l\'attente de '
+        '5 s', (tester) async {
+      final binding = tester.binding;
+      addTearDown(
+        () => binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed),
+      );
+      await connect(tester);
+      gateway.lastLink.emit(gCombatStart(1));
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await settle(tester);
+      await elapse(tester, const Duration(minutes: 11));
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await settle(tester);
+      await elapse(tester, const Duration(seconds: 4));
+      expect(read().view.liveness, GrimoireLiveness.live);
+      await elapse(tester, const Duration(seconds: 2));
+      expect(read().view.liveness, GrimoireLiveness.expired);
+    });
+
+    grimoireTest('un seul state_request au retour : le state reçu après un '
+        'trou de seq comble le trou', (tester) async {
+      final binding = tester.binding;
+      addTearDown(
+        () => binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed),
+      );
+      await connect(tester);
+      gateway.lastLink.emit(gCombatStart(1));
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await settle(tester);
+      await elapse(tester, const Duration(seconds: 30));
+      final before = gateway.stateRequests.length;
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await settle(tester);
+      expect(gateway.stateRequests.length, before + 1);
+      gateway.lastLink.emit(gState(14, participants: grimoireRoster()));
+      await elapse(tester, const Duration(seconds: 5));
+      expect(gateway.stateRequests.length, before + 1);
+    });
+  });
+
+  group('course à la reconnexion (défaut B de la QA)', () {
+    Future<void> settle(WidgetTester tester) async {
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+    }
+
+    grimoireTest('rotation, fermeture lente, volet de notifications : une '
+        'seule reconnexion ; arrière-plan : plus aucun canal ni présence', (
+      tester,
+    ) async {
+      final binding = tester.binding;
+      addTearDown(
+        () => binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed),
+      );
+      final slow = Completer<void>();
+      gateway.closeGate = slow;
+      await connect(tester);
+      final first = gateway.lastLink;
+      expect(first.tracks, 1);
+      first.emit(gRotated());
+      await settle(tester);
+      expect(first.closeRequested, isTrue);
+      // Volet de notifications pendant la fermeture lente.
+      binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await settle(tester);
+      // Rien n'est ouvert tant que l'ancien canal n'est pas fermé.
+      expect(gateway.links, hasLength(1));
+      slow.complete();
+      await settle(tester);
+      expect(gateway.links, hasLength(2));
+      expect(gateway.topicsReads, 2);
+      expect(gateway.lastLink.tracks, 1);
+
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await settle(tester);
+      expect(gateway.links.every((link) => link.closeRequested), isTrue);
+      expect(gateway.links.any((link) => link.presenceActive), isFalse);
+      await elapse(tester, const Duration(minutes: 1));
+      expect(gateway.links, hasLength(2));
+    });
+
+    grimoireTest('arrière-plan pendant une fermeture lente : aucun canal '
+        'rouvert ; retour : un seul canal', (tester) async {
+      final binding = tester.binding;
+      addTearDown(
+        () => binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed),
+      );
+      final slow = Completer<void>();
+      gateway.closeGate = slow;
+      await connect(tester);
+      gateway.lastLink.emit(gRotated());
+      await settle(tester);
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      slow.complete();
+      await settle(tester);
+      expect(gateway.links, hasLength(1));
+      expect(gateway.links.any((link) => link.presenceActive), isFalse);
+      expect(read().link, GrimoireLinkStatus.idle);
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await settle(tester);
+      expect(gateway.links, hasLength(2));
+      expect(gateway.links.where((link) => !link.closeRequested), hasLength(1));
+    });
+
+    grimoireTest('arrière-plan pendant la lecture des sujets : aucun canal '
+        'ouvert', (tester) async {
+      final binding = tester.binding;
+      addTearDown(
+        () => binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed),
+      );
+      final slow = Completer<void>();
+      gateway.topicsGate = slow;
+      watch();
+      await settle(tester);
+      expect(gateway.topicsReads, 1);
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      slow.complete();
+      await settle(tester);
+      expect(gateway.links, isEmpty);
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await settle(tester);
+      expect(gateway.links, hasLength(1));
+      expect(gateway.lastLink.tracks, 1);
+    });
+  });
+
+  group('compte et groupes', () {
+    Future<void> settle(WidgetTester tester) async {
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+    }
+
+    grimoireTest('changement de compte : état purgé, ancien canal fermé, '
+        'présence du nouveau compte', (tester) async {
+      await connect(tester);
+      gateway.lastLink
+        ..emit(gCombatStart(1))
+        ..emit(gOrder(2, grimoireRoster(), current: 'p-gob'));
+      expect(read().view.isRunning, isTrue);
+      final first = gateway.lastLink;
+      container.read(testUserIdProvider.notifier).set('user-2');
+      await settle(tester);
+      expect(read().view, const GrimoireCombatView());
+      expect(first.closeRequested, isTrue);
+      expect(first.presenceActive, isFalse);
+      expect(gateway.links, hasLength(2));
+      expect(gateway.lastLink.presenceKey, 'user-2');
+      expect(gateway.lastLink.tracks, 1);
+      expect(container.read(grimoireBannerProvider(groupId)), isNull);
+    });
+
+    grimoireTest('déconnexion : état purgé, canal fermé, aucun nouveau canal', (
+      tester,
+    ) async {
+      await connect(tester);
+      gateway.lastLink.emit(gCombatStart(1));
+      final first = gateway.lastLink;
+      container.read(testUserIdProvider.notifier).set(null);
+      await settle(tester);
+      expect(read().view, const GrimoireCombatView());
+      expect(first.closeRequested, isTrue);
+      expect(first.presenceActive, isFalse);
+      expect(gateway.links, hasLength(1));
+      // Un message tardif de l'ancien canal n'est plus appliqué.
+      first.emit(gState(5, participants: grimoireRoster()));
+      expect(read().view, const GrimoireCombatView());
+    });
+
+    grimoireTest('deux groupes ouverts : canaux et vues indépendants', (
+      tester,
+    ) async {
+      await connect(tester);
+      container.listen(
+        grimoireCombatWatcherProvider('group-2'),
+        (_, _) {},
+        fireImmediately: true,
+      );
+      await settle(tester);
+      container
+          .read(grimoireCombatProvider('group-2').notifier)
+          .setIdentity(kMe);
+      expect(gateway.links, hasLength(2));
+      GrimoireCombatSession other() =>
+          container.read(grimoireCombatProvider('group-2'));
+
+      gateway.linkFor(groupId).emit(gCombatStart(1));
+      expect(read().view.isRunning, isTrue);
+      expect(other().view.isRunning, isFalse);
+
+      gateway.linkFor('group-2')
+        ..emit(gCombatStart(1, combatId: kCombatB))
+        ..emit(gInitiativeRequest(2, ['c-player'], combatId: kCombatB));
+      expect(other().view.combatId, kCombatB);
+      expect(
+        other().view.initiative.status,
+        GrimoireInitiativeStatus.requested,
+      );
+      expect(read().view.initiative.status, GrimoireInitiativeStatus.idle);
+
+      gateway.linkFor(groupId).emit(gEnd(2));
+      expect(read().view.isAlive, isFalse);
+      expect(other().view.isAlive, isTrue);
+      expect(gateway.stateRequests.map((message) => message.groupId).toSet(), {
+        groupId,
+        'group-2',
+      });
     });
   });
 }

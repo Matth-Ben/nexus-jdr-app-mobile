@@ -148,7 +148,8 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
 
   // ------------------------------------------------------------- lien
 
-  /// Lien en cours d'ouverture, `SUBSCRIBED`, coupé, perdu ou au repos.
+  /// Lien en cours d'ouverture, `SUBSCRIBED`, coupé ou au repos. Une
+  /// exclusion passe par [markExcluded].
   void setLink(GrimoireLinkStatus link, {bool? isLeader}) {
     if (link == GrimoireLinkStatus.subscribed) _resyncing = true;
     state = state.copyWith(
@@ -159,13 +160,28 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
     _tick();
   }
 
+  /// `group_not_found` (lecture des sujets, `state_request`, initiative) :
+  /// le joueur ne fait plus partie du groupe (décision 50). La vue Grimoire
+  /// est effacée et le lien passe à « perdu » : le canal est fermé
+  /// ([grimoireCombatWatcherProvider] y veille) et plus rien n'est tenté.
+  void markExcluded() {
+    if (state.isExcluded && state.view == const GrimoireCombatView()) return;
+    _cancelTimers();
+    _resyncing = false;
+    state = GrimoireCombatSession(
+      link: GrimoireLinkStatus.lost,
+      linkSince: _now(),
+      eventSerial: state.eventSerial,
+    );
+  }
+
   // --------------------------------------------------------- messages
 
   /// Broadcast reçu sur `:gm` (déjà débarrassé de l'enveloppe Phoenix).
   void receive(Map<String, dynamic> payload) {
     final message = decodeGrimoireMessage(payload);
     final me = _me;
-    if (message == null || me == null) return;
+    if (message == null || me == null || state.isExcluded) return;
     final now = _now();
     final graceUntil = state.graceUntil;
     final step = applyGrimoireMessage(
@@ -203,22 +219,28 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
       session = session.copyWith(link: GrimoireLinkStatus.down, linkSince: now);
       state = session;
     }
-    final step = tickGrimoireCombat(
-      session.view,
-      now: now,
-      canJudgeGm: session.link == GrimoireLinkStatus.subscribed && _phoneOnline,
-      graceUntil: session.graceUntil,
-    );
-    _applyStep(step);
+    // Au repos (arrière-plan) : aucune conclusion sur le silence du MJ ; au
+    // retour, l'attente de 5 s passe d'abord.
+    if (session.evaluatesSilence) {
+      _applyStep(
+        tickGrimoireCombat(
+          session.view,
+          now: now,
+          canJudgeGm:
+              session.link == GrimoireLinkStatus.subscribed && _phoneOnline,
+          graceUntil: session.graceUntil,
+        ),
+      );
+    }
     _reschedule();
   }
 
   void _reschedule() {
     _tickTimer?.cancel();
     _tickTimer = null;
-    if (_attached == 0) return;
-    final now = _now();
     final session = state;
+    if (_attached == 0 || !session.evaluatesSilence) return;
+    final now = _now();
     final deadlines = [
       ?nextGrimoireDeadline(
         session.view,
@@ -277,7 +299,7 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
             if (!ref.mounted || epoch != _epoch) return;
             if (error is GrimoireFailure &&
                 error.kind == GrimoireFailureKind.groupNotFound) {
-              setLink(GrimoireLinkStatus.lost);
+              markExcluded();
             }
           }),
     );
@@ -332,7 +354,7 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
         ),
       );
       if (failure.kind == GrimoireFailureKind.groupNotFound) {
-        setLink(GrimoireLinkStatus.lost);
+        markExcluded();
       }
     }
   }
@@ -359,9 +381,6 @@ final grimoireCombatWatcherProvider = Provider.autoDispose.family<void, String>(
     final connectivity = ref.watch(connectivityCheckerProvider);
     final userId = ref.watch(currentUserProvider.select((user) => user?.id));
     if (userId == null) return;
-    // Garde le suivi actif (et son écoute du réseau) tant qu'un écran observe
-    // le groupe, même si cet écran ne lit pas l'état lui-même.
-    ref.listen(grimoireCombatProvider(groupId), (_, _) {});
     final notifier = ref.read(grimoireCombatProvider(groupId).notifier);
     final controller = _GrimoireLinkController(
       groupId: groupId,
@@ -370,20 +389,27 @@ final grimoireCombatWatcherProvider = Provider.autoDispose.family<void, String>(
       notifier: notifier,
       isMounted: () => ref.mounted,
     );
+    // Garde le suivi actif (et son écoute du réseau) tant qu'un écran observe
+    // le groupe ; une exclusion signalée par un envoi ferme le canal.
+    ref.listen<bool>(
+      grimoireCombatProvider(groupId).select((session) => session.isExcluded),
+      (previous, excluded) {
+        if (excluded) controller.excluded();
+      },
+    );
     final binding = WidgetsBinding.instance;
     final observer = _GrimoireLifecycleObserver(
       onForeground: controller.foreground,
       onBackground: controller.background,
     );
     binding.addObserver(observer);
-    final lifecycle = binding.lifecycleState;
-    final foreground =
-        lifecycle == null || lifecycle == AppLifecycleState.resumed;
-    // Jamais d'écriture dans un autre fournisseur pendant cette construction.
+    // Jamais d'écriture dans un autre fournisseur pendant cette construction ;
+    // l'état de l'app est lu au moment d'agir (il a pu changer entre-temps).
     Future.microtask(() {
       if (!ref.mounted) return;
       notifier.attach();
-      if (foreground) {
+      final lifecycle = binding.lifecycleState;
+      if (lifecycle == null || lifecycle == AppLifecycleState.resumed) {
         controller.foreground();
       } else {
         controller.background();
@@ -402,6 +428,13 @@ final grimoireCombatWatcherProvider = Provider.autoDispose.family<void, String>(
 );
 
 /// Ouverture, réabonnement et fermeture du canal `:gm` d'un groupe.
+///
+/// **Sérialisé** : une seule opération (fermeture, lecture des sujets,
+/// ouverture) à la fois, conduite par [_run] ; les évènements (premier plan,
+/// arrière-plan, rotation, erreur, retour du réseau, exclusion) ne font que
+/// poser l'intention, et la **dernière intention l'emporte**. L'ancien canal
+/// est toujours fermé avant qu'un nouveau soit gardé ; en arrière-plan, aucun
+/// canal ni présence ne reste actif.
 class _GrimoireLinkController {
   _GrimoireLinkController({
     required this.groupId,
@@ -417,54 +450,95 @@ class _GrimoireLinkController {
   final GrimoireCombatNotifier notifier;
   final bool Function() isMounted;
 
+  /// Canal gardé (ouvert ou en cours d'abonnement).
   GrimoireGmLink? _link;
-  Timer? _retry;
-  int _attempt = 0;
-  bool _foreground = false;
-  bool _connecting = false;
+
+  /// Intention : canal voulu (premier plan) ou non (arrière-plan, libéré).
+  bool _wantOpen = false;
+
+  /// Le canal gardé doit être remplacé (rotation d'époque, erreur).
+  bool _needsFresh = false;
+
+  /// `group_not_found` : plus aucun essai, canal fermé.
   bool _lost = false;
   bool _disposed = false;
 
-  /// Génération du canal courant : les signaux d'un canal remplacé ou fermé
+  Timer? _retry;
+  int _attempt = 0;
+
+  /// Opération en cours, et nouvelle évaluation demandée pendant celle-ci.
+  Future<void>? _running;
+  bool _rerun = false;
+
+  /// Génération du canal gardé : les signaux d'un canal remplacé ou fermé
   /// par nous sont ignorés.
   int _generation = 0;
 
   bool get _active => !_disposed && isMounted();
 
+  /// Premier plan (y compris `resumed` après le volet de notifications) :
+  /// canal voulu ; un canal déjà gardé n'est pas rouvert.
   void foreground() {
-    // Un `resumed` sans passage en arrière-plan (centre de notifications)
-    // garde le canal ouvert.
-    if (_foreground && (_link != null || _connecting || _retry != null)) {
-      return;
-    }
-    _foreground = true;
-    unawaited(_connect());
+    _wantOpen = true;
+    _kick();
   }
 
+  /// Arrière-plan : canal quitté (la présence disparaît avec lui).
   void background() {
-    _foreground = false;
-    _retry?.cancel();
-    _retry = null;
-    unawaited(_close());
-    if (_active) notifier.setLink(GrimoireLinkStatus.idle);
+    _wantOpen = false;
+    _cancelRetry();
+    if (_active && !_lost) notifier.setLink(GrimoireLinkStatus.idle);
+    _kick();
+  }
+
+  /// Rotation d'époque (`channel_rotated`) : nouveau sujet à relire.
+  void _rotated() {
+    _needsFresh = true;
+    _cancelRetry();
+    _kick();
   }
 
   void networkRestored() {
-    if (_foreground && _link == null && _retry != null) {
-      _retry?.cancel();
-      _retry = null;
-      unawaited(_connect());
-    }
+    if (_retry == null) return;
+    _cancelRetry();
+    _kick();
+  }
+
+  /// Exclusion signalée par un envoi (`group_not_found`) : canal fermé.
+  void excluded() {
+    if (_lost) return;
+    _lost = true;
+    _cancelRetry();
+    _kick();
   }
 
   void dispose() {
     _disposed = true;
-    _retry?.cancel();
-    _retry = null;
-    unawaited(_close());
+    _cancelRetry();
+    _kick();
   }
 
-  Future<void> _close() async {
+  void _cancelRetry() {
+    _retry?.cancel();
+    _retry = null;
+  }
+
+  void _kick() {
+    if (_running != null) {
+      _rerun = true;
+      return;
+    }
+    _running = _run().whenComplete(() {
+      _running = null;
+      if (_rerun) {
+        _rerun = false;
+        _kick();
+      }
+    });
+  }
+
+  /// Ferme le canal gardé (toujours avant d'en garder un autre).
+  Future<void> _closeLink() async {
     _generation++;
     final link = _link;
     _link = null;
@@ -476,47 +550,57 @@ class _GrimoireLinkController {
     }
   }
 
-  Future<void> _connect() async {
-    if (!_active || !_foreground || _lost) return;
-    _retry?.cancel();
-    _retry = null;
-    // Retirer d'abord l'ancien canal, puis relire les sujets (l'époque a pu
-    // changer) : jamais d'abonnement à un sujet construit soi-même.
-    await _close();
-    final generation = _generation;
-    if (!_active) return;
-    notifier.setLink(GrimoireLinkStatus.connecting);
-    final GrimoireLiveTopics topics;
-    _connecting = true;
-    try {
-      topics = await gateway.fetchLiveChannels(groupId);
-    } on GrimoireFailure catch (failure) {
-      if (!_active || generation != _generation) return;
-      if (failure.kind == GrimoireFailureKind.groupNotFound) {
-        _lost = true;
-        notifier.setLink(GrimoireLinkStatus.lost);
-        return;
+  /// Conduit le canal vers l'intention courante, réévaluée après chaque
+  /// attente.
+  Future<void> _run() async {
+    while (true) {
+      _rerun = false;
+      final wanted = _active && _wantOpen && !_lost;
+      if (!wanted) {
+        if (_link == null) return;
+        await _closeLink();
+        continue;
       }
-      _scheduleRetry();
-      return;
-    } on Object {
-      if (!_active || generation != _generation) return;
-      _scheduleRetry();
-      return;
-    } finally {
-      if (generation == _generation) _connecting = false;
+      if (_link != null) {
+        if (!_needsFresh) return;
+        await _closeLink();
+        continue;
+      }
+      // Nouvel essai programmé : on l'attend.
+      if (_retry != null) return;
+      _needsFresh = false;
+      notifier.setLink(GrimoireLinkStatus.connecting);
+      final GrimoireLiveTopics topics;
+      try {
+        // Jamais un sujet construit soi-même : l'époque a pu changer.
+        topics = await gateway.fetchLiveChannels(groupId);
+      } on GrimoireFailure catch (failure) {
+        if (!_active) continue;
+        if (failure.kind == GrimoireFailureKind.groupNotFound) {
+          _lost = true;
+          notifier.markExcluded();
+        } else {
+          _scheduleRetry();
+        }
+        continue;
+      } on Object {
+        if (_active) _scheduleRetry();
+        continue;
+      }
+      // L'intention a pu changer pendant la lecture (arrière-plan...).
+      if (!_active || !_wantOpen || _lost || _link != null) continue;
+      final generation = ++_generation;
+      _link = gateway.openGmChannel(
+        topic: topics.gmTopic,
+        presenceKey: userId,
+        onBroadcast: (raw) {
+          if (generation == _generation) _onBroadcast(raw);
+        },
+        onSignal: (signal) {
+          if (generation == _generation) _onSignal(signal, topics.isLeader);
+        },
+      );
     }
-    if (!_active || !_foreground || generation != _generation) return;
-    _link = gateway.openGmChannel(
-      topic: topics.gmTopic,
-      presenceKey: userId,
-      onBroadcast: (raw) {
-        if (generation == _generation) _onBroadcast(raw);
-      },
-      onSignal: (signal) {
-        if (generation == _generation) _onSignal(signal, topics.isLeader);
-      },
-    );
   }
 
   void _onBroadcast(Map<String, dynamic> raw) {
@@ -524,7 +608,7 @@ class _GrimoireLinkController {
     final payload = unwrapGrimoireBroadcast(raw);
     if (payload == null) return;
     if (isGrimoireChannelRotated(payload)) {
-      unawaited(_connect());
+      _rotated();
       return;
     }
     notifier.receive(payload);
@@ -537,7 +621,8 @@ class _GrimoireLinkController {
         _attempt = 0;
         notifier.setLink(GrimoireLinkStatus.subscribed, isLeader: isLeader);
         final link = _link;
-        if (_foreground && link != null) {
+        // Présence seulement au premier plan, sur le canal gardé.
+        if (_wantOpen && !_lost && link != null) {
           unawaited(
             link.trackPresence().catchError((Object _) {
               // Présence non annoncée : Grimoire notifiera ce joueur par push,
@@ -551,13 +636,14 @@ class _GrimoireLinkController {
       case GrimoireChannelSignal.timedOut:
         // Le client réessaierait en boucle sur le même sujet : retirer le
         // canal et relire les sujets plus tard.
-        unawaited(_close());
+        _needsFresh = true;
         _scheduleRetry();
+        _kick();
     }
   }
 
   void _scheduleRetry() {
-    if (!_active || !_foreground || _lost) return;
+    if (!_active || !_wantOpen || _lost) return;
     notifier.setLink(GrimoireLinkStatus.down);
     final delay =
         kGrimoireRetryDelays[_attempt.clamp(
@@ -568,7 +654,7 @@ class _GrimoireLinkController {
     _retry?.cancel();
     _retry = Timer(delay, () {
       _retry = null;
-      unawaited(_connect());
+      _kick();
     });
   }
 }

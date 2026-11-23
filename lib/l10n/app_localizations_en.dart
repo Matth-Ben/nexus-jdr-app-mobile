@@ -5929,4 +5929,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get combatStartBlockedByGrimoire =>
       'A combat is being run from Grimoire.';
+
+  @override
+  String get combatBackHome => 'Back to home';
 }

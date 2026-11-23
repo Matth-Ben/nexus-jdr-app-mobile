@@ -483,10 +483,21 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
     ref.watch(combatRealtimeWatcherProvider(groupId));
     ref.watch(grimoireCombatWatcherProvider(groupId));
     ref.listen<CombatViewState>(combatProvider(groupId), _onStateChange);
-    ref.listen<int>(
-      grimoireCombatProvider(groupId).select((session) => session.eventSerial),
-      _onGrimoireEvents,
-    );
+    ref
+      ..listen<int>(
+        grimoireCombatProvider(groupId)
+            .select((session) => session.eventSerial),
+        _onGrimoireEvents,
+      )
+      // Exclusion : une annonce polie du titre de l'état final.
+      ..listen<bool>(
+        grimoireCombatProvider(groupId).select((session) => session.isExcluded),
+        (previous, excluded) {
+          if (excluded && previous != true && mounted) {
+            _announce(AppLocalizations.of(context)!.combatNotMemberAnymore);
+          }
+        },
+      );
     final state = ref.watch(combatProvider(groupId));
     final detailAsync = ref.watch(groupDetailProvider(groupId));
     final detail = detailAsync.value;
@@ -521,6 +532,7 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
   ) {
     final detail = detailAsync.value;
     final grimoire = ref.watch(grimoireCombatProvider(widget.groupId));
+    if (grimoire.isExcluded) return _fade('excluded', _excluded(l10n));
     final view = grimoire.view;
     // Décision 61 : un combat Grimoire vivant passe avant le combat natif.
     if (view.isAlive && detail != null) {
@@ -633,7 +645,14 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
   Widget _emptyScreen({
     required Key key,
     required String title,
-    required String body,
+    String? body,
+    Widget icon = const PixelIcon(
+      matrix: kCombatSwordsMatrix,
+      size: 32,
+      color: AppColors.textSecondary,
+    ),
+    String? buttonLabel,
+    VoidCallback? onButton,
   }) {
     final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
@@ -643,11 +662,7 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: AppSpacing.lg),
-          const PixelIcon(
-            matrix: kCombatSwordsMatrix,
-            size: 32,
-            color: AppColors.textSecondary,
-          ),
+          icon,
           const SizedBox(height: AppSpacing.sm),
           Semantics(
             header: true,
@@ -660,23 +675,42 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            body,
-            textAlign: TextAlign.center,
-            style: AppTypography.body(
-              fontSize: 13,
-              color: AppColors.textSecondary,
+          if (body != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              body,
+              textAlign: TextAlign.center,
+              style: AppTypography.body(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: AppSpacing.md),
           SecondaryButton(
-            label: l10n.combatBackToGroup,
+            label: buttonLabel ?? l10n.combatBackToGroup,
             surface: SecondaryButtonSurface.parchment,
-            onPressed: _goBack,
+            onPressed: onButton ?? _goBack,
           ),
         ],
       ),
+    );
+  }
+
+  /// Le joueur ne fait plus partie du groupe (`group_not_found`, décision
+  /// 50) : état final neutre, retour à l'accueil (le groupe n'est plus
+  /// accessible).
+  Widget _excluded(AppLocalizations l10n) {
+    return _emptyScreen(
+      key: const Key('combatExcluded'),
+      title: l10n.combatNotMemberAnymore,
+      icon: const Icon(
+        Icons.group_off_outlined,
+        size: 32,
+        color: AppColors.textSecondary,
+      ),
+      buttonLabel: l10n.combatBackHome,
+      onButton: () => context.go('/'),
     );
   }
 
