@@ -241,6 +241,12 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
     (`push_gm_combat_and_reveals`) couvre aussi le combat natif de Nexus (la préférence « rappel de tour » prévue pour
     la V2 n'est pas créée).
 
+61. **Combat natif et combat Grimoire dans un même groupe** : Grimoire prioritaire ; tant qu'un combat Grimoire est
+    vivant, Nexus l'affiche et désactive « Lancer un combat » (natif).
+62. **Initiative reçue par le MJ** : le joueur ne peut plus la modifier depuis Nexus ; seul le MJ la corrige.
+63. **Nom « Grimoire » montré aux joueurs**, seulement dans une ligne discrète « Mené depuis Grimoire » de l'en-tête du
+    combat. Spécification visuelle de la partie Nexus : `docs/combat-grimoire-ui.md` (§13 : arbitrages).
+
 Précision du chef de projet (23/11, PR Grimoire #12) : « rien n'est montré avant le début réel » porte sur le
 **contenu** du combat (participants, ordre) ; l'**annonce** (`combat_start`) et la demande d'initiative, sans aucun
 participant, partent dès « Préparer » pour que les joueurs puissent envoyer leur initiative. La notification
