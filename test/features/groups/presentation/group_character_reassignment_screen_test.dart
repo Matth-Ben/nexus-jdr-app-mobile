@@ -42,6 +42,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
+import 'package:personnages/features/combat/presentation/providers/grimoire_combat_providers.dart';
 import 'package:personnages/features/groups/data/group_error_mapper.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/created_group.dart';
@@ -62,6 +63,7 @@ import '../../../support/combat_fixtures.dart';
 import '../../../support/fake_combat_repository.dart';
 import '../../../support/fake_connectivity_checker.dart';
 import '../../../support/fake_current_user.dart';
+import '../../../support/fake_grimoire_combat_gateway.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   List<CharacterSummary>? charactersToReturn;
@@ -903,6 +905,9 @@ void main() {
         extraOverrides: [
           currentUserFromTestOverride,
           combatRepositoryProvider.overrideWithValue(combatRepo),
+          grimoireCombatGatewayProvider.overrideWithValue(
+            FakeGrimoireCombatGateway(),
+          ),
           connectivityCheckerProvider.overrideWithValue(
             FakeConnectivityChecker(),
           ),
@@ -943,6 +948,9 @@ void main() {
           extraOverrides: [
             currentUserFromTestOverride,
             combatRepositoryProvider.overrideWithValue(FakeCombatRepository()),
+            grimoireCombatGatewayProvider.overrideWithValue(
+              FakeGrimoireCombatGateway(),
+            ),
             connectivityCheckerProvider.overrideWithValue(
               FakeConnectivityChecker(),
             ),

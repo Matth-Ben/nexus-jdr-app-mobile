@@ -17,12 +17,14 @@ import '../../domain/combat_view_state.dart';
 import '../combat_l10n.dart';
 import '../providers/combat_providers.dart';
 import '../providers/combat_read_only_provider.dart';
+import '../providers/grimoire_combat_providers.dart';
 
 /// Entrée « Lancer un combat » de l'onglet Membres (`docs/combat-groupe-ui.md`
 /// §4), sous l'indicateur de mise à jour en direct :
 /// - MJ dans l'app ([canStartCombat]) sans combat actif : bouton primaire
 ///   pleine largeur (spinner pendant l'appel, désactivé hors ligne avec
-///   « Indisponible hors ligne ») ;
+///   « Indisponible hors ligne », ou pendant un combat mené depuis Grimoire
+///   avec « Un combat est mené depuis Grimoire. », décision 61) ;
 /// - propriétaire sans rôle MJ : bandeau « Pas de combat sans MJ dans l'app. »
 ///   et lien vers les paramètres ;
 /// - joueur ou combat déjà actif (le bandeau du groupe prend le relais) :
@@ -106,7 +108,14 @@ class _StartCombatSectionState extends ConsumerState<StartCombatSection> {
     if (phase == CombatPhase.loading || phase == CombatPhase.active) {
       return const SizedBox.shrink();
     }
-    final readOnly = ref.watch(combatReadOnlyProvider(detail.id));
+    // Décision 61 : tant qu'un combat mené depuis Grimoire est vivant, il est
+    // affiché en priorité et le combat natif ne peut pas être lancé.
+    final grimoireAlive = ref.watch(grimoireCombatAliveProvider(detail.id));
+    final offline = ref.watch(combatReadOnlyProvider(detail.id));
+    final readOnly = offline || grimoireAlive;
+    final hint = grimoireAlive
+        ? l10n.combatStartBlockedByGrimoire
+        : l10n.combatStartUnavailableOffline;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Column(
@@ -137,7 +146,7 @@ class _StartCombatSectionState extends ConsumerState<StartCombatSection> {
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.xs),
               child: Text(
-                l10n.combatStartUnavailableOffline,
+                hint,
                 style: AppTypography.body(
                   fontSize: 12,
                   color: AppColors.textSecondary,

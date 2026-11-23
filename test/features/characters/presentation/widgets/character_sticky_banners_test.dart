@@ -16,6 +16,7 @@ import 'package:personnages/core/widgets/alert_banner.dart';
 import 'package:personnages/core/widgets/info_banner.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_sticky_banners.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
+import 'package:personnages/features/combat/presentation/providers/grimoire_combat_providers.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
 import 'package:personnages/l10n/app_localizations.dart';
 
@@ -23,6 +24,7 @@ import '../../../../support/combat_fixtures.dart';
 import '../../../../support/fake_combat_repository.dart';
 import '../../../../support/fake_connectivity_checker.dart';
 import '../../../../support/fake_current_user.dart';
+import '../../../../support/fake_grimoire_combat_gateway.dart';
 import '../../../../support/fake_group_character_lookup.dart';
 
 const _character = 'c-1';
@@ -86,6 +88,9 @@ void main() {
     final overrides = <Override>[
       currentUserFromTestOverride,
       combatRepositoryProvider.overrideWithValue(combats),
+      grimoireCombatGatewayProvider.overrideWithValue(
+        FakeGrimoireCombatGateway(),
+      ),
       groupRepositoryProvider.overrideWithValue(groups),
       connectivityCheckerProvider.overrideWithValue(connectivity),
       combatRefetchDebounceProvider.overrideWithValue(

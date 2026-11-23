@@ -1016,6 +1016,18 @@ abstract class AppLocalizations {
   /// **'DÉCLENCHEURS'**
   String get profileNotificationsSectionTriggers;
 
+  /// Interrupteur de notification (PR 2).
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat et révélations du MJ'**
+  String get profileNotificationsGmCombat;
+
+  /// Sous-titre de l'interrupteur de notification (PR 2).
+  ///
+  /// In fr, this message translates to:
+  /// **'Début du combat, ton tour et ce que le MJ te montre.'**
+  String get profileNotificationsGmCombatSubtitle;
+
   /// Titre de la 1ère rangée "DÉCLENCHEURS".
   ///
   /// In fr, this message translates to:
@@ -9158,6 +9170,384 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Combat en cours, round {round}, état de {time}. Ouvrir le combat.'**
   String combatSheetBannerSemanticsOffline(int round, String time);
+
+  /// Ligne de source discrète de l'en-tête d'un combat mené depuis Grimoire (décision 63).
+  ///
+  /// In fr, this message translates to:
+  /// **'Mené depuis Grimoire'**
+  String get combatGrimoireSource;
+
+  /// Bandeau d'information du meneur qui ouvre le combat dans Nexus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu mènes ce combat depuis Grimoire. Ici, tu le suis comme les joueurs.'**
+  String get combatGrimoireLeaderInfo;
+
+  /// Ligne 1 de l'en-tête pendant la préparation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat !'**
+  String get combatShout;
+
+  /// Ligne 2 de l'en-tête pendant la préparation.
+  ///
+  /// In fr, this message translates to:
+  /// **'En préparation'**
+  String get combatPreparingStatus;
+
+  /// Ligne 3 de l'en-tête pendant la préparation.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'ordre d\'initiative apparaîtra au premier tour.'**
+  String get combatPreparingHint;
+
+  /// Bandeau Groupe (ligne 1) et fiche pendant la préparation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat en préparation'**
+  String get combatBannerPreparing;
+
+  /// Bandeau Groupe, ligne 2 sans autre information.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir le combat'**
+  String get combatBannerOpen;
+
+  /// Bandeau Groupe, ligne 2 : initiative demandée, pas encore envoyée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoie ton initiative · Ouvrir le combat'**
+  String get combatBannerSendInitiative;
+
+  /// Bandeau Groupe, ligne 2 : initiative envoyée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Initiative envoyée · Ouvrir le combat'**
+  String get combatBannerInitiativeSent;
+
+  /// Bandeau de la fiche : initiative demandée, pas encore envoyée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat ! Envoie ton initiative'**
+  String get combatSheetBannerInitiativeRequested;
+
+  /// Libellé lecteur d'écran du bandeau de la fiche pendant la préparation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat en préparation. Ouvrir le combat.'**
+  String get combatSheetBannerPreparingSemantics;
+
+  /// Libellé lecteur d'écran du bandeau de la fiche : initiative demandée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat ! Envoie ton initiative. Ouvrir le combat.'**
+  String get combatSheetBannerInitiativeRequestedSemantics;
+
+  /// Titre de la carte d'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ demande ton initiative'**
+  String get combatInitiativeRequestTitle;
+
+  /// Personnage concerné par la demande d'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour {name}'**
+  String combatInitiativeRequestFor(String name);
+
+  /// Bouton de la carte d'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer mon initiative'**
+  String get combatSendInitiative;
+
+  /// Bouton primaire de la feuille d'initiative envoyée au MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer au MJ'**
+  String get combatSendToGm;
+
+  /// Aide de la feuille d'initiative envoyée au MJ (décision 62).
+  ///
+  /// In fr, this message translates to:
+  /// **'Une fois reçue, seul le MJ peut la modifier.'**
+  String get combatSendHint;
+
+  /// Carte d'initiative : valeur envoyée.
+  ///
+  /// In fr, this message translates to:
+  /// **'{value} · envoyée au MJ'**
+  String combatInitiativeSent(int value);
+
+  /// Carte d'initiative : envoi pas encore confirmé.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente de confirmation du MJ…'**
+  String get combatInitiativeAwaitingReceipt;
+
+  /// Carte d'initiative : valeur reçue par le MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'{value} · reçue par le MJ'**
+  String combatInitiativeReceived(int value);
+
+  /// Carte d'initiative : reçue, valeur inconnue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ a ton initiative'**
+  String get combatInitiativeKnownByGm;
+
+  /// Carte d'initiative reçue pendant la préparation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ peut l\'ajuster : la valeur retenue s\'affichera au premier tour.'**
+  String get combatInitiativeMayAdjust;
+
+  /// Carte d'initiative : envoi non reçu.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ n\'a pas reçu ton initiative. Renvoie-la.'**
+  String get combatInitiativeNotReceived;
+
+  /// Carte d'initiative : nouvelle demande du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ te redemande ton initiative.'**
+  String get combatInitiativeRequestedAgain;
+
+  /// Libellé de statut de la ligne du joueur après l'envoi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyée au MJ'**
+  String get combatInitiativeSentLabel;
+
+  /// Libellé de statut de la ligne du joueur quand le MJ a retenu une autre valeur.
+  ///
+  /// In fr, this message translates to:
+  /// **'Corrigée par le MJ (envoyé : {sent})'**
+  String combatInitiativeCorrected(int sent);
+
+  /// Envoi d'initiative indisponible : MJ hors ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Indisponible tant que le MJ est hors ligne.'**
+  String get combatUnavailableGmOffline;
+
+  /// Échec d'envoi rate_limited.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop d\'envois. Réessaie dans {seconds} s.'**
+  String combatSendRateLimited(int seconds);
+
+  /// Échec d'envoi générique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoi impossible. Réessaie.'**
+  String get combatSendFailed;
+
+  /// Échec d'envoi group_not_found.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu ne fais plus partie de ce groupe.'**
+  String get combatNotMemberAnymore;
+
+  /// Badge d'un héros mort dans l'ordre d'initiative (décision 58).
+  ///
+  /// In fr, this message translates to:
+  /// **'Mort'**
+  String get combatBadgeDead;
+
+  /// Libellé de statut d'un héros mort.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tour sauté'**
+  String get combatTurnSkipped;
+
+  /// Ajout à l'étiquette lecteur d'écran d'une ligne de héros mort.
+  ///
+  /// In fr, this message translates to:
+  /// **'mort, tour sauté'**
+  String get combatRowDeadSemantics;
+
+  /// Bandeau du joueur retiré d'un combat mené depuis Grimoire.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ t\'a retiré de ce combat.'**
+  String get combatRemovedByGm;
+
+  /// En-tête en mode « à toi de jouer ».
+  ///
+  /// In fr, this message translates to:
+  /// **'À toi de jouer'**
+  String get combatYourTurn;
+
+  /// Bandeaux Groupe et fiche en mode « à toi de jouer ».
+  ///
+  /// In fr, this message translates to:
+  /// **'À toi de jouer · round {round}'**
+  String combatBannerYourTurn(int round);
+
+  /// Libellé lecteur d'écran du bandeau de la fiche, mode « à toi de jouer ».
+  ///
+  /// In fr, this message translates to:
+  /// **'À toi de jouer, round {round}. Ouvrir le combat.'**
+  String combatSheetBannerYourTurnSemantics(int round);
+
+  /// Signal global (PR 2) : le MJ redemande l'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Initiative demandée'**
+  String get combatCalloutInitiativeTitle;
+
+  /// Signal global (PR 2), ligne 2.
+  ///
+  /// In fr, this message translates to:
+  /// **'{group} · Envoie ton initiative'**
+  String combatCalloutSendInitiative(String group);
+
+  /// Signal global (PR 2), ligne 2.
+  ///
+  /// In fr, this message translates to:
+  /// **'{group} · Ouvrir le combat'**
+  String combatCalloutOpen(String group);
+
+  /// Signal global (PR 2), variante tour.
+  ///
+  /// In fr, this message translates to:
+  /// **'{group} · round {round} · Ouvrir le combat'**
+  String combatCalloutYourTurnBody(String group, int round);
+
+  /// Signal global (PR 2), bouton de fermeture.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer'**
+  String get combatCalloutClose;
+
+  /// Bandeau de l'écran Combat après 90 s sans message du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ semble hors ligne. Dernier état reçu à {time} ; le combat reprendra dès son retour.'**
+  String combatGmOfflineBanner(String time);
+
+  /// Bandeau Groupe, ligne 2 : MJ hors ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'MJ hors ligne · état de {time}'**
+  String combatBannerGmOffline(String time);
+
+  /// Bandeau de la fiche : MJ hors ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat · MJ hors ligne (état de {time})'**
+  String combatSheetBannerGmOffline(String time);
+
+  /// Libellé lecteur d'écran du bandeau de la fiche : MJ hors ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat en cours, MJ hors ligne, état de {time}. Ouvrir le combat.'**
+  String combatSheetBannerGmOfflineSemantics(String time);
+
+  /// Écran Combat après 10 min sans message du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas de nouvelles du MJ'**
+  String get combatInterruptedTitle;
+
+  /// Écran Combat après 10 min sans message du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dernier état reçu à {time}. Le combat réapparaîtra ici s\'il reprend.'**
+  String combatInterruptedBody(String time);
+
+  /// Libellé visible du chargement de l'écran Combat sans état connu.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion au combat…'**
+  String get combatConnecting;
+
+  /// Écran Combat sans combat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun combat en cours'**
+  String get combatNoneTitle;
+
+  /// Écran Combat sans combat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le combat est peut-être terminé, ou le MJ n\'est pas connecté. Il s\'affichera ici dès qu\'il reprend.'**
+  String get combatNoneBody;
+
+  /// Ouverture depuis une notification (PR 2) d'un groupe quitté.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce groupe n\'est plus accessible.'**
+  String get combatGroupNotAccessible;
+
+  /// Fin d'un combat terminé avant le dévoilement de l'ordre.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat terminé'**
+  String get combatEndedTitle;
+
+  /// Fin d'un combat terminé avant le dévoilement de l'ordre.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le combat s\'est terminé avant que l\'ordre soit dévoilé.'**
+  String get combatEndedBeforeOrder;
+
+  /// Annonce polie du début d'un combat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat ! Le MJ lance un combat dans {group}.'**
+  String combatAnnounceStart(String group);
+
+  /// Annonce polie d'une demande d'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ demande ton initiative.'**
+  String get combatAnnounceInitiativeRequested;
+
+  /// Annonce polie d'un envoi d'initiative réussi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Initiative {value} envoyée au MJ.'**
+  String combatAnnounceInitiativeSent(int value);
+
+  /// Annonce polie de la réception de l'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ a reçu ton initiative.'**
+  String get combatAnnounceInitiativeReceived;
+
+  /// Annonce polie d'une initiative corrigée par le MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ a retenu {value}.'**
+  String combatAnnounceInitiativeCorrected(int value);
+
+  /// Annonce polie du dévoilement de l'ordre.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'ordre d\'initiative est dévoilé.'**
+  String get combatAnnounceOrderRevealed;
+
+  /// Annonce polie après 90 s sans message du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ semble hors ligne. La dernière vue reste affichée.'**
+  String get combatAnnounceGmOffline;
+
+  /// Annonce polie au retour des messages du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ est de retour.'**
+  String get combatAnnounceGmBack;
+
+  /// Indice de « Lancer un combat » désactivé pendant un combat Grimoire vivant (décision 61).
+  ///
+  /// In fr, this message translates to:
+  /// **'Un combat est mené depuis Grimoire.'**
+  String get combatStartBlockedByGrimoire;
 }
 
 class _AppLocalizationsDelegate

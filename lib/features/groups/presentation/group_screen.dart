@@ -491,6 +491,10 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             CombatGroupBanner(
               groupId: widget.groupId,
               masterAbsent: isCombatMasterAbsent(detail),
+              identity: (
+                userId: detail.currentUserId,
+                characterId: detail.currentMember?.characterId,
+              ),
               onTap: () => context.push('/groups/${widget.groupId}/combat'),
             ),
           Expanded(

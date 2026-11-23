@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
@@ -21,6 +22,8 @@ import 'initiative_roll_block.dart';
 ///   « Dextérité : +3 → d20 + 3 ».
 /// - MJ (PNJ ou ligne d'un autre) : [rollModifier] = 0, pas d'aide.
 /// - [rollModifier] `null` : pas de lanceur (modificateur inconnu).
+/// - [primaryLabel] remplace « Enregistrer » (ex. « Envoyer au MJ ») et
+///   [helpText] ajoute une aide 12 `textSecondary` au-dessus des boutons.
 ///
 /// Renvoie l'initiative saisie, ou `null` si annulée.
 Future<int?> showInitiativeSheet(
@@ -31,6 +34,8 @@ Future<int?> showInitiativeSheet(
   bool showDexHelp = false,
   CombatSheetAnnouncer announcer = defaultCombatAnnouncer,
   InitiativeRollOpener rollOpener = defaultInitiativeRollOpener,
+  String? primaryLabel,
+  String? helpText,
 }) {
   return showModalBottomSheet<int>(
     context: context,
@@ -43,6 +48,8 @@ Future<int?> showInitiativeSheet(
       showDexHelp: showDexHelp,
       announcer: announcer,
       rollOpener: rollOpener,
+      primaryLabel: primaryLabel,
+      helpText: helpText,
     ),
   );
 }
@@ -55,6 +62,8 @@ class InitiativeSheet extends StatefulWidget {
     this.showDexHelp = false,
     this.announcer = defaultCombatAnnouncer,
     this.rollOpener = defaultInitiativeRollOpener,
+    this.primaryLabel,
+    this.helpText,
     super.key,
   });
 
@@ -64,6 +73,12 @@ class InitiativeSheet extends StatefulWidget {
   final bool showDexHelp;
   final CombatSheetAnnouncer announcer;
   final InitiativeRollOpener rollOpener;
+
+  /// Libellé du bouton primaire (défaut : « Enregistrer »).
+  final String? primaryLabel;
+
+  /// Aide affichée au-dessus des boutons (`null` : aucune).
+  final String? helpText;
 
   @override
   State<InitiativeSheet> createState() => _InitiativeSheetState();
@@ -124,9 +139,19 @@ class _InitiativeSheetState extends State<InitiativeSheet> {
                       onChanged: () => setState(() {}),
                     ),
                   ],
+                  if (widget.helpText != null) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      widget.helpText!,
+                      style: AppTypography.body(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.lg),
                   PrimaryButton(
-                    label: l10n.combatSave,
+                    label: widget.primaryLabel ?? l10n.combatSave,
                     onPressed: valid
                         ? () => Navigator.of(context).pop(_input.value)
                         : null,

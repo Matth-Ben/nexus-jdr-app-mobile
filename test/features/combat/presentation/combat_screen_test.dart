@@ -146,7 +146,10 @@ void main() {
     ) async {
       final h = CombatHarness();
       await h.pumpScreen(tester);
-      expect(find.text('Aucun combat actif.'), findsOneWidget);
+      // Remplacé par l'état commun « Aucun combat en cours »
+      // (`docs/combat-grimoire-ui.md` §8) après la fenêtre de connexion.
+      expect(find.text('Aucun combat actif.'), findsNothing);
+      expect(find.text('Aucun combat en cours'), findsOneWidget);
       await tester.tap(find.text('RETOUR AU GROUPE'));
       await tester.pumpAndSettle();
       expect(find.text('ouvrir'), findsOneWidget);

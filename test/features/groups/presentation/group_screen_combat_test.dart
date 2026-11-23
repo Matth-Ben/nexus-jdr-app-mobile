@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/features/combat/domain/combat_failure.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
+import 'package:personnages/features/combat/presentation/providers/grimoire_combat_providers.dart';
 import 'package:personnages/features/combat/presentation/widgets/combat_banner.dart';
 import 'package:personnages/features/groups/data/group_error_mapper.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
@@ -26,6 +27,7 @@ import '../../../support/combat_fixtures.dart';
 import '../../../support/fake_combat_repository.dart';
 import '../../../support/fake_connectivity_checker.dart';
 import '../../../support/fake_current_user.dart';
+import '../../../support/fake_grimoire_combat_gateway.dart';
 import '../../combat/presentation/combat_test_harness.dart';
 
 /// Dépôt de groupes réduit au départ (`leaveGroup`) : refus serveur
@@ -58,6 +60,9 @@ Widget _app({
       groupRepositoryProvider.overrideWithValue(groupRepository),
     currentUserFromTestOverride,
     combatRepositoryProvider.overrideWithValue(repo),
+    grimoireCombatGatewayProvider.overrideWithValue(
+      FakeGrimoireCombatGateway(),
+    ),
     connectivityCheckerProvider.overrideWithValue(FakeConnectivityChecker()),
     combatRefetchDebounceProvider.overrideWithValue(
       const Duration(milliseconds: 10),
