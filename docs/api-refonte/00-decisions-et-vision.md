@@ -212,6 +212,19 @@ où ils le contredisent. Les tickets Project #7 portent la même numérotation (
     (jusqu'à 1 h). Faisabilité à établir par `dev-backend-supabase` (piste du chef de projet : sujet renouvelé à chaque
     départ d'un membre).
 
+51. **Édition des règles du combat dans Grimoire** : réglage par campagne, **2014 par défaut** (2024 au choix). Surprise :
+    en 2014, la créature surprise perd son premier tour (ni déplacement, ni action, ni réaction avant la fin de ce tour) ;
+    en 2024, désavantage à son jet d'initiative.
+52. **Monstres identiques** : **un jet d'initiative par monstre** (pas de jet commun par fiche).
+53. **Score d'initiative fixe** (10 + modificateur, variante 2024) : option par campagne, **désactivée par défaut**.
+54. **Jets de sauvegarde des monstres** dans l'étape 7 : un bouton par caractéristique, d20 + modificateur lu dans la
+    fiche, **modifiable** par le MJ (la fiche ne connaît pas les maîtrises), avec avantage/désavantage.
+
+Choix par défaut du chef de projet (23/11, recommandations de `regles-dnd`) : égalités comme dans Nexus (PJ avant PNJ,
+puis ordre d'arrivée, le MJ réordonne) ; « touche/rate » indicatif, confirmé par le MJ (la CA de Nexus ne compte ni
+Bouclier ni abri) ; lecture des dégâts acceptant `7 (2d6+3)`, « plus » et « et », refusant « ou » ; modificateur de DEX
+affiché à côté d'une initiative à 0.
+
 Choix technique du chef de projet (23/11) : la langue des notifications est lue dans `user_metadata.locale` (déjà lu
 par DeepCore) ; Nexus l'écrit à la connexion et au changement de langue (partie Nexus de l'étape 7) ; à défaut, français.
 
