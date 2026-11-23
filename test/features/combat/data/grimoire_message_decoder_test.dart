@@ -206,6 +206,16 @@ void main() {
       expect(failure.retryAfterSeconds, 37);
     });
 
+    test('API absente : PGRST106 et PGRST202 définitifs', () {
+      for (final code in ['PGRST106', 'PGRST202']) {
+        final failure = mapGrimoirePostgrestError(
+          PostgrestException(message: 'Could not find', code: code),
+        );
+        expect(failure.kind, GrimoireFailureKind.unavailable, reason: code);
+        expect(failure.rawMessage, code);
+      }
+    });
+
     test('codes stables : no_character, group_not_found, inconnu', () {
       expect(
         mapGrimoirePostgrestError(

@@ -22,6 +22,10 @@ enum GrimoireLinkStatus {
 
   /// `group_not_found` : plus membre du groupe, plus aucun essai.
   lost,
+
+  /// API absente de ce projet (`PGRST106`, `PGRST202`) : plus aucun essai,
+  /// comme si aucun combat n'était en cours (aucun écran d'erreur).
+  unavailable,
 }
 
 /// Fraîcheur affichée, par priorité (spec `docs/combat-grimoire-ui.md` §7).
@@ -76,10 +80,13 @@ abstract class GrimoireCombatSession with _$GrimoireCombatSession {
   }
 
   /// Le silence du MJ peut-il être jugé ? Jamais au repos (app en
-  /// arrière-plan, personne n'écoute) ni après une exclusion : au retour,
-  /// l'attente de 5 s s'applique d'abord, puis l'expiration si rien n'arrive.
+  /// arrière-plan, personne n'écoute), après une exclusion ni sans API : au
+  /// retour, l'attente de 5 s s'applique d'abord, puis l'expiration si rien
+  /// n'arrive.
   bool get evaluatesSilence =>
-      link != GrimoireLinkStatus.idle && link != GrimoireLinkStatus.lost;
+      link != GrimoireLinkStatus.idle &&
+      link != GrimoireLinkStatus.lost &&
+      link != GrimoireLinkStatus.unavailable;
 
   /// `group_not_found` : le joueur ne fait plus partie du groupe (exclu ou
   /// parti, décision 50). Canal fermé, vue effacée.
@@ -89,6 +96,7 @@ abstract class GrimoireCombatSession with _$GrimoireCombatSession {
   bool get linkDown =>
       link == GrimoireLinkStatus.down ||
       link == GrimoireLinkStatus.lost ||
+      link == GrimoireLinkStatus.unavailable ||
       link == GrimoireLinkStatus.idle;
 
   /// Fraîcheur affichée, par priorité : expiré, puis téléphone hors ligne ou

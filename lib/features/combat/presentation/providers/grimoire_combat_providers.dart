@@ -27,6 +27,10 @@ final grimoireCombatGatewayProvider = Provider<GrimoireCombatGateway>(
 /// joueur toutes les 2 s ; plusieurs demandes rapprochées sont regroupées).
 const Duration kGrimoireStateRequestGap = Duration(seconds: 2);
 
+/// Durée d'abonnement au-delà de laquelle un canal est jugé stable :
+/// l'espacement des nouveaux essais repart alors du premier délai.
+const Duration kGrimoireStableSubscription = Duration(seconds: 30);
+
 /// Délais de réabonnement après une erreur de canal ou de lecture des sujets.
 const List<Duration> kGrimoireRetryDelays = [
   Duration(seconds: 1),
@@ -63,6 +67,10 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
   Timer? _stateRequestTimer;
   Timer? _afterSendTimer;
   DateTime? _lastStateRequestAt;
+
+  /// `rate_limited` (limite de 20 messages par minute partagée avec
+  /// l'initiative) : aucun `state_request` avant cet instant.
+  DateTime? _stateRequestPausedUntil;
   GrimoireIdentity? _identity;
 
   /// Le prochain `state` est la réponse à un (ré)abonnement : appliqué sans
@@ -80,6 +88,7 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
     _identity = null;
     _resyncing = false;
     _lastStateRequestAt = null;
+    _stateRequestPausedUntil = null;
     ref.onDispose(_cancelTimers);
     ref
       ..listen<String?>(currentUserProvider.select((user) => user?.id), (
@@ -152,6 +161,13 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
   /// exclusion passe par [markExcluded].
   void setLink(GrimoireLinkStatus link, {bool? isLeader}) {
     if (link == GrimoireLinkStatus.subscribed) _resyncing = true;
+    if (link == GrimoireLinkStatus.idle) {
+      // Arrière-plan : aucune demande d'état ne part plus.
+      _stateRequestTimer?.cancel();
+      _stateRequestTimer = null;
+      _afterSendTimer?.cancel();
+      _afterSendTimer = null;
+    }
     state = state.copyWith(
       link: link,
       linkSince: _now(),
@@ -172,6 +188,17 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
       link: GrimoireLinkStatus.lost,
       linkSince: _now(),
       eventSerial: state.eventSerial,
+    );
+  }
+
+  /// API absente de ce projet (`PGRST106`, `PGRST202`) : plus aucun essai,
+  /// aucun écran d'erreur, comme si aucun combat n'était en cours.
+  void markUnavailable() {
+    if (state.link == GrimoireLinkStatus.unavailable) return;
+    _cancelTimers();
+    state = state.copyWith(
+      link: GrimoireLinkStatus.unavailable,
+      linkSince: _now(),
     );
   }
 
@@ -210,6 +237,10 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
   // -------------------------------------------------------- minuterie
 
   void _tick() {
+    // Personne n'écoute (dernier écran fermé) : aucune conclusion, même sur
+    // un changement de réseau ; à la réouverture, l'attente de 5 s passe
+    // d'abord.
+    if (_attached == 0) return;
     final now = _now();
     var session = state;
     // Ouverture trop longue : le canal est considéré coupé.
@@ -265,11 +296,7 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
   /// toutes les 2 s), jamais hors ligne ni sans canal. Sans `combat_id` :
   /// Grimoire répond avec son combat en cours, quel qu'il soit.
   void requestState() {
-    if (_attached == 0 ||
-        state.link != GrimoireLinkStatus.subscribed ||
-        !_phoneOnline) {
-      return;
-    }
+    if (!_canRequestState()) return;
     final now = _now();
     final last = _lastStateRequestAt;
     if (last == null || now.difference(last) >= kGrimoireStateRequestGap) {
@@ -280,9 +307,31 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
       kGrimoireStateRequestGap - now.difference(last),
       () {
         _stateRequestTimer = null;
-        if (ref.mounted) _sendStateRequest();
+        // Conditions revérifiées : l'app a pu passer en arrière-plan.
+        if (ref.mounted && _canRequestState()) _sendStateRequest();
       },
     );
+  }
+
+  /// Un écran écoute, le canal est `SUBSCRIBED`, le téléphone en ligne, et
+  /// aucune pause `rate_limited` n'est en cours.
+  bool _canRequestState() {
+    if (_attached == 0 ||
+        state.link != GrimoireLinkStatus.subscribed ||
+        !_phoneOnline) {
+      return false;
+    }
+    final pausedUntil = _stateRequestPausedUntil;
+    return pausedUntil == null || !_now().isBefore(pausedUntil);
+  }
+
+  /// `rate_limited` : pause des `state_request` pendant `retryAfterSeconds`
+  /// (60 s si le serveur ne le précise pas).
+  void _pauseStateRequests(GrimoireFailure failure) {
+    final seconds = failure.retryAfterSeconds ?? 60;
+    _stateRequestPausedUntil = _now().add(Duration(seconds: seconds));
+    _stateRequestTimer?.cancel();
+    _stateRequestTimer = null;
   }
 
   void _sendStateRequest() {
@@ -297,9 +346,14 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
           )
           .catchError((Object error) {
             if (!ref.mounted || epoch != _epoch) return;
-            if (error is GrimoireFailure &&
-                error.kind == GrimoireFailureKind.groupNotFound) {
-              markExcluded();
+            if (error is! GrimoireFailure) return;
+            switch (error.kind) {
+              case GrimoireFailureKind.groupNotFound:
+                markExcluded();
+              case GrimoireFailureKind.rateLimited:
+                _pauseStateRequests(error);
+              default:
+                break;
             }
           }),
     );
@@ -355,6 +409,9 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
       );
       if (failure.kind == GrimoireFailureKind.groupNotFound) {
         markExcluded();
+      } else if (failure.kind == GrimoireFailureKind.rateLimited) {
+        // Limite partagée : les `state_request` attendent aussi.
+        _pauseStateRequests(failure);
       }
     }
   }
@@ -388,6 +445,7 @@ final grimoireCombatWatcherProvider = Provider.autoDispose.family<void, String>(
       gateway: gateway,
       notifier: notifier,
       isMounted: () => ref.mounted,
+      now: ref.read(combatClockProvider),
     );
     // Garde le suivi actif (et son écoute du réseau) tant qu'un écran observe
     // le groupe ; une exclusion signalée par un envoi ferme le canal.
@@ -442,6 +500,7 @@ class _GrimoireLinkController {
     required this.gateway,
     required this.notifier,
     required this.isMounted,
+    required this.now,
   });
 
   final String groupId;
@@ -449,6 +508,7 @@ class _GrimoireLinkController {
   final GrimoireCombatGateway gateway;
   final GrimoireCombatNotifier notifier;
   final bool Function() isMounted;
+  final DateTime Function() now;
 
   /// Canal gardé (ouvert ou en cours d'abonnement).
   GrimoireGmLink? _link;
@@ -461,10 +521,18 @@ class _GrimoireLinkController {
 
   /// `group_not_found` : plus aucun essai, canal fermé.
   bool _lost = false;
+
+  /// API absente (`PGRST106`, `PGRST202`) : plus aucun essai.
+  bool _unavailable = false;
   bool _disposed = false;
 
   Timer? _retry;
   int _attempt = 0;
+
+  /// `SUBSCRIBED` du canal gardé : l'espacement des essais n'est remis à zéro
+  /// qu'après un abonnement stable ([kGrimoireStableSubscription]) ou au
+  /// premier message reçu (un canal qui retombe aussitôt reste espacé).
+  DateTime? _subscribedAt;
 
   /// Opération en cours, et nouvelle évaluation demandée pendant celle-ci.
   Future<void>? _running;
@@ -540,6 +608,7 @@ class _GrimoireLinkController {
   /// Ferme le canal gardé (toujours avant d'en garder un autre).
   Future<void> _closeLink() async {
     _generation++;
+    _subscribedAt = null;
     final link = _link;
     _link = null;
     if (link == null) return;
@@ -555,7 +624,7 @@ class _GrimoireLinkController {
   Future<void> _run() async {
     while (true) {
       _rerun = false;
-      final wanted = _active && _wantOpen && !_lost;
+      final wanted = _active && _wantOpen && !_lost && !_unavailable;
       if (!wanted) {
         if (_link == null) return;
         await _closeLink();
@@ -576,11 +645,21 @@ class _GrimoireLinkController {
         topics = await gateway.fetchLiveChannels(groupId);
       } on GrimoireFailure catch (failure) {
         if (!_active) continue;
-        if (failure.kind == GrimoireFailureKind.groupNotFound) {
-          _lost = true;
-          notifier.markExcluded();
-        } else {
-          _scheduleRetry();
+        switch (failure.kind) {
+          case GrimoireFailureKind.groupNotFound:
+            _lost = true;
+            notifier.markExcluded();
+          case GrimoireFailureKind.unavailable:
+            // Définitif : aucun nouvel essai, aucune donnée personnelle
+            // journalisée (ni groupe ni compte).
+            _unavailable = true;
+            debugPrint(
+              'Combat Grimoire : API indisponible (${failure.rawMessage}), '
+              'suivi arrêté.',
+            );
+            notifier.markUnavailable();
+          default:
+            _scheduleRetry();
         }
         continue;
       } on Object {
@@ -607,6 +686,8 @@ class _GrimoireLinkController {
     if (!_active) return;
     final payload = unwrapGrimoireBroadcast(raw);
     if (payload == null) return;
+    // Un message reçu prouve que le canal fonctionne.
+    _attempt = 0;
     if (isGrimoireChannelRotated(payload)) {
       _rotated();
       return;
@@ -618,7 +699,7 @@ class _GrimoireLinkController {
     if (!_active) return;
     switch (signal) {
       case GrimoireChannelSignal.subscribed:
-        _attempt = 0;
+        _subscribedAt = now();
         notifier.setLink(GrimoireLinkStatus.subscribed, isLeader: isLeader);
         final link = _link;
         // Présence seulement au premier plan, sur le canal gardé.
@@ -635,7 +716,13 @@ class _GrimoireLinkController {
       case GrimoireChannelSignal.closed:
       case GrimoireChannelSignal.timedOut:
         // Le client réessaierait en boucle sur le même sujet : retirer le
-        // canal et relire les sujets plus tard.
+        // canal et relire les sujets plus tard. Un abonnement resté stable
+        // repart du premier délai ; un canal qui retombe aussitôt, non.
+        final since = _subscribedAt;
+        if (since != null &&
+            now().difference(since) >= kGrimoireStableSubscription) {
+          _attempt = 0;
+        }
         _needsFresh = true;
         _scheduleRetry();
         _kick();
@@ -643,7 +730,7 @@ class _GrimoireLinkController {
   }
 
   void _scheduleRetry() {
-    if (!_active || !_wantOpen || _lost) return;
+    if (!_active || !_wantOpen || _lost || _unavailable) return;
     notifier.setLink(GrimoireLinkStatus.down);
     final delay =
         kGrimoireRetryDelays[_attempt.clamp(

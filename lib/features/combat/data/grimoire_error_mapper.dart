@@ -7,6 +7,12 @@ import '../domain/grimoire_failure.dart';
 /// stable du contrat DeepCore §6), jamais au statut HTTP. Pour `rate_limited`,
 /// `details` porte les secondes à attendre.
 GrimoireFailure mapGrimoirePostgrestError(PostgrestException error) {
+  if (kGrimoireUnavailableCodes.contains(error.code)) {
+    return GrimoireFailure(
+      GrimoireFailureKind.unavailable,
+      rawMessage: error.code,
+    );
+  }
   final kind = GrimoireFailureKind.fromServerCode(error.message);
   return GrimoireFailure(
     kind,
@@ -16,6 +22,10 @@ GrimoireFailure mapGrimoirePostgrestError(PostgrestException error) {
     rawMessage: error.message,
   );
 }
+
+/// Codes PostgREST d'une API absente, **définitifs** : `PGRST106` (schéma
+/// non exposé) et `PGRST202` (fonction introuvable).
+const Set<String> kGrimoireUnavailableCodes = {'PGRST106', 'PGRST202'};
 
 /// Toute autre erreur (transport, réponse illisible) : [GrimoireFailureKind.other].
 GrimoireFailure mapGrimoireUnknownError(Object error) {

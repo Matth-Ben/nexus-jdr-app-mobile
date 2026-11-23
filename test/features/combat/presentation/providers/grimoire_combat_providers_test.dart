@@ -686,4 +686,148 @@ void main() {
       });
     });
   });
+
+  group('relecture du code', () {
+    Future<void> settle(WidgetTester tester) async {
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+    }
+
+    grimoireTest('écran fermé puis changement de réseau : aucune conclusion ; '
+        'réouverture : pas de « MJ hors ligne » pendant l\'attente', (
+      tester,
+    ) async {
+      final subscription = watch();
+      await settle(tester);
+      notifier().setIdentity(kMe);
+      gateway.lastLink.emit(gCombatStart(1));
+      // Un autre observateur garde le suivi vivant, mais plus aucun écran
+      // n'écoute le canal.
+      container.listen(grimoireCombatProvider(groupId), (_, _) {});
+      subscription.close();
+      await tester.pump(const Duration(milliseconds: 1));
+      await elapse(tester, const Duration(seconds: 100));
+      connectivity.goOffline();
+      await settle(tester);
+      connectivity.goOnline();
+      await settle(tester);
+      expect(read().view.liveness, GrimoireLiveness.live);
+
+      watch();
+      await settle(tester);
+      expect(
+        read().displayLiveness(phoneOnline: true),
+        GrimoireDisplayLiveness.normal,
+      );
+      await elapse(tester, const Duration(seconds: 3));
+      expect(read().view.liveness, GrimoireLiveness.live);
+    });
+
+    grimoireTest('arrière-plan : la demande d\'état en attente ne part pas', (
+      tester,
+    ) async {
+      final binding = tester.binding;
+      addTearDown(
+        () => binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed),
+      );
+      await connect(tester);
+      final before = gateway.stateRequests.length;
+      // Trou de seq moins de 2 s après le premier `state_request` : demande
+      // différée.
+      gateway.lastLink
+        ..emit(gCombatStart(1))
+        ..emit(gTurn(5, 'p-x'));
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await elapse(tester, const Duration(seconds: 3));
+      expect(gateway.stateRequests.length, before);
+    });
+
+    grimoireTest(
+      'rate_limited sur state_request : pause de retryAfterSeconds',
+      (tester) async {
+        gateway.failures['state_request'] = const GrimoireFailure(
+          GrimoireFailureKind.rateLimited,
+          retryAfterSeconds: 20,
+        );
+        await connect(tester);
+        await settle(tester);
+        gateway.failures.remove('state_request');
+        final before = gateway.stateRequests.length;
+        await elapse(tester, const Duration(seconds: 5));
+        gateway.lastLink
+          ..emit(gCombatStart(1))
+          ..emit(gTurn(5, 'p-x'));
+        await elapse(tester, const Duration(seconds: 3));
+        expect(gateway.stateRequests.length, before);
+        await elapse(tester, const Duration(seconds: 15));
+        gateway.lastLink.emit(gTurn(9, 'p-y'));
+        expect(gateway.stateRequests.length, before + 1);
+      },
+    );
+
+    grimoireTest('rate_limited sur l\'initiative : les state_request attendent '
+        'aussi (limite partagée)', (tester) async {
+      await connect(tester);
+      gateway.lastLink
+        ..emit(gCombatStart(1))
+        ..emit(gInitiativeRequest(2, ['c-player']));
+      await elapse(tester, const Duration(seconds: 3));
+      gateway.failures['initiative'] = const GrimoireFailure(
+        GrimoireFailureKind.rateLimited,
+        retryAfterSeconds: 30,
+      );
+      await notifier().sendInitiative(7);
+      final before = gateway.stateRequests.length;
+      await elapse(tester, const Duration(seconds: 3));
+      gateway.lastLink.emit(gTurn(6, 'p-x'));
+      await elapse(tester, const Duration(seconds: 3));
+      expect(gateway.stateRequests.length, before);
+    });
+
+    grimoireTest('canal qui retombe aussitôt : essais espacés ; abonnement '
+        'stable ou message reçu : premier délai', (tester) async {
+      await connect(tester);
+      gateway.lastLink.signal(GrimoireChannelSignal.error);
+      await settle(tester);
+      await elapse(tester, kGrimoireRetryDelays[0]);
+      expect(gateway.links, hasLength(2));
+      // Retombe aussitôt : le délai suivant s'applique.
+      gateway.lastLink.signal(GrimoireChannelSignal.error);
+      await settle(tester);
+      await elapse(tester, kGrimoireRetryDelays[0]);
+      expect(gateway.links, hasLength(2));
+      await elapse(tester, kGrimoireRetryDelays[1] - kGrimoireRetryDelays[0]);
+      expect(gateway.links, hasLength(3));
+      // Abonnement stable : retour au premier délai.
+      await elapse(tester, kGrimoireStableSubscription);
+      gateway.lastLink.signal(GrimoireChannelSignal.error);
+      await settle(tester);
+      await elapse(tester, kGrimoireRetryDelays[0]);
+      expect(gateway.links, hasLength(4));
+      // Un message reçu prouve que le canal fonctionne : premier délai aussi.
+      gateway.lastLink
+        ..emit(gCombatStart(1))
+        ..signal(GrimoireChannelSignal.error);
+      await settle(tester);
+      await elapse(tester, kGrimoireRetryDelays[0]);
+      expect(gateway.links, hasLength(5));
+    });
+
+    grimoireTest('API absente (PGRST106) : plus aucun essai, aucun combat', (
+      tester,
+    ) async {
+      gateway.topicsFailure = const GrimoireFailure(
+        GrimoireFailureKind.unavailable,
+        rawMessage: 'PGRST106',
+      );
+      await connect(tester);
+      expect(read().link, GrimoireLinkStatus.unavailable);
+      await elapse(tester, const Duration(minutes: 2));
+      expect(gateway.topicsReads, 1);
+      expect(gateway.links, isEmpty);
+      expect(read().view.isAlive, isFalse);
+      expect(container.read(grimoireBannerProvider(groupId)), isNull);
+    });
+  });
 }

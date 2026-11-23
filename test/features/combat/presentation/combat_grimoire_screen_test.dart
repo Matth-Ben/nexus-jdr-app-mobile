@@ -654,6 +654,58 @@ void main() {
       await close(tester, h);
     });
 
+    testWidgets('combat natif lancé puis terminé après une expiration '
+        'Grimoire : résumé natif, puis fin Grimoire plus récente', (
+      tester,
+    ) async {
+      final h = await open(tester);
+      await emit(tester, h, [gCombatStart(1)]);
+      await elapse(tester, h, const Duration(minutes: 10));
+      expect(find.text('Pas de nouvelles du MJ'), findsOneWidget);
+
+      h.repo.snapshot = fakeSnapshot(participants: combatRoster());
+      h.now = h.now.add(const Duration(minutes: 1));
+      await h.emitChange(tester);
+      expect(find.text('Round 1'), findsOneWidget);
+      h.repo.snapshot = null;
+      h.now = h.now.add(const Duration(minutes: 1));
+      await h.emitChange(tester);
+      expect(
+        find.text('Combat terminé · 1 round · 4 participants'),
+        findsOneWidget,
+      );
+      expect(find.text('Pas de nouvelles du MJ'), findsNothing);
+
+      // Un combat Grimoire reçu après la fin native reprend la main.
+      h.now = h.now.add(const Duration(minutes: 1));
+      await emit(tester, h, [
+        gCombatStart(1, combatId: kCombatB),
+        gEnd(2, rounds: 1, count: 0, combatId: kCombatB),
+      ]);
+      expect(find.text('Combat terminé'), findsOneWidget);
+      expect(
+        find.text('Le combat s\'est terminé avant que l\'ordre soit dévoilé.'),
+        findsOneWidget,
+      );
+      await close(tester, h);
+    });
+
+    testWidgets('API absente (PGRST106) : « Aucun combat en cours », sans '
+        'écran d\'erreur ni attente', (tester) async {
+      final h = CombatHarness(detail: _detail(), extraOverrides: dex());
+      h.grimoire.topicsFailure = const GrimoireFailure(
+        GrimoireFailureKind.unavailable,
+        rawMessage: 'PGRST106',
+      );
+      await h.pumpScreen(tester, settle: false);
+      await tester.pump(const Duration(milliseconds: 10));
+      expect(find.text('Aucun combat en cours'), findsOneWidget);
+      expect(find.text('Connexion au combat…'), findsNothing);
+      expect(find.textContaining('Impossible'), findsNothing);
+      expect(h.grimoire.links, isEmpty);
+      await close(tester, h);
+    });
+
     testWidgets('combat natif actif : Grimoire vivant affiché en priorité', (
       tester,
     ) async {

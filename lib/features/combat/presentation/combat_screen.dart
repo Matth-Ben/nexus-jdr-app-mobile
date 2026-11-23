@@ -549,9 +549,10 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
         ),
       );
     }
-    final nativeActive =
-        state.phase == CombatPhase.active && state.snapshot != null;
-    if (!nativeActive && detail != null) {
+    // Fin ou expiration d'un combat Grimoire : seulement sans combat natif,
+    // ou si le dernier message de Grimoire est plus récent que la fin native
+    // (un combat natif lancé puis terminé après coup n'est jamais masqué).
+    if (detail != null && _grimoireEndPrevails(state, view)) {
       if (view.status == GrimoireCombatStatus.ended) {
         return _fade('grimoireEnded', _grimoireEnded(l10n, view));
       }
@@ -582,7 +583,9 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
       case CombatPhase.none:
         // Remplace « Aucun combat actif. » : le combat (natif ou Grimoire)
         // s'affichera ici dès qu'il reprend.
-        if (!_connectingOver && grimoire.link != GrimoireLinkStatus.lost) {
+        if (!_connectingOver &&
+            grimoire.link != GrimoireLinkStatus.lost &&
+            grimoire.link != GrimoireLinkStatus.unavailable) {
           return _fade('connecting', _loading(l10n));
         }
         return _fade(
@@ -599,6 +602,28 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
         final snapshot = state.snapshot;
         if (snapshot == null) return _loading(l10n);
         return _activeBody(context, l10n, state, snapshot, detail);
+    }
+  }
+
+  /// La fin (ou l'expiration) du combat Grimoire l'emporte-t-elle sur le
+  /// combat natif ? Oui sans combat natif ; face à un combat natif terminé,
+  /// seulement si le dernier message de Grimoire a été reçu après la fin
+  /// native (même horloge, celle de Nexus) ; jamais face à un combat natif
+  /// actif, en chargement ou en erreur.
+  bool _grimoireEndPrevails(CombatViewState state, GrimoireCombatView view) {
+    switch (state.phase) {
+      case CombatPhase.none:
+        return true;
+      case CombatPhase.ended:
+        final nativeEnd = state.snapshot?.combat.endedAt ?? state.lastKnownAt;
+        final lastGrimoire = view.lastReceivedAt;
+        return nativeEnd != null &&
+            lastGrimoire != null &&
+            lastGrimoire.isAfter(nativeEnd);
+      case CombatPhase.loading:
+      case CombatPhase.active:
+      case CombatPhase.error:
+        return false;
     }
   }
 

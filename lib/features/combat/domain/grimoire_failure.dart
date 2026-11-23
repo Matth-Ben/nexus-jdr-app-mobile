@@ -17,6 +17,11 @@ enum GrimoireFailureKind {
   /// `not_member` (P0002) : meneur sans ligne de membre.
   notMember('not_member'),
 
+  /// API absente de ce projet (`PGRST106` : schéma `api_v1` non exposé ;
+  /// `PGRST202` : fonction introuvable). **Définitif** : plus aucun essai,
+  /// comme si aucun combat n'était en cours.
+  unavailable(null),
+
   /// Purement local : aucune connexion, rien n'est envoyé.
   offline(null),
 
