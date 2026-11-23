@@ -193,6 +193,16 @@ où ils le contredisent. Les tickets Project #7 portent la même numérotation (
 43. **PV des ennemis** : quand les barres de vie des ennemis sont masquées, aucun écran joueur (HDMI ou tablette)
     n'affiche rien de leurs PV, y compris les « −N » de dégâts (retirés de l'écran HDMI).
 
+## Décisions du 23/11/2026 (étape 7 de Grimoire, combat piloté par Grimoire, lancée le 23/11)
+
+44. **« MJ avec une licence valide » avant l'étape 11** : en attendant les licences, la règle est **propriétaire du
+    groupe** (compte Nexus connecté). La vérification de licence s'ajoutera à l'étape 11 au même endroit (fonction SQL
+    unique), sans rien défaire.
+45. **Panneau de combat dans la version d'essai** : oui, combat local (PNJ et héros saisis à la main) sans compte ; le
+    lien avec Nexus (initiatives, tours, notifications) reste réservé au compte.
+46. **Lanceur de dés dans l'étape 7** : initiative des monstres tirée par Grimoire (d20 + bonus) et bouton pour lancer
+    l'attaque et les dégâts lus dans la fiche du PNJ.
+
 **Abandonné** par rapport aux propositions de `05`/`09` : tables `adventure_*`, bucket d'images d'histoire,
 `generate_group_from_story`, `groups.adventure_id`, `game_events`, `combat_npc_state`, `add_monsters`, `revealed`,
 export des catalogues autres que les objets et les monstres, utilisation des RPC de combat par l'outil. (Le 17/11, le
