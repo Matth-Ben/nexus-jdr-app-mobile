@@ -220,6 +220,20 @@ où ils le contredisent. Les tickets Project #7 portent la même numérotation (
 54. **Jets de sauvegarde des monstres** dans l'étape 7 : un bouton par caractéristique, d20 + modificateur lu dans la
     fiche, **modifiable** par le MJ (la fiche ne connaît pas les maîtrises), avec avantage/désavantage.
 
+55. **Cacher un PNJ ou un monstre** : les jetons de PNJ et de monstres peuvent être cachés (comme décors, trésors et
+    objets) ; cacher un participant du combat cache son jeton, et inversement ; rien n'apparaît aux joueurs avant que le
+    MJ le révèle.
+56. **« Donner le tour (correction) »** : gardé (ajouté par `dev-grimoire` hors spécification), sans changer le round.
+57. **Moitié des dégâts** (sauvegarde réussie) : calculée **type par type**, arrondie à l'inférieur, chaque moitié
+    affichée (seule lecture compatible avec une résistance à un seul type).
+58. **Héros relié à Nexus et mort** : badge « Mort » et tour **sauté automatiquement**, de façon réversible ; un héros à
+    0 PV mais vivant garde toujours son tour (jets contre la mort).
+
+Choix techniques du chef de projet (23/11, PR Grimoire #11) : rien n'est montré aux joueurs avant le début réel du
+combat, et un participant hérite de l'état caché de son jeton ; l'édition et les réglages de combat entrent dans les
+exports JSON ; le 20 et le 1 naturels restent affichés sans CA connue ; score fixe : +5 avec avantage, −5 avec
+désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.175, selon `regles-dnd`).
+
 Choix par défaut du chef de projet (23/11, recommandations de `regles-dnd`) : égalités comme dans Nexus (PJ avant PNJ,
 puis ordre d'arrivée, le MJ réordonne) ; « touche/rate » indicatif, confirmé par le MJ (la CA de Nexus ne compte ni
 Bouclier ni abri) ; lecture des dégâts acceptant `7 (2d6+3)`, « plus » et « et », refusant « ou » ; modificateur de DEX
