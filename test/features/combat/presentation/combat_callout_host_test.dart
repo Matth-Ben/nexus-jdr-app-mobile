@@ -111,6 +111,12 @@ class _Host {
           builder: (context, state) => const Scaffold(body: Text('SCÈNE')),
         ),
         GoRoute(
+          // Page sans `Scaffold` : une `SnackBar` n'y est pas affichée.
+          path: '/bare',
+          builder: (context, state) =>
+              const ColoredBox(color: Colors.white, child: Text('NU')),
+        ),
+        GoRoute(
           path: '/p/:token',
           builder: (context, state) =>
               SharedCharacterViewScreen(token: state.pathParameters['token']!),
@@ -536,6 +542,24 @@ void main() {
       await h.elapse(tester, const Duration(seconds: 5));
       expect(find.byType(SnackBar), findsNothing);
       expect(tester.getRect(_callout()).bottom, closeTo(alone.bottom, 0.5));
+      await h.dispose(tester);
+    });
+
+    testWidgets('échec doux : SnackBar introuvable dans la page, le signal '
+        'reste à sa place habituelle, sans exception', (tester) async {
+      final h = _Host();
+      await h.pump(tester);
+      unawaited(h.router.push('/bare'));
+      await h.settle(tester);
+      tester
+          .state<SnackBarAwareScaffoldMessengerState>(
+            find.byType(SnackBarAwareScaffoldMessenger),
+          )
+          .showSnackBar(const SnackBar(content: Text('Ailleurs')));
+      h.controller.showFromPush(_start);
+      await h.settle(tester);
+      expect(tester.takeException(), isNull);
+      expect(tester.getRect(_callout()).bottom, closeTo(700 - 22, 0.5));
       await h.dispose(tester);
     });
 

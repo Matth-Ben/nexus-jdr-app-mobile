@@ -589,6 +589,8 @@ class NexusJdrApp extends ConsumerWidget {
     // arrière-plan), pour le signal global de combat — voir
     // `grimoire_groups_providers.dart`.
     ref.watch(grimoireGroupsFollowerProvider);
+    // Lue ici (jamais dans la fermeture `builder`, hors de `build`).
+    final scaffoldMessengerKey = ref.watch(scaffoldMessengerKeyProvider);
 
     return MaterialApp.router(
       title: 'Nexus JDR — Personnages',
@@ -604,7 +606,7 @@ class NexusJdrApp extends ConsumerWidget {
       //   la langue du joueur) ;
       // - le signal global de combat (`docs/combat-grimoire-ui.md` §6).
       builder: (context, child) => SnackBarAwareScaffoldMessenger(
-        key: ref.watch(scaffoldMessengerKeyProvider),
+        key: scaffoldMessengerKey,
         child: AccountLocaleReporter(
           child: CombatCalloutHost(child: child ?? const SizedBox.shrink()),
         ),
