@@ -63,6 +63,12 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
   final String groupId;
 
   int _attached = 0;
+
+  /// Écrans ouverts sur ce groupe (Groupe, Combat, bandeau de la fiche) :
+  /// seuls eux justifient une demande d'état complet (`state_request`) ; le
+  /// suivi de fond de tous les groupes attend le `state` périodique de
+  /// Grimoire (35 s au plus), pour ménager le quota de messages.
+  int _focused = 0;
   Timer? _tickTimer;
   Timer? _stateRequestTimer;
   Timer? _afterSendTimer;
@@ -144,6 +150,24 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
     if (_attached == 0) return;
     _attached--;
     if (_attached == 0) _cancelTimers();
+  }
+
+  /// Un écran du groupe s'ouvre ([grimoireCombatFocusProvider]) : sans état
+  /// reçu depuis le dernier abonnement, l'état complet est demandé tout de
+  /// suite (le canal a pu être ouvert par le suivi de fond, qui ne le demande
+  /// pas).
+  void focus() {
+    _focused++;
+    if (_focused == 1 &&
+        _resyncing &&
+        state.link == GrimoireLinkStatus.subscribed) {
+      requestState();
+    }
+  }
+
+  /// L'écran du groupe se ferme.
+  void unfocus() {
+    if (_focused > 0) _focused--;
   }
 
   void _cancelTimers() {
@@ -292,9 +316,11 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
   // ---------------------------------------------------- vers le meneur
 
   /// Demande l'état complet (`state_request`) : après `SUBSCRIBED`, sur un
-  /// trou de `seq`, 2 s après un envoi d'initiative. Regroupé (au plus un
-  /// toutes les 2 s), jamais hors ligne ni sans canal. Sans `combat_id` :
-  /// Grimoire répond avec son combat en cours, quel qu'il soit.
+  /// trou de `seq`, 2 s après un envoi d'initiative, à l'ouverture d'un écran.
+  /// **Seulement si un écran du groupe est ouvert** ([focus]). Regroupé (au
+  /// plus un toutes les 2 s), jamais hors ligne ni sans canal. Sans
+  /// `combat_id` : Grimoire répond avec son combat en cours, quel qu'il
+  /// soit.
   void requestState() {
     if (!_canRequestState()) return;
     final now = _now();
@@ -313,10 +339,11 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
     );
   }
 
-  /// Un écran écoute, le canal est `SUBSCRIBED`, le téléphone en ligne, et
-  /// aucune pause `rate_limited` n'est en cours.
+  /// Un écran du groupe est ouvert, le canal est `SUBSCRIBED`, le téléphone
+  /// en ligne, et aucune pause `rate_limited` n'est en cours.
   bool _canRequestState() {
     if (_attached == 0 ||
+        _focused == 0 ||
         state.link != GrimoireLinkStatus.subscribed ||
         !_phoneOnline) {
       return false;
@@ -418,9 +445,10 @@ class GrimoireCombatNotifier extends Notifier<GrimoireCombatSession> {
 }
 
 /// Abonnement au sujet `:gm` du groupe [groupId] — fournisseur à effet de
-/// bord pur, à `ref.watch` depuis l'écran Groupe, l'écran Combat et le
-/// bandeau de la fiche : il ne vit que tant qu'ils l'observent
-/// (`autoDispose`). Un seul canal par groupe.
+/// bord pur, observé par [grimoireCombatFocusProvider] (écran Groupe, écran
+/// Combat, bandeau de la fiche) et par le suivi de fond des groupes liés à
+/// Grimoire : il ne vit que tant qu'ils l'observent (`autoDispose`). Un seul
+/// canal par groupe.
 ///
 /// - Sujets lus par `api_v1.group_live_channels` (jamais construits ici) ;
 ///   `group_not_found` : plus aucun essai.
@@ -484,6 +512,34 @@ final grimoireCombatWatcherProvider = Provider.autoDispose.family<void, String>(
     });
   },
 );
+
+/// Un écran du groupe [groupId] est ouvert (Groupe, Combat, bandeau de la
+/// fiche) : à `ref.watch` depuis ces écrans **à la place** de
+/// [grimoireCombatWatcherProvider], qu'il observe lui-même (même canal). Seul
+/// un groupe ainsi observé demande l'état complet au `SUBSCRIBED` ; le suivi
+/// de fond de tous les groupes (`grimoireGroupsFollowerProvider`) observe le
+/// canal sans ce fournisseur.
+final grimoireCombatFocusProvider = Provider.autoDispose.family<void, String>((
+  ref,
+  groupId,
+) {
+  ref
+    ..watch(grimoireCombatWatcherProvider(groupId))
+    // Changement de compte : le suivi est recréé, l'écran se signale de
+    // nouveau.
+    ..watch(currentUserProvider.select((user) => user?.id));
+  final notifier = ref.read(grimoireCombatProvider(groupId).notifier);
+  var focused = false;
+  // Après l'abonnement du canal (`attach` passe par une microtâche).
+  Future.microtask(() {
+    if (!ref.mounted) return;
+    focused = true;
+    notifier.focus();
+  });
+  ref.onDispose(() {
+    if (focused) notifier.unfocus();
+  });
+});
 
 /// Ouverture, réabonnement et fermeture du canal `:gm` d'un groupe.
 ///

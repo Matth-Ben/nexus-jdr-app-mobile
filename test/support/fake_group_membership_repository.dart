@@ -24,13 +24,16 @@ class FakeGroupMembershipRepository implements GroupMembershipRepository {
   }
 }
 
-/// Appartenance de test (`characterId` : personnage courant dans le groupe).
+/// Appartenance de test (`characterId` : personnage courant dans le groupe ;
+/// [linked] : groupe associé à une campagne de Grimoire, `story_title` posé).
 GroupMembership membership(
   String groupId, {
   String? name,
   String? characterId = 'c-player',
+  bool linked = true,
 }) => (
   groupId: groupId,
   groupName: name ?? 'Groupe $groupId',
   characterId: characterId,
+  grimoireLinked: linked,
 );

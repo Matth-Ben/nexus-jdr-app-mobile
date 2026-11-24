@@ -26,12 +26,15 @@ const Duration kGroupMembershipsSeenRefreshGap = Duration(seconds: 30);
 /// une notification ; au-delà, l'appartenance est inconnue.
 const Duration kGroupMembershipCheckTimeout = Duration(seconds: 5);
 
-/// Groupes du joueur connecté (groupe, nom, personnage courant) : **cache
-/// mémoire** (jamais persisté), `null` tant qu'aucune lecture n'a abouti.
+/// Groupes du joueur connecté (groupe, nom, personnage courant, lien avec
+/// Grimoire) : **cache mémoire** (jamais persisté), `null` tant qu'aucune
+/// lecture n'a abouti.
 ///
-/// Relu au premier accès, au retour au premier plan, au retour du réseau, et
-/// quand un écran montre un groupe absent de la liste (groupe créé ou
-/// rejoint, personnage changé : [noteGroupSeen]). Hors ligne ou en erreur, la
+/// Relu au premier accès, au retour **d'arrière-plan** (`paused` puis
+/// `resumed` ; jamais pour le seul volet de notifications, `inactive`), au
+/// retour du réseau, et quand un écran ou une notification parle d'un groupe
+/// absent de la liste, non suivi, ou avec un autre personnage
+/// ([noteGroupSeen], [ensureFollowed]). Hors ligne ou en erreur, la
 /// dernière liste connue est gardée. Un groupe d'où le joueur est exclu
 /// (`group_not_found` sur son canal) en est retiré tout de suite ([forget]).
 /// Purgé au changement de compte.
@@ -62,7 +65,7 @@ class MyGroupMembershipsNotifier extends Notifier<List<GroupMembership>?> {
           unawaited(refresh());
         }
       });
-    final observer = _ResumeObserver(() => unawaited(refresh()));
+    final observer = _BackgroundReturnObserver(() => unawaited(refresh()));
     WidgetsBinding.instance.addObserver(observer);
     ref.onDispose(() => WidgetsBinding.instance.removeObserver(observer));
     Future.microtask(() {
@@ -131,12 +134,17 @@ class MyGroupMembershipsNotifier extends Notifier<List<GroupMembership>?> {
     _refreshForGroup(groupId);
   }
 
-  /// Une notification parle du groupe [groupId] : relecture s'il est absent
-  /// de la liste (au plus toutes les 30 s par groupe), pour afficher son nom.
-  void ensureKnown(String groupId) {
+  /// Une notification de combat parle du groupe [groupId] : relecture s'il
+  /// est absent de la liste ou pas encore lié à Grimoire (association faite
+  /// pendant que l'app était ouverte), au plus toutes les 30 s par groupe —
+  /// son nom s'affiche et son canal est suivi.
+  void ensureFollowed(String groupId) {
     final current = state;
     if (current == null ||
-        current.any((membership) => membership.groupId == groupId)) {
+        current.any(
+          (membership) =>
+              membership.groupId == groupId && membership.grimoireLinked,
+        )) {
       return;
     }
     _refreshForGroup(groupId);
@@ -168,26 +176,47 @@ class MyGroupMembershipsNotifier extends Notifier<List<GroupMembership>?> {
   }
 }
 
-class _ResumeObserver with WidgetsBindingObserver {
-  _ResumeObserver(this.onResume);
+/// Retour **d'arrière-plan** : `resumed` après `paused` (ou `hidden`,
+/// `detached`), jamais après le seul `inactive` du volet de notifications.
+class _BackgroundReturnObserver with WidgetsBindingObserver {
+  _BackgroundReturnObserver(this.onReturn);
 
-  final VoidCallback onResume;
+  final VoidCallback onReturn;
+  bool _wasInBackground = false;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) onResume();
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        _wasInBackground = true;
+      case AppLifecycleState.resumed:
+        if (_wasInBackground) {
+          _wasInBackground = false;
+          onReturn();
+        }
+      case AppLifecycleState.inactive:
+        break;
+    }
   }
 }
 
-/// Suit le combat Grimoire de **tous** les groupes du joueur tant que l'app
-/// est au premier plan (`docs/combat-grimoire-ui.md` §13, arbitrage Q2) :
-/// sans lui, aucun signal hors de l'écran du groupe.
+/// Suit le combat Grimoire de **tous** les groupes du joueur **liés à
+/// Grimoire** (`story_title` posé, `GroupMembership.grimoireLinked`) tant
+/// que l'app est au premier plan (`docs/combat-grimoire-ui.md` §13, arbitrage
+/// Q2) : sans lui, aucun signal hors de l'écran du groupe. Un groupe sans
+/// campagne associée ne peut pas avoir de combat Grimoire : aucun canal pour
+/// lui (coût des messages Realtime, décision du chef de projet du
+/// 24/11/2026) ; son écran ouvre toujours son propre canal.
 ///
 /// - **Un canal par groupe**, celui de [grimoireCombatWatcherProvider],
 ///   partagé avec les écrans (Groupe, Combat, fiche) : le même contrôleur
 ///   sérialisé, les mêmes garanties. En arrière-plan, chaque canal est
-///   quitté (aucun canal, aucune présence) ; au retour, réabonnement et
-///   `state_request`.
+///   quitté (aucun canal, aucune présence) ; au retour, réabonnement
+///   **sans** `state_request` (seul un écran ouvert le demande, voir
+///   [grimoireCombatFocusProvider]) : le `state` périodique de Grimoire
+///   (35 s au plus) suffit.
 /// - **Aucune connexion de plus** : le client Realtime multiplexe tous les
 ///   canaux sur un seul WebSocket.
 /// - Identité du joueur transmise à chaque suivi (personnage courant du
@@ -219,7 +248,8 @@ final grimoireGroupsFollowerProvider = Provider.autoDispose<void>((ref) {
     next,
   ) {
     final kept = {
-      for (final membership in next ?? const []) membership.groupId,
+      for (final membership in next ?? const <GroupMembership>[])
+        if (membership.grimoireLinked) membership.groupId,
     };
     for (final membership in previous ?? const <GroupMembership>[]) {
       if (!kept.contains(membership.groupId)) {
@@ -227,7 +257,11 @@ final grimoireGroupsFollowerProvider = Provider.autoDispose<void>((ref) {
       }
     }
   });
-  for (final membership in memberships) {
+  final followed = [
+    for (final membership in memberships)
+      if (membership.grimoireLinked) membership,
+  ];
+  for (final membership in followed) {
     final groupId = membership.groupId;
     final me = (userId: userId, characterId: membership.characterId);
     ref
@@ -245,7 +279,7 @@ final grimoireGroupsFollowerProvider = Provider.autoDispose<void>((ref) {
   // Jamais d'écriture dans un autre fournisseur pendant cette construction.
   Future.microtask(() {
     if (!ref.mounted) return;
-    for (final membership in memberships) {
+    for (final membership in followed) {
       ref.read(grimoireCombatProvider(membership.groupId).notifier).setIdentity(
         (userId: userId, characterId: membership.characterId),
       );

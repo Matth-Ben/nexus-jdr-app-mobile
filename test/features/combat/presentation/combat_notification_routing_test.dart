@@ -93,7 +93,9 @@ class _AuthStream implements AuthStateStream {
 }
 
 class _App {
-  _App() {
+  /// [authRedirect] : la vraie redirection d'authentification de l'app
+  /// (`computeAuthRedirect`), avec la session et la présentation simulées.
+  _App({this.authRedirect = false}) {
     container = ProviderContainer(
       overrides: [
         currentUserFromTestOverride,
@@ -112,8 +114,23 @@ class _App {
     router = GoRouter(
       initialLocation: '/',
       observers: [container.read(routeStackObserverProvider)],
+      redirect: authRedirect
+          ? (context, state) => computeAuthRedirect(
+              isLoggedIn: container.read(currentUserProvider) != null,
+              location: state.uri.toString(),
+              needsOnboarding: needsOnboarding,
+            )
+          : null,
       routes: [
         GoRoute(path: '/', builder: (context, state) => _page('ACCUEIL')),
+        GoRoute(
+          path: '/login',
+          builder: (context, state) => _page('CONNEXION'),
+        ),
+        GoRoute(
+          path: '/onboarding',
+          builder: (context, state) => _page('PRÉSENTATION'),
+        ),
         GoRoute(
           path: '/groups/:id',
           builder: (context, state) =>
@@ -130,6 +147,11 @@ class _App {
   }
 
   static Widget _page(String text) => Scaffold(body: Center(child: Text(text)));
+
+  final bool authRedirect;
+
+  /// Présentation de l'app pas encore vue (`onboarding_completed` absent).
+  bool needsOnboarding = false;
 
   final _Gateway gateway = _Gateway();
   final FakeGroupMembershipRepository memberships =
@@ -247,6 +269,47 @@ void main() {
       await app.settle(tester);
       expect(app.location, '/groups/$_member/combat');
       expect(find.text('COMBAT $_member'), findsOneWidget);
+      await app.dispose(tester);
+    });
+  });
+
+  group('démarrage à froid avec la vraie redirection d\'authentification', () {
+    testWidgets('session restaurée, présentation vue : écran Combat, le '
+        'retour mène au groupe', (tester) async {
+      final app = _App(authRedirect: true);
+      app.gateway.initial = _combat('your_turn', _member);
+      await app.pump(tester);
+      await app.settle(tester);
+      expect(app.location, '/groups/$_member/combat');
+      app.router.pop();
+      await app.settle(tester);
+      expect(find.text('GROUPE $_member'), findsOneWidget);
+      await app.dispose(tester);
+    });
+
+    testWidgets('présentation pas encore vue : la redirection l\'emporte, '
+        'aucun combat empilé par-dessus', (tester) async {
+      final app = _App(authRedirect: true)..needsOnboarding = true;
+      app.gateway.initial = _combat('combat_start', _member);
+      await app.pump(tester);
+      await app.settle(tester);
+      expect(app.location, '/onboarding');
+      expect(app.router.canPop(), isFalse);
+      expect(find.textContaining('COMBAT'), findsNothing);
+      await app.dispose(tester);
+    });
+
+    testWidgets('aucune session : rien ne s\'ouvre (écran de connexion)', (
+      tester,
+    ) async {
+      final app = _App(authRedirect: true);
+      app.container.read(testUserIdProvider.notifier).set(null);
+      app.gateway.initial = _combat('your_turn', _member);
+      await app.pump(tester);
+      await app.settle(tester);
+      expect(app.location, '/login');
+      expect(find.text('CONNEXION'), findsOneWidget);
+      expect(app.memberships.reads, 0);
       await app.dispose(tester);
     });
   });

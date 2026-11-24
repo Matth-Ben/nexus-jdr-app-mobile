@@ -99,8 +99,10 @@ void main() {
   };
 
   group('abonnement à tous les groupes', () {
-    followerTest('premier plan : un canal par groupe, présence et '
-        'state_request ; le canal est partagé avec un écran', (tester) async {
+    followerTest('premier plan : un canal par groupe lié, présence, aucun '
+        'state_request ; un écran ouvert partage le canal et demande l\'état', (
+      tester,
+    ) async {
       await follow(tester);
       expect(openGroups(), {'g1', 'g2'});
       expect(gateway.links, hasLength(2));
@@ -108,20 +110,22 @@ void main() {
         expect(link.tracks, 1);
         expect(link.presenceKey, 'user-1');
       }
-      expect(gateway.stateRequests.map((m) => m.groupId).toSet(), {'g1', 'g2'});
+      // Le suivi de fond attend le `state` périodique de Grimoire.
+      expect(gateway.stateRequests, isEmpty);
       expect(
         container.read(grimoireCombatProvider('g1')).link,
         GrimoireLinkStatus.subscribed,
       );
 
-      // L'écran Groupe de g1 s'ouvre : même canal, aucun autre.
+      // L'écran Groupe de g1 s'ouvre : même canal, état complet demandé.
       final screen = container.listen(
-        grimoireCombatWatcherProvider('g1'),
+        grimoireCombatFocusProvider('g1'),
         (_, _) {},
         fireImmediately: true,
       );
       await settle(tester);
       expect(gateway.links, hasLength(2));
+      expect(gateway.stateRequests.map((m) => m.groupId), ['g1']);
       screen.close();
       await settle(tester);
       // L'écran fermé : le suivi global garde le canal.
@@ -129,7 +133,7 @@ void main() {
     });
 
     followerTest('arrière-plan : aucun canal, aucune présence ; retour : '
-        'réabonnement et state_request pour chaque groupe', (tester) async {
+        'réabonnement sans state_request, liste relue', (tester) async {
       await follow(tester);
       final first = gateway.links.toList();
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
@@ -153,12 +157,47 @@ void main() {
       await settle(tester);
       expect(openGroups(), {'g1', 'g2'});
       expect(gateway.links, hasLength(4));
-      expect(gateway.stateRequests.length, requestsBefore + 2);
+      expect(gateway.stateRequests.length, requestsBefore);
       for (final link in open()) {
         expect(link.tracks, 1);
       }
       // La liste des groupes est relue au retour.
       expect(memberships.reads, readsBefore + 1);
+    });
+
+    followerTest('groupes sans campagne Grimoire (story_title nul) : aucun '
+        'canal ; leur écran ouvre le sien', (tester) async {
+      memberships.memberships = [
+        membership('g1'),
+        membership('g2', linked: false),
+        membership('g3', linked: false),
+      ];
+      await follow(tester);
+      expect(openGroups(), {'g1'});
+      expect(gateway.topicsReads, 1);
+
+      final screen = container.listen(
+        grimoireCombatFocusProvider('g3'),
+        (_, _) {},
+        fireImmediately: true,
+      );
+      await settle(tester);
+      expect(openGroups(), {'g1', 'g3'});
+      screen.close();
+      await tester.pump(const Duration(milliseconds: 1));
+      await settle(tester);
+      expect(openGroups(), {'g1'});
+    });
+
+    followerTest('groupe associé à Grimoire pendant que l\'app est ouverte : '
+        'suivi dès qu\'une notification en parle', (tester) async {
+      memberships.memberships = [membership('g1', linked: false)];
+      await follow(tester);
+      expect(open(), isEmpty);
+      memberships.memberships = [membership('g1')];
+      container.read(myGroupMembershipsProvider.notifier).ensureFollowed('g1');
+      await settle(tester);
+      expect(openGroups(), {'g1'});
     });
 
     followerTest('groupe ajouté puis retiré : canal ouvert puis fermé', (
@@ -242,6 +281,53 @@ void main() {
       );
       expect(gateway.linkFor('g1').closed, isTrue);
       expect(openGroups(), {'g2'});
+    });
+  });
+
+  group('coût au retour au premier plan (5 groupes, 3 liés à Grimoire, un '
+      'écran ouvert)', () {
+    followerTest('retour d\'arrière-plan : 1 lecture des groupes, 3 sujets, 3 '
+        'abonnements, 1 state_request ; volet de notifications : rien', (
+      tester,
+    ) async {
+      memberships.memberships = [
+        membership('g1'),
+        membership('g2'),
+        membership('g3'),
+        membership('g4', linked: false),
+        membership('g5', linked: false),
+      ];
+      await follow(tester);
+      container.listen(
+        grimoireCombatFocusProvider('g1'),
+        (_, _) {},
+        fireImmediately: true,
+      );
+      await settle(tester);
+      ({int reads, int topics, int links, int requests}) counts() => (
+        reads: memberships.reads,
+        topics: gateway.topicsReads,
+        links: gateway.links.length,
+        requests: gateway.stateRequests.length,
+      );
+      expect(counts(), (reads: 1, topics: 3, links: 3, requests: 1));
+
+      // Volet de notifications : `inactive` puis `resumed`, rien ne part.
+      tester.binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await settle(tester);
+      expect(counts(), (reads: 1, topics: 3, links: 3, requests: 1));
+
+      // Vraie mise en arrière-plan puis retour.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await settle(tester);
+      now = now.add(const Duration(minutes: 1));
+      await tester.pump(const Duration(seconds: 3));
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await settle(tester);
+      expect(counts(), (reads: 2, topics: 6, links: 6, requests: 2));
+      expect(gateway.stateRequests.last.groupId, 'g1');
     });
   });
 

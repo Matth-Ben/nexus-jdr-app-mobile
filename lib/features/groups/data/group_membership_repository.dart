@@ -3,13 +3,20 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/group_failure.dart';
 import 'group_error_mapper.dart';
 
-/// Appartenance du joueur connecté à un groupe : le groupe, son nom et le
+/// Appartenance du joueur connecté à un groupe : le groupe, son nom, le
 /// personnage courant du joueur dans ce groupe (`group_members.character_id`,
-/// `null` pour un MJ sans personnage).
+/// `null` pour un MJ sans personnage) et le lien avec Grimoire.
+///
+/// [grimoireLinked] : `groups.story_title` non nul. Grimoire écrit le titre de
+/// la campagne sur le groupe à l'association et l'efface (`NULL`) à la
+/// dissociation (contrat DeepCore `20261119120000`, Grimoire
+/// `server/nexus/groups.ts`) ; un combat Grimoire exige ce lien. Seuls ces
+/// groupes sont suivis en continu au premier plan (coût des canaux).
 typedef GroupMembership = ({
   String groupId,
   String groupName,
   String? characterId,
+  bool grimoireLinked,
 });
 
 /// Lecture légère des groupes du joueur connecté (une seule requête) : sert
@@ -43,23 +50,23 @@ class SupabaseGroupMembershipRepository implements GroupMembershipRepository {
     try {
       final rows = await _client
           .from('group_members')
-          .select('group_id, character_id, groups(name)')
+          .select('group_id, character_id, groups(name, story_title)')
           .eq('user_id', ownerId);
-      return [
-        for (final row in rows)
-          (
-            groupId: row['group_id'] as String,
-            groupName:
-                ((row['groups'] as Map<String, dynamic>?)?['name']
-                    as String?) ??
-                '',
-            characterId: row['character_id'] as String?,
-          ),
-      ];
+      return [for (final row in rows) _membershipOf(row)];
     } on PostgrestException catch (error) {
       throw mapGroupError(error);
     } catch (_) {
       throw mapUnknownGroupError();
     }
+  }
+
+  GroupMembership _membershipOf(Map<String, dynamic> row) {
+    final group = row['groups'] as Map<String, dynamic>?;
+    return (
+      groupId: row['group_id'] as String,
+      groupName: (group?['name'] as String?) ?? '',
+      characterId: row['character_id'] as String?,
+      grimoireLinked: group?['story_title'] is String,
+    );
   }
 }

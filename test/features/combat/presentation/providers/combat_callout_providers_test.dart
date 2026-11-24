@@ -236,20 +236,31 @@ void main() {
     const start = (type: CombatNotificationType.combatStart, groupId: _g1);
     const turn = (type: CombatNotificationType.yourTurn, groupId: _g1);
 
-    test('signal correspondant ; push en double dans les 60 s : ignoré, '
-        'même après fermeture', () {
+    test('signal correspondant ; push en double pendant qu\'il est affiché : '
+        'ignoré ; aucune fenêtre de temps après sa fermeture', () {
       controller().showFromPush(start);
       final shown = callout()!;
       expect(shown.kind, CombatCalloutKind.combatStart);
       controller().showFromPush(start);
       expect(callout(), shown);
-      controller().dismiss(shown.id);
-      now = now.add(const Duration(seconds: 59));
-      controller().showFromPush(start);
-      expect(callout(), isNull);
-      now = now.add(const Duration(seconds: 1));
-      controller().showFromPush(start);
+      controller()
+        ..dismiss(shown.id)
+        ..showFromPush(start);
       expect(callout()!.kind, CombatCalloutKind.combatStart);
+      expect(callout()!.id, isNot(shown.id));
+    });
+
+    test('push « À toi de jouer » quand le canal montre déjà ce tour : '
+        'ignoré, même signal fermé', () {
+      _GroupFeed(container, _g1).receive([
+        gCombatStart(1),
+        gOrder(2, grimoireRoster(), current: 'p-gob'),
+        gTurn(3, 'p-aria'),
+      ]);
+      controller()
+        ..dismiss(callout()!.id)
+        ..showFromPush(turn);
+      expect(callout(), isNull);
     });
 
     test('canal puis push du même évènement : un seul signal', () {
@@ -275,11 +286,37 @@ void main() {
       expect(shown.isTurn, isTrue);
       feed.receive([gTurn(3, 'p-aria')]);
       expect(callout()!.id, shown.id);
-      // Fermé par le joueur : le même tour arrivé par l'autre voie dans les
-      // 60 s ne le rouvre pas.
+      // Fermé par le joueur : le même tour reçu de nouveau sur le canal ne le
+      // rouvre pas.
       controller().dismiss(shown.id);
-      feed.receive([gTurn(4, 'p-brun'), gTurn(5, 'p-aria', round: 2)]);
+      feed.receive([
+        gState(4, participants: grimoireRoster(), current: 'p-aria'),
+      ]);
       expect(callout(), isNull);
+    });
+
+    test('Q5 : tour annoncé par push, puis un vrai nouveau tour du même '
+        'joueur moins de 60 s après : affiché', () {
+      final feed = _GroupFeed(container, _g1)
+        ..receive([
+          gCombatStart(1),
+          gOrder(2, grimoireRoster(), current: 'p-gob'),
+        ]);
+      controller()
+        ..dismiss(callout()!.id)
+        ..showFromPush(turn);
+      final pushed = callout()!;
+      // Le même tour arrive sur le canal : un seul signal.
+      feed.receive([gTurn(3, 'p-aria')]);
+      expect(callout()!.id, pushed.id);
+      now = now.add(const Duration(seconds: 20));
+      // Tour suivant, puis de nouveau le joueur (round 2) : nouveau tour.
+      feed.receive([gTurn(4, 'p-brun')]);
+      expect(callout(), isNull);
+      now = now.add(const Duration(seconds: 20));
+      feed.receive([gTurn(5, 'p-aria', round: 2)]);
+      expect(callout()!.isTurn, isTrue);
+      expect(callout()!.id, isNot(pushed.id));
     });
 
     test('deux tours reçus sur le canal : deux signaux (évènements '
@@ -310,6 +347,31 @@ void main() {
         );
       expect(callout()!.isTurn, isTrue);
       feed.receive([gTurn(2, 'p-gob')]);
+      expect(callout(), isNull);
+    });
+  });
+
+  group('meneur du groupe (is_leader)', () {
+    test('aucun signal, ni annonce ni tour ; un signal déjà affiché est '
+        'retiré', () {
+      final feed = _GroupFeed(container, _g1)..receive([gCombatStart(1)]);
+      expect(callout(), isNotNull);
+      feed
+        ..push(feed.session.copyWith(isLeader: true))
+        ..session = feed.session.copyWith(isLeader: true);
+      expect(callout(), isNull);
+      final leader = _GroupFeed(container, _g2)
+        ..session = const GrimoireCombatSession(
+          link: GrimoireLinkStatus.subscribed,
+          isLeader: true,
+        )
+        ..receive([
+          gCombatStart(1),
+          gInitiativeRequest(2, ['c-player']),
+          gOrder(3, grimoireRoster(), current: 'p-gob'),
+          gTurn(4, 'p-aria'),
+        ]);
+      expect(leader.session.isLeader, isTrue);
       expect(callout(), isNull);
     });
   });

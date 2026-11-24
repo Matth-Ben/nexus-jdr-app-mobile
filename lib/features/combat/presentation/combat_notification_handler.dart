@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/notifications/notification_providers.dart';
 import '../../../core/router/app_router.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../auth/presentation/providers/auth_providers.dart';
 import '../domain/combat_notification.dart';
 import 'providers/combat_callout_providers.dart';
 import 'providers/grimoire_groups_providers.dart';
@@ -28,12 +29,12 @@ class CombatNotificationHandler {
   /// pendant 60 s avec les messages du canal du groupe).
   void received(CombatNotificationTarget target) {
     _ref.read(combatCalloutControllerProvider.notifier).showFromPush(target);
-    // Groupe inconnu de la liste (rejoint ailleurs) : son nom arrive avec la
-    // relecture.
+    // Groupe inconnu de la liste (rejoint ailleurs) ou pas encore lié à
+    // Grimoire : son nom arrive avec la relecture, et son canal est suivi.
     if (_ref.exists(myGroupMembershipsProvider)) {
       _ref
           .read(myGroupMembershipsProvider.notifier)
-          .ensureKnown(target.groupId);
+          .ensureFollowed(target.groupId);
     }
   }
 
@@ -41,9 +42,13 @@ class CombatNotificationHandler {
   /// écran Groupe (`go`) puis écran Combat (`push`), pour que le retour mène
   /// au groupe. Compte qui n'est plus membre : rien ne s'ouvre, « Ce groupe
   /// n'est plus accessible. ». Appartenance inconnue (hors ligne) : le combat
-  /// s'ouvre, l'écran gère lui-même un groupe devenu inaccessible.
+  /// s'ouvre, l'écran gère lui-même un groupe devenu inaccessible. Sans
+  /// compte connecté : rien. Si la redirection du routeur (connexion,
+  /// présentation de l'app) détourne l'écran Groupe, le combat n'est pas
+  /// empilé par-dessus.
   Future<void> open(CombatNotificationTarget target) async {
     final groupId = target.groupId;
+    if (_ref.read(currentUserProvider) == null) return;
     bool? member;
     try {
       member = await _ref
@@ -56,10 +61,12 @@ class CombatNotificationHandler {
       _showNotAccessible();
       return;
     }
-    final router = _ref.read(appRouterProvider)..go('/groups/$groupId');
+    final groupPath = '/groups/$groupId';
+    final router = _ref.read(appRouterProvider)..go(groupPath);
     // La pile « Groupe » doit être en place avant d'y empiler le combat.
     await WidgetsBinding.instance.endOfFrame;
-    unawaited(router.push('/groups/$groupId/combat'));
+    if (router.state.uri.path != groupPath) return;
+    unawaited(router.push('$groupPath/combat'));
   }
 
   void _showNotAccessible() {
