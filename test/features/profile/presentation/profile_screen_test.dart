@@ -65,6 +65,7 @@ class _FakeNotificationPreferencesRepository
     bool? pushRestReminder,
     bool? pushAccessRevoked,
     bool? pushNewVersionAvailable,
+    bool? pushGmCombatAndReveals,
     bool? emailDigestEnabled,
   }) async => const NotificationPreferences.defaults();
 }

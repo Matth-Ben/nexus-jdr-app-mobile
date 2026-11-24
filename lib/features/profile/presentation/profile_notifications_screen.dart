@@ -33,15 +33,16 @@ import 'providers/notification_preferences_providers.dart';
 ///
 /// Interrupteur principal "Notifications push" isolé (sa propre carte
 /// simple, sans en-tête de section ni icône), puis groupe "DÉCLENCHEURS"
-/// (`_SectionHeader`, 3 rangées `_ToggleRow` avec `standalone: false`
+/// (`_SectionHeader`, 4 rangées `_ToggleRow` avec `standalone: false`
 /// regroupées dans un `SettingsListCard`), puis groupe "E-MAIL" (1 rangée) —
-/// recettage direction-artistique du 13/09/2026. Les 3 rangées
-/// "DÉCLENCHEURS" ("Repos long non pris depuis longtemps"/
-/// `pushRestReminder`, "Accès retiré ou modifié par le MJ"/
-/// `pushAccessRevoked` et "Nouvelle mise à jour disponible"/
-/// `pushNewVersionAvailable`) sont grisées (`onChanged: null`) quand
-/// l'interrupteur "Notifications push" est désactivé. Le switch e-mail est
-/// toujours indépendant du push.
+/// recettage direction-artistique du 13/09/2026. Les 4 rangées
+/// "DÉCLENCHEURS" ("Combat et révélations du MJ"/`pushGmCombatAndReveals`,
+/// en tête avec un sous-titre — `docs/combat-grimoire-ui.md` §9 —, "Repos
+/// long non pris depuis longtemps"/`pushRestReminder`, "Accès retiré ou
+/// modifié par le MJ"/`pushAccessRevoked` et "Nouvelle mise à jour
+/// disponible"/`pushNewVersionAvailable`) sont grisées (`onChanged: null`)
+/// quand l'interrupteur "Notifications push" est désactivé. Le switch e-mail
+/// est toujours indépendant du push.
 ///
 /// **Pas de rangée "Invitation à rejoindre une histoire"** : décision chef
 /// de projet (13/09/2026) de retirer plutôt que d'afficher un réglage sans
@@ -138,6 +139,7 @@ class _ProfileNotificationsScreenState
     bool? pushRestReminder,
     bool? pushAccessRevoked,
     bool? pushNewVersionAvailable,
+    bool? pushGmCombatAndReveals,
     bool? emailDigestEnabled,
   }) async {
     // Capturé avant tout `await` (même précaution que
@@ -150,6 +152,7 @@ class _ProfileNotificationsScreenState
         pushRestReminder: pushRestReminder,
         pushAccessRevoked: pushAccessRevoked,
         pushNewVersionAvailable: pushNewVersionAvailable,
+        pushGmCombatAndReveals: pushGmCombatAndReveals,
         emailDigestEnabled: emailDigestEnabled,
       ),
     );
@@ -161,6 +164,7 @@ class _ProfileNotificationsScreenState
             pushRestReminder: pushRestReminder,
             pushAccessRevoked: pushAccessRevoked,
             pushNewVersionAvailable: pushNewVersionAvailable,
+            pushGmCombatAndReveals: pushGmCombatAndReveals,
             emailDigestEnabled: emailDigestEnabled,
           );
     } catch (_) {
@@ -222,6 +226,19 @@ class _ProfileNotificationsScreenState
           const SizedBox(height: AppSpacing.sm),
           SettingsListCard(
             children: [
+              // Première ligne, seule avec un sous-titre : son titre couvre
+              // trois évènements et le combat natif (décision 60) —
+              // `docs/combat-grimoire-ui.md` §9.
+              _ToggleRow(
+                standalone: false,
+                icon: Icons.campaign_outlined,
+                title: l10n.profileNotificationsGmCombat,
+                subtitle: l10n.profileNotificationsGmCombatSubtitle,
+                value: prefs.pushGmCombatAndReveals,
+                onChanged: prefs.pushEnabled
+                    ? (value) => _toggle(prefs, pushGmCombatAndReveals: value)
+                    : null,
+              ),
               _ToggleRow(
                 standalone: false,
                 icon: Icons.star_outline,
@@ -316,7 +333,7 @@ class _SectionHeader extends StatelessWidget {
 ///
 /// [standalone] (`true` par défaut) porte sa propre carte `parchment.card` —
 /// seule la rangée "Notifications push", isolée en tête d'écran, l'utilise.
-/// À `false` (les 3 rangées "DÉCLENCHEURS"), aucune carte/bordure propre :
+/// À `false` (les 4 rangées "DÉCLENCHEURS"), aucune carte/bordure propre :
 /// pensé pour être empilé dans un
 /// `core/widgets/settings_list_card.dart::SettingsListCard`, qui porte déjà
 /// la carte englobante — même convention que `MenuTile.standalone`.
@@ -336,9 +353,11 @@ class _ToggleRow extends StatelessWidget {
 
   final String title;
 
-  /// Ligne de sous-titre optionnelle sous [title] — seule "Recevoir un
-  /// résumé par e-mail" en a une désormais (les 2 rangées "DÉCLENCHEURS" ont
-  /// perdu la leur, spec direction-artistique du 13/09/2026).
+  /// Ligne de sous-titre optionnelle sous [title] — "Recevoir un résumé par
+  /// e-mail" et, dans "DÉCLENCHEURS", la seule "Combat et révélations du MJ"
+  /// (son titre couvre trois évènements, `docs/combat-grimoire-ui.md` §9 ;
+  /// les autres rangées ont perdu la leur, spec direction-artistique du
+  /// 13/09/2026).
   final String? subtitle;
 
   /// Icône affichée à gauche de la rangée.
