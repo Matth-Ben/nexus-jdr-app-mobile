@@ -25,6 +25,8 @@ import 'features/app_update/presentation/providers/app_version_providers.dart';
 import 'features/character_creation/presentation/providers/character_creation_catalog_preloader.dart';
 import 'features/characters/presentation/providers/character_providers.dart';
 import 'features/characters/presentation/providers/character_write_sync_coordinator.dart';
+import 'features/combat/presentation/combat_callout_host.dart';
+import 'features/combat/presentation/providers/grimoire_groups_providers.dart';
 import 'features/profile/presentation/widgets/account_locale_reporter.dart';
 import 'features/splash/presentation/splash_screen.dart';
 import 'firebase_options.dart';
@@ -581,6 +583,11 @@ class NexusJdrApp extends ConsumerWidget {
     // (jeton FCM, réception au premier plan, tap sur notification), pour
     // toute la durée de l'app — voir `push_token_registrar.dart`.
     ref.watch(pushTokenRegistrarProvider);
+    // Combat mené depuis Grimoire : suivi de tous les groupes du joueur tant
+    // que l'app est au premier plan (un canal par groupe, aucun en
+    // arrière-plan), pour le signal global de combat — voir
+    // `grimoire_groups_providers.dart`.
+    ref.watch(grimoireGroupsFollowerProvider);
 
     return MaterialApp.router(
       title: 'Nexus JDR — Personnages',
@@ -593,9 +600,11 @@ class NexusJdrApp extends ConsumerWidget {
       routerConfig: router,
       // Au-dessus du navigateur, sous les `Localizations` de l'app : langue
       // affichée recopiée dans le compte (notifications push dans la langue
-      // du joueur).
-      builder: (context, child) =>
-          AccountLocaleReporter(child: child ?? const SizedBox.shrink()),
+      // du joueur) et signal global de combat posé en bas de l'écran
+      // (`docs/combat-grimoire-ui.md` §6).
+      builder: (context, child) => AccountLocaleReporter(
+        child: CombatCalloutHost(child: child ?? const SizedBox.shrink()),
+      ),
       // Chantier "traduction de l'app" Phase A — infrastructure `.arb`
       // uniquement (voir `core/i18n/locale_preference_provider.dart` et
       // `features/profile/presentation/profile_language_screen.dart`) : le

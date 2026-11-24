@@ -9,8 +9,9 @@
 // l'app), plutôt que d'initialiser Supabase pour de vrai.
 //
 // `characterWriteSyncCoordinatorProvider`/`characterCreationCatalogPreloaderProvider`/
-// `pushTokenRegistrarProvider` (`NexusJdrApp.build`), ainsi que la langue du
-// compte (`appShellTestOverrides`), sont surchargés pour la
+// `pushTokenRegistrarProvider` (`NexusJdrApp.build`), ainsi que le suivi des
+// combats de tous les groupes et la langue du compte (`appShellTestOverrides`),
+// sont surchargés pour la
 // même raison : leur provider "réel" déclenche `start()` dès sa construction
 // (tentative de synchro/préchargement/enregistrement du jeton FCM immédiate,
 // voir leur doc de classe), qui lit à son tour `supabaseClientProvider` ->

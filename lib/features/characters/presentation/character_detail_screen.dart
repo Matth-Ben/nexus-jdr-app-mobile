@@ -10,6 +10,7 @@ import '../../../core/rules/spell_status.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/bottom_bar_inset_reporter.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/undo_snack_bar.dart';
 import '../../../core/widgets/wood_back_header.dart';
@@ -3100,9 +3101,13 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         ],
       ),
       bottomNavigationBar: detailAsync.maybeWhen(
-        data: (_) => CharacterDetailTabBar(
-          current: _tab,
-          onSelect: (tab) => setState(() => _tab = tab),
+        // Hauteur signalée au signal global de combat, posé au-dessus de la
+        // barre d'onglets comme une `SnackBar`.
+        data: (_) => BottomBarInsetReporter(
+          child: CharacterDetailTabBar(
+            current: _tab,
+            onSelect: (tab) => setState(() => _tab = tab),
+          ),
         ),
         orElse: () => null,
       ),

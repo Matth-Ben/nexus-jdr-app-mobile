@@ -52,8 +52,14 @@ import '../../features/xml_import/presentation/xml_import_review_screen.dart';
 import '../analytics/analytics_preferences_provider.dart';
 import '../network/supabase_client_provider.dart';
 import 'route_observer_provider.dart';
+import 'route_stack_observer.dart';
 
 part 'app_router.g.dart';
+
+/// Nom de la route de l'écran Combat d'un groupe (`/groups/:id/combat`) : le
+/// signal global de combat ne s'affiche jamais sur l'écran du groupe concerné
+/// (`docs/combat-grimoire-ui.md` §6).
+const String kGroupCombatRouteName = 'group-combat';
 
 /// Routeur applicatif : redirige automatiquement `/login` ↔ `/` selon
 /// l'état d'authentification Supabase, conformément à l'arborescence
@@ -97,6 +103,10 @@ GoRouter appRouter(Ref ref) {
     // (`AnalyticsService.trackEvent`).
     observers: [
       ref.watch(routeObserverProvider),
+      // Pile des routes (page visible, feuille modale ouverte) : lue par le
+      // signal global de combat posé au-dessus du navigateur — voir
+      // `route_stack_observer.dart`.
+      ref.watch(routeStackObserverProvider),
       if (analyticsAvailability.firebaseAnalyticsReady)
         FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
       if (analyticsAvailability.postHogReady) PosthogObserver(),
@@ -550,7 +560,7 @@ GoRouter appRouter(Ref ref) {
         // Écran « Combat » du groupe (`features/combat/`) — poussé depuis le
         // bandeau du groupe et le bouton « Lancer un combat » ; spec
         // `docs/combat-groupe-ui.md`.
-        name: 'group-combat',
+        name: kGroupCombatRouteName,
         path: '/groups/:id/combat',
         builder: (context, state) =>
             CombatScreen(groupId: state.pathParameters['id']!),
