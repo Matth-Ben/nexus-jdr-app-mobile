@@ -274,6 +274,12 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
     revente… usage personnel » est ignoré) ; mention d'attribution partout ; à faire confirmer par un conseil avant toute
     vente.
 
+72. **Données 2024 du bestiaire corrigées avant la PR Grimoire #13** : petite PR DeepCore (vulnérabilités perdues à
+    l'import du SRD 5.2, `armor_detail` « armure naturelle » posé par défaut sur tous les monstres 2024 et vidé quand le
+    SRD 5.2 ne l'indique pas) appliquée en production, puis l'extrait d'essai de la PR #13 est régénéré avant son merge.
+73. **Dégâts en plus sous condition** (« plus 1d4 si le jet avait l'avantage ») : convertis en **seconde attaque nommée**
+    avec la condition dans le nom ; les bonus écrits dans une phrase à part restent des notes.
+
 Choix du chef de projet (24/11, PR DeepCore #58) : noms anglais des 6 armes naturelles gardés (simples noms, hors SRD) ;
 coquille du SRD français (Méphite vaporeux) gardée par fidélité à la source ; initiative d'un monstre 2014 = modificateur
 de Dextérité.
