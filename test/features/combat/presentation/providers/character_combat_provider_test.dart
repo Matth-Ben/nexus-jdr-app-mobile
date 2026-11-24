@@ -6,13 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/features/combat/presentation/providers/character_combat_provider.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
+import 'package:personnages/features/combat/presentation/providers/grimoire_combat_providers.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
 
 import '../../../../support/combat_fixtures.dart';
 import '../../../../support/fake_combat_repository.dart';
 import '../../../../support/fake_connectivity_checker.dart';
 import '../../../../support/fake_current_user.dart';
+import '../../../../support/fake_grimoire_combat_gateway.dart';
 import '../../../../support/fake_group_character_lookup.dart';
+import '../../../../support/grimoire_fixtures.dart';
 
 const _character = 'c-1';
 
@@ -27,6 +30,7 @@ void main() {
   late FakeCombatRepository combats;
   late FakeGroupCharacterLookup groups;
   late FakeConnectivityChecker connectivity;
+  late FakeGrimoireCombatGateway grimoire;
   late ProviderContainer container;
   late DateTime now;
 
@@ -34,11 +38,13 @@ void main() {
     combats = FakeCombatRepository();
     groups = FakeGroupCharacterLookup()..groupsByCharacter[_character] = ['g1'];
     connectivity = FakeConnectivityChecker();
+    grimoire = FakeGrimoireCombatGateway();
     now = DateTime.utc(2026, 11, 14, 12);
     container = ProviderContainer(
       overrides: [
         currentUserFromTestOverride,
         combatRepositoryProvider.overrideWithValue(combats),
+        grimoireCombatGatewayProvider.overrideWithValue(grimoire),
         groupRepositoryProvider.overrideWithValue(groups),
         connectivityCheckerProvider.overrideWithValue(connectivity),
         combatRefetchDebounceProvider.overrideWithValue(
@@ -282,5 +288,24 @@ void main() {
         expect(banner()?.groupId, 'g1');
       },
     );
+
+    test('combat mené depuis Grimoire vivant : prioritaire sur le natif '
+        '(décision 61), canal du groupe suivi', () async {
+      combats.snapshotsByGroup['g1'] = fakeSnapshot(
+        combat: fakeCombat(groupId: 'g1', round: 4),
+      );
+      listen();
+      await _settle();
+      expect(banner(), (groupId: 'g1', round: 4, isStale: false));
+      expect(grimoire.links, hasLength(1));
+      grimoire.lastLink
+        ..emit(gCombatStart(1))
+        ..emit(gOrder(2, grimoireRoster(), current: 'p-gob', round: 2));
+      await _settle();
+      expect(banner(), (groupId: 'g1', round: 2, isStale: false));
+      grimoire.lastLink.emit(gEnd(3));
+      await _settle();
+      expect(banner(), (groupId: 'g1', round: 4, isStale: false));
+    });
   });
 }

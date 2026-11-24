@@ -86,6 +86,7 @@ class _CharacterStickyBannersState
             ),
             child: CombatSheetBanner(
               groupId: combat.groupId,
+              characterId: widget.characterId,
               compact: compact,
               onOpen: (groupId) =>
                   unawaited(context.push('/groups/$groupId/combat')),

@@ -535,6 +535,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileNotificationsSectionTriggers => 'DÉCLENCHEURS';
 
   @override
+  String get profileNotificationsGmCombat => 'Combat et révélations du MJ';
+
+  @override
+  String get profileNotificationsGmCombatSubtitle =>
+      'Début du combat, ton tour et ce que le MJ te montre.';
+
+  @override
   String get profileNotificationsRestReminder =>
       'Repos long non pris depuis longtemps';
 
@@ -5728,4 +5735,250 @@ class AppLocalizationsFr extends AppLocalizations {
   String combatSheetBannerSemanticsOffline(int round, String time) {
     return 'Combat en cours, round $round, état de $time. Ouvrir le combat.';
   }
+
+  @override
+  String get combatGrimoireSource => 'Mené depuis Grimoire';
+
+  @override
+  String get combatGrimoireLeaderInfo =>
+      'Tu mènes ce combat depuis Grimoire. Ici, tu le suis comme les joueurs.';
+
+  @override
+  String get combatShout => 'Combat !';
+
+  @override
+  String get combatPreparingStatus => 'En préparation';
+
+  @override
+  String get combatPreparingHint =>
+      'L\'ordre d\'initiative apparaîtra au premier tour.';
+
+  @override
+  String get combatBannerPreparing => 'Combat en préparation';
+
+  @override
+  String get combatBannerOpen => 'Ouvrir le combat';
+
+  @override
+  String get combatBannerSendInitiative =>
+      'Envoie ton initiative · Ouvrir le combat';
+
+  @override
+  String get combatBannerInitiativeSent =>
+      'Initiative envoyée · Ouvrir le combat';
+
+  @override
+  String get combatSheetBannerInitiativeRequested =>
+      'Combat ! Envoie ton initiative';
+
+  @override
+  String get combatSheetBannerPreparingSemantics =>
+      'Combat en préparation. Ouvrir le combat.';
+
+  @override
+  String get combatSheetBannerInitiativeRequestedSemantics =>
+      'Combat ! Envoie ton initiative. Ouvrir le combat.';
+
+  @override
+  String get combatInitiativeRequestTitle => 'Le MJ demande ton initiative';
+
+  @override
+  String combatInitiativeRequestFor(String name) {
+    return 'Pour $name';
+  }
+
+  @override
+  String get combatSendInitiative => 'Envoyer mon initiative';
+
+  @override
+  String get combatSendToGm => 'Envoyer au MJ';
+
+  @override
+  String get combatSendHint => 'Une fois reçue, seul le MJ peut la modifier.';
+
+  @override
+  String combatInitiativeSent(int value) {
+    return '$value · envoyée au MJ';
+  }
+
+  @override
+  String get combatInitiativeAwaitingReceipt =>
+      'En attente de confirmation du MJ…';
+
+  @override
+  String combatInitiativeReceived(int value) {
+    return '$value · reçue par le MJ';
+  }
+
+  @override
+  String get combatInitiativeKnownByGm => 'Le MJ a ton initiative';
+
+  @override
+  String get combatInitiativeMayAdjust =>
+      'Le MJ peut l\'ajuster : la valeur retenue s\'affichera au premier tour.';
+
+  @override
+  String get combatInitiativeNotReceived =>
+      'Le MJ n\'a pas reçu ton initiative. Renvoie-la.';
+
+  @override
+  String get combatInitiativeRequestedAgain =>
+      'Le MJ te redemande ton initiative.';
+
+  @override
+  String get combatInitiativeSentLabel => 'Envoyée au MJ';
+
+  @override
+  String combatInitiativeCorrected(int sent) {
+    return 'Corrigée par le MJ (envoyé : $sent)';
+  }
+
+  @override
+  String get combatUnavailableGmOffline =>
+      'Indisponible tant que le MJ est hors ligne.';
+
+  @override
+  String combatSendRateLimited(int seconds) {
+    return 'Trop d\'envois. Réessaie dans $seconds s.';
+  }
+
+  @override
+  String get combatSendFailed => 'Envoi impossible. Réessaie.';
+
+  @override
+  String get combatNotMemberAnymore => 'Tu ne fais plus partie de ce groupe.';
+
+  @override
+  String get combatBadgeDead => 'Mort';
+
+  @override
+  String get combatTurnSkipped => 'Tour sauté';
+
+  @override
+  String get combatRowDeadSemantics => 'mort, tour sauté';
+
+  @override
+  String get combatRemovedByGm => 'Le MJ t\'a retiré de ce combat.';
+
+  @override
+  String get combatYourTurn => 'À toi de jouer';
+
+  @override
+  String combatBannerYourTurn(int round) {
+    return 'À toi de jouer · round $round';
+  }
+
+  @override
+  String combatSheetBannerYourTurnSemantics(int round) {
+    return 'À toi de jouer, round $round. Ouvrir le combat.';
+  }
+
+  @override
+  String get combatCalloutInitiativeTitle => 'Initiative demandée';
+
+  @override
+  String combatCalloutSendInitiative(String group) {
+    return '$group · Envoie ton initiative';
+  }
+
+  @override
+  String combatCalloutOpen(String group) {
+    return '$group · Ouvrir le combat';
+  }
+
+  @override
+  String combatCalloutYourTurnBody(String group, int round) {
+    return '$group · round $round · Ouvrir le combat';
+  }
+
+  @override
+  String get combatCalloutClose => 'Fermer';
+
+  @override
+  String combatGmOfflineBanner(String time) {
+    return 'Le MJ semble hors ligne. Dernier état reçu à $time ; le combat reprendra dès son retour.';
+  }
+
+  @override
+  String combatBannerGmOffline(String time) {
+    return 'MJ hors ligne · état de $time';
+  }
+
+  @override
+  String combatSheetBannerGmOffline(String time) {
+    return 'Combat · MJ hors ligne (état de $time)';
+  }
+
+  @override
+  String combatSheetBannerGmOfflineSemantics(String time) {
+    return 'Combat en cours, MJ hors ligne, état de $time. Ouvrir le combat.';
+  }
+
+  @override
+  String get combatInterruptedTitle => 'Pas de nouvelles du MJ';
+
+  @override
+  String combatInterruptedBody(String time) {
+    return 'Dernier état reçu à $time. Le combat réapparaîtra ici s\'il reprend.';
+  }
+
+  @override
+  String get combatConnecting => 'Connexion au combat…';
+
+  @override
+  String get combatNoneTitle => 'Aucun combat en cours';
+
+  @override
+  String get combatNoneBody =>
+      'Le combat est peut-être terminé, ou le MJ n\'est pas connecté. Il s\'affichera ici dès qu\'il reprend.';
+
+  @override
+  String get combatGroupNotAccessible => 'Ce groupe n\'est plus accessible.';
+
+  @override
+  String get combatEndedTitle => 'Combat terminé';
+
+  @override
+  String get combatEndedBeforeOrder =>
+      'Le combat s\'est terminé avant que l\'ordre soit dévoilé.';
+
+  @override
+  String combatAnnounceStart(String group) {
+    return 'Combat ! Le MJ lance un combat dans $group.';
+  }
+
+  @override
+  String get combatAnnounceInitiativeRequested =>
+      'Le MJ demande ton initiative.';
+
+  @override
+  String combatAnnounceInitiativeSent(int value) {
+    return 'Initiative $value envoyée au MJ.';
+  }
+
+  @override
+  String get combatAnnounceInitiativeReceived => 'Le MJ a reçu ton initiative.';
+
+  @override
+  String combatAnnounceInitiativeCorrected(int value) {
+    return 'Le MJ a retenu $value.';
+  }
+
+  @override
+  String get combatAnnounceOrderRevealed =>
+      'L\'ordre d\'initiative est dévoilé.';
+
+  @override
+  String get combatAnnounceGmOffline =>
+      'Le MJ semble hors ligne. La dernière vue reste affichée.';
+
+  @override
+  String get combatAnnounceGmBack => 'Le MJ est de retour.';
+
+  @override
+  String get combatStartBlockedByGrimoire =>
+      'Un combat est mené depuis Grimoire.';
+
+  @override
+  String get combatBackHome => 'Retour à l\'accueil';
 }

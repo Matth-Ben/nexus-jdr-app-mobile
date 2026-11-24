@@ -528,6 +528,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileNotificationsSectionTriggers => 'TRIGGERS';
 
   @override
+  String get profileNotificationsGmCombat => 'GM combat and reveals';
+
+  @override
+  String get profileNotificationsGmCombatSubtitle =>
+      'Combat start, your turn and what the GM shows you.';
+
+  @override
   String get profileNotificationsRestReminder =>
       'Long rest not taken in a while';
 
@@ -5680,4 +5687,249 @@ class AppLocalizationsEn extends AppLocalizations {
   String combatSheetBannerSemanticsOffline(int round, String time) {
     return 'Combat in progress, round $round, state as of $time. Open the combat.';
   }
+
+  @override
+  String get combatGrimoireSource => 'Run from Grimoire';
+
+  @override
+  String get combatGrimoireLeaderInfo =>
+      'You\'re running this combat from Grimoire. Here, you follow it like the players.';
+
+  @override
+  String get combatShout => 'Combat!';
+
+  @override
+  String get combatPreparingStatus => 'Getting ready';
+
+  @override
+  String get combatPreparingHint =>
+      'The initiative order will appear on the first turn.';
+
+  @override
+  String get combatBannerPreparing => 'Combat getting ready';
+
+  @override
+  String get combatBannerOpen => 'Open combat';
+
+  @override
+  String get combatBannerSendInitiative => 'Send your initiative · Open combat';
+
+  @override
+  String get combatBannerInitiativeSent => 'Initiative sent · Open combat';
+
+  @override
+  String get combatSheetBannerInitiativeRequested =>
+      'Combat! Send your initiative';
+
+  @override
+  String get combatSheetBannerPreparingSemantics =>
+      'Combat getting ready. Open combat.';
+
+  @override
+  String get combatSheetBannerInitiativeRequestedSemantics =>
+      'Combat! Send your initiative. Open combat.';
+
+  @override
+  String get combatInitiativeRequestTitle =>
+      'The GM is asking for your initiative';
+
+  @override
+  String combatInitiativeRequestFor(String name) {
+    return 'For $name';
+  }
+
+  @override
+  String get combatSendInitiative => 'Send my initiative';
+
+  @override
+  String get combatSendToGm => 'Send to GM';
+
+  @override
+  String get combatSendHint => 'Once received, only the GM can change it.';
+
+  @override
+  String combatInitiativeSent(int value) {
+    return '$value · sent to the GM';
+  }
+
+  @override
+  String get combatInitiativeAwaitingReceipt =>
+      'Waiting for the GM to confirm…';
+
+  @override
+  String combatInitiativeReceived(int value) {
+    return '$value · received by the GM';
+  }
+
+  @override
+  String get combatInitiativeKnownByGm => 'The GM has your initiative';
+
+  @override
+  String get combatInitiativeMayAdjust =>
+      'The GM may adjust it: the final value will show on the first turn.';
+
+  @override
+  String get combatInitiativeNotReceived =>
+      'The GM didn\'t get your initiative. Send it again.';
+
+  @override
+  String get combatInitiativeRequestedAgain =>
+      'The GM is asking for your initiative again.';
+
+  @override
+  String get combatInitiativeSentLabel => 'Sent to the GM';
+
+  @override
+  String combatInitiativeCorrected(int sent) {
+    return 'Adjusted by the GM (you sent $sent)';
+  }
+
+  @override
+  String get combatUnavailableGmOffline =>
+      'Unavailable while the GM is offline.';
+
+  @override
+  String combatSendRateLimited(int seconds) {
+    return 'Too many attempts. Try again in $seconds s.';
+  }
+
+  @override
+  String get combatSendFailed => 'Couldn\'t send. Try again.';
+
+  @override
+  String get combatNotMemberAnymore => 'You\'re no longer in this group.';
+
+  @override
+  String get combatBadgeDead => 'Dead';
+
+  @override
+  String get combatTurnSkipped => 'Turn skipped';
+
+  @override
+  String get combatRowDeadSemantics => 'dead, turn skipped';
+
+  @override
+  String get combatRemovedByGm => 'The GM removed you from this combat.';
+
+  @override
+  String get combatYourTurn => 'Your turn';
+
+  @override
+  String combatBannerYourTurn(int round) {
+    return 'Your turn · round $round';
+  }
+
+  @override
+  String combatSheetBannerYourTurnSemantics(int round) {
+    return 'Your turn, round $round. Open combat.';
+  }
+
+  @override
+  String get combatCalloutInitiativeTitle => 'Initiative requested';
+
+  @override
+  String combatCalloutSendInitiative(String group) {
+    return '$group · Send your initiative';
+  }
+
+  @override
+  String combatCalloutOpen(String group) {
+    return '$group · Open combat';
+  }
+
+  @override
+  String combatCalloutYourTurnBody(String group, int round) {
+    return '$group · round $round · Open combat';
+  }
+
+  @override
+  String get combatCalloutClose => 'Close';
+
+  @override
+  String combatGmOfflineBanner(String time) {
+    return 'The GM seems to be offline. Last update at $time; the combat will resume when they\'re back.';
+  }
+
+  @override
+  String combatBannerGmOffline(String time) {
+    return 'GM offline · as of $time';
+  }
+
+  @override
+  String combatSheetBannerGmOffline(String time) {
+    return 'Combat · GM offline (as of $time)';
+  }
+
+  @override
+  String combatSheetBannerGmOfflineSemantics(String time) {
+    return 'Combat in progress, GM offline, as of $time. Open combat.';
+  }
+
+  @override
+  String get combatInterruptedTitle => 'No news from the GM';
+
+  @override
+  String combatInterruptedBody(String time) {
+    return 'Last update at $time. The combat will show up here again if it resumes.';
+  }
+
+  @override
+  String get combatConnecting => 'Connecting to the combat…';
+
+  @override
+  String get combatNoneTitle => 'No combat in progress';
+
+  @override
+  String get combatNoneBody =>
+      'The combat may be over, or the GM isn\'t connected. It will show up here as soon as it resumes.';
+
+  @override
+  String get combatGroupNotAccessible => 'This group is no longer available.';
+
+  @override
+  String get combatEndedTitle => 'Combat over';
+
+  @override
+  String get combatEndedBeforeOrder =>
+      'The combat ended before the order was revealed.';
+
+  @override
+  String combatAnnounceStart(String group) {
+    return 'Combat! The GM starts a combat in $group.';
+  }
+
+  @override
+  String get combatAnnounceInitiativeRequested =>
+      'The GM is asking for your initiative.';
+
+  @override
+  String combatAnnounceInitiativeSent(int value) {
+    return 'Initiative $value sent to the GM.';
+  }
+
+  @override
+  String get combatAnnounceInitiativeReceived =>
+      'The GM received your initiative.';
+
+  @override
+  String combatAnnounceInitiativeCorrected(int value) {
+    return 'The GM set it to $value.';
+  }
+
+  @override
+  String get combatAnnounceOrderRevealed => 'The initiative order is revealed.';
+
+  @override
+  String get combatAnnounceGmOffline =>
+      'The GM seems to be offline. The last view stays on screen.';
+
+  @override
+  String get combatAnnounceGmBack => 'The GM is back.';
+
+  @override
+  String get combatStartBlockedByGrimoire =>
+      'A combat is being run from Grimoire.';
+
+  @override
+  String get combatBackHome => 'Back to home';
 }

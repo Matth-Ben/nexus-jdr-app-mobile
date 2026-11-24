@@ -22,6 +22,7 @@ import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/combat/presentation/providers/character_combat_provider.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
+import 'package:personnages/features/combat/presentation/providers/grimoire_combat_providers.dart';
 import 'package:personnages/features/groups/data/group_error_mapper.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/created_group.dart';
@@ -44,6 +45,7 @@ import '../../../support/combat_fixtures.dart';
 import '../../../support/fake_combat_repository.dart';
 import '../../../support/fake_connectivity_checker.dart';
 import '../../../support/fake_current_user.dart';
+import '../../../support/fake_grimoire_combat_gateway.dart';
 
 class _FakeGroupRepository implements GroupRepository {
   /// Réponses successives de `fetchGroupIdsForCharacter` (la dernière se
@@ -298,6 +300,9 @@ Widget _buildTestWidget(
       // relecture du combat du groupe (aucun combat par défaut).
       combatRepositoryProvider.overrideWithValue(
         combatRepository ?? FakeCombatRepository(),
+      ),
+      grimoireCombatGatewayProvider.overrideWithValue(
+        FakeGrimoireCombatGateway(),
       ),
       connectivityCheckerProvider.overrideWithValue(
         connectivity ?? FakeConnectivityChecker(),

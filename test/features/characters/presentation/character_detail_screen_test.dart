@@ -12,6 +12,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
+import 'package:personnages/features/combat/presentation/providers/grimoire_combat_providers.dart';
 import 'package:personnages/l10n/app_localizations.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,6 +70,7 @@ import '../../../support/fake_connectivity_checker.dart';
 import '../../../support/combat_fixtures.dart';
 import '../../../support/fake_combat_repository.dart';
 import '../../../support/fake_current_user.dart';
+import '../../../support/fake_grimoire_combat_gateway.dart';
 import '../../../support/fake_group_character_lookup.dart';
 
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
@@ -3836,6 +3838,9 @@ void main() {
           extraOverrides: [
             currentUserFromTestOverride,
             combatRepositoryProvider.overrideWithValue(combats),
+            grimoireCombatGatewayProvider.overrideWithValue(
+              FakeGrimoireCombatGateway(),
+            ),
             groupRepositoryProvider.overrideWithValue(groups),
             connectivityCheckerProvider.overrideWithValue(connectivity),
             combatRefetchDebounceProvider.overrideWithValue(
