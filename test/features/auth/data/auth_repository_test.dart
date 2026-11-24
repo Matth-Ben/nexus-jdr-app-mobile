@@ -10,6 +10,11 @@
 // `test/features/auth/presentation/login_screen_test.dart`, qui ne passe
 // jamais par `SupabaseAuthRepository` ni par son mapping d'erreurs réel.
 //
+// Écritures de `user_metadata` (`updateDisplayName`, `updateAvatar`,
+// `removeAvatar`, `markOnboardingSeen`) : le corps exact envoyé à `PUT /user`
+// est vérifié (seulement la clé modifiée, `null` pour supprimer), contre un
+// double qui fusionne comme GoTrue (`_goTrueMetadataHandler`).
+//
 // `updateAvatar`/`removeAvatar` mockent en plus les requêtes Storage
 // (`POST`/`DELETE .../storage/v1/object/...`), sur le même `MockClient` que
 // les requêtes Auth — `getPublicUrl` ne fait quant à lui aucun appel réseau
@@ -718,123 +723,87 @@ void main() {
     );
   });
   group('SupabaseAuthRepository.updateDisplayName', () {
-    Future<http.Response> Function(http.Request request)
-    buildUpdateUserHandler({
-      required Map<String, dynamic> initialUserMetadata,
-      required void Function(http.Request request) onCapture,
-    }) {
-      return (request) async {
-        if (request.url.path.endsWith('/token')) {
-          return http.Response(
-            jsonEncode(_fakeSessionJson(userMetadata: initialUserMetadata)),
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        if (request.url.path.endsWith('/user')) {
-          onCapture(request);
-          final body = jsonDecode(request.body) as Map<String, dynamic>;
-          return http.Response(
-            jsonEncode({
-              ..._fakeUserJson(userMetadata: initialUserMetadata),
-              'user_metadata': body['data'],
-            }),
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        return http.Response('{}', 200, request: request);
-      };
-    }
-
-    test(
-      "fusionne `full_name` dans `user_metadata` existant sans l'écraser "
-      '(clé déjà présente, ex. stockée par un tiers un jour côté web)',
-      () async {
-        http.Request? capturedRequest;
-        final client = _buildFakeSupabaseClient(
-          buildUpdateUserHandler(
-            initialUserMetadata: {'some_other_key': 'valeur préexistante'},
-            onCapture: (request) => capturedRequest = request,
-          ),
-        );
-
-        await client.auth.signInWithPassword(
-          email: 'joueur@exemple.com',
-          password: 'password1234',
-        );
-
-        await SupabaseAuthRepository(client)
-            .updateDisplayName(displayName: '  Aranea Nightsong  ');
-
-        expect(capturedRequest, isNotNull);
-        expect(capturedRequest!.url.path, endsWith('/user'));
-        final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
-        final data = body['data'] as Map<String, dynamic>;
-        expect(
-          data['full_name'],
-          'Aranea Nightsong',
-          reason: 'la valeur envoyée doit être trimée',
-        );
-        expect(
-          data['some_other_key'],
-          'valeur préexistante',
-          reason:
-              '`user_metadata` existant ne doit jamais être écrasé, '
-              'seule la clé `full_name` doit être affectée',
-        );
-      },
-    );
-
-    test('displayName `null` retire la clé `full_name` de `user_metadata` sans '
-        'toucher aux autres clés existantes', () async {
-      http.Request? capturedRequest;
+    test("n'envoie que `full_name` (trimé) : une copie locale périmée ne "
+        'réécrit aucune autre clé du compte, et la copie locale suit la '
+        'fusion faite par le serveur', () async {
+      final sentBodies = <Map<String, dynamic>>[];
       final client = _buildFakeSupabaseClient(
-        buildUpdateUserHandler(
-          initialUserMetadata: {
+        _goTrueMetadataHandler(
+          // Copie locale périmée : `locale` et `some_other_key` ont changé
+          // depuis un autre appareil ou l'app web.
+          localMetadata: {'locale': 'fr', 'some_other_key': 'ancienne'},
+          serverMetadata: {'locale': 'en', 'some_other_key': 'à jour'},
+          sentBodies: sentBodies,
+        ),
+      );
+      await _signIn(client);
+
+      await SupabaseAuthRepository(client)
+          .updateDisplayName(displayName: '  Aranea Nightsong  ');
+
+      expect(sentBodies, [
+        {
+          'data': {'full_name': 'Aranea Nightsong'},
+        },
+      ], reason: 'seule `full_name` part, trimée, sans aucune autre clé');
+      expect(client.auth.currentUser!.userMetadata, {
+        'locale': 'en',
+        'some_other_key': 'à jour',
+        'full_name': 'Aranea Nightsong',
+      });
+    });
+
+    test('displayName `null` envoie `full_name: null` (seul moyen de '
+        'supprimer la clé côté GoTrue) et rien d\'autre', () async {
+      final sentBodies = <Map<String, dynamic>>[];
+      final client = _buildFakeSupabaseClient(
+        _goTrueMetadataHandler(
+          localMetadata: {
             'full_name': 'Ancien nom',
             'some_other_key': 'valeur préexistante',
           },
-          onCapture: (request) => capturedRequest = request,
+          serverMetadata: {
+            'full_name': 'Ancien nom',
+            'some_other_key': 'valeur préexistante',
+          },
+          sentBodies: sentBodies,
         ),
       );
-
-      await client.auth.signInWithPassword(
-        email: 'joueur@exemple.com',
-        password: 'password1234',
-      );
+      await _signIn(client);
 
       await SupabaseAuthRepository(client).updateDisplayName(displayName: null);
 
-      final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
-      final data = body['data'] as Map<String, dynamic>;
-      expect(data.containsKey('full_name'), isFalse);
-      expect(data['some_other_key'], 'valeur préexistante');
+      expect(sentBodies, [
+        {
+          'data': {'full_name': null},
+        },
+      ]);
+      expect(client.auth.currentUser!.userMetadata, {
+        'some_other_key': 'valeur préexistante',
+      });
     });
 
-    test('displayName vide/blanc après trim est traité comme `null` (retire '
-        '`full_name`), même coalescing que la sheet appelante', () async {
-      http.Request? capturedRequest;
+    test('displayName vide/blanc après trim est traité comme `null` (envoie '
+        '`full_name: null`), même coalescing que la sheet appelante', () async {
+      final sentBodies = <Map<String, dynamic>>[];
       final client = _buildFakeSupabaseClient(
-        buildUpdateUserHandler(
-          initialUserMetadata: {'full_name': 'Ancien nom'},
-          onCapture: (request) => capturedRequest = request,
+        _goTrueMetadataHandler(
+          localMetadata: {'full_name': 'Ancien nom'},
+          serverMetadata: {'full_name': 'Ancien nom'},
+          sentBodies: sentBodies,
         ),
       );
-
-      await client.auth.signInWithPassword(
-        email: 'joueur@exemple.com',
-        password: 'password1234',
-      );
+      await _signIn(client);
 
       await SupabaseAuthRepository(client)
           .updateDisplayName(displayName: '   ');
 
-      final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
-      final data = body['data'] as Map<String, dynamic>;
-      expect(data.containsKey('full_name'), isFalse);
+      expect(sentBodies, [
+        {
+          'data': {'full_name': null},
+        },
+      ]);
+      expect(client.auth.currentUser!.userMetadata, isEmpty);
     });
 
     test(
@@ -875,55 +844,31 @@ void main() {
   });
 
   group('SupabaseAuthRepository.markOnboardingSeen', () {
-    test("fusionne `onboarding_completed: true` dans `user_metadata` existant "
-        "sans l'écraser (clé déjà présente, ex. `full_name`)", () async {
-      http.Request? capturedRequest;
-      final client = _buildFakeSupabaseClient((request) async {
-        if (request.url.path.endsWith('/token')) {
-          return http.Response(
-            jsonEncode(
-              _fakeSessionJson(userMetadata: {'full_name': 'Aranea Nightsong'}),
-            ),
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        if (request.url.path.endsWith('/user')) {
-          capturedRequest = request;
-          final body = jsonDecode(request.body) as Map<String, dynamic>;
-          return http.Response(
-            jsonEncode({
-              ..._fakeUserJson(userMetadata: {'full_name': 'Aranea Nightsong'}),
-              'user_metadata': body['data'],
-            }),
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        return http.Response('{}', 200, request: request);
-      });
-
-      await client.auth.signInWithPassword(
-        email: 'joueur@exemple.com',
-        password: 'password1234',
+    test("n'envoie que `onboarding_completed: true` : une copie locale "
+        'périmée (`full_name`, `locale`) ne réécrit pas les valeurs du '
+        'serveur', () async {
+      final sentBodies = <Map<String, dynamic>>[];
+      final client = _buildFakeSupabaseClient(
+        _goTrueMetadataHandler(
+          localMetadata: {'full_name': 'Ancien nom', 'locale': 'fr'},
+          serverMetadata: {'full_name': 'Aranea Nightsong', 'locale': 'en'},
+          sentBodies: sentBodies,
+        ),
       );
+      await _signIn(client);
 
       await SupabaseAuthRepository(client).markOnboardingSeen();
 
-      expect(capturedRequest, isNotNull);
-      expect(capturedRequest!.url.path, endsWith('/user'));
-      final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
-      final data = body['data'] as Map<String, dynamic>;
-      expect(data['onboarding_completed'], isTrue);
-      expect(
-        data['full_name'],
-        'Aranea Nightsong',
-        reason:
-            '`user_metadata` existant ne doit jamais être écrasé, seule '
-            'la clé `onboarding_completed` doit être affectée',
-      );
+      expect(sentBodies, [
+        {
+          'data': {'onboarding_completed': true},
+        },
+      ]);
+      expect(client.auth.currentUser!.userMetadata, {
+        'full_name': 'Aranea Nightsong',
+        'locale': 'en',
+        'onboarding_completed': true,
+      });
     });
 
     test(
@@ -1156,56 +1101,32 @@ void main() {
 
   group('SupabaseAuthRepository.updateAvatar', () {
     test('envoie les octets au bucket `character-portraits` sous '
-        '`{ownerId}/avatar/...`, puis fusionne `avatar_url` dans '
-        '`user_metadata` existant sans l\'écraser', () async {
+        "`{ownerId}/avatar/...`, puis n'envoie que `avatar_url` à GoTrue : "
+        'une copie locale périmée ne réécrit aucune autre clé', () async {
       http.Request? uploadRequest;
-      http.Request? userRequest;
-      final client = _buildFakeSupabaseClient((request) async {
-        if (request.url.path.endsWith('/token')) {
-          return http.Response(
-            jsonEncode(
-              _fakeSessionJson(
-                userMetadata: {'some_other_key': 'valeur préexistante'},
-              ),
-            ),
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        if (request.url.path.contains('/storage/v1/object/')) {
-          uploadRequest = request;
-          return http.Response(
-            jsonEncode({
-              'Key': 'character-portraits/fake-user-id/avatar/1.png',
-            }),
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        if (request.url.path.endsWith('/user')) {
-          userRequest = request;
-          final body = jsonDecode(request.body) as Map<String, dynamic>;
-          return http.Response(
-            jsonEncode({
-              ..._fakeUserJson(
-                userMetadata: {'some_other_key': 'valeur préexistante'},
-              ),
-              'user_metadata': body['data'],
-            }),
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        return http.Response('{}', 200, request: request);
-      });
-
-      await client.auth.signInWithPassword(
-        email: 'joueur@exemple.com',
-        password: 'password1234',
+      final sentBodies = <Map<String, dynamic>>[];
+      final client = _buildFakeSupabaseClient(
+        _goTrueMetadataHandler(
+          localMetadata: {'locale': 'fr', 'some_other_key': 'ancienne'},
+          serverMetadata: {'locale': 'en', 'some_other_key': 'à jour'},
+          sentBodies: sentBodies,
+          otherRequests: (request) async {
+            if (request.url.path.contains('/storage/v1/object/')) {
+              uploadRequest = request;
+              return http.Response(
+                jsonEncode({
+                  'Key': 'character-portraits/fake-user-id/avatar/1.png',
+                }),
+                200,
+                request: request,
+                headers: {'content-type': 'application/json'},
+              );
+            }
+            return http.Response('{}', 200, request: request);
+          },
+        ),
       );
+      await _signIn(client);
 
       final publicUrl = await SupabaseAuthRepository(client)
           .updateAvatar(bytes: Uint8List.fromList([1, 2, 3]));
@@ -1217,17 +1138,16 @@ void main() {
       );
       expect(uploadRequest!.url.path, endsWith('.png'));
 
-      expect(userRequest, isNotNull);
-      final body = jsonDecode(userRequest!.body) as Map<String, dynamic>;
-      final data = body['data'] as Map<String, dynamic>;
-      expect(data['avatar_url'], publicUrl);
-      expect(
-        data['some_other_key'],
-        'valeur préexistante',
-        reason:
-            '`user_metadata` existant ne doit jamais être écrasé, seule '
-            'la clé `avatar_url` doit être affectée',
-      );
+      expect(sentBodies, [
+        {
+          'data': {'avatar_url': publicUrl},
+        },
+      ]);
+      expect(client.auth.currentUser!.userMetadata, {
+        'locale': 'en',
+        'some_other_key': 'à jour',
+        'avatar_url': publicUrl,
+      });
     });
 
     test('échec de l\'upload (StorageException) : AuthFailure avec le message '
@@ -1304,125 +1224,97 @@ void main() {
   });
 
   group('SupabaseAuthRepository.removeAvatar', () {
-    test('supprime le fichier correspondant à `avatar_url` du bucket puis '
-        'retire la clé `avatar_url` de `user_metadata` sans toucher aux '
-        'autres clés existantes', () async {
-      http.Request? deleteRequest;
-      http.Request? userRequest;
-      const avatarUrl =
-          'https://fake.supabase.test/storage/v1/object/public/'
-          'character-portraits/fake-user-id/avatar/1.png';
-      final client = _buildFakeSupabaseClient((request) async {
-        if (request.url.path.endsWith('/token')) {
-          return http.Response(
-            jsonEncode(
-              _fakeSessionJson(
-                userMetadata: {
-                  'avatar_url': avatarUrl,
-                  'some_other_key': 'valeur préexistante',
-                },
-              ),
-            ),
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        if (request.method == 'DELETE' &&
-            request.url.path.contains('/storage/v1/object/')) {
-          deleteRequest = request;
-          return http.Response(
-            '[]',
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        if (request.url.path.endsWith('/user')) {
-          userRequest = request;
-          return http.Response(
-            jsonEncode(_fakeUserJson()),
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        return http.Response('{}', 200, request: request);
-      });
+    test(
+      'supprime le fichier correspondant à `avatar_url` du bucket puis '
+      "envoie `avatar_url: null` et rien d'autre : la clé disparaît du "
+      'compte, une copie locale périmée ne réécrit aucune autre clé',
+      () async {
+        http.Request? deleteRequest;
+        final sentBodies = <Map<String, dynamic>>[];
+        const avatarUrl =
+            'https://fake.supabase.test/storage/v1/object/public/'
+            'character-portraits/fake-user-id/avatar/1.png';
+        final client = _buildFakeSupabaseClient(
+          _goTrueMetadataHandler(
+            localMetadata: {'avatar_url': avatarUrl, 'locale': 'fr'},
+            serverMetadata: {'avatar_url': avatarUrl, 'locale': 'en'},
+            sentBodies: sentBodies,
+            otherRequests: (request) async {
+              if (request.method == 'DELETE' &&
+                  request.url.path.contains('/storage/v1/object/')) {
+                deleteRequest = request;
+                return http.Response(
+                  '[]',
+                  200,
+                  request: request,
+                  headers: {'content-type': 'application/json'},
+                );
+              }
+              return http.Response('{}', 200, request: request);
+            },
+          ),
+        );
+        await _signIn(client);
 
-      await client.auth.signInWithPassword(
-        email: 'joueur@exemple.com',
-        password: 'password1234',
-      );
+        await SupabaseAuthRepository(client).removeAvatar();
 
-      await SupabaseAuthRepository(client).removeAvatar();
+        expect(deleteRequest, isNotNull);
+        final deleteBody =
+            jsonDecode(deleteRequest!.body) as Map<String, dynamic>;
+        expect(
+          (deleteBody['prefixes'] as List).single,
+          'fake-user-id/avatar/1.png',
+        );
 
-      expect(deleteRequest, isNotNull);
-      final deleteBody =
-          jsonDecode(deleteRequest!.body) as Map<String, dynamic>;
-      expect(
-        (deleteBody['prefixes'] as List).single,
-        'fake-user-id/avatar/1.png',
-      );
+        expect(sentBodies, [
+          {
+            'data': {'avatar_url': null},
+          },
+        ], reason: 'une clé simplement absente serait conservée par GoTrue');
+        expect(client.auth.currentUser!.userMetadata, {'locale': 'en'});
+      },
+    );
 
-      expect(userRequest, isNotNull);
-      final body = jsonDecode(userRequest!.body) as Map<String, dynamic>;
-      final data = body['data'] as Map<String, dynamic>;
-      expect(data.containsKey('avatar_url'), isFalse);
-      expect(data['some_other_key'], 'valeur préexistante');
-    });
-
-    test("aucun `avatar_url` en cours : aucune requête de suppression tentée, "
-        'seule la mise à jour de `user_metadata` est envoyée', () async {
+    test("aucun `avatar_url` dans la copie locale : aucune requête de "
+        'suppression tentée, `avatar_url: null` est quand même envoyé (la '
+        'copie locale peut être périmée)', () async {
       var deleteCallCount = 0;
-      http.Request? userRequest;
-      final client = _buildFakeSupabaseClient((request) async {
-        if (request.url.path.endsWith('/token')) {
-          return http.Response(
-            jsonEncode(
-              _fakeSessionJson(
-                userMetadata: {'some_other_key': 'valeur préexistante'},
-              ),
-            ),
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        if (request.method == 'DELETE' &&
-            request.url.path.contains('/storage/v1/object/')) {
-          deleteCallCount++;
-          return http.Response(
-            '[]',
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        if (request.url.path.endsWith('/user')) {
-          userRequest = request;
-          return http.Response(
-            jsonEncode(_fakeUserJson()),
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        return http.Response('{}', 200, request: request);
-      });
-
-      await client.auth.signInWithPassword(
-        email: 'joueur@exemple.com',
-        password: 'password1234',
+      final sentBodies = <Map<String, dynamic>>[];
+      final client = _buildFakeSupabaseClient(
+        _goTrueMetadataHandler(
+          localMetadata: {'some_other_key': 'valeur préexistante'},
+          serverMetadata: {
+            'some_other_key': 'valeur préexistante',
+            'avatar_url': 'https://exemple.test/avatar-pose-ailleurs.png',
+          },
+          sentBodies: sentBodies,
+          otherRequests: (request) async {
+            if (request.method == 'DELETE' &&
+                request.url.path.contains('/storage/v1/object/')) {
+              deleteCallCount++;
+            }
+            return http.Response(
+              '[]',
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          },
+        ),
       );
+      await _signIn(client);
 
       await SupabaseAuthRepository(client).removeAvatar();
 
       expect(deleteCallCount, 0);
-      expect(userRequest, isNotNull);
-      final body = jsonDecode(userRequest!.body) as Map<String, dynamic>;
-      final data = body['data'] as Map<String, dynamic>;
-      expect(data['some_other_key'], 'valeur préexistante');
+      expect(sentBodies, [
+        {
+          'data': {'avatar_url': null},
+        },
+      ]);
+      expect(client.auth.currentUser!.userMetadata, {
+        'some_other_key': 'valeur préexistante',
+      });
     });
 
     test("remonte un message réseau générique quand l'appel échoue sans "
@@ -2073,9 +1965,7 @@ Map<String, dynamic> _fakeSessionJson({
 
 /// JSON minimal d'un `user` GoTrue valide — factorisé hors de
 /// [_fakeSessionJson] pour être aussi réutilisé comme corps de la réponse
-/// `PUT /user` simulée par `buildUpdateUserHandler`
-/// (`SupabaseAuthRepository.updateDisplayName`, groupe de tests dédié
-/// ci-dessus).
+/// `PUT /user` simulée par [_goTrueMetadataHandler].
 Map<String, dynamic> _fakeUserJson({
   Map<String, dynamic> userMetadata = const {},
 }) {
@@ -2086,6 +1976,64 @@ Map<String, dynamic> _fakeUserJson({
     'user_metadata': userMetadata,
     'created_at': '2026-01-01T00:00:00Z',
   };
+}
+
+/// Double de GoTrue pour les écritures de `user_metadata`.
+///
+/// `/token` ouvre une session dont la copie locale de `user_metadata` vaut
+/// [localMetadata]. `PUT /user` fusionne `data` dans [serverMetadata] clé
+/// par clé, comme `UpdateUserMetaData` côté GoTrue (clé absente conservée,
+/// clé à `null` supprimée — vérifié sur la pile Supabase locale), puis
+/// renvoie le `user` résultant. [serverMetadata] peut différer de
+/// [localMetadata] pour simuler une copie locale périmée. Chaque corps
+/// envoyé à `/user` est ajouté à [sentBodies]. Toute autre requête part vers
+/// [otherRequests] (Storage), sinon `200 {}`.
+Future<http.Response> Function(http.Request request) _goTrueMetadataHandler({
+  required Map<String, dynamic> localMetadata,
+  required Map<String, dynamic> serverMetadata,
+  required List<Map<String, dynamic>> sentBodies,
+  Future<http.Response> Function(http.Request request)? otherRequests,
+}) {
+  final server = Map<String, dynamic>.of(serverMetadata);
+  return (request) async {
+    if (request.url.path.endsWith('/token')) {
+      return http.Response(
+        jsonEncode(_fakeSessionJson(userMetadata: localMetadata)),
+        200,
+        request: request,
+        headers: {'content-type': 'application/json'},
+      );
+    }
+    if (request.method == 'PUT' && request.url.path.endsWith('/user')) {
+      final body = jsonDecode(request.body) as Map<String, dynamic>;
+      sentBodies.add(body);
+      final data = body['data'] as Map<String, dynamic>? ?? const {};
+      data.forEach((key, value) {
+        if (value == null) {
+          server.remove(key);
+        } else {
+          server[key] = value;
+        }
+      });
+      return http.Response(
+        jsonEncode(_fakeUserJson(userMetadata: server)),
+        200,
+        request: request,
+        headers: {'content-type': 'application/json'},
+      );
+    }
+    final fallback = otherRequests;
+    if (fallback != null) return fallback(request);
+    return http.Response('{}', 200, request: request);
+  };
+}
+
+/// Ouvre une session sur [client] (le double répond à `/token`).
+Future<void> _signIn(SupabaseClient client) async {
+  await client.auth.signInWithPassword(
+    email: 'joueur@exemple.com',
+    password: 'password1234',
+  );
 }
 
 SupabaseClient _buildFakeSupabaseClient(
