@@ -264,6 +264,20 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
 68. **Armes et armures du SRD 5.2** (édition 2024) ajoutées au catalogue dans la PR de contenu de l'étape 8, avec les
     monstres du SRD 5.1, vérifiées par `regles-dnd` (Nexus les verra aussi dans son catalogue).
 
+69. **Armes et armures 2024, option A** : d'abord Nexus (filtre `edition` sur ses quatre lectures d'objets, classement
+    des armes courantes/de guerre par une donnée et non plus par leur nom français), publié dans une version ; ensuite
+    la migration DeepCore des 36 armes et 13 armures 2024 avec leurs bottes d'arme (Weapon Mastery). La PR DeepCore #58
+    part sans elles (révise la décision 68).
+70. **Monstres 2014 appliqués tout de suite**, même si la Bibliothèque les affiche en double avec les monstres 2024 de
+    même nom tant qu'elle ne filtre pas par édition (ticket Bibliothèque, décision 67).
+71. **Licence du SRD 5.1 français** : on s'appuie sur la mention CC BY 4.0 de la page 1 (le pied de page « Interdit à la
+    revente… usage personnel » est ignoré) ; mention d'attribution partout ; à faire confirmer par un conseil avant toute
+    vente.
+
+Choix du chef de projet (24/11, PR DeepCore #58) : noms anglais des 6 armes naturelles gardés (simples noms, hors SRD) ;
+coquille du SRD français (Méphite vaporeux) gardée par fidélité à la source ; initiative d'un monstre 2014 = modificateur
+de Dextérité.
+
 Choix par défaut du chef de projet (24/11, PR DeepCore #56) : édition 2014 pour les 86 objets de base et les 6 armes
 naturelles ; noms anglais des 92 objets qui n'en ont pas ajoutés avec la PR de contenu (l'affichage anglais de Nexus
 s'en trouve corrigé).
