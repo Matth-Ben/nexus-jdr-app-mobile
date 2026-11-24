@@ -257,6 +257,16 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
 66. **Monstres 2014 ajoutés** : en plus des 331 monstres du SRD 5.2 (2024), importer ceux du **SRD 5.1** (2014), noms
     en français et en anglais, avec un champ d'édition sur chaque monstre (et sur chaque objet). Licence CC BY 4.0 pour
     les deux SRD : mention d'attribution de Wizards of the Coast obligatoire dans Grimoire.
+67. **Bibliothèque (`nexus-jdr-library`) en ligne** : son onglet « Créatures » lit `creatures` et les noms des monstres
+    sans connexion. La **restriction** des lectures directes (décision 64, migration `20261124092000`) part dans une
+    **PR DeepCore séparée**, appliquée seulement après adaptation de la Bibliothèque (connexion requise pour l'onglet, ou
+    passage par l'API). Identifiants, éditions et API d'export (PR DeepCore #56) s'appliquent tout de suite.
+68. **Armes et armures du SRD 5.2** (édition 2024) ajoutées au catalogue dans la PR de contenu de l'étape 8, avec les
+    monstres du SRD 5.1, vérifiées par `regles-dnd` (Nexus les verra aussi dans son catalogue).
+
+Choix par défaut du chef de projet (24/11, PR DeepCore #56) : édition 2014 pour les 86 objets de base et les 6 armes
+naturelles ; noms anglais des 92 objets qui n'en ont pas ajoutés avec la PR de contenu (l'affichage anglais de Nexus
+s'en trouve corrigé).
 
 Précision du chef de projet (23/11, PR Grimoire #12) : « rien n'est montré avant le début réel » porte sur le
 **contenu** du combat (participants, ordre) ; l'**annonce** (`combat_start`) et la demande d'initiative, sans aucun
