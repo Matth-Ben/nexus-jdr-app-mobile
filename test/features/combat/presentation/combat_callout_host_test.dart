@@ -17,6 +17,12 @@ import 'package:personnages/core/router/app_router.dart';
 import 'package:personnages/core/router/route_stack_observer.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/bottom_bar_inset_reporter.dart';
+import 'package:personnages/core/widgets/snack_bar_aware_scaffold_messenger.dart';
+import 'package:personnages/features/character_sharing/data/character_sharing_repository.dart';
+import 'package:personnages/features/character_sharing/presentation/providers/character_sharing_providers.dart';
+import 'package:personnages/features/character_sharing/presentation/shared_character_view_screen.dart';
+import 'package:personnages/features/characters/domain/character_detail.dart';
+import 'package:personnages/features/characters/presentation/widgets/character_detail_tab_bar.dart';
 import 'package:personnages/features/combat/domain/combat_notification.dart';
 import 'package:personnages/features/combat/presentation/combat_callout_host.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_callout_providers.dart';
@@ -25,6 +31,7 @@ import 'package:personnages/features/combat/presentation/providers/grimoire_comb
 import 'package:personnages/features/combat/presentation/providers/grimoire_groups_providers.dart';
 import 'package:personnages/features/combat/presentation/widgets/combat_callout.dart';
 import 'package:personnages/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../support/fake_connectivity_checker.dart';
 import '../../../support/fake_current_user.dart';
@@ -56,6 +63,9 @@ class _Host {
             membership(_g2, name: 'La Compagnie'),
           ]),
         ),
+        characterSharingRepositoryProvider.overrideWithValue(
+          _SharingRepository(),
+        ),
       ],
     );
     router = GoRouter(
@@ -65,19 +75,45 @@ class _Host {
         GoRoute(
           path: '/',
           builder: (context, state) => Scaffold(
-            body: Center(
-              child: TextButton(
-                onPressed: () => showModalBottomSheet<void>(
-                  context: context,
-                  builder: (context) => const SizedBox(
-                    height: 200,
-                    child: Center(child: Text('FEUILLE')),
+            body: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () => showModalBottomSheet<void>(
+                    context: context,
+                    builder: (context) => const SizedBox(
+                      height: 200,
+                      child: Center(child: Text('FEUILLE')),
+                    ),
                   ),
+                  child: const Text('ACCUEIL'),
                 ),
-                child: const Text('ACCUEIL'),
-              ),
+                TextButton(
+                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Objet retiré'),
+                      action: SnackBarAction(
+                        label: 'Annuler',
+                        onPressed: () => undone++,
+                      ),
+                    ),
+                  ),
+                  child: const Text('SNACK'),
+                ),
+              ],
             ),
           ),
+        ),
+        GoRoute(
+          // Écran scène (accueil de l'app).
+          name: 'character-list',
+          path: '/home',
+          builder: (context, state) => const Scaffold(body: Text('SCÈNE')),
+        ),
+        GoRoute(
+          path: '/p/:token',
+          builder: (context, state) =>
+              SharedCharacterViewScreen(token: state.pathParameters['token']!),
         ),
         GoRoute(
           path: '/sheet',
@@ -114,6 +150,10 @@ class _Host {
   final List<String> haptics = [];
   double scale = 1;
   bool accessibleNavigation = false;
+
+  /// Hauteur du clavier simulé (`viewInsets.bottom`).
+  double keyboard = 0;
+  int undone = 0;
 
   CombatCalloutController get controller =>
       container.read(combatCalloutControllerProvider.notifier);
@@ -154,10 +194,17 @@ class _Host {
             data: MediaQuery.of(context).copyWith(
               textScaler: TextScaler.linear(scale),
               accessibleNavigation: accessibleNavigation,
+              viewInsets: EdgeInsets.only(bottom: keyboard),
+              viewPadding: const EdgeInsets.only(top: 24),
+              padding: const EdgeInsets.only(top: 24),
             ),
-            child: CombatCalloutHost(
-              assertiveAnnouncer: (context, text) => assertive.add(text),
-              child: child!,
+            // Comme `main.dart` : le messager des `SnackBar` de l'app, puis
+            // le signal.
+            child: SnackBarAwareScaffoldMessenger(
+              child: CombatCalloutHost(
+                assertiveAnnouncer: (context, text) => assertive.add(text),
+                child: child!,
+              ),
             ),
           ),
         ),
@@ -202,6 +249,69 @@ class _Host {
 }
 
 Finder _callout() => find.byType(CombatCalloutView);
+
+class _SharingRepository implements CharacterSharingRepository {
+  @override
+  Future<CharacterDetail?> fetchSharedCharacter(String token) async =>
+      const CharacterDetail(
+        id: 'char-1',
+        name: 'Halltesse',
+        raceName: 'Elfe',
+        classes: [],
+        xp: 0,
+        currentHp: 10,
+        maxHp: 10,
+        temporaryHp: 0,
+        abilityScores: {
+          'str': 10,
+          'dex': 10,
+          'con': 10,
+          'int': 10,
+          'wis': 10,
+          'cha': 10,
+        },
+      );
+
+  @override
+  Future<CharacterDetail?> fetchGroupMemberCharacter({
+    required String groupId,
+    required String characterId,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<String> regenerateShareToken(String characterId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> disableShareToken(String characterId) =>
+      throw UnimplementedError();
+}
+
+/// Libellés lus de la carte (bouton) et présence de la région vivante.
+({String label, bool liveRegion}) _semanticsOf(WidgetTester tester) {
+  final button = tester.widget<Semantics>(
+    find
+        .ancestor(
+          of: find.byKey(const Key('combatCallout')),
+          matching: find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.button == true,
+          ),
+        )
+        .first,
+  );
+  return (
+    label: button.properties.label ?? '',
+    liveRegion: find
+        .descendant(
+          of: _callout(),
+          matching: find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.liveRegion == true,
+          ),
+        )
+        .evaluate()
+        .isNotEmpty,
+  );
+}
 
 void main() {
   setUpAll(loadCombatFonts);
@@ -327,6 +437,136 @@ void main() {
         button.properties.customSemanticsActions!.keys.single.label,
         'Fermer',
       );
+      await h.dispose(tester);
+    });
+  });
+
+  group('revue visuelle du 24/11/2026', () {
+    testWidgets('région vivante sur l\'annonce seulement ; libellé sans « . » '
+        'après « Combat ! »', (tester) async {
+      final h = _Host();
+      await h.pump(tester);
+      h.controller.showFromPush(_start);
+      await h.settle(tester);
+      var semantics = _semanticsOf(tester);
+      expect(semantics.liveRegion, isTrue);
+      expect(
+        semantics.label,
+        'Combat ! Les Braves de la Marche du Nord · Ouvrir le combat',
+      );
+
+      h.knownTurn();
+      h.controller.showFromPush(_turn);
+      await h.settle(tester);
+      semantics = _semanticsOf(tester);
+      expect(semantics.liveRegion, isFalse);
+      expect(semantics.label, startsWith('À toi de jouer. '));
+      expect(h.assertive, ['C\'est ton tour.']);
+      await h.dispose(tester);
+    });
+
+    testWidgets('écran scène : cadre emphasis et ombre diffuse ; écran '
+        'parchemin : cadre doré, sans ombre', (tester) async {
+      final h = _Host();
+      await h.pump(tester);
+      h.controller.showFromPush(_start);
+      await h.settle(tester);
+      CombatCalloutView view() => tester.widget<CombatCalloutView>(_callout());
+      BorderSide side() {
+        final material = tester.widget<Material>(
+          find
+              .descendant(of: _callout(), matching: find.byType(Material))
+              .first,
+        );
+        return (material.shape! as RoundedRectangleBorder).side;
+      }
+
+      List<BoxShadow> shadows() => [
+        for (final box in tester.widgetList<Container>(
+          find.descendant(of: _callout(), matching: find.byType(Container)),
+        ))
+          ...?(box.decoration as BoxDecoration?)?.boxShadow,
+      ];
+
+      expect(view().onScene, isFalse);
+      expect(side().color, AppColors.goldEnd);
+      expect(shadows(), isEmpty);
+
+      h.router.go('/home');
+      await h.settle(tester);
+      h.controller.showFromPush((
+        type: CombatNotificationType.combatStart,
+        groupId: _g2,
+      ));
+      await h.settle(tester);
+      expect(view().onScene, isTrue);
+      expect(side().color, AppColors.woodMedium);
+      expect(side().width, 3);
+      expect(
+        shadows().map((shadow) => shadow.color),
+        containsAll([AppColors.woodDark, AppColors.cardDiffuseShadow]),
+      );
+      final diffuse = shadows().singleWhere(
+        (shadow) => shadow.color == AppColors.cardDiffuseShadow,
+      );
+      expect(diffuse.blurRadius, 6);
+      expect(diffuse.offset, const Offset(0, 3));
+      await h.dispose(tester);
+    });
+
+    testWidgets('SnackBar affichée : le signal se pose au-dessus (space.sm), '
+        '« Annuler » reste touchable, puis il redescend', (tester) async {
+      final h = _Host();
+      await h.pump(tester);
+      h.controller.showFromPush(_turn);
+      await h.settle(tester);
+      final alone = tester.getRect(_callout());
+
+      await tester.tap(find.text('SNACK'));
+      await h.settle(tester);
+      final snackBar = tester.getRect(find.byType(SnackBar));
+      final raised = tester.getRect(_callout());
+      expect(raised.bottom, closeTo(snackBar.top - 10, 1));
+      expect(raised.overlaps(snackBar), isFalse);
+      await tester.tap(find.text('Annuler'));
+      await h.settle(tester);
+      expect(h.undone, 1);
+
+      // SnackBar partie : retour à sa place.
+      await h.elapse(tester, const Duration(seconds: 5));
+      expect(find.byType(SnackBar), findsNothing);
+      expect(tester.getRect(_callout()).bottom, closeTo(alone.bottom, 0.5));
+      await h.dispose(tester);
+    });
+
+    testWidgets('clavier ouvert : le signal se place en haut, puis redescend '
+        'à la fermeture ; haptique et annonce immédiates', (tester) async {
+      final h = _Host()..keyboard = 300;
+      await h.pump(tester);
+      h.controller.showFromPush(_turn);
+      await h.settle(tester);
+      expect(tester.getRect(_callout()).top, closeTo(24 + 10, 1.5));
+      expect(h.haptics, hasLength(1));
+      expect(h.assertive, hasLength(1));
+
+      h.keyboard = 0;
+      await h.pump(tester);
+      expect(tester.getRect(_callout()).bottom, closeTo(700 - 22, 1.5));
+      await h.dispose(tester);
+    });
+
+    testWidgets('fiche partagée : le bas du signal est au haut de la barre '
+        'd\'onglets + space.lg', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final h = _Host();
+      await h.pump(tester, size: const Size(400, 800));
+      unawaited(h.router.push('/p/tok-abc'));
+      await h.settle(tester);
+      expect(find.byType(BottomBarInsetReporter), findsOneWidget);
+      h.controller.showFromPush(_start);
+      await h.settle(tester);
+      final tabBar = tester.getRect(find.byType(CharacterDetailTabBar));
+      expect(tester.getRect(_callout()).bottom, closeTo(tabBar.top - 22, 0.5));
       await h.dispose(tester);
     });
   });

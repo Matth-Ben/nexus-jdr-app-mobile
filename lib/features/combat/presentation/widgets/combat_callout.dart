@@ -25,8 +25,15 @@ enum CombatCalloutVariant {
 /// Toute la carte (hauteur 56 au moins) ouvre l'écran Combat ; bouton
 /// « Fermer » 44×44. Textes plafonnés ×2,0 ; hauteur au plus [maxHeight]
 /// (25 % de la vue), défilement interne au-delà. Le nom du groupe passe à la
-/// ligne, jamais coupé. Sémantique : région vivante, bouton « Ouvrir le
-/// combat », action « Fermer ».
+/// ligne, jamais coupé. Sémantique : bouton « Ouvrir le combat », action
+/// « Fermer » ; région vivante pour la variante annonce **seulement** (le
+/// tour a déjà son annonce assertive « C'est ton tour. », revue visuelle du
+/// 24/11/2026).
+///
+/// [onScene] : écran « scène » (accueil, connexion, montée de niveau...) :
+/// la variante annonce prend le cadre `border.card-emphasis` et les deux
+/// variantes l'ombre diffuse des cartes sur fond scène ; sur fond parchemin,
+/// cadre doré et aucune ombre.
 ///
 /// Aucun `Tooltip` : la carte vit au-dessus du navigateur, hors de tout
 /// `Overlay`.
@@ -40,6 +47,7 @@ class CombatCalloutView extends StatelessWidget {
     required this.onOpen,
     required this.onClose,
     required this.maxHeight,
+    this.onScene = false,
     super.key,
   });
 
@@ -55,14 +63,27 @@ class CombatCalloutView extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onClose;
   final double maxHeight;
+  final bool onScene;
 
   bool get _turn => variant == CombatCalloutVariant.turn;
+
+  /// Cadre `border.card-emphasis` (3 `woodMedium` + halo 1 `woodDark`) :
+  /// variante tour partout, variante annonce sur un écran scène.
+  bool get _emphasis => _turn || onScene;
+
+  /// Libellé lu : titre puis texte, sans « . » ajouté après un titre déjà
+  /// ponctué (« Combat ! »).
+  String get _semanticLabel {
+    final trimmed = title.trimRight();
+    final punctuated = RegExp(r'[.!?…:;]$').hasMatch(trimmed);
+    return punctuated ? '$trimmed $body' : '$trimmed. $body';
+  }
 
   @override
   Widget build(BuildContext context) {
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(AppRadius.md),
-      side: _turn
+      side: _emphasis
           ? const BorderSide(
               color: AppColors.woodMedium,
               width: AppBorders.cardEmphasis,
@@ -74,10 +95,10 @@ class CombatCalloutView extends StatelessWidget {
       shape: shape,
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
-        // Variante tour : le halo (1 dp de chaque côté) compte dans la
+        // Cadre emphasis : le halo (1 dp de chaque côté) compte dans la
         // hauteur maximale.
         constraints: BoxConstraints(
-          maxHeight: _turn
+          maxHeight: _emphasis
               ? maxHeight - 2 * AppBorders.cardEmphasisHalo
               : maxHeight,
         ),
@@ -86,7 +107,7 @@ class CombatCalloutView extends StatelessWidget {
             Expanded(
               child: Semantics(
                 button: true,
-                label: '$title. $body',
+                label: _semanticLabel,
                 onTapHint: openLabel,
                 onTap: onOpen,
                 customSemanticsActions: {
@@ -177,25 +198,38 @@ class CombatCalloutView extends StatelessWidget {
       maxScaleFactor: AppTypography.maxTextScaleFactor,
       child: Semantics(
         container: true,
-        liveRegion: true,
+        liveRegion: !_turn,
         explicitChildNodes: true,
-        child: _turn ? _halo(card) : card,
+        child: _frame(card),
       ),
     );
   }
 
-  /// Halo 1 `woodDark` de la variante tour (comme la ligne en cours).
-  Widget _halo(Widget child) => Container(
-    margin: const EdgeInsets.all(AppBorders.cardEmphasisHalo),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      boxShadow: const [
-        BoxShadow(
-          color: AppColors.woodDark,
-          spreadRadius: AppBorders.cardEmphasisHalo,
-        ),
-      ],
-    ),
-    child: child,
-  );
+  /// Halo 1 `woodDark` du cadre emphasis (comme la ligne en cours) et, sur un
+  /// écran scène, ombre diffuse des cartes (comme `CharacterCard`).
+  Widget _frame(Widget card) {
+    if (!_emphasis && !onScene) return card;
+    return Container(
+      margin: _emphasis
+          ? const EdgeInsets.all(AppBorders.cardEmphasisHalo)
+          : EdgeInsets.zero,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        boxShadow: [
+          if (_emphasis)
+            const BoxShadow(
+              color: AppColors.woodDark,
+              spreadRadius: AppBorders.cardEmphasisHalo,
+            ),
+          if (onScene)
+            const BoxShadow(
+              color: AppColors.cardDiffuseShadow,
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+        ],
+      ),
+      child: card,
+    );
+  }
 }

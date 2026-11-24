@@ -61,6 +61,18 @@ part 'app_router.g.dart';
 /// (`docs/combat-grimoire-ui.md` §6).
 const String kGroupCombatRouteName = 'group-combat';
 
+/// Routes des écrans « scène » (fond bois sombre, `SceneScaffold`) : accueil,
+/// connexion, montée de niveau, liste des groupes, présentation de l'app. Le
+/// signal global de combat y prend le cadre et l'ombre des cartes sur fond
+/// scène (revue visuelle du 24/11/2026).
+const Set<String> kSceneRouteNames = {
+  'character-list',
+  'login',
+  'character-level-up',
+  'group-list',
+  'onboarding',
+};
+
 /// Routeur applicatif : redirige automatiquement `/login` ↔ `/` selon
 /// l'état d'authentification Supabase, conformément à l'arborescence
 /// générale de `docs/cahier-des-charges/05-ux-navigation.md`

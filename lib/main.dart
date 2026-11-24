@@ -19,6 +19,7 @@ import 'core/router/app_router.dart';
 import 'core/sync/pending_write_sync_hook_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/display_text.dart';
+import 'core/widgets/snack_bar_aware_scaffold_messenger.dart';
 import 'features/app_update/domain/app_version_status.dart';
 import 'features/app_update/presentation/force_update_screen.dart';
 import 'features/app_update/presentation/providers/app_version_providers.dart';
@@ -592,18 +593,21 @@ class NexusJdrApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Nexus JDR — Personnages',
       theme: AppTheme.light,
-      // Voir `notification_providers.dart::scaffoldMessengerKeyProvider` :
-      // seul point d'accès à un `ScaffoldMessengerState` en dehors de tout
-      // `BuildContext` d'écran, pour le `SnackBar` de message FCM reçu au
-      // premier plan (`PushTokenRegistrar`).
-      scaffoldMessengerKey: ref.watch(scaffoldMessengerKeyProvider),
       routerConfig: router,
-      // Au-dessus du navigateur, sous les `Localizations` de l'app : langue
-      // affichée recopiée dans le compte (notifications push dans la langue
-      // du joueur) et signal global de combat posé en bas de l'écran
-      // (`docs/combat-grimoire-ui.md` §6).
-      builder: (context, child) => AccountLocaleReporter(
-        child: CombatCalloutHost(child: child ?? const SizedBox.shrink()),
+      // Au-dessus du navigateur, sous les `Localizations` de l'app :
+      // - le messager des `SnackBar` de l'app, avec la clé globale
+      //   (`notification_providers.dart::scaffoldMessengerKeyProvider`, seul
+      //   point d'accès à un `ScaffoldMessengerState` hors de tout
+      //   `BuildContext` d'écran) : il expose la `SnackBar` affichée, que le
+      //   signal global de combat ne couvre jamais ;
+      // - la langue affichée recopiée dans le compte (notifications push dans
+      //   la langue du joueur) ;
+      // - le signal global de combat (`docs/combat-grimoire-ui.md` §6).
+      builder: (context, child) => SnackBarAwareScaffoldMessenger(
+        key: ref.watch(scaffoldMessengerKeyProvider),
+        child: AccountLocaleReporter(
+          child: CombatCalloutHost(child: child ?? const SizedBox.shrink()),
+        ),
       ),
       // Chantier "traduction de l'app" Phase A — infrastructure `.arb`
       // uniquement (voir `core/i18n/locale_preference_provider.dart` et
