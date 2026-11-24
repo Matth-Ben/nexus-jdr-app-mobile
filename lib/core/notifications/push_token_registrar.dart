@@ -6,6 +6,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/presentation/providers/auth_providers.dart';
+import '../../features/combat/domain/combat_notification.dart';
+import '../../features/combat/presentation/combat_notification_handler.dart';
 import '../router/app_router.dart';
 import 'notification_providers.dart';
 import 'push_notification_gateway.dart';
@@ -46,11 +48,19 @@ part 'push_token_registrar.g.dart';
 /// - **Réception au premier plan** ([PushNotificationGateway.onMessage]) :
 ///   affiche un `SnackBar` simple (titre/corps), via
 ///   [scaffoldMessengerKeyProvider] (aucune UI dédiée pour cette itération,
-///   cohérent avec le reste de ce dépôt pour des messages informatifs).
+///   cohérent avec le reste de ce dépôt pour des messages informatifs) —
+///   **sauf** une notification de combat (`{v: "1", type: combat_start |
+///   your_turn, group_id}`), qui affiche le signal global du combat, jamais
+///   cette `SnackBar` (`CombatNotificationHandler.received`).
 /// - **Tap sur une notification** ([PushNotificationGateway
 ///   .onMessageOpenedApp]/[PushNotificationGateway.getInitialMessage],
-///   routé par [_routeFromMessage]) : deux formats de payload `data`
+///   routé par [_routeFromMessage]) : trois formats de payload `data`
 ///   possibles selon le déclencheur —
+///     - `{v: "1", type: 'combat_start' | 'your_turn', group_id}`
+///       (`notify-group`, contrat DeepCore §5 ; combat natif V2, décision
+///       59) : écran Groupe puis écran Combat du groupe, après contrôle
+///       d'appartenance (`CombatNotificationHandler.open`). Un autre type de
+///       ce format versionné (ex. `reveal`) est ignoré.
 ///     - `{type: 'new_version', ...}` ("nouvelle version disponible") :
 ///       route vers l'accueil (`/`), où vit déjà `UpdateSuggestedBanner`
 ///       (`features/app_update/presentation/widgets/update_suggested_banner
@@ -153,6 +163,17 @@ class PushTokenRegistrar {
   }
 
   void _showForegroundMessage(RemoteMessage message) {
+    final combat = parseCombatNotificationData(message.data);
+    if (combat != null) {
+      // Combat (`combat_start`, `your_turn`) : jamais la SnackBar générique,
+      // le signal global du combat (`docs/combat-grimoire-ui.md` §5).
+      try {
+        _ref.read(combatNotificationHandlerProvider).received(combat);
+      } catch (error) {
+        debugPrint('PushTokenRegistrar._showForegroundMessage: $error');
+      }
+      return;
+    }
     final notification = message.notification;
     if (notification == null) return;
     final title = notification.title;
@@ -180,7 +201,7 @@ class PushTokenRegistrar {
     }
   }
 
-  /// Routage sur tap de notification — voir la doc de classe pour les 2
+  /// Routage sur tap de notification — voir la doc de classe pour les
   /// formats de payload `data` gérés.
   void _routeFromMessage(RemoteMessage message) {
     if (message.data['type'] == 'new_version') {
@@ -192,9 +213,27 @@ class PushTokenRegistrar {
       _ref.read(appRouterProvider).go('/');
       return;
     }
+    final combat = parseCombatNotificationData(message.data);
+    if (combat != null) {
+      unawaited(_openCombat(combat));
+      return;
+    }
+    // Format versionné (`v` = "1") d'un type inconnu de cette version de
+    // l'app (ex. `reveal` avant l'étape 10) : ignoré.
+    if (isVersionedNotificationData(message.data)) return;
     final characterId = message.data['characterId'] as String?;
     if (characterId == null || characterId.isEmpty) return;
     unawaited(_ref.read(appRouterProvider).push('/characters/$characterId'));
+  }
+
+  /// Écran Combat du groupe, après contrôle d'appartenance — best-effort,
+  /// aucune exception ne remonte (voir la doc de classe).
+  Future<void> _openCombat(CombatNotificationTarget target) async {
+    try {
+      await _ref.read(combatNotificationHandlerProvider).open(target);
+    } catch (error) {
+      debugPrint('PushTokenRegistrar._openCombat: $error');
+    }
   }
 
   void dispose() {

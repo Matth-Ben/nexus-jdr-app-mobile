@@ -12,6 +12,11 @@ const _consumers = [
   'lib/features/combat/presentation/widgets/combat_banner.dart',
   'lib/features/combat/presentation/widgets/combat_sheet_banner.dart',
   'lib/features/combat/presentation/providers/character_combat_provider.dart',
+  // Signal global et notifications du combat (PR 2 de l'étape 7).
+  'lib/features/combat/presentation/combat_callout_host.dart',
+  'lib/features/combat/presentation/combat_notification_handler.dart',
+  'lib/features/combat/presentation/providers/combat_callout_providers.dart',
+  'lib/features/combat/presentation/widgets/combat_callout.dart',
 ];
 
 /// Fichiers du suivi Grimoire (domaine, données, fournisseurs, écran), plus
@@ -57,6 +62,9 @@ void main() {
         'combat_banner.dart',
         'combat_sheet_banner.dart',
         'character_combat_provider.dart',
+        'grimoire_groups_providers.dart',
+        'combat_callout_host.dart',
+        'combat_callout_providers.dart',
       ]),
     );
   });
