@@ -247,6 +247,17 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
 63. **Nom « Grimoire » montré aux joueurs**, seulement dans une ligne discrète « Mené depuis Grimoire » de l'en-tête du
     combat. Spécification visuelle de la partie Nexus : `docs/combat-grimoire-ui.md` (§13 : arbitrages).
 
+## Décisions du 24/11/2026 (étape 8 de Grimoire, bestiaire et catalogue d'objets)
+
+64. **Bestiaire complet avant l'étape 11** : lisible par **tout compte connecté** ; visiteurs sans compte refusés dès
+    maintenant (aujourd'hui `creatures` est lisible par `anon`). Règle dans une seule fonction SQL, complétée par la
+    vraie licence à l'étape 11 (comme la décision 44).
+65. **Extrait d'essai livré avec Grimoire** : une trentaine de monstres courants de FP 0 à 2 et l'équipement de base
+    (armes, armures, matériel), liste proposée dans la PR et **validée par Florian** à la relecture.
+66. **Monstres 2014 ajoutés** : en plus des 331 monstres du SRD 5.2 (2024), importer ceux du **SRD 5.1** (2014), noms
+    en français et en anglais, avec un champ d'édition sur chaque monstre (et sur chaque objet). Licence CC BY 4.0 pour
+    les deux SRD : mention d'attribution de Wizards of the Coast obligatoire dans Grimoire.
+
 Précision du chef de projet (23/11, PR Grimoire #12) : « rien n'est montré avant le début réel » porte sur le
 **contenu** du combat (participants, ordre) ; l'**annonce** (`combat_start`) et la demande d'initiative, sans aucun
 participant, partent dès « Préparer » pour que les joueurs puissent envoyer leur initiative. La notification
