@@ -134,10 +134,14 @@ abstract class AuthRepository {
   /// `features/profile/presentation/profile_screen.dart`.
   ///
   /// [displayName] `null` ou vide (après `trim`) retire la clé `full_name`
-  /// de `user_metadata` plutôt que d'y stocker une chaîne blanche —
+  /// de `user_metadata` (envoyée à `null`, seul moyen de supprimer une clé
+  /// côté GoTrue) plutôt que d'y stocker une chaîne blanche —
   /// l'appelant retombe alors sur le nom par défaut "Aventurier" à
   /// l'affichage (jamais stocké comme valeur réelle, voir la doc de
   /// `_EditDisplayNameSheetContent`).
+  ///
+  /// N'envoie que la clé `full_name`, jamais le reste de `user_metadata` :
+  /// voir `SupabaseAuthRepository._patchUserMetadata`.
   ///
   /// Écriture directe uniquement, sans file d'attente hors-ligne
   /// (contrairement à `CharacterRepository.updateHp`/`addXp`/
@@ -175,9 +179,9 @@ abstract class AuthRepository {
   /// dont le flux d'avatar est une variante) dans le bucket Storage partagé
   /// `character-portraits` (même bucket que les portraits de personnage,
   /// RLS déjà scopée par dossier `{user_id}/...` — aucune migration requise),
-  /// sous `{ownerId}/avatar/{timestamp}.png`, puis fusionne l'URL publique
-  /// résultante dans `user_metadata['avatar_url']` (même mécanisme de fusion
-  /// que [updateDisplayName], jamais un écrasement de `user_metadata`).
+  /// sous `{ownerId}/avatar/{timestamp}.png`, puis écrit l'URL publique
+  /// résultante dans `user_metadata['avatar_url']` (seule cette clé est
+  /// envoyée, même mécanisme que [updateDisplayName]).
   /// Retourne cette URL.
   Future<String> updateAvatar({required Uint8List bytes});
 
@@ -185,8 +189,8 @@ abstract class AuthRepository {
   /// du bucket en best-effort (silencieux si `avatar_url` ne pointe pas vers
   /// ce bucket, même règle que
   /// `CharacterRepository.removePortrait`/`PortraitStoragePathResolver`) puis
-  /// retire la clé `avatar_url` de `user_metadata` (fusion, jamais un
-  /// écrasement).
+  /// supprime la clé `avatar_url` de `user_metadata` en l'envoyant à `null`
+  /// (seule cette clé est envoyée, même mécanisme que [updateDisplayName]).
   Future<void> removeAvatar();
 
   /// Supprime définitivement le compte connecté — étape finale de l'écran
@@ -232,9 +236,9 @@ abstract class AuthRepository {
   /// volontairement (profil > Aide et support > "Revoir la présentation de
   /// l'app").
   ///
-  /// Idempotente : rappelable sans effet de bord si déjà `true`. Même
-  /// mécanisme de fusion que [updateDisplayName]/[updateAvatar] (ne jamais
-  /// écraser le reste de `user_metadata`).
+  /// Idempotente : rappelable sans effet de bord si déjà `true`. Seule la
+  /// clé `onboarding_completed` est envoyée, même mécanisme que
+  /// [updateDisplayName]/[updateAvatar].
   ///
   /// Écriture directe uniquement, sans file d'attente hors-ligne — même
   /// remarque que [updateDisplayName] : l'appelant ([OnboardingScreen])
@@ -567,25 +571,14 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> updateDisplayName({required String? displayName}) async {
-    // Fusionne par-dessus `user_metadata` existant plutôt que de l'écraser :
-    // `UserAttributes.data` remplace tout `user_metadata` côté GoTrue, pas
-    // seulement les clés fournies — voir la doc de
-    // `AuthRepository.updateDisplayName`. `full_name` est la seule clé
-    // utilisée par ce dépôt aujourd'hui, mais ce dépôt partage son compte
-    // avec l'app web "Histoires" (`SupabaseAuthRepository`, doc de classe),
-    // qui pourrait un jour y stocker d'autres clés.
-    final existingMetadata = Map<String, dynamic>.from(
-      _client.auth.currentUser?.userMetadata ?? const <String, dynamic>{},
-    );
     final trimmed = displayName?.trim();
-    if (trimmed == null || trimmed.isEmpty) {
-      existingMetadata.remove('full_name');
-    } else {
-      existingMetadata['full_name'] = trimmed;
-    }
 
     try {
-      await _client.auth.updateUser(UserAttributes(data: existingMetadata));
+      // `null` : supprime la clé (voir la doc de
+      // `AuthRepository.updateDisplayName`).
+      await _patchUserMetadata(<String, dynamic>{
+        'full_name': trimmed == null || trimmed.isEmpty ? null : trimmed,
+      });
     } on AuthException catch (error) {
       throw mapAuthException(error);
     } catch (_) {
@@ -636,13 +629,7 @@ class SupabaseAuthRepository implements AuthRepository {
           );
       final publicUrl = _client.storage.from(_avatarBucket).getPublicUrl(path);
 
-      // Fusion par-dessus `user_metadata` existant — voir la documentation
-      // de [updateDisplayName].
-      final existingMetadata = Map<String, dynamic>.from(
-        _client.auth.currentUser?.userMetadata ?? const <String, dynamic>{},
-      );
-      existingMetadata['avatar_url'] = publicUrl;
-      await _client.auth.updateUser(UserAttributes(data: existingMetadata));
+      await _patchUserMetadata(<String, dynamic>{'avatar_url': publicUrl});
 
       return publicUrl;
     } on StorageException catch (error) {
@@ -661,10 +648,10 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<void> removeAvatar() async {
     _requireOwnerId();
-    final existingMetadata = Map<String, dynamic>.from(
-      _client.auth.currentUser?.userMetadata ?? const <String, dynamic>{},
-    );
-    final avatarUrl = existingMetadata['avatar_url'] as String?;
+    // Lue seulement pour retrouver le fichier à supprimer du bucket, jamais
+    // renvoyée à GoTrue.
+    final avatarUrl =
+        _client.auth.currentUser?.userMetadata?['avatar_url'] as String?;
 
     try {
       if (avatarUrl != null) {
@@ -678,8 +665,10 @@ class SupabaseAuthRepository implements AuthRepository {
           await _client.storage.from(_avatarBucket).remove([path]);
         }
       }
-      existingMetadata.remove('avatar_url');
-      await _client.auth.updateUser(UserAttributes(data: existingMetadata));
+      // `null`, jamais une clé simplement absente : GoTrue conserverait
+      // alors `avatar_url` (voir [_patchUserMetadata]). Envoyée même sans
+      // `avatar_url` dans la copie locale, qui peut être périmée.
+      await _patchUserMetadata(<String, dynamic>{'avatar_url': null});
     } on StorageException catch (error) {
       throw AuthFailure(
         error.message.isNotEmpty
@@ -727,16 +716,8 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> markOnboardingSeen() async {
-    // Fusion par-dessus `user_metadata` existant — même mécanisme que
-    // [updateDisplayName]/[updateAvatar] (voir leur doc), jamais un
-    // écrasement.
-    final existingMetadata = Map<String, dynamic>.from(
-      _client.auth.currentUser?.userMetadata ?? const <String, dynamic>{},
-    );
-    existingMetadata['onboarding_completed'] = true;
-
     try {
-      await _client.auth.updateUser(UserAttributes(data: existingMetadata));
+      await _patchUserMetadata(<String, dynamic>{'onboarding_completed': true});
     } on AuthException catch (error) {
       throw mapAuthException(error);
     } catch (_) {
@@ -818,6 +799,24 @@ class SupabaseAuthRepository implements AuthRepository {
         // Best-effort — voir ci-dessus.
       }
     }
+  }
+
+  /// Seule mise à jour de `user_metadata` de ce dépôt (avec
+  /// `SupabaseAccountLocaleRepository.writeLocale`, même règle ; [signUp] ne
+  /// fait que l'initialiser) : envoie à GoTrue **seulement** [changes],
+  /// jamais la copie locale entière.
+  ///
+  /// GoTrue fusionne `data` dans `user_metadata` clé par clé : une clé
+  /// absente de la requête est conservée telle quelle, une clé envoyée à
+  /// `null` est supprimée. Renvoyer toute la copie locale réécrirait donc
+  /// des valeurs périmées (ex. `locale` ou nom changés depuis un autre
+  /// appareil ou l'app web) et ne supprimerait jamais rien.
+  ///
+  /// La copie locale (`currentUser`) est remplacée par le `user` renvoyé par
+  /// le serveur (`GoTrueClient.updateUser`, qui émet aussi
+  /// `AuthChangeEvent.userUpdated`) : elle reflète donc la fusion réelle.
+  Future<void> _patchUserMetadata(Map<String, dynamic> changes) async {
+    await _client.auth.updateUser(UserAttributes(data: changes));
   }
 
   String _requireOwnerId() {
