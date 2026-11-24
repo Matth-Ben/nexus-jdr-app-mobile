@@ -280,6 +280,11 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
 73. **Dégâts en plus sous condition** (« plus 1d4 si le jet avait l'avantage ») : convertis en **seconde attaque nommée**
     avec la condition dans le nom ; les bonus écrits dans une phrase à part restent des notes.
 
+74. **Objets 2014 retirés de l'extrait d'essai de Grimoire** : leurs descriptions ont été rédigées d'après le Manuel des
+    Joueurs (source « Manuel des Joueurs » dans DeepCore), pas d'après le SRD, et aucune licence libre ne les couvre.
+    L'extrait ne garde que les objets 2024 (SRD 5.2) et les monstres. Ticket DeepCore : vérifier les textes des objets
+    2014 face au SRD 5.1 et les remplacer par le texte du SRD si besoin, avec la bonne source (protège aussi Nexus).
+
 Choix du chef de projet (24/11, PR DeepCore #58) : noms anglais des 6 armes naturelles gardés (simples noms, hors SRD) ;
 coquille du SRD français (Méphite vaporeux) gardée par fidélité à la source ; initiative d'un monstre 2014 = modificateur
 de Dextérité.
