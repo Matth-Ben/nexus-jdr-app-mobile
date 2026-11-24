@@ -12,11 +12,16 @@ import 'group_error_mapper.dart';
 /// dissociation (contrat DeepCore `20261119120000`, Grimoire
 /// `server/nexus/groups.ts`) ; un combat Grimoire exige ce lien. Seuls ces
 /// groupes sont suivis en continu au premier plan (coût des canaux).
+///
+/// [ownedByMe] : le compte est propriétaire du groupe (`groups.owner_id`),
+/// donc son meneur (décision 44) : il mène le combat depuis Grimoire et n'en
+/// suit jamais le canal en fond.
 typedef GroupMembership = ({
   String groupId,
   String groupName,
   String? characterId,
   bool grimoireLinked,
+  bool ownedByMe,
 });
 
 /// Lecture légère des groupes du joueur connecté (une seule requête) : sert
@@ -50,9 +55,9 @@ class SupabaseGroupMembershipRepository implements GroupMembershipRepository {
     try {
       final rows = await _client
           .from('group_members')
-          .select('group_id, character_id, groups(name, story_title)')
+          .select('group_id, character_id, groups(name, story_title, owner_id)')
           .eq('user_id', ownerId);
-      return [for (final row in rows) _membershipOf(row)];
+      return [for (final row in rows) _membershipOf(row, ownerId)];
     } on PostgrestException catch (error) {
       throw mapGroupError(error);
     } catch (_) {
@@ -60,13 +65,14 @@ class SupabaseGroupMembershipRepository implements GroupMembershipRepository {
     }
   }
 
-  GroupMembership _membershipOf(Map<String, dynamic> row) {
+  GroupMembership _membershipOf(Map<String, dynamic> row, String userId) {
     final group = row['groups'] as Map<String, dynamic>?;
     return (
       groupId: row['group_id'] as String,
       groupName: (group?['name'] as String?) ?? '',
       characterId: row['character_id'] as String?,
       grimoireLinked: group?['story_title'] is String,
+      ownedByMe: group?['owner_id'] == userId,
     );
   }
 }

@@ -335,6 +335,19 @@ void main() {
       await app.dispose(tester);
     });
 
+    testWidgets('sans session (notification de l\'ancien compte) : rien, '
+        'ni signal ni SnackBar', (tester) async {
+      final app = _App();
+      await app.pump(tester);
+      app.container.read(testUserIdProvider.notifier).set(null);
+      app.gateway.receive(_combat('combat_start', _member));
+      await app.settle(tester);
+      expect(app.container.read(combatCalloutControllerProvider), isNull);
+      expect(find.byType(CombatCalloutView), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+      await app.dispose(tester);
+    });
+
     testWidgets('your_turn : variante tour', (tester) async {
       final app = _App();
       await app.pump(tester);

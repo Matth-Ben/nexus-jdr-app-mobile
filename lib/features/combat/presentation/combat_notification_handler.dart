@@ -25,9 +25,13 @@ class CombatNotificationHandler {
   final Ref _ref;
 
   /// Notification reçue **app ouverte** : jamais la `SnackBar` générique,
-  /// le signal global correspondant (dédoublonné par groupe et par type
-  /// pendant 60 s avec les messages du canal du groupe).
+  /// le signal global correspondant (dédoublonné avec les messages du canal
+  /// du groupe, voir `CombatCalloutController.showFromPush`) ; rien sans
+  /// session.
   void received(CombatNotificationTarget target) {
+    // Sans session (notification de l'ancien compte après une déconnexion) :
+    // rien, jamais « Combat ! » sur l'écran de connexion.
+    if (_ref.read(currentUserProvider) == null) return;
     _ref.read(combatCalloutControllerProvider.notifier).showFromPush(target);
     // Groupe inconnu de la liste (rejoint ailleurs) ou pas encore lié à
     // Grimoire : son nom arrive avec la relecture, et son canal est suivi.

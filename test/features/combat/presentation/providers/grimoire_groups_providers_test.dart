@@ -189,6 +189,29 @@ void main() {
       expect(openGroups(), {'g1'});
     });
 
+    followerTest('groupe mené par ce compte (propriétaire) : aucun canal de '
+        'fond ; son écran Combat ouvre le sien', (tester) async {
+      memberships.memberships = [
+        membership('g1'),
+        membership('g2', owned: true, characterId: null),
+      ];
+      await follow(tester);
+      expect(openGroups(), {'g1'});
+      expect(gateway.topicsReads, 1);
+
+      final screen = container.listen(
+        grimoireCombatFocusProvider('g2'),
+        (_, _) {},
+        fireImmediately: true,
+      );
+      await settle(tester);
+      expect(openGroups(), {'g1', 'g2'});
+      screen.close();
+      await tester.pump(const Duration(milliseconds: 1));
+      await settle(tester);
+      expect(openGroups(), {'g1'});
+    });
+
     followerTest('groupe associé à Grimoire pendant que l\'app est ouverte : '
         'suivi dès qu\'une notification en parle', (tester) async {
       memberships.memberships = [membership('g1', linked: false)];

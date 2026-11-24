@@ -202,6 +202,15 @@ class _BackgroundReturnObserver with WidgetsBindingObserver {
   }
 }
 
+/// Groupe suivi en fond : lié à Grimoire, et pas mené par ce compte. Le
+/// meneur (propriétaire, décision 44) mène le combat depuis Grimoire : un
+/// canal de fond ne lui servirait à rien, et sa présence (même clé `user_id`
+/// que Grimoire) ferait renvoyer un `state` à tout le groupe à chaque retour
+/// au premier plan de son téléphone. Son écran Combat reste accessible : il
+/// ouvre son propre canal.
+bool _followedInBackground(GroupMembership membership) =>
+    membership.grimoireLinked && !membership.ownedByMe;
+
 /// Suit le combat Grimoire de **tous** les groupes du joueur **liés à
 /// Grimoire** (`story_title` posé, `GroupMembership.grimoireLinked`) tant
 /// que l'app est au premier plan (`docs/combat-grimoire-ui.md` §13, arbitrage
@@ -249,7 +258,7 @@ final grimoireGroupsFollowerProvider = Provider.autoDispose<void>((ref) {
   ) {
     final kept = {
       for (final membership in next ?? const <GroupMembership>[])
-        if (membership.grimoireLinked) membership.groupId,
+        if (_followedInBackground(membership)) membership.groupId,
     };
     for (final membership in previous ?? const <GroupMembership>[]) {
       if (!kept.contains(membership.groupId)) {
@@ -259,7 +268,7 @@ final grimoireGroupsFollowerProvider = Provider.autoDispose<void>((ref) {
   });
   final followed = [
     for (final membership in memberships)
-      if (membership.grimoireLinked) membership,
+      if (_followedInBackground(membership)) membership,
   ];
   for (final membership in followed) {
     final groupId = membership.groupId;
