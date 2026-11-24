@@ -24,6 +24,8 @@ import 'package:personnages/features/profile/presentation/profile_language_scree
 import 'package:personnages/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/app_shell_overrides.dart';
+
 Future<void> _pumpAppOnLanguageScreen(
   WidgetTester tester, {
   required Locale deviceLocale,
@@ -62,6 +64,7 @@ Future<void> _pumpAppOnLanguageScreen(
         pushTokenRegistrarProvider.overrideWith(
           (ref) => PushTokenRegistrar(ref),
         ),
+        ...appShellTestOverrides(),
       ],
       child: const NexusJdrApp(),
     ),

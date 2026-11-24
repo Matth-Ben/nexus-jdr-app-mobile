@@ -25,6 +25,7 @@ import 'features/app_update/presentation/providers/app_version_providers.dart';
 import 'features/character_creation/presentation/providers/character_creation_catalog_preloader.dart';
 import 'features/characters/presentation/providers/character_providers.dart';
 import 'features/characters/presentation/providers/character_write_sync_coordinator.dart';
+import 'features/profile/presentation/widgets/account_locale_reporter.dart';
 import 'features/splash/presentation/splash_screen.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
@@ -590,6 +591,11 @@ class NexusJdrApp extends ConsumerWidget {
       // premier plan (`PushTokenRegistrar`).
       scaffoldMessengerKey: ref.watch(scaffoldMessengerKeyProvider),
       routerConfig: router,
+      // Au-dessus du navigateur, sous les `Localizations` de l'app : langue
+      // affichée recopiée dans le compte (notifications push dans la langue
+      // du joueur).
+      builder: (context, child) =>
+          AccountLocaleReporter(child: child ?? const SizedBox.shrink()),
       // Chantier "traduction de l'app" Phase A — infrastructure `.arb`
       // uniquement (voir `core/i18n/locale_preference_provider.dart` et
       // `features/profile/presentation/profile_language_screen.dart`) : le
