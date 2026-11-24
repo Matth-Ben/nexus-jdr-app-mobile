@@ -38,13 +38,12 @@ class SupabaseAccountLocaleRepository implements AccountLocaleRepository {
 
   @override
   Future<void> writeLocale(String languageCode) async {
-    // Fusion par-dessus `user_metadata` existant, jamais un écrasement —
-    // même mécanisme que `SupabaseAuthRepository.updateDisplayName`
-    // (`features/auth/data/auth_repository.dart`).
-    final metadata = Map<String, dynamic>.from(
-      _client.auth.currentUser?.userMetadata ?? const <String, dynamic>{},
+    // Seulement `{locale}` : GoTrue fusionne `data` dans `user_metadata`
+    // (clé par clé), et la copie locale de `user_metadata` peut être
+    // périmée (nom ou avatar changés depuis l'app web) : la renvoyer en
+    // entier écraserait ces changements.
+    await _client.auth.updateUser(
+      UserAttributes(data: <String, dynamic>{_key: languageCode}),
     );
-    metadata[_key] = languageCode;
-    await _client.auth.updateUser(UserAttributes(data: metadata));
   }
 }
