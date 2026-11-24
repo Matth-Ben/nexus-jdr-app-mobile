@@ -481,7 +481,8 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
     final l10n = AppLocalizations.of(context)!;
     final groupId = widget.groupId;
     ref.watch(combatRealtimeWatcherProvider(groupId));
-    ref.watch(grimoireCombatWatcherProvider(groupId));
+    // Écran ouvert : canal du groupe et état complet à l'ouverture.
+    ref.watch(grimoireCombatFocusProvider(groupId));
     ref.listen<CombatViewState>(combatProvider(groupId), _onStateChange);
     ref
       ..listen<int>(

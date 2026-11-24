@@ -124,7 +124,7 @@ final characterCombatBannerProvider = Provider.autoDispose
       final groupIds = ref.watch(characterGroupIdsProvider(characterId));
       if (groupIds == null || groupIds.isEmpty) return null;
       for (final groupId in groupIds) {
-        ref.watch(grimoireCombatWatcherProvider(groupId));
+        ref.watch(grimoireCombatFocusProvider(groupId));
       }
       for (final groupId in groupIds) {
         final grimoire = ref.watch(grimoireBannerProvider(groupId));

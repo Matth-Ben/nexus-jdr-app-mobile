@@ -9,7 +9,9 @@
 // l'app), plutôt que d'initialiser Supabase pour de vrai.
 //
 // `characterWriteSyncCoordinatorProvider`/`characterCreationCatalogPreloaderProvider`/
-// `pushTokenRegistrarProvider` (`NexusJdrApp.build`) sont surchargés pour la
+// `pushTokenRegistrarProvider` (`NexusJdrApp.build`), ainsi que le suivi des
+// combats de tous les groupes et la langue du compte (`appShellTestOverrides`),
+// sont surchargés pour la
 // même raison : leur provider "réel" déclenche `start()` dès sa construction
 // (tentative de synchro/préchargement/enregistrement du jeton FCM immédiate,
 // voir leur doc de classe), qui lit à son tour `supabaseClientProvider` ->
@@ -26,6 +28,8 @@ import 'package:personnages/core/router/app_router.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_catalog_preloader.dart';
 import 'package:personnages/features/characters/presentation/providers/character_write_sync_coordinator.dart';
 import 'package:personnages/main.dart';
+
+import 'support/app_shell_overrides.dart';
 
 void main() {
   testWidgets('affiche la route fournie par le routeur au démarrage', (
@@ -55,6 +59,7 @@ void main() {
           pushTokenRegistrarProvider.overrideWith(
             (ref) => PushTokenRegistrar(ref),
           ),
+          ...appShellTestOverrides(),
         ],
         child: const NexusJdrApp(),
       ),

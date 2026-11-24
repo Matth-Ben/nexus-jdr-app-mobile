@@ -67,7 +67,7 @@ void main() {
 
   /// Garde le client vivant, comme un écran qui l'observe.
   ProviderSubscription<void> watch() => container.listen(
-    grimoireCombatWatcherProvider(groupId),
+    grimoireCombatFocusProvider(groupId),
     (_, _) {},
     fireImmediately: true,
   );
@@ -99,6 +99,36 @@ void main() {
       // Jamais de `combat_id` : Grimoire répond avec son combat en cours.
       expect(gateway.stateRequests.single.payload, isEmpty);
       expect(gateway.stateRequests.single.groupId, groupId);
+    });
+
+    grimoireTest('suivi de fond sans écran : SUBSCRIBED sans state_request ; '
+        "un écran qui s'ouvre ensuite le demande une fois", (tester) async {
+      container.listen(
+        grimoireCombatWatcherProvider(groupId),
+        (_, _) {},
+        fireImmediately: true,
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(read().link, GrimoireLinkStatus.subscribed);
+      expect(gateway.lastLink.tracks, 1);
+      expect(gateway.stateRequests, isEmpty);
+
+      final screen = watch();
+      await tester.pump();
+      await tester.pump();
+      expect(gateway.links, hasLength(1));
+      expect(gateway.stateRequests, hasLength(1));
+
+      // Un état reçu : un écran rouvert plus tard ne redemande rien.
+      gateway.lastLink.emit(gState(1, participants: grimoireRoster()));
+      screen.close();
+      await tester.pump(const Duration(milliseconds: 1));
+      now = now.add(const Duration(seconds: 5));
+      watch();
+      await tester.pump();
+      await tester.pump();
+      expect(gateway.stateRequests, hasLength(1));
     });
 
     grimoireTest('meneur : is_leader retenu', (tester) async {
@@ -651,7 +681,7 @@ void main() {
     ) async {
       await connect(tester);
       container.listen(
-        grimoireCombatWatcherProvider('group-2'),
+        grimoireCombatFocusProvider('group-2'),
         (_, _) {},
         fireImmediately: true,
       );

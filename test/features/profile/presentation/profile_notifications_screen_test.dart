@@ -1,6 +1,6 @@
 // Tests de widget de l'écran "Préférences de notifications"
 // (`presentation/profile_notifications_screen.dart`) : chargement/erreur/
-// données, groupe "DÉCLENCHEURS" (3 rangées regroupées dans un
+// données, groupe "DÉCLENCHEURS" (4 rangées regroupées dans un
 // `SettingsListCard` — voir la doc de classe de
 // `ProfileNotificationsScreen`), rangées grisées quand "Notifications push"
 // est désactivé, bascule optimiste + revert sur échec, demande de
@@ -70,6 +70,7 @@ class _FakeNotificationPreferencesRepository
     bool? pushRestReminder,
     bool? pushAccessRevoked,
     bool? pushNewVersionAvailable,
+    bool? pushGmCombatAndReveals,
     bool? emailDigestEnabled,
   }) async {
     if (updateCompleter != null) await updateCompleter!.future;
@@ -78,6 +79,7 @@ class _FakeNotificationPreferencesRepository
       pushRestReminder: pushRestReminder,
       pushAccessRevoked: pushAccessRevoked,
       pushNewVersionAvailable: pushNewVersionAvailable,
+      pushGmCombatAndReveals: pushGmCombatAndReveals,
       emailDigestEnabled: emailDigestEnabled,
     );
     final error = updateErrorToThrow;
@@ -311,7 +313,7 @@ void main() {
   );
 
   testWidgets(
-    'affiche les 2 groupes ("DÉCLENCHEURS"/"E-MAIL") et les 5 rangées avec '
+    'affiche les 2 groupes ("DÉCLENCHEURS"/"E-MAIL") et les 6 rangées avec '
     'leurs valeurs, sans en-tête ni icône sur "Notifications push"',
     (tester) async {
       repository.current = const NotificationPreferences(
@@ -333,12 +335,14 @@ void main() {
       expect(find.text('Repos long non pris depuis longtemps'), findsOneWidget);
       expect(find.text('Accès retiré ou modifié par le MJ'), findsOneWidget);
       expect(find.text('Nouvelle mise à jour disponible'), findsOneWidget);
+      expect(find.text('Combat et révélations du MJ'), findsOneWidget);
       expect(find.text('Recevoir un résumé par e-mail'), findsOneWidget);
 
-      // Icônes dédiées des 3 rangées "DÉCLENCHEURS", dans cet ordre — le
+      // Icônes dédiées des 4 rangées "DÉCLENCHEURS", dans cet ordre — le
       // groupe ne contient plus "Invitation à rejoindre une histoire"
       // (retrait, décision chef de projet du 13/09/2026).
       expect(find.byIcon(Icons.arrow_forward), findsNothing);
+      expect(find.byIcon(Icons.campaign_outlined), findsOneWidget);
       expect(find.byIcon(Icons.star_outline), findsOneWidget);
       expect(find.byIcon(Icons.warning_amber_outlined), findsOneWidget);
       expect(find.byIcon(Icons.file_download_outlined), findsOneWidget);
@@ -346,7 +350,7 @@ void main() {
       expect(settingsListCard, findsOneWidget);
       expect(
         find.descendant(of: settingsListCard, matching: find.byType(Switch)),
-        findsNWidgets(3),
+        findsNWidgets(4),
       );
 
       expect(_switchFor(tester, 'Notifications push').value, isTrue);
@@ -382,12 +386,14 @@ void main() {
     },
   );
 
-  testWidgets('grise les 3 rangées "DÉCLENCHEURS" adossées à une préférence '
+  testWidgets('grise les 4 rangées "DÉCLENCHEURS" adossées à une préférence '
       '(onChanged null) quand "Notifications push" est désactivé, sans '
       'affecter le switch e-mail', (tester) async {
     repository.current = const NotificationPreferences(pushEnabled: false);
 
     await _pumpScreen(tester, repository: repository, gateway: gateway);
+
+    expect(_switchFor(tester, 'Combat et révélations du MJ').onChanged, isNull);
 
     expect(
       _switchFor(tester, 'Repos long non pris depuis longtemps').onChanged,
@@ -598,6 +604,115 @@ void main() {
 
     expect(gateway.requestPermissionCallCount, 0);
     expect(repository.updateCalls.single.pushEnabled, isFalse);
+  });
+
+  group('« Combat et révélations du MJ » (push_gm_combat_and_reveals)', () {
+    Finder gmCombatSwitch() => find.descendant(
+      of: find.ancestor(
+        of: find.text('Combat et révélations du MJ'),
+        matching: find.byType(Row),
+      ),
+      matching: find.byType(Switch),
+    );
+
+    testWidgets('première ligne de « DÉCLENCHEURS », seule avec un '
+        'sous-titre, activée par défaut (pas de ligne = activée)', (
+      tester,
+    ) async {
+      // Aucune ligne en base : `NotificationPreferences.defaults()`.
+      await _pumpScreen(tester, repository: repository, gateway: gateway);
+
+      final card = find.byType(SettingsListCard);
+      final switches = tester
+          .widgetList<Switch>(
+            find.descendant(of: card, matching: find.byType(Switch)),
+          )
+          .toList();
+      expect(switches.first.value, isTrue);
+      expect(switches.first.onChanged, isNotNull);
+      expect(_switchFor(tester, 'Combat et révélations du MJ').value, isTrue);
+      expect(
+        find.text('Début du combat, ton tour et ce que le MJ te montre.'),
+        findsOneWidget,
+      );
+      // Ordre : la ligne combat est au-dessus de « Repos long ».
+      expect(
+        tester.getTopLeft(find.text('Combat et révélations du MJ')).dy,
+        lessThan(
+          tester
+              .getTopLeft(find.text('Repos long non pris depuis longtemps'))
+              .dy,
+        ),
+      );
+    });
+
+    testWidgets('grisée (onChanged null) quand « Notifications push » est '
+        'coupé, valeur conservée', (tester) async {
+      repository.current = const NotificationPreferences(
+        pushEnabled: false,
+        pushGmCombatAndReveals: false,
+      );
+      await _pumpScreen(tester, repository: repository, gateway: gateway);
+
+      final toggle = _switchFor(tester, 'Combat et révélations du MJ');
+      expect(toggle.onChanged, isNull);
+      expect(toggle.value, isFalse);
+    });
+
+    testWidgets('bascule optimiste puis écriture de '
+        'push_gm_combat_and_reveals seulement', (tester) async {
+      repository.updateCompleter = Completer<void>();
+      await _pumpScreen(tester, repository: repository, gateway: gateway);
+
+      await tester.tap(gmCombatSwitch());
+      await tester.pump();
+      expect(_switchFor(tester, 'Combat et révélations du MJ').value, isFalse);
+
+      repository.updateCompleter!.complete();
+      await tester.pumpAndSettle();
+      final saved = repository.updateCalls.single;
+      expect(saved.pushGmCombatAndReveals, isFalse);
+      // Les autres interrupteurs ne bougent pas.
+      expect(saved.pushEnabled, isTrue);
+      expect(saved.pushRestReminder, isTrue);
+      expect(saved.pushAccessRevoked, isTrue);
+      expect(saved.pushNewVersionAvailable, isTrue);
+      expect(_switchFor(tester, 'Combat et révélations du MJ').value, isFalse);
+    });
+
+    testWidgets('échec : retour à la valeur précédente et SnackBar '
+        "d'erreur existante", (tester) async {
+      repository.updateErrorToThrow = Exception('network down');
+      repository.updateCompleter = Completer<void>();
+      await _pumpScreen(tester, repository: repository, gateway: gateway);
+
+      await tester.tap(gmCombatSwitch());
+      await tester.pump();
+      expect(_switchFor(tester, 'Combat et révélations du MJ').value, isFalse);
+
+      repository.updateCompleter!.complete();
+      await tester.pumpAndSettle();
+      expect(_switchFor(tester, 'Combat et révélations du MJ').value, isTrue);
+      expect(
+        find.text("Impossible d'enregistrer ce réglage. Réessaie."),
+        findsOneWidget,
+      );
+      expect(repository.updateCalls, isEmpty);
+    });
+
+    testWidgets('anglais', (tester) async {
+      await _pumpScreen(
+        tester,
+        repository: repository,
+        gateway: gateway,
+        locale: const Locale('en'),
+      );
+      expect(find.text('GM combat and reveals'), findsOneWidget);
+      expect(
+        find.text('Combat start, your turn and what the GM shows you.'),
+        findsOneWidget,
+      );
+    });
   });
 
   group('locale anglaise', () {

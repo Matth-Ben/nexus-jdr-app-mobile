@@ -115,8 +115,9 @@ final class PushTokenRepositoryProvider
 String _$pushTokenRepositoryHash() =>
     r'aeaf0f0c38f74dd63eb3f3308069b35e26fd2c91';
 
-/// Clé globale de `ScaffoldMessenger`, câblée sur
-/// `MaterialApp.router(scaffoldMessengerKey: ...)` dans `main.dart` —
+/// Clé globale de `ScaffoldMessenger`, câblée sur le
+/// `SnackBarAwareScaffoldMessenger` posé par `MaterialApp.router(builder:
+/// ...)` dans `main.dart` (le messager de toutes les pages) —
 /// permet à [PushTokenRegistrar] (`push_token_registrar.dart`) d'afficher un
 /// `SnackBar` pour un message FCM reçu au premier plan sans jamais disposer
 /// d'un `BuildContext` d'écran (ce coordinateur vit tant que l'app tourne,
@@ -132,8 +133,9 @@ String _$pushTokenRepositoryHash() =>
 @ProviderFor(scaffoldMessengerKey)
 final scaffoldMessengerKeyProvider = ScaffoldMessengerKeyProvider._();
 
-/// Clé globale de `ScaffoldMessenger`, câblée sur
-/// `MaterialApp.router(scaffoldMessengerKey: ...)` dans `main.dart` —
+/// Clé globale de `ScaffoldMessenger`, câblée sur le
+/// `SnackBarAwareScaffoldMessenger` posé par `MaterialApp.router(builder:
+/// ...)` dans `main.dart` (le messager de toutes les pages) —
 /// permet à [PushTokenRegistrar] (`push_token_registrar.dart`) d'afficher un
 /// `SnackBar` pour un message FCM reçu au premier plan sans jamais disposer
 /// d'un `BuildContext` d'écran (ce coordinateur vit tant que l'app tourne,
@@ -154,8 +156,9 @@ final class ScaffoldMessengerKeyProvider
           GlobalKey<ScaffoldMessengerState>
         >
     with $Provider<GlobalKey<ScaffoldMessengerState>> {
-  /// Clé globale de `ScaffoldMessenger`, câblée sur
-  /// `MaterialApp.router(scaffoldMessengerKey: ...)` dans `main.dart` —
+  /// Clé globale de `ScaffoldMessenger`, câblée sur le
+  /// `SnackBarAwareScaffoldMessenger` posé par `MaterialApp.router(builder:
+  /// ...)` dans `main.dart` (le messager de toutes les pages) —
   /// permet à [PushTokenRegistrar] (`push_token_registrar.dart`) d'afficher un
   /// `SnackBar` pour un message FCM reçu au premier plan sans jamais disposer
   /// d'un `BuildContext` d'écran (ce coordinateur vit tant que l'app tourne,

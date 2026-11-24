@@ -6,6 +6,7 @@ import '../../domain/grimoire_combat_session.dart';
 import '../../domain/grimoire_combat_view.dart';
 import '../widgets/combat_banner_mode.dart';
 import 'grimoire_combat_providers.dart';
+import 'grimoire_groups_providers.dart';
 
 /// Contenu des bandeaux Groupe et fiche d'un combat mené depuis Grimoire.
 /// Un record : égalité structurelle, un message sans rapport ne reconstruit
@@ -67,6 +68,10 @@ final grimoireBannerProvider = Provider.family<GrimoireBannerInfo?, String>((
 /// (compte et personnage courant), connue des écrans qui l'affichent. Appelé
 /// à chaque construction : l'écriture a lieu après l'image, et seulement si
 /// l'identité change (jamais pendant une construction).
+///
+/// Signale aussi le groupe au suivi de tous les groupes (s'il tourne) : un
+/// groupe tout juste créé ou rejoint, ou un personnage changé, y entre sans
+/// attendre le prochain retour au premier plan.
 void syncGrimoireIdentity(
   BuildContext context,
   WidgetRef ref,
@@ -77,5 +82,10 @@ void syncGrimoireIdentity(
   WidgetsBinding.instance.addPostFrameCallback((_) {
     if (!context.mounted) return;
     ref.read(grimoireCombatProvider(groupId).notifier).setIdentity(identity);
+    if (ref.exists(myGroupMembershipsProvider)) {
+      ref
+          .read(myGroupMembershipsProvider.notifier)
+          .noteGroupSeen(groupId, characterId: identity.characterId);
+    }
   });
 }

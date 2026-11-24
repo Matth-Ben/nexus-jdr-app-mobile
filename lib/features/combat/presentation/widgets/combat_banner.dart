@@ -374,7 +374,7 @@ class CombatGroupBanner extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Un seul abonnement Realtime tant que l'écran Groupe est monté.
     ref.watch(combatRealtimeWatcherProvider(groupId));
-    ref.watch(grimoireCombatWatcherProvider(groupId));
+    ref.watch(grimoireCombatFocusProvider(groupId));
     syncGrimoireIdentity(context, ref, groupId, identity);
     // Fin d'un combat Grimoire vue depuis l'écran Groupe : une seule annonce
     // polie (l'écran Combat annonce lui-même la fin quand il est devant).

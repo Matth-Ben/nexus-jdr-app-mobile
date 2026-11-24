@@ -19,8 +19,9 @@ PushTokenRepository pushTokenRepository(Ref ref) {
   return SupabasePushTokenRepository(ref.watch(supabaseClientProvider));
 }
 
-/// Clé globale de `ScaffoldMessenger`, câblée sur
-/// `MaterialApp.router(scaffoldMessengerKey: ...)` dans `main.dart` —
+/// Clé globale de `ScaffoldMessenger`, câblée sur le
+/// `SnackBarAwareScaffoldMessenger` posé par `MaterialApp.router(builder:
+/// ...)` dans `main.dart` (le messager de toutes les pages) —
 /// permet à [PushTokenRegistrar] (`push_token_registrar.dart`) d'afficher un
 /// `SnackBar` pour un message FCM reçu au premier plan sans jamais disposer
 /// d'un `BuildContext` d'écran (ce coordinateur vit tant que l'app tourne,
