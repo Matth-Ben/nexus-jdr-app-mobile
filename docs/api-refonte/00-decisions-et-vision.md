@@ -314,6 +314,18 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
 83. **Mentions de licence de Nexus** (PR #310, mergée en squash `65cad41`) : les trois textes provisoires de
     `docs/licence/spec-credits-nexus.md` §3.4 (contenu hors SRD, phrase de marque et de non-affiliation, fin du paragraphe
     de propriété intellectuelle) sont validés **tels quels** en attendant l'avis du conseil (dossier §6, questions 4 et 6).
+84. **Coquille du SRD français qui change une règle** (PR DeepCore #63, Tempête de neige : « 12 m de diamètre » au lieu
+    de 12 m de **rayon** dans le SRD anglais) : **corrigée** dans le texte posé, listée dans la PR (couverte par la mention
+    « Modifié »). Les coquilles sans effet sur la règle restent telles quelles.
+85. **Pastilles de dégâts de Nexus** (premier dé de la description) : la PR #63 s'applique **d'abord** (22 pastilles
+    deviennent justes, 11 fausses), **puis** Nexus est corrigé dans sa prochaine version : liste explicite d'exceptions.
+86. La pastille ne montre que **le dé de dégâts infligé à la cible au niveau minimal** (option d'attaque principale) :
+    rien pour un bonus (d4 d'Assistance…), une réserve de points de vie (Sommeil), une durée, un nombre, un pourcentage
+    ou des dégâts subis par le lanceur.
+87. **Données de jeu des sorts fausses en production** (13 règles fausses et 8 libellés incomplets relevés par
+    `regles-dnd` sur la PR #63) : PR DeepCore de correction juste après la #63, en suivant le **SRD 5.1** (Soins et
+    Guérison de groupe en évocation), mile = **1,5 km** comme le SRD français. L'affichage des déclencheurs des 4 sorts de
+    réaction fait l'objet d'un ticket à part.
 
 Choix du chef de projet (24/11, PR DeepCore #58) : noms anglais des 6 armes naturelles gardés (simples noms, hors SRD) ;
 coquille du SRD français (Méphite vaporeux) gardée par fidélité à la source ; initiative d'un monstre 2014 = modificateur
