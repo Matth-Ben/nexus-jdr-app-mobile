@@ -3136,7 +3136,10 @@ contrôle `regles-dnd`, tests, sans compter la relecture juridique).
 | `translations` (texte seul) | aucune contrainte : remplacer un texte ne touche à aucun personnage |
 
 **Calculs.** Nexus n'analyse **jamais** le texte des descriptions (aucune expression régulière ni recherche dans une
-description) : les options A et B, qui ne changent que les textes, n'ont aucun effet sur les calculs. Les calculs
+description) : les options A et B, qui ne changent que les textes, n'ont aucun effet sur les calculs.
+**Erratum (25/11/2026, PR DeepCore #63)** : c'est **faux pour les sorts**. `SpellDamageDiceExtractor` prend le premier dé
+de la description pour la pastille de dégâts de la liste des sorts : changer un texte de sort peut changer sa pastille
+(37 pastilles changent avec les 319 textes du SRD 5.1). Toute PR de texte de sort doit lister ces changements. Les calculs
 s'appuient sur des champs structurés (bonus raciaux, vitesse, `uses_per_rest`, `choice_type`, prérequis, sorts de
 sous-classe, sorts innés, bonus de dons, statistiques d'objets) et sur des **noms français codés en dur** :
 
