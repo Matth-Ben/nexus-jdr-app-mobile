@@ -134,12 +134,49 @@ void main() {
   testWidgets(
     'affiche le badge de dé de dégâts à côté du nom d\'un sort qui en a un',
     (tester) async {
-      await pumpSheet(tester, spells: const [_unprepared]);
+      await pumpSheet(
+        tester,
+        spells: const [
+          CharacterSpellEntry(
+            id: 5,
+            name: 'Orbe chromatique',
+            level: 1,
+            school: 'Évocation',
+            status: SpellStatus.known,
+            description: 'La cible subit 3d8 dégâts du type choisi.',
+          ),
+        ],
+      );
 
       expect(find.byType(DiceTypeBadge), findsOneWidget);
-      expect(find.text('1d8'), findsOneWidget);
+      expect(find.text('3d8'), findsOneWidget);
     },
   );
+
+  testWidgets('applique la table d\'exceptions de la pastille (spec '
+      'pastille-degats-sorts) : aucun badge pour un soin malgré le 1d8 de sa '
+      'description, dé imposé pour un sort sans NdM', (tester) async {
+    await pumpSheet(
+      tester,
+      spells: const [
+        // « Soins » : sans pastille, même si sa description contient 1d8.
+        _unprepared,
+        CharacterSpellEntry(
+          id: 6,
+          name: 'Murmures dissonants',
+          level: 1,
+          school: 'Enchantement',
+          status: SpellStatus.known,
+          description: 'Résumé sans motif de dé.',
+        ),
+      ],
+    );
+
+    expect(find.text('Soins'), findsOneWidget);
+    expect(find.byType(DiceTypeBadge), findsOneWidget);
+    expect(find.text('1d8'), findsNothing);
+    expect(find.text('3d6'), findsOneWidget);
+  });
 
   testWidgets(
     'aucun badge de dé pour un sort sans dé de dégâts dans sa description',

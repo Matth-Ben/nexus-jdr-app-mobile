@@ -2,7 +2,10 @@
 // `CharacterSpellsSection`) affiche bien un `DiceTypeBadge` quand la
 // description du sort contient un dé de dégâts détectable, et rien quand ce
 // n'est pas le cas — pas de reconstruction de la suite de tests complète de
-// cet écran (aucune suite existante à ce jour pour ce widget).
+// cet écran (aucune suite existante à ce jour pour ce widget). Vérifie aussi
+// que l'écran applique la table d'exceptions par nom
+// (`SpellDamageDiceExceptions`, un cas par catégorie ; chaque entrée est
+// couverte par `spell_damage_dice_extractor_test.dart`).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,5 +68,63 @@ void main() {
     ]);
 
     expect(find.byType(DiceTypeBadge), findsNothing);
+  });
+
+  group('table d\'exceptions (spec pastille-degats-sorts)', () {
+    testWidgets('un sort sans pastille n\'en affiche aucune malgré le NdM de '
+        'sa description', (tester) async {
+      await pump(tester, [
+        const CharacterSpellEntry(
+          id: 3,
+          name: 'Sommeil',
+          level: 1,
+          school: 'enchantement',
+          status: SpellStatus.known,
+          description:
+              'Lancez 5d8 : le total est le nombre de points de vie '
+              'de créatures que ce sort peut affecter.',
+        ),
+      ]);
+
+      expect(find.text('Sommeil'), findsOneWidget);
+      expect(find.byType(DiceTypeBadge), findsNothing);
+    });
+
+    testWidgets('un sort remplacé affiche le dé imposé, pas le premier NdM', (
+      tester,
+    ) async {
+      await pump(tester, [
+        const CharacterSpellEntry(
+          id: 4,
+          name: 'Main de Bigby',
+          level: 5,
+          school: 'évocation',
+          status: SpellStatus.known,
+          description: 'Main interposée : 2d6 dégâts. Poing serré : 4d8.',
+        ),
+      ]);
+
+      expect(find.byType(DiceTypeBadge), findsOneWidget);
+      expect(find.text('4d8'), findsOneWidget);
+      expect(find.text('2d6'), findsNothing);
+    });
+
+    testWidgets('un sort ajouté affiche un dé malgré un texte sans NdM', (
+      tester,
+    ) async {
+      await pump(tester, [
+        const CharacterSpellEntry(
+          id: 5,
+          name: 'Trique noueuse',
+          level: 0,
+          school: 'transmutation',
+          status: SpellStatus.known,
+          description: 'Le dé de dégâts de l\'arme devient un d8.',
+        ),
+      ]);
+
+      expect(find.byType(DiceTypeBadge), findsOneWidget);
+      expect(find.text('1d8'), findsOneWidget);
+    });
   });
 }
