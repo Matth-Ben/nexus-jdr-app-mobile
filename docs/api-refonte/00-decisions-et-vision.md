@@ -311,6 +311,9 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
 82. **Le dépôt DeepCore (`Matth-Ben/markdown-editor`) est privé** depuis le 25/11/2026 : les 157 textes anglais retirés
     de la base (PR #61) restent dans une migration publiée et dans l'historique Git. Pas de purge d'historique. Si Florian
     doit lire les contrats d'API de DeepCore, l'ajouter comme collaborateur.
+83. **Mentions de licence de Nexus** (PR #310, mergée en squash `65cad41`) : les trois textes provisoires de
+    `docs/licence/spec-credits-nexus.md` §3.4 (contenu hors SRD, phrase de marque et de non-affiliation, fin du paragraphe
+    de propriété intellectuelle) sont validés **tels quels** en attendant l'avis du conseil (dossier §6, questions 4 et 6).
 
 Choix du chef de projet (24/11, PR DeepCore #58) : noms anglais des 6 armes naturelles gardés (simples noms, hors SRD) ;
 coquille du SRD français (Méphite vaporeux) gardée par fidélité à la source ; initiative d'un monstre 2014 = modificateur
