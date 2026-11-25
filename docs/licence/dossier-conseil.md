@@ -1,6 +1,6 @@
 # Dossier pour un conseil : licence du contenu de jeu de Nexus, Grimoire et la Bibliothèque
 
-Préparé par le chef de projet le 25/11/2026 (décision 81). Document factuel : il ne contient **aucun avis juridique** ; il
+Préparé par le chef de projet le 25/11/2026 (décision 81), mis à jour le 26/11/2026. Document factuel : il ne contient **aucun avis juridique** ; il
 expose la situation et les questions à trancher. Détail complet : `docs/licence/registre-licence-contenu.md` (audit en
 lecture seule du 25/11/2026, 2 567 éléments).
 
@@ -32,8 +32,10 @@ DeepCore, en français (et partiellement en anglais), et affiché par les trois 
 - **Objets** : textes 2014 remplacés par le SRD 5.1 (25/11/2026) ; objets 2024 issus du SRD 5.2.
 - **Grimoire** (produit payant) n'affiche, du contenu non SRD, que des **noms** (race, classe, sous-classe d'un
   personnage) ; son bestiaire et son catalogue sont strictement SRD.
-- **En cours (décisions 79-80)** : retrait de 157 textes anglais copiés mot pour mot des livres ; correction des
-  mentions de licence ; remplacement par le texte officiel du SRD des éléments présents au SRD.
+- **Fait le 25/11/2026** : retrait des 157 textes anglais copiés mot pour mot des livres ; mentions de licence exactes
+  dans l'app (déclarations officielles SRD 5.1 et 5.2, mention « Modifié ») ; texte officiel du SRD 5.1 français pour les
+  319 sorts du SRD (les résumés d'aidedd.org de ces sorts ont disparu) ; dépôt du code de DeepCore passé en privé.
+- **En cours (décision 80)** : texte officiel du SRD pour les autres éléments présents au SRD (classes, races, dons…).
 
 ## 4. Ce qui reste hors SRD (objet de ce dossier)
 
@@ -50,8 +52,9 @@ DeepCore, en français (et partiellement en anglais), et affiché par les trois 
 | **Total** | **1 307 éléments** | **≈ 257 000** |
 
 **Nature des textes** : d'après les en-têtes des migrations, ce sont des **reformulations** des mécaniques (pas des
-copies), à l'exception de **420 descriptions françaises de sorts reprises d'aidedd.org** (site tiers : 265 sorts du SRD,
-14 homonymes, 141 hors SRD). La source de certaines sous-classes et historiques est un fichier `CodexArcanum_V2.html`
+copies), à l'exception de **155 descriptions françaises de sorts reprises d'aidedd.org** (site tiers : 141 hors SRD et 14 sorts
+2014 dont seule la version 2024 est au SRD ; les 265 descriptions d'aidedd des sorts du SRD 5.1 ont été remplacées par
+le texte officiel le 25/11/2026). La source de certaines sous-classes et historiques est un fichier `CodexArcanum_V2.html`
 d'origine à préciser. Les **noms** des éléments (« Maître de guerre », « Lame maudite »…) sont ceux des livres.
 
 **Exposition** : lus par Nexus (joueurs connectés), affichés **sans connexion** par la Bibliothèque web, et lisibles par
@@ -82,7 +85,7 @@ possible.
    c) un produit payant (Grimoire), s'il venait à afficher ce contenu ?
 3. Les **textes actuels**, décrits comme des reformulations, présentent-ils un risque en l'état ? Comment évaluer une
    reformulation « suffisante » ?
-4. Les **420 descriptions d'aidedd.org** : faut-il les retirer, les réécrire, ou demander une autorisation à aidedd ?
+4. Les **155 descriptions d'aidedd.org** restantes : faut-il les retirer, les réécrire, ou demander une autorisation à aidedd ?
    (droit d'auteur, droit du producteur de base de données)
 5. Le **pied de page** « Interdit à la revente… usage personnel » du SRD 5.1 français remet-il en cause la licence
    CC BY 4.0 de sa page 1 pour un usage commercial (Grimoire) ?
