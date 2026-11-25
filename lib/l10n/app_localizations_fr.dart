@@ -220,15 +220,41 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileCreditsGameContentPara1 =>
-      'Le contenu de règles Donjons & Dragons 5e (races, classes, historiques, sorts, objets, monstres...) provient d\'Open5e et du System Reference Document (SRD 5.1/5.2) de Wizards of the Coast, sous licence Creative Commons Attribution 4.0 International (CC-BY 4.0).';
+      'Une partie du contenu de règles utilisé par Nexus JDR provient du System Reference Document (SRD), publié sous licence Creative Commons Attribution 4.0 International (CC BY 4.0). Voici les déclarations d\'attribution correspondantes et les modifications apportées.';
+
+  @override
+  String get profileCreditsModifiedPrefix => 'Modifié : ';
+
+  @override
+  String get profileCreditsSrd51Label => 'SRD 5.1 (règles 2014)';
+
+  @override
+  String get profileCreditsSrd51Attribution =>
+      'Ce travail comprend la documentation tirée du Document de Référence du Système 5.1 (« SRD 5.1 ») par Wizards of the Coast LLC et disponible à l\'adresse https://dnd.wizards.com/fr/resources/systems-reference-document. Le SRD 5.1 est distribué en vertu de la licence Creative Commons Attribution 4.0 International disponible à l\'adresse https://creativecommons.org/licenses/by/4.0/legalcode.fr.';
+
+  @override
+  String get profileCreditsSrd51Modified =>
+      'textes repris en tout ou en partie du SRD 5.1 français, ou traduits du SRD 5.1 anglais (traduction non officielle) et parfois résumés ; certains noms diffèrent de la traduction officielle ; poids et distances exprimés en kilogrammes et en mètres ; contenu réparti en champs et présentation adaptée à l\'application.';
+
+  @override
+  String get profileCreditsSrd52Label =>
+      'SRD 5.2 (règles 2024, déclaration en anglais)';
+
+  @override
+  String get profileCreditsSrd52Attribution =>
+      'This work includes material from the System Reference Document 5.2 (“SRD 5.2”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.';
+
+  @override
+  String get profileCreditsSrd52Modified =>
+      'traduit de l\'anglais en français (traduction non officielle), parfois résumé ; distances et poids convertis en mètres et en kilogrammes ; contenu réparti en champs et présentation adaptée à l\'application.';
+
+  @override
+  String get profileCreditsNonSrdContent =>
+      'Une partie du contenu de jeu de Nexus JDR ne fait pas partie du SRD (notamment de nombreux sorts, sous-classes, dons, historiques, races et options de classe). Ce contenu n\'est pas couvert par la licence Creative Commons Attribution 4.0 citée ci-dessus.';
 
   @override
   String get profileCreditsGameContentPara2 =>
-      'Donjons & Dragons, D&D et leurs logos sont des marques de Wizards of the Coast LLC. Wizards of the Coast n\'a ni produit, ni approuvé, ni autorisé cette application.';
-
-  @override
-  String get profileCreditsLicenseNotice =>
-      'Ce produit inclut des éléments du System Reference Document 5.1 et 5.2, disponibles sur dndbeyond.com/srd et open5e.com, sous licence Creative Commons Attribution 4.0 International (creativecommons.org/licenses/by/4.0/legalcode).';
+      'Donjons & Dragons et D&D sont des marques de Wizards of the Coast LLC. Nexus JDR n\'est ni affilié à Wizards of the Coast, ni approuvé par cette société.';
 
   @override
   String get profileCreditsFontsTitle => 'Polices';
@@ -250,7 +276,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileCreditsLastUpdated =>
-      'Dernière mise à jour : 14 octobre 2026';
+      'Dernière mise à jour : 25 novembre 2026';
 
   @override
   String get profileDeleteAccountScreenTitle => 'SUPPRIMER LE COMPTE';
@@ -444,7 +470,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileHelpAboutFooterNote =>
-      'Contenu D&D 5e sous licence Open5e / SRD. Voir les crédits complets pour le détail des sources.';
+      'Une partie du contenu de jeu provient du SRD (CC BY 4.0). Détail des sources et des attributions dans « Crédits & licences ».';
 
   @override
   String profileHelpFooterVersionWithNumber(String version) {
@@ -501,7 +527,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileLegalIntellectualPropertyPara1 =>
-      'Le contenu de règles Donjons & Dragons 5e (races, classes, sorts, objets...) provient d\'Open5e et du System Reference Document (SRD), sous licence Creative Commons Attribution 4.0 (CC-BY 4.0) — voir « Crédits & licences » pour le détail. Le reste de l\'application (code, design, marque « Nexus JDR ») appartient à son éditeur.';
+      'Une partie du contenu de règles de Donjons & Dragons 5e provient du System Reference Document (SRD 5.1 et 5.2), sous licence Creative Commons Attribution 4.0 International (CC BY 4.0) ; le reste du contenu de jeu n\'est pas issu du SRD et n\'est pas couvert par cette licence. Les déclarations d\'attribution et les modifications apportées figurent dans « Crédits & licences ». Le code, le design et la marque « Nexus JDR » appartiennent à l\'éditeur de l\'application.';
 
   @override
   String get profileLegalTerminationTitle => 'Résiliation';
@@ -519,7 +545,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileLegalLastUpdated =>
-      'Dernière mise à jour : 25 septembre 2026';
+      'Dernière mise à jour : 25 novembre 2026';
 
   @override
   String get profileNotificationsScreenTitle => 'NOTIFICATIONS';

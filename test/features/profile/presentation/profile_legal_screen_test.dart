@@ -95,6 +95,29 @@ void main() {
     },
   );
 
+  testWidgets(
+    'la propriété intellectuelle renvoie aux attributions du SRD, sans '
+    'mention d\'Open5e (licence étape 1, fin du texte PROVISOIRE)',
+    (tester) async {
+      await _pumpScreen(tester);
+
+      expect(
+        find.text(
+          'Une partie du contenu de règles de Donjons & Dragons 5e provient '
+          'du System Reference Document (SRD 5.1 et 5.2), sous licence '
+          'Creative Commons Attribution 4.0 International (CC BY 4.0) ; le '
+          "reste du contenu de jeu n'est pas issu du SRD et n'est pas "
+          "couvert par cette licence. Les déclarations d'attribution et les "
+          'modifications apportées figurent dans « Crédits & licences ». Le '
+          'code, le design et la marque « Nexus JDR » appartiennent à '
+          "l'éditeur de l'application.",
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Open5e'), findsNothing);
+    },
+  );
+
   testWidgets('sépare chaque section par un Divider (6 séparateurs pour '
       '7 sections, jamais après la dernière)', (tester) async {
     await _pumpScreen(tester);
@@ -106,10 +129,10 @@ void main() {
     await _pumpScreen(tester);
 
     await tester.ensureVisible(
-      find.text('Dernière mise à jour : 25 septembre 2026'),
+      find.text('Dernière mise à jour : 25 novembre 2026'),
     );
     final footer = tester.widget<Text>(
-      find.text('Dernière mise à jour : 25 septembre 2026'),
+      find.text('Dernière mise à jour : 25 novembre 2026'),
     );
     expect(footer.style?.fontSize, 11);
     expect(footer.style?.color, AppColors.textMuted);
