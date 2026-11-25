@@ -326,6 +326,14 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
     `regles-dnd` sur la PR #63) : PR DeepCore de correction juste après la #63, en suivant le **SRD 5.1** (Soins et
     Guérison de groupe en évocation), mile = **1,5 km** comme le SRD français. L'affichage des déclencheurs des 4 sorts de
     réaction fait l'objet d'un ticket à part.
+88. **Pastille de dégâts : ajouts** : les 7 sorts qui infligent des dégâts sans motif `NdM` dans leur texte reçoivent une
+    pastille (Dragon illusoire 7d6, Force fantasmagorique 1d6, Fouet d'épines 1d6, Fureur de la nature 4d6, Gardien de la
+    nature 1d6, Murmures dissonants 3d6, Trique noueuse 1d8). Spec : `docs/spec-pastille-degats-sorts.md`.
+89. **Pastille de dégâts : sorts utilitaires** : pas de pastille quand l'option offensive est secondaire (Contrôle de
+    l'eau, Modification d'apparence, Songe, Quête). Choix du chef de projet dans le cadre de la décision 86 :
+    Agrandissement/Rapetissement sans pastille (bonus), premier dé gardé pour les sorts à deux dés, rien d'ajouté pour les
+    dégâts conditionnels (Ossements de la Terre, Transmutation de la pierre), exception de « Fausse vie » étendue à
+    « Simulacre de vie ».
 
 Choix du chef de projet (24/11, PR DeepCore #58) : noms anglais des 6 armes naturelles gardés (simples noms, hors SRD) ;
 coquille du SRD français (Méphite vaporeux) gardée par fidélité à la source ; initiative d'un monstre 2014 = modificateur
