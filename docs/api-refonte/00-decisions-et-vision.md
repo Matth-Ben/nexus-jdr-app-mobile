@@ -334,6 +334,9 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
     Agrandissement/Rapetissement sans pastille (bonus), premier dé gardé pour les sorts à deux dés, rien d'ajouté pour les
     dégâts conditionnels (Ossements de la Terre, Transmutation de la pierre), exception de « Fausse vie » étendue à
     « Simulacre de vie ».
+90. **Ébauches dans la Bibliothèque** (pages de propositions de contenu, lues avec le compte connecté) : les ébauches
+    restent proposables, avec un badge « Fiche incomplète », pour qu'un joueur puisse proposer d'en compléter la fiche
+    (25/11/2026, après la PR DeepCore #66 qui les masque aux visiteurs sans compte).
 
 Choix du chef de projet (24/11, PR DeepCore #58) : noms anglais des 6 armes naturelles gardés (simples noms, hors SRD) ;
 coquille du SRD français (Méphite vaporeux) gardée par fidélité à la source ; initiative d'un monstre 2014 = modificateur
