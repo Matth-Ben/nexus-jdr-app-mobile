@@ -220,15 +220,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileCreditsGameContentPara1 =>
-      'Dungeons & Dragons 5e rules content (races, classes, backgrounds, spells, items, monsters...) comes from Open5e and the System Reference Document (SRD 5.1/5.2) by Wizards of the Coast, under the Creative Commons Attribution 4.0 International license (CC-BY 4.0).';
+      'Part of the rules content used by Nexus JDR comes from the System Reference Document (SRD), published under the Creative Commons Attribution 4.0 International license (CC BY 4.0). The corresponding attribution statements and the changes made are listed below.';
+
+  @override
+  String get profileCreditsModifiedPrefix => 'Modified: ';
+
+  @override
+  String get profileCreditsSrd51Label => 'SRD 5.1 (2014 rules)';
+
+  @override
+  String get profileCreditsSrd51Attribution =>
+      'This work includes material taken from the System Reference Document 5.1 (“SRD 5.1”) by Wizards of the Coast LLC and available at https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 is licensed under the Creative Commons Attribution 4.0 International License available at https://creativecommons.org/licenses/by/4.0/legalcode.';
+
+  @override
+  String get profileCreditsSrd51Modified =>
+      'text taken in whole or in part from the French SRD 5.1, or translated into French from the English SRD 5.1 (unofficial translation) and sometimes summarized; some names differ from the official French translation; weights and distances given in kilograms and meters; content split into fields and presentation adapted to the app.';
+
+  @override
+  String get profileCreditsSrd52Label => 'SRD 5.2 (2024 rules)';
+
+  @override
+  String get profileCreditsSrd52Attribution =>
+      'This work includes material from the System Reference Document 5.2 (“SRD 5.2”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.';
+
+  @override
+  String get profileCreditsSrd52Modified =>
+      'translated from English into French (unofficial translation), sometimes summarized; distances and weights converted to meters and kilograms; content split into fields and presentation adapted to the app.';
+
+  @override
+  String get profileCreditsNonSrdContent =>
+      'Some of the game content in Nexus JDR is not part of the SRD (including many spells, subclasses, feats, backgrounds, races and class options). This content is not covered by the Creative Commons Attribution 4.0 license cited above.';
 
   @override
   String get profileCreditsGameContentPara2 =>
-      'Dungeons & Dragons, D&D and their logos are trademarks of Wizards of the Coast LLC. Wizards of the Coast has not produced, endorsed, or authorized this application.';
-
-  @override
-  String get profileCreditsLicenseNotice =>
-      'This product includes material from the System Reference Document 5.1 and 5.2, available at dndbeyond.com/srd and open5e.com, under the Creative Commons Attribution 4.0 International license (creativecommons.org/licenses/by/4.0/legalcode).';
+      'Dungeons & Dragons and D&D are trademarks of Wizards of the Coast LLC. Nexus JDR is not affiliated with or endorsed by Wizards of the Coast.';
 
   @override
   String get profileCreditsFontsTitle => 'Fonts';
@@ -249,7 +274,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'As well as the other libraries listed in the project\'s pubspec.yaml file, each under its own original open source license.';
 
   @override
-  String get profileCreditsLastUpdated => 'Last updated: October 14, 2026';
+  String get profileCreditsLastUpdated => 'Last updated: November 25, 2026';
 
   @override
   String get profileDeleteAccountScreenTitle => 'DELETE ACCOUNT';
@@ -439,7 +464,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileHelpAboutFooterNote =>
-      'D&D 5e content under the Open5e / SRD license. See the full credits for details on sources.';
+      'Part of the game content comes from the SRD (CC BY 4.0). Sources and attributions are detailed in \"Credits & licenses\".';
 
   @override
   String profileHelpFooterVersionWithNumber(String version) {
@@ -495,7 +520,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileLegalIntellectualPropertyPara1 =>
-      'Dungeons & Dragons 5e rules content (races, classes, spells, items...) comes from Open5e and the System Reference Document (SRD), under the Creative Commons Attribution 4.0 license (CC-BY 4.0) — see \"Credits & licenses\" for details. The rest of the application (code, design, the \"Nexus JDR\" brand) belongs to its publisher.';
+      'Part of the Dungeons & Dragons 5e rules content comes from the System Reference Document (SRD 5.1 and 5.2), under the Creative Commons Attribution 4.0 International license (CC BY 4.0); the rest of the game content is not from the SRD and is not covered by this license. Attribution statements and the changes made are listed in \"Credits & licenses\". The code, design and the \"Nexus JDR\" brand belong to the app\'s publisher.';
 
   @override
   String get profileLegalTerminationTitle => 'Termination';
@@ -512,7 +537,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'This notice is governed by French law.';
 
   @override
-  String get profileLegalLastUpdated => 'Last updated: September 25, 2026';
+  String get profileLegalLastUpdated => 'Last updated: November 25, 2026';
 
   @override
   String get profileNotificationsScreenTitle => 'NOTIFICATIONS';

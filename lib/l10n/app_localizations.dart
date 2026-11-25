@@ -476,23 +476,65 @@ abstract class AppLocalizations {
   /// **'Contenu de jeu'**
   String get profileCreditsGameContentTitle;
 
-  /// 1er paragraphe de la section "Contenu de jeu" de `profile_credits_screen.dart`.
+  /// 1er paragraphe de la section « Contenu de jeu » de `profile_credits_screen.dart` (licence étape 1, décision 79), avant les deux cadres d'attribution du SRD.
   ///
   /// In fr, this message translates to:
-  /// **'Le contenu de règles Donjons & Dragons 5e (races, classes, historiques, sorts, objets, monstres...) provient d\'Open5e et du System Reference Document (SRD 5.1/5.2) de Wizards of the Coast, sous licence Creative Commons Attribution 4.0 International (CC-BY 4.0).'**
+  /// **'Une partie du contenu de règles utilisé par Nexus JDR provient du System Reference Document (SRD), publié sous licence Creative Commons Attribution 4.0 International (CC BY 4.0). Voici les déclarations d\'attribution correspondantes et les modifications apportées.'**
   String get profileCreditsGameContentPara1;
 
-  /// 2e paragraphe de la section "Contenu de jeu" de `profile_credits_screen.dart`.
+  /// Préfixe en gras de la ligne « Modifié » d'un cadre d'attribution du SRD (`_SrdAttributionBox` de `profile_credits_screen.dart`), exigée par CC BY 4.0 (section 3(a)(1)(B)). Espace insécable avant les deux-points, espace finale conservée.
   ///
   /// In fr, this message translates to:
-  /// **'Donjons & Dragons, D&D et leurs logos sont des marques de Wizards of the Coast LLC. Wizards of the Coast n\'a ni produit, ni approuvé, ni autorisé cette application.'**
-  String get profileCreditsGameContentPara2;
+  /// **'Modifié : '**
+  String get profileCreditsModifiedPrefix;
 
-  /// Texte du bloc encadré `_LicenseNoticeBox` de `profile_credits_screen.dart`.
+  /// Libellé du cadre d'attribution du SRD 5.1 (`profile_credits_screen.dart`).
   ///
   /// In fr, this message translates to:
-  /// **'Ce produit inclut des éléments du System Reference Document 5.1 et 5.2, disponibles sur dndbeyond.com/srd et open5e.com, sous licence Creative Commons Attribution 4.0 International (creativecommons.org/licenses/by/4.0/legalcode).'**
-  String get profileCreditsLicenseNotice;
+  /// **'SRD 5.1 (règles 2014)'**
+  String get profileCreditsSrd51Label;
+
+  /// Déclaration d'attribution du SRD 5.1 en français : texte officiel de Wizards, recopié mot pour mot du contrat DeepCore `docs/api-v1/contrat-bestiaire-catalogue.md` l. 108-111 ; ne jamais traduire ni reformuler. L'anglais reprend la déclaration anglaise officielle (l. 115-117), pas une traduction de celle-ci.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce travail comprend la documentation tirée du Document de Référence du Système 5.1 (« SRD 5.1 ») par Wizards of the Coast LLC et disponible à l\'adresse https://dnd.wizards.com/fr/resources/systems-reference-document. Le SRD 5.1 est distribué en vertu de la licence Creative Commons Attribution 4.0 International disponible à l\'adresse https://creativecommons.org/licenses/by/4.0/legalcode.fr.'**
+  String get profileCreditsSrd51Attribution;
+
+  /// Ligne « Modifié » du cadre SRD 5.1 (modifications apportées, CC BY 4.0). À relire à chaque PR des étapes 2 et 3 de la licence (dette D258).
+  ///
+  /// In fr, this message translates to:
+  /// **'textes repris en tout ou en partie du SRD 5.1 français, ou traduits du SRD 5.1 anglais (traduction non officielle) et parfois résumés ; certains noms diffèrent de la traduction officielle ; poids et distances exprimés en kilogrammes et en mètres ; contenu réparti en champs et présentation adaptée à l\'application.'**
+  String get profileCreditsSrd51Modified;
+
+  /// Libellé du cadre d'attribution du SRD 5.2 : signale que la déclaration est en anglais.
+  ///
+  /// In fr, this message translates to:
+  /// **'SRD 5.2 (règles 2024, déclaration en anglais)'**
+  String get profileCreditsSrd52Label;
+
+  /// Déclaration d'attribution du SRD 5.2 : texte officiel de Wizards, recopié mot pour mot du contrat DeepCore `docs/api-v1/contrat-bestiaire-catalogue.md` l. 141-143 ; ne jamais traduire ni reformuler. Affichée en anglais telle quelle dans les deux langues (`locale: en` pour le lecteur d'écran, arbitrage 3.1 de la spec).
+  ///
+  /// In fr, this message translates to:
+  /// **'This work includes material from the System Reference Document 5.2 (“SRD 5.2”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.'**
+  String get profileCreditsSrd52Attribution;
+
+  /// Ligne « Modifié » du cadre SRD 5.2 (modifications apportées, CC BY 4.0). À relire à chaque PR des étapes 2 et 3 de la licence (dette D258).
+  ///
+  /// In fr, this message translates to:
+  /// **'traduit de l\'anglais en français (traduction non officielle), parfois résumé ; distances et poids convertis en mètres et en kilogrammes ; contenu réparti en champs et présentation adaptée à l\'application.'**
+  String get profileCreditsSrd52Modified;
+
+  /// PROVISOIRE (à valider par Matthias et par le conseil) : paragraphe sur le contenu de jeu hors SRD, sous les cadres d'attribution de `profile_credits_screen.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une partie du contenu de jeu de Nexus JDR ne fait pas partie du SRD (notamment de nombreux sorts, sous-classes, dons, historiques, races et options de classe). Ce contenu n\'est pas couvert par la licence Creative Commons Attribution 4.0 citée ci-dessus.'**
+  String get profileCreditsNonSrdContent;
+
+  /// PROVISOIRE (à valider par Matthias et par le conseil) : phrase de marque, dernier paragraphe de la section « Contenu de jeu » de `profile_credits_screen.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Donjons & Dragons et D&D sont des marques de Wizards of the Coast LLC. Nexus JDR n\'est ni affilié à Wizards of the Coast, ni approuvé par cette société.'**
+  String get profileCreditsGameContentPara2;
 
   /// Titre de la section "Polices" de `profile_credits_screen.dart`.
   ///
@@ -527,7 +569,7 @@ abstract class AppLocalizations {
   /// Date de dernière mise à jour en pied de `profile_credits_screen.dart`.
   ///
   /// In fr, this message translates to:
-  /// **'Dernière mise à jour : 14 octobre 2026'**
+  /// **'Dernière mise à jour : 25 novembre 2026'**
   String get profileCreditsLastUpdated;
 
   /// Titre du bandeau bois de `profile_delete_account_screen.dart`.
@@ -863,7 +905,7 @@ abstract class AppLocalizations {
   /// Note sous la section "À PROPOS" de `profile_help_screen.dart`.
   ///
   /// In fr, this message translates to:
-  /// **'Contenu D&D 5e sous licence Open5e / SRD. Voir les crédits complets pour le détail des sources.'**
+  /// **'Une partie du contenu de jeu provient du SRD (CC BY 4.0). Détail des sources et des attributions dans « Crédits & licences ».'**
   String get profileHelpAboutFooterNote;
 
   /// Pied de page de `profile_help_screen.dart` une fois `packageInfoProvider` résolu.
@@ -956,10 +998,10 @@ abstract class AppLocalizations {
   /// **'Propriété intellectuelle'**
   String get profileLegalIntellectualPropertyTitle;
 
-  /// Paragraphe de la section "Propriété intellectuelle".
+  /// Paragraphe de la section "Propriété intellectuelle". Fin PROVISOIRE (à partir de « ; le reste du contenu de jeu… », à valider par Matthias et par le conseil). « SRD 5.1 et 5.2 » sera complété quand le SRD 5.2.1 entrera dans Nexus (licence étape 2).
   ///
   /// In fr, this message translates to:
-  /// **'Le contenu de règles Donjons & Dragons 5e (races, classes, sorts, objets...) provient d\'Open5e et du System Reference Document (SRD), sous licence Creative Commons Attribution 4.0 (CC-BY 4.0) — voir « Crédits & licences » pour le détail. Le reste de l\'application (code, design, marque « Nexus JDR ») appartient à son éditeur.'**
+  /// **'Une partie du contenu de règles de Donjons & Dragons 5e provient du System Reference Document (SRD 5.1 et 5.2), sous licence Creative Commons Attribution 4.0 International (CC BY 4.0) ; le reste du contenu de jeu n\'est pas issu du SRD et n\'est pas couvert par cette licence. Les déclarations d\'attribution et les modifications apportées figurent dans « Crédits & licences ». Le code, le design et la marque « Nexus JDR » appartiennent à l\'éditeur de l\'application.'**
   String get profileLegalIntellectualPropertyPara1;
 
   /// Titre de la section "Résiliation" de `profile_legal_screen.dart`.
@@ -989,7 +1031,7 @@ abstract class AppLocalizations {
   /// Date de dernière mise à jour en pied de `profile_legal_screen.dart`.
   ///
   /// In fr, this message translates to:
-  /// **'Dernière mise à jour : 25 septembre 2026'**
+  /// **'Dernière mise à jour : 25 novembre 2026'**
   String get profileLegalLastUpdated;
 
   /// Titre du bandeau bois de `profile_notifications_screen.dart`.
