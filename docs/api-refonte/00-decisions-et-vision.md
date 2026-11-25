@@ -285,6 +285,18 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
     L'extrait ne garde que les objets 2024 (SRD 5.2) et les monstres. Ticket DeepCore : vérifier les textes des objets
     2014 face au SRD 5.1 et les remplacer par le texte du SRD si besoin, avec la bonne source (protège aussi Nexus).
 
+## Décisions du 25/11/2026 (licence des objets 2014, PR DeepCore #60)
+
+75. **Conversion des poids : 0,5 kg la livre**, comme le SRD 5.1 français, Nexus (capacité de charge) et les objets 2024 :
+    les 4 poids corrigés prennent les valeurs du SRD français (250 g, 500 g, 1 kg, 10 kg) ; un ticket à part aligne
+    tous les poids 2014 (aujourd'hui mélangés 0,45 et 0,5).
+76. **Torche** : compléter le texte du SRD 5.1 français par « Une torche brûle pendant 1 heure. », traduit du SRD 5.1
+    anglais, avec la mention « complété d'après le SRD 5.1 anglais » (CC BY 4.0 : source citée, modification signalée).
+77. **Noms des objets 2014** différents du SRD 5.1 français (36) : gardés pour l'instant (un renommage demanderait une PR
+    Nexus coordonnée, des armes étant reconnues par leur nom).
+78. **Armes naturelles** (6, hors SRD, sans texte) : gardées ; le risque de licence est dans les traits de race (ticket
+    d'audit).
+
 Choix du chef de projet (24/11, PR DeepCore #58) : noms anglais des 6 armes naturelles gardés (simples noms, hors SRD) ;
 coquille du SRD français (Méphite vaporeux) gardée par fidélité à la source ; initiative d'un monstre 2014 = modificateur
 de Dextérité.
