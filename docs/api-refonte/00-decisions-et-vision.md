@@ -297,6 +297,18 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
 78. **Armes naturelles** (6, hors SRD, sans texte) : gardées ; le risque de licence est dans les traits de race (ticket
     d'audit).
 
+## Décisions du 25/11/2026 (audit de licence de tout le contenu de jeu, `docs/licence/registre-licence-contenu.md`)
+
+79. **Étape 1, tout de suite** (sans impact sur les joueurs) : retirer les 157 textes anglais copiés mot pour mot des
+    livres (non affichés, mais téléchargeables sans compte) ; corriger les mentions de licence (écran Crédits de Nexus,
+    Bibliothèque) ; ajouter la migration manquante de `races.traits_2024` et `subraces.traits_2024` (colonnes présentes
+    en production, absentes de l'historique des migrations).
+80. **Étape 2** : les éléments **présents au SRD** dont le texte a été rédigé d'après un livre ou repris d'aidedd.org
+    (dont 420 descriptions de sorts) reçoivent le **texte officiel du SRD français** (5.1 ou 5.2.1), **sans renommer**
+    (Nexus reconnaît des éléments par leur nom), source corrigée ; une PR par type, vérifiée par `regles-dnd`.
+81. **Étape 3** : le contenu **hors SRD** (1 307 éléments, dont une partie utilisée par 8 des 14 personnages) ne bouge
+    pas avant l'avis d'un **conseil** ; le chef de projet prépare le dossier ; jamais de suppression d'une ligne utilisée.
+
 Choix du chef de projet (24/11, PR DeepCore #58) : noms anglais des 6 armes naturelles gardés (simples noms, hors SRD) ;
 coquille du SRD français (Méphite vaporeux) gardée par fidélité à la source ; initiative d'un monstre 2014 = modificateur
 de Dextérité.
