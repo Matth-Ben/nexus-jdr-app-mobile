@@ -560,7 +560,10 @@ class _SpellCheckRow extends StatelessWidget {
     // (`spells_step_screen.dart`) — jamais pour un sort déjà coché, qui
     // reste toujours dé-cochable.
     final enabled = !grantedBySubclass && (checked || canCheck);
-    final dice = SpellDamageDiceExtractor.extract(spell.description);
+    final dice = SpellDamageDiceExtractor.extract(
+      name: spell.name,
+      description: spell.description,
+    );
 
     final tile = CheckableOptionTile(
       title: spell.name,
