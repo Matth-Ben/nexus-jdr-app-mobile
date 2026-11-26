@@ -308,7 +308,7 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
     (Nexus reconnaît des éléments par leur nom), source corrigée ; une PR par type, vérifiée par `regles-dnd`.
 81. **Étape 3** : le contenu **hors SRD** (1 307 éléments, dont une partie utilisée par 8 des 14 personnages) ne bouge
     pas avant l'avis d'un **conseil** ; le chef de projet prépare le dossier ; jamais de suppression d'une ligne utilisée.
-82. **Le dépôt DeepCore (`Matth-Ben/markdown-editor`) est privé** depuis le 25/11/2026 : les 157 textes anglais retirés
+82. **Le dépôt DeepCore (`Matth-Ben/markdown-editor`, renommé `Matth-Ben/deepcore` le 26/11/2026) est privé** depuis le 25/11/2026 : les 157 textes anglais retirés
     de la base (PR #61) restent dans une migration publiée et dans l'historique Git. Pas de purge d'historique. Si Florian
     doit lire les contrats d'API de DeepCore, l'ajouter comme collaborateur.
 83. **Mentions de licence de Nexus** (PR #310, mergée en squash `65cad41`) : les trois textes provisoires de

@@ -138,7 +138,7 @@ de nuisible en leur absence (il échoue proprement).
       "Environment secrets", pas "Environment variables"** — piège qui a
       fait échouer silencieusement plusieurs essais, voir note ci-dessous).
 - [x] **Pipeline de release Android testé de bout en bout** : le tag `v1.0.0`
-      a produit avec succès une [Release GitHub](https://github.com/Matth-Ben/nexus-jdr-app-mobile/releases/tag/v1.0.0)
+      a produit avec succès une [Release GitHub](https://github.com/Matth-Ben/nexus-mobile/releases/tag/v1.0.0)
       avec un App Bundle signé (59,8 Mo) en pièce jointe.
 - [ ] Compte développeur Google Play pas encore créé.
 - [ ] Fiche store (icône, captures, description, politique de
