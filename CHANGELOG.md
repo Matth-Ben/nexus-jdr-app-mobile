@@ -31,6 +31,25 @@ dans la Play Console (« Notes de version », 500 caractères max, balise
 
 ## [Non publié]
 
+_Rien pour l'instant._
+
+---
+
+## [1.0.10] — 2026-11-26 (build 11)
+
+### Notes de version (stores)
+
+```
+<fr-FR>
+Butin de groupe :
+• Touche un objet pour voir sa fiche, le modifier, te l'attribuer ou le retirer
+• Ajout comme dans l'inventaire : catalogue, objets personnalisés avec arme ou armure
+• Monnaie du butin modifiable : ajouter, retirer, convertir
+Récompense :
+• Même formulaire d'objet personnalisé que l'inventaire
+</fr-FR>
+```
+
 ### Ajouté
 - Butin de groupe : toucher un objet ouvre sa fiche (provenance, quantité,
   détails et description), avec « S'attribuer », « Modifier » et
@@ -56,6 +75,13 @@ dans la Play Console (« Notes de version », 500 caractères max, balise
   modifie plus (message affiché) ; si un autre membre vient de modifier ou
   d'attribuer le même objet, rien n'est écrasé et le butin se recharge
   (#314).
+
+### Côté serveur (DeepCore, visible dans l'app)
+- Garde-fou du butin de groupe, appliqué en production : une ancienne
+  version de l'app (1.0.9 ou avant) ne peut plus effacer ni écraser les
+  objets ajoutés ou modifiés par la 1.0.10 ; l'écriture est refusée sans
+  rien changer (DeepCore #69). La 1.0.10 sera la version minimale exigée
+  une fois publiée (mise à jour forcée, décision 92).
 
 ---
 
