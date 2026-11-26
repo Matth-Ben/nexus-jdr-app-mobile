@@ -17,10 +17,15 @@ name: Integration tests
 # `workflow_dispatch` pour pouvoir le relancer manuellement (ex. juste après
 # un merge touchant au dépôt web).
 #
-# Dépôt web : `Matth-Ben/markdown-editor` (public), qui héberge l'historique
-# unique de migrations SQL partagé avec l'app web "Histoires" — voir
-# docs/cahier-des-charges/13-depot-versioning-publication.md. Ce dépôt
+# DeepCore (ex « dépôt web ») : `Matth-Ben/deepcore` (ex
+# `markdown-editor`, renommé et passé en PRIVÉ le 26/11/2026), qui héberge
+# l'historique unique de migrations SQL partagé avec l'app web "Histoires" —
+# voir docs/cahier-des-charges/13-depot-versioning-publication.md. Ce dépôt
 # mobile ne contient et ne doit jamais contenir de fichier de migration.
+# Récupéré avec une clé de déploiement SSH en LECTURE SEULE posée sur
+# `Matth-Ben/deepcore`, dont la partie privée est le secret de dépôt (pas
+# d'environnement) `DEEPCORE_DEPLOY_KEY` de ce dépôt : sans lui, le job
+# échoue dès cette récupération (« repository not found »).
 #
 # N'écrit jamais sur un projet Supabase distant : uniquement un stack local
 # éphémère, détruit avec le runner à la fin du job.
@@ -40,10 +45,16 @@ jobs:
       - name: Checkout du dépôt mobile (ce dépôt)
         uses: actions/checkout@v4
 
-      - name: Checkout du dépôt web (historique de migrations partagé)
+      # `persist-credentials: false` : la clé n'est utile qu'à ce clone. Sans
+      # cette option, actions/checkout la laisse configurée dans `web/` pour
+      # les étapes suivantes, dont `pnpm install`, qui exécute les scripts
+      # d'installation de paquets tiers dans ce même dossier.
+      - name: Checkout de DeepCore (historique de migrations partagé, dépôt privé)
         uses: actions/checkout@v4
         with:
-          repository: Matth-Ben/markdown-editor
+          repository: Matth-Ben/deepcore
+          ssh-key: ${{ secrets.DEEPCORE_DEPLOY_KEY }}
+          persist-credentials: false
           path: web
 
       # pnpm/action-setup avant setup-node : actions/setup-node@v4 avec
