@@ -79,9 +79,11 @@ Récompense :
 ### Côté serveur (DeepCore, visible dans l'app)
 - Garde-fou du butin de groupe, appliqué en production : une ancienne
   version de l'app (1.0.9 ou avant) ne peut plus effacer ni écraser les
-  objets ajoutés ou modifiés par la 1.0.10 ; l'écriture est refusée sans
-  rien changer (DeepCore #69). La 1.0.10 sera la version minimale exigée
-  une fois publiée (mise à jour forcée, décision 92).
+  objets ajoutés ou modifiés par la 1.0.10. Elle peut encore s'attribuer
+  un objet (en partie ou en totalité) ou ajouter seulement de la monnaie,
+  sans rien effacer ; tout le reste est refusé avec un message qui invite
+  à mettre l'app à jour (DeepCore #69). La 1.0.10 sera la version minimale
+  exigée une fois publiée (mise à jour forcée, décision 92).
 
 ---
 
