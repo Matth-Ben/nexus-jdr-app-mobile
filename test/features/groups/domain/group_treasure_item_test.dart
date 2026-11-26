@@ -142,18 +142,61 @@ void main() {
       expect(kept.enrichment?.requiresAttunement, isTrue);
     });
 
-    test('valeurs custom_* hors ensemble ou de mauvais type ignorées', () {
-      final item = GroupTreasureItem.fromJson(const {
+    test('valeurs custom_* hors ensemble (ex. futur type d\'objet) : ignorées '
+        'à l\'affichage, conservées telles quelles à la réécriture', () {
+      const json = {
+        'entry_id': 'e-4',
         'custom_name': 'Truc',
         'display_name': 'Truc',
         'quantity': 1,
         'custom_kind': 'dragon',
+        'custom_weapon_range': 'orbitale',
         'custom_magic_bonus': 9,
         'custom_ac_base': 'quinze',
         'custom_properties': ['ok', 3],
-      });
+      };
+      final item = GroupTreasureItem.fromJson(json);
       expect(item.enrichment, isNull);
-      expect(item.customProperties, ['ok']);
+      expect(item.customProperties, isEmpty);
+
+      expect(item.toJson(), json);
+      // Écriture qui ne touche que la quantité : valeurs brutes gardées.
+      expect(item.copyWith(quantity: 3).toJson(), {...json, 'quantity': 3});
+      // Une modification complète (formulaire) ne garde que les clés
+      // inconnues, jamais ces valeurs connues ressaisies.
+      expect(item.unknownFields, isEmpty);
+    });
+
+    test('valeurs d\'un type inattendu : aucune exception, ignorées à '
+        'l\'affichage, conservées telles quelles à la réécriture', () {
+      const json = {
+        'entry_id': 42,
+        'item_id': 'sept',
+        'custom_name': 'Truc',
+        'display_name': 7,
+        'quantity': '2',
+        'category': ['arme'],
+        'weight': 'lourd',
+        'custom_description': 12,
+        'custom_requires_attunement': 'oui',
+        'custom_weight': -3,
+      };
+      late GroupTreasureItem item;
+      expect(() => item = GroupTreasureItem.fromJson(json), returnsNormally);
+      expect(item.entryId, isNull);
+      expect(item.itemId, isNull);
+      expect(item.displayName, '');
+      expect(item.quantity, 0);
+      expect(item.category, isNull);
+      expect(item.weight, isNull);
+      expect(item.customDescription, isNull);
+      expect(item.enrichment, isNull);
+
+      expect(item.toJson(), json);
+      // Un entry_id attribué par l'app remplace la valeur brute invalide.
+      expect(item.copyWith(entryId: 'e-5').toJson()['entry_id'], 'e-5');
+      // Une vraie quantité donnée par l'app remplace aussi la valeur brute.
+      expect(item.copyWith(quantity: 1).toJson()['quantity'], 1);
     });
 
     test('clé inconnue (version plus récente) conservée à la réécriture', () {

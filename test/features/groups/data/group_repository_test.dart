@@ -1509,6 +1509,72 @@ void main() {
       }
     });
 
+    test('une entrée d\'un type inattendu ne fait pas échouer le chargement '
+        'du butin, et sa valeur brute est réécrite telle quelle', () async {
+      const odd = {
+        'entry_id': 'odd',
+        'custom_name': 'Truc',
+        'display_name': 7,
+        'quantity': '2',
+        'custom_kind': 'dragon',
+      };
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        _buildFakeClient(
+          onRequest: requests.add,
+          responses: {
+            'group_treasure': [
+              {
+                'group_id': groupId,
+                'items': [odd, rope.toJson()],
+              },
+            ],
+          },
+        ),
+      );
+
+      final treasure = await repository.fetchGroupTreasure(groupId);
+      expect(treasure.items, hasLength(2));
+      expect(treasure.items.first.displayName, '');
+
+      await repository.removeTreasureItem(groupId: groupId, expected: rope);
+      expect(writtenItems(requests), [odd]);
+    });
+
+    test('aucune ligne modifiée (membre retiré du groupe entre la lecture et '
+        'l\'écriture) : erreur, jamais un faux succès', () async {
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'owner-1',
+        tableRows: {
+          'group_treasure': [
+            {
+              'items': [rope.toJson()],
+            },
+          ],
+        },
+        respond: (request) => request.method == 'PATCH'
+            ? http.Response(
+                '[]',
+                200,
+                request: request,
+                headers: {'content-type': 'application/json'},
+              )
+            : null,
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await expectLater(
+        repository.removeTreasureItem(groupId: groupId, expected: rope),
+        throwsA(
+          isA<GroupFailure>().having(
+            (f) => f.code,
+            'code',
+            GroupErrorCode.notMember,
+          ),
+        ),
+      );
+    });
+
     test('modifier ou retirer une entrée changée entre-temps : rien n\'est '
         'écrit, treasureStale', () async {
       final requests = <http.Request>[];

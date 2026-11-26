@@ -179,8 +179,21 @@ class GroupTreasureItem {
   /// objet personnalisé sans type.
   final CustomItemEnrichment? enrichment;
 
-  /// Clés jsonb inconnues de cette version, réécrites telles quelles.
+  /// Valeurs jsonb réécrites telles quelles : clés inconnues de cette version
+  /// **et** valeurs d'une clé connue d'un type inattendu ou hors de leur
+  /// ensemble (ex. futur type d'objet), ignorées à l'affichage (voir
+  /// [fromJson]). Une telle valeur brute reste écrite tant que l'app ne donne
+  /// pas une vraie valeur à ce champ.
   final Map<String, dynamic> extra;
+
+  /// Seulement les clés inconnues de [extra] : ce qu'une modification
+  /// complète de l'objet (formulaire) garde, les champs connus étant alors
+  /// tous ressaisis.
+  Map<String, dynamic> get unknownFields => {
+    for (final entry in extra.entries)
+      if (!GroupTreasureItemKeys.known.contains(entry.key))
+        entry.key: entry.value,
+  };
 
   bool get isCustom => itemId == null;
 
@@ -210,14 +223,12 @@ class GroupTreasureItem {
 
   Map<String, dynamic> _toJson({required bool withIdentity}) {
     final e = enrichment;
-    return {
-      ...extra,
-      if (withIdentity && entryId != null)
-        GroupTreasureItemKeys.entryId: entryId,
+    final known = <String, dynamic>{
+      GroupTreasureItemKeys.entryId: ?entryId,
       GroupTreasureItemKeys.itemId: ?itemId,
       GroupTreasureItemKeys.customName: ?customName,
       GroupTreasureItemKeys.displayName: displayName,
-      if (withIdentity) GroupTreasureItemKeys.quantity: quantity,
+      GroupTreasureItemKeys.quantity: quantity,
       GroupTreasureItemKeys.category: ?category,
       GroupTreasureItemKeys.weight: ?weight,
       GroupTreasureItemKeys.customDescription: ?customDescription,
@@ -238,38 +249,76 @@ class GroupTreasureItem {
         GroupTreasureItemKeys.customArmorCategory: ?e.armorCategory,
       },
     };
+    final json = <String, dynamic>{
+      ...extra,
+      for (final entry in known.entries)
+        if (!_keepsRawValue(entry.key, entry.value)) entry.key: entry.value,
+    };
+    if (!withIdentity) {
+      json
+        ..remove(GroupTreasureItemKeys.entryId)
+        ..remove(GroupTreasureItemKeys.quantity);
+    }
+    return json;
   }
+
+  /// Les champs toujours écrits (nom affiché, quantité) gardent leur valeur
+  /// brute conservée ([extra]) tant qu'ils sont à leur valeur neutre ; les
+  /// autres champs neutres ne sont pas écrits, la valeur brute reste donc.
+  bool _keepsRawValue(String key, Object? value) =>
+      extra.containsKey(key) &&
+      ((key == GroupTreasureItemKeys.displayName && value == '') ||
+          (key == GroupTreasureItemKeys.quantity && value == 0));
 
   String _canonical({required bool withIdentity}) =>
       jsonEncode(_toJson(withIdentity: withIdentity));
 
-  /// Lecture tolérante d'une entrée jsonb : une clé absente ou d'un type
-  /// inattendu donne la valeur neutre (jamais d'exception), une valeur
-  /// `custom_*` hors de son ensemble est ignorée.
+  /// Lecture tolérante d'une entrée jsonb, jamais d'exception : une clé
+  /// absente donne la valeur neutre ; une valeur d'un type inattendu, ou une
+  /// valeur `custom_*` hors de son ensemble (ex. futur type d'objet), est
+  /// ignorée pour l'affichage mais **conservée telle quelle** dans [extra]
+  /// pour la réécriture, comme une clé inconnue.
   static GroupTreasureItem fromJson(Map<String, dynamic> json) {
-    String? text(String key) {
-      final value = json[key];
-      return value is String && value.isNotEmpty ? value : null;
+    final extra = <String, dynamic>{
+      for (final entry in json.entries)
+        if (!GroupTreasureItemKeys.known.contains(entry.key))
+          entry.key: entry.value,
+    };
+
+    T? read<T extends Object>(String key, T? Function(Object raw) parse) {
+      final raw = json[key];
+      if (raw == null) return null;
+      final value = parse(raw);
+      if (value == null) extra[key] = raw;
+      return value;
     }
 
-    String? oneOf(String key, Set<String> allowed) {
-      final value = text(key);
-      return value != null && allowed.contains(value) ? value : null;
-    }
+    String? text(String key) => read(key, (raw) => raw is String ? raw : null);
+    String? nonEmpty(String? value) =>
+        value == null || value.isEmpty ? null : value;
+    String? oneOf(String key, Set<String> allowed) =>
+        read(key, (raw) => raw is String && allowed.contains(raw) ? raw : null);
+    int? whole(String key) =>
+        read(key, (raw) => raw is num ? raw.toInt() : null);
 
-    final rawProperties = json[GroupTreasureItemKeys.customProperties];
-    final magicBonus = json[GroupTreasureItemKeys.customMagicBonus];
-    final acBase = json[GroupTreasureItemKeys.customAcBase];
-    final customWeight = json[GroupTreasureItemKeys.customWeight];
-    final weight = json[GroupTreasureItemKeys.weight];
     final enrichment = CustomItemEnrichment(
       kind: oneOf(GroupTreasureItemKeys.customKind, CustomItemKinds.all),
-      magicBonus: isValidCustomMagicBonus(magicBonus) ? magicBonus as int : 0,
-      weight: isValidCustomWeight(customWeight)
-          ? (customWeight as num).toDouble()
-          : null,
+      magicBonus:
+          read(
+            GroupTreasureItemKeys.customMagicBonus,
+            (raw) => isValidCustomMagicBonus(raw) ? raw as int : null,
+          ) ??
+          0,
+      weight: read(
+        GroupTreasureItemKeys.customWeight,
+        (raw) => isValidCustomWeight(raw) ? (raw as num).toDouble() : null,
+      ),
       requiresAttunement:
-          json[GroupTreasureItemKeys.customRequiresAttunement] == true,
+          read(
+            GroupTreasureItemKeys.customRequiresAttunement,
+            (raw) => raw is bool ? raw : null,
+          ) ??
+          false,
       weaponCategory: oneOf(
         GroupTreasureItemKeys.customWeaponCategory,
         CustomWeaponCategories.all,
@@ -278,7 +327,10 @@ class GroupTreasureItem {
         GroupTreasureItemKeys.customWeaponRange,
         CustomWeaponRanges.all,
       ),
-      acBase: isValidCustomAcBase(acBase) ? acBase as int : null,
+      acBase: read(
+        GroupTreasureItemKeys.customAcBase,
+        (raw) => isValidCustomAcBase(raw) ? raw as int : null,
+      ),
       armorCategory: oneOf(
         GroupTreasureItemKeys.customArmorCategory,
         CustomArmorCategories.all,
@@ -286,25 +338,33 @@ class GroupTreasureItem {
     );
 
     return GroupTreasureItem(
-      entryId: text(GroupTreasureItemKeys.entryId),
-      itemId: (json[GroupTreasureItemKeys.itemId] as num?)?.toInt(),
-      customName: json[GroupTreasureItemKeys.customName] as String?,
-      displayName: (json[GroupTreasureItemKeys.displayName] as String?) ?? '',
-      quantity: (json[GroupTreasureItemKeys.quantity] as num?)?.toInt() ?? 0,
-      category: text(GroupTreasureItemKeys.category),
-      weight: weight is num ? weight.toDouble() : null,
-      customDescription: text(GroupTreasureItemKeys.customDescription),
-      customDamageDice: text(GroupTreasureItemKeys.customDamageDice),
-      customDamageType: text(GroupTreasureItemKeys.customDamageType),
-      customProperties: rawProperties is List
-          ? rawProperties.whereType<String>().toList()
-          : const [],
+      entryId: nonEmpty(text(GroupTreasureItemKeys.entryId)),
+      itemId: whole(GroupTreasureItemKeys.itemId),
+      customName: text(GroupTreasureItemKeys.customName),
+      displayName: text(GroupTreasureItemKeys.displayName) ?? '',
+      quantity: whole(GroupTreasureItemKeys.quantity) ?? 0,
+      category: nonEmpty(text(GroupTreasureItemKeys.category)),
+      weight: read(
+        GroupTreasureItemKeys.weight,
+        (raw) => raw is num ? raw.toDouble() : null,
+      ),
+      customDescription: nonEmpty(
+        text(GroupTreasureItemKeys.customDescription),
+      ),
+      customDamageDice: nonEmpty(text(GroupTreasureItemKeys.customDamageDice)),
+      customDamageType: nonEmpty(text(GroupTreasureItemKeys.customDamageType)),
+      // Liste mêlant d'autres types : ignorée en entier pour l'affichage,
+      // conservée telle quelle.
+      customProperties:
+          read(
+            GroupTreasureItemKeys.customProperties,
+            (raw) => raw is List && raw.every((value) => value is String)
+                ? List<String>.from(raw)
+                : null,
+          ) ??
+          const [],
       enrichment: enrichment.isEmpty ? null : enrichment,
-      extra: {
-        for (final entry in json.entries)
-          if (!GroupTreasureItemKeys.known.contains(entry.key))
-            entry.key: entry.value,
-      },
+      extra: extra,
     );
   }
 

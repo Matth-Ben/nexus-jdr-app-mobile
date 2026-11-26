@@ -303,7 +303,7 @@ abstract class GroupRepository {
 
   /// Remplace le titre/corps d'une entrée déjà enregistrée — mode édition de
   /// [addGroupNoteEntry]. [title] `null` efface le titre existant (texte
-  /// intégral envoyé, jamais un diff — même principe que [addToTreasure]).
+  /// intégral envoyé, jamais un diff — même principe que [addTreasureItems]).
   Future<void> updateGroupNoteEntry({
     required String entryId,
     String? title,
@@ -841,15 +841,27 @@ class SupabaseGroupRepository implements GroupRepository {
     return _parseItems(row?['items']);
   }
 
+  /// Écrit `items` et vérifie qu'une ligne a bien été modifiée : sans ligne
+  /// renvoyée (membre retiré du groupe entre la lecture et l'écriture, RLS,
+  /// ou groupe dissous), rien n'a été écrit et une [GroupFailure] de code
+  /// [GroupErrorCode.notMember] est levée plutôt qu'un faux succès.
   Future<void> _writeTreasureItems(
     String groupId,
     List<GroupTreasureItem> items,
   ) async {
-    await _client
+    final rows = await _client
         .from('group_treasure')
         .update({'items': items.map((item) => item.toJson()).toList()})
-        .eq('group_id', groupId);
+        .eq('group_id', groupId)
+        .select('group_id');
+    if (rows.isEmpty) throw _treasureNotWritten;
   }
+
+  static const GroupFailure _treasureNotWritten = GroupFailure(
+    "Le butin n'a pas été modifié : tu ne fais peut-être plus partie de ce "
+    'groupe.',
+    code: GroupErrorCode.notMember,
+  );
 
   static const GroupFailure _treasureStale = GroupFailure(
     'Le butin a été modifié entre-temps par un autre membre.',

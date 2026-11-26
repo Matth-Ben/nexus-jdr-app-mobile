@@ -446,7 +446,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         damageType: result.damageType,
         properties: result.properties,
         enrichment: result.enrichment,
-        extra: item.extra,
+        extra: item.unknownFields,
       );
     } else {
       final quantity = await showItemQuantitySheet(
