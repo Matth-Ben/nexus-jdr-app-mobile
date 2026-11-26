@@ -345,6 +345,12 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
     attribué à un personnage. **L'ajout et la modification** d'un objet du butin reprennent **le même système que l'inventaire**
     (Matthias : « je ne comprend pas pourquoi les 2 sont différents ») : mêmes écrans et même formulaire, seule la
     destination change.
+92. **Butin : protection contre les versions mélangées** (26/11/2026) : une écriture du butin par Nexus 1.0.9 effacerait
+    les nouveaux champs (identifiant `entry_id`, description, détails) de **tous** les objets. Garde-fou **DeepCore**
+    (la base refuse une écriture de `group_treasure.items` qui retirerait `entry_id` à des objets qui en ont déjà un ;
+    une v1.0.9 reçoit une erreur au lieu d'effacer), appliqué **avant** la publication de la v1.0.10, **plus mise à jour
+    forcée** (`app_versions.min_supported_version` = 1.0.10 à la publication). Choix du chef de projet : le butin affiche
+    toujours ses 5 tuiles de monnaie (sinon impossible d'y ajouter du platine ou de l'électrum).
 
 Choix du chef de projet (24/11, PR DeepCore #58) : noms anglais des 6 armes naturelles gardés (simples noms, hors SRD) ;
 coquille du SRD français (Méphite vaporeux) gardée par fidélité à la source ; initiative d'un monstre 2014 = modificateur
