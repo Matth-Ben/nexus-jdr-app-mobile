@@ -117,16 +117,24 @@ temps `supabase db reset` dans le dépôt web pour repartir d'une base propre.
 ## CI
 
 Branché depuis la PR #89 (D18) : `.github/workflows/integration-tests.yml`
-automatise exactement cette séquence — checkout croisé de ce dépôt et du
-dépôt web (`Matth-Ben/markdown-editor`), installation de la CLI Supabase du
-dépôt web, `supabase start` puis `supabase db reset`, génération de
-`config/integration.json`, puis `flutter test test_integration`. Déclenché
-par `schedule` (quotidien, nuit Europe) et `workflow_dispatch` (relance
-manuelle) — volontairement pas sur chaque PR/push, ce job étant plus lourd
-et plus lent qu'un `flutter test` classique.
+automatise exactement cette séquence — checkout croisé de ce dépôt et de
+DeepCore (`Matth-Ben/deepcore`, ex `markdown-editor`), installation de la
+CLI Supabase de DeepCore, `supabase start` puis `supabase db reset`,
+génération de `config/integration.json`, puis `flutter test
+test_integration`. Déclenché par `schedule` (quotidien, nuit Europe) et
+`workflow_dispatch` (relance manuelle) — volontairement pas sur chaque
+PR/push, ce job étant plus lourd et plus lent qu'un `flutter test` classique.
 
-**Dépendance externe** : ce workflow échoue tant que la PR #21 du dépôt web
-(`fix/migration-history-gaps`, corrige une colonne `is_incomplete` manquante
-dans l'historique des migrations) n'est pas fusionnée dans `main` du dépôt
-web — un `supabase db reset` depuis zéro échoue sinon dès la migration
-`20260921090000_fix_spells_metadata_add_2024_spells.sql`.
+**Prérequis** : DeepCore est privé depuis le 26/11/2026. Le checkout utilise
+une clé de déploiement SSH en lecture seule posée sur `Matth-Ben/deepcore`,
+dont la partie privée est le secret de dépôt `DEEPCORE_DEPLOY_KEY` de ce
+dépôt (pas un secret d'environnement).
+
+**Base neuve ≠ production** : la pile éphémère de la CI ne donne plus aucun
+privilège par défaut sur les nouvelles tables (`auto_expose_new_tables`
+non défini dans `supabase/config.toml` de DeepCore), contrairement à la
+production. Une table de DeepCore créée sans `grant … to authenticated`
+explicite y répond donc « permission denied », alors qu'elle fonctionne en
+production et sur une pile locale qui a gardé ces privilèges par défaut
+(vérifiable avec `select * from pg_default_acl`). C'est un défaut de la
+migration DeepCore, à corriger là-bas, pas dans ces tests.

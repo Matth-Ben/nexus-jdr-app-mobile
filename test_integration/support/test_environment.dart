@@ -112,9 +112,9 @@ class ReferenceContent {
   /// `spell_classes` (lanceuse de sorts, voir `domain/spellcasting_rules.dart`),
   /// et un sort accessible à cette classe, pour
   /// `SupabaseCharacterCreationRepository.fetchSpellCatalog`. Distinct de
-  /// [classId] : ce dernier est simplement la première classe de la table
-  /// `classes`, pas nécessairement lanceuse de sorts (c'est même le cas dans
-  /// le contenu peuplé actuel, `classes.id = 1` est Barbare).
+  /// [classId] : ce dernier est simplement la classe de plus petit `id` de la
+  /// table `classes`, pas nécessairement lanceuse de sorts (c'est même le cas
+  /// dans le contenu peuplé actuel, `classes.id = 1` est Barbare).
   final Object spellcastingClassId;
   final Object spellId;
   final String spellName;
@@ -131,11 +131,12 @@ class ReferenceContent {
   final String alignmentName;
 }
 
-/// Récupère [ReferenceContent] en lisant la première race et la première
-/// classe disponibles. Échoue explicitement (plutôt que de laisser passer un
-/// test qui ne teste plus rien) si ces tables ou leurs traductions sont
-/// vides : ça signifie que les migrations/seeds du dépôt web n'ont pas été
-/// appliqués (`supabase db reset`).
+/// Récupère [ReferenceContent] en lisant la race, la classe, l'historique,
+/// l'outil, la langue et l'alignement de plus petit `id`. Échoue
+/// explicitement (plutôt que de laisser passer un test qui ne teste plus
+/// rien) si ces tables ou leurs traductions sont vides : ça signifie que les
+/// migrations/seeds du dépôt web n'ont pas été appliqués
+/// (`supabase db reset`).
 Future<ReferenceContent> fetchReferenceContent(SupabaseClient client) async {
   final race = await _fetchFirstTranslatedName(
     client,
@@ -273,7 +274,19 @@ Future<(Object, String)> _fetchFirstTranslatedName(
   required String table,
   required String entityType,
 }) async {
-  final row = await client.from(table).select('id').limit(1).maybeSingle();
+  // Plus petit `id`, explicitement : sans `order`, Postgres renvoie la
+  // première ligne dans l'ordre PHYSIQUE de la table, qui change dès qu'une
+  // migration de DeepCore réécrit une ligne par un `UPDATE` (constaté le
+  // 26/11/2026 : `classes` renvoyait le Clerc, id 3, et plus le Barbare,
+  // id 1, dont dépendent les tests « classe non lanceuse de sorts »).
+  // `ascending: true` explicite : le défaut de `order` du package postgrest
+  // est décroissant.
+  final row = await client
+      .from(table)
+      .select('id')
+      .order('id', ascending: true)
+      .limit(1)
+      .maybeSingle();
   if (row == null) {
     throw StateError(
       "Table '$table' vide : les migrations/seeds du dépôt web ont-elles "
