@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/cache/app_database.dart';
 import 'package:personnages/core/cache/reference_data_cache.dart';
+import 'package:personnages/core/utils/french_text_normalizer.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
@@ -55,18 +56,48 @@ void main() {
       },
     );
 
-    test('fetchRaceCatalog retourne races/sous-races triées par id croissant '
-        '(`.order(\'id\', ascending: true)` — le défaut du package postgrest '
-        '2.9.1 est `ascending: false`, voir la note de '
-        'SupabaseCharacterCreationRepository.fetchRaceCatalog)', () async {
+    // Ancienne attente : races et sous-races triées par id croissant. Périmée
+    // depuis le 03/10/2026 (6c229fa puis f279900, retour utilisateur) :
+    // `_mapRaceCatalogPayload` retrie le résultat de la requête, races de
+    // base (Manuel des Joueurs) d'abord puis alphabétique français au sein de
+    // chaque groupe, sous-races par race puis alphabétique. L'ordre `id` de
+    // la requête ne sert plus qu'au déterminisme du cache, il n'est plus
+    // observable ici.
+    test('fetchRaceCatalog retourne les races de base avant les races '
+        'd\'extension, puis par ordre alphabétique français dans chaque '
+        'groupe, et les sous-races par race puis par nom', () async {
       final repository = SupabaseCharacterCreationRepository(client, cache);
 
       final catalog = await repository.fetchRaceCatalog();
 
-      final raceIds = catalog.races.map((r) => r.id).toList();
-      expect(raceIds, List<int>.from(raceIds)..sort());
-      final subraceIds = catalog.subraces.map((s) => s.id).toList();
-      expect(subraceIds, List<int>.from(subraceIds)..sort());
+      expect(catalog.races, isNotEmpty);
+      for (var i = 1; i < catalog.races.length; i++) {
+        final previous = catalog.races[i - 1];
+        final current = catalog.races[i];
+        final byGroup = (previous.isCoreSource ? 0 : 1).compareTo(
+          current.isCoreSource ? 0 : 1,
+        );
+        expect(
+          byGroup < 0 ||
+              (byGroup == 0 &&
+                  FrenchTextNormalizer.compare(previous.name, current.name) <=
+                      0),
+          isTrue,
+          reason: '« ${previous.name} » placée avant « ${current.name} »',
+        );
+      }
+      for (var i = 1; i < catalog.subraces.length; i++) {
+        final previous = catalog.subraces[i - 1];
+        final current = catalog.subraces[i];
+        expect(
+          previous.raceId < current.raceId ||
+              (previous.raceId == current.raceId &&
+                  FrenchTextNormalizer.compare(previous.name, current.name) <=
+                      0),
+          isTrue,
+          reason: '« ${previous.name} » placée avant « ${current.name} »',
+        );
+      }
     });
 
     test('fetchClassCatalog résout le nom et la description de classe via '
@@ -207,36 +238,50 @@ void main() {
       expect(skill.abilityId, isNotEmpty);
     });
 
+    // Ancienne attente : les six catalogues triés par id croissant. Périmée
+    // pour les classes, historiques, outils et langues depuis le 03/10/2026
+    // (6c229fa, « tri alphabétique français normalisé des catalogues ») :
+    // leur `_map…Payload` retrie par `FrenchTextNormalizer.compare` sur le
+    // nom. Objets et compétences ne sont pas retriés : ils gardent l'ordre de
+    // la requête, donc le garde-fou d'origine (`ascending: true` explicite,
+    // le défaut du package postgrest étant décroissant) reste vérifié pour
+    // eux.
     test('fetchClassCatalog/fetchBackgroundCatalog/fetchToolCatalog/'
-        'fetchLanguageCatalog/fetchItemCatalog/fetchSkillCatalog retournent '
-        'chacun leurs lignes triées par id croissant (même garde-fou que '
-        'fetchRaceCatalog ci-dessus contre le défaut `ascending: false` du '
-        'package postgrest 2.9.1)', () async {
+        'fetchLanguageCatalog retournent leurs lignes par ordre alphabétique '
+        'français, fetchItemCatalog/fetchSkillCatalog par id croissant (défaut '
+        '`ascending: false` du package postgrest)', () async {
       final repository = SupabaseCharacterCreationRepository(client, cache);
 
       Iterable<int> sortedCopy(Iterable<int> ids) =>
           List<int>.from(ids)..sort();
+      // Paire par paire plutôt qu'une copie triée : `List.sort` n'est pas
+      // stable, deux noms égaux une fois normalisés pourraient y être
+      // permutés sans que l'ordre renvoyé soit faux.
+      void expectAlphabetical(String catalog, List<String> names) {
+        expect(names, isNotEmpty, reason: '$catalog vide');
+        for (var i = 1; i < names.length; i++) {
+          expect(
+            FrenchTextNormalizer.compare(names[i - 1], names[i]),
+            lessThanOrEqualTo(0),
+            reason: '$catalog : « ${names[i - 1]} » avant « ${names[i]} »',
+          );
+        }
+      }
 
-      final classIds = (await repository.fetchClassCatalog()).classes
-          .map((c) => c.id)
-          .toList();
-      expect(classIds, sortedCopy(classIds));
-
-      final backgroundIds = (await repository.fetchBackgroundCatalog())
-          .backgrounds
-          .map((b) => b.id)
-          .toList();
-      expect(backgroundIds, sortedCopy(backgroundIds));
-
-      final toolIds = (await repository.fetchToolCatalog()).tools
-          .map((t) => t.id)
-          .toList();
-      expect(toolIds, sortedCopy(toolIds));
-
-      final languageIds = (await repository.fetchLanguageCatalog()).languages
-          .map((l) => l.id)
-          .toList();
-      expect(languageIds, sortedCopy(languageIds));
+      expectAlphabetical('classes', [
+        for (final c in (await repository.fetchClassCatalog()).classes) c.name,
+      ]);
+      expectAlphabetical('historiques', [
+        for (final b in (await repository.fetchBackgroundCatalog()).backgrounds)
+          b.name,
+      ]);
+      expectAlphabetical('outils', [
+        for (final t in (await repository.fetchToolCatalog()).tools) t.name,
+      ]);
+      expectAlphabetical('langues', [
+        for (final l in (await repository.fetchLanguageCatalog()).languages)
+          l.name,
+      ]);
 
       final itemIds = (await repository.fetchItemCatalog()).items
           .map((i) => i.id)
@@ -401,13 +446,21 @@ void main() {
         expect(
           spellRows.every((row) => row['source_class_id'] == classOption.id),
           isTrue,
+          reason: 'classe ${classOption.name}, lignes : $spellRows',
         );
+        // `.value` : depuis 1384520 (10/10/2026, D04/D41), `statusFor`
+        // renvoie l'enum `SpellStatus`, plus la chaîne stockée en base
+        // ('préparé'/'connu') ; comparer la ligne à l'enum lui-même était
+        // toujours faux (`row['status']` est `dynamic`, aucun avertissement
+        // de l'analyseur).
         expect(
           spellRows.every(
             (row) =>
-                row['status'] == SpellcastingRules.statusFor(classOption.name),
+                row['status'] ==
+                SpellcastingRules.statusFor(classOption.name).value,
           ),
           isTrue,
+          reason: 'classe ${classOption.name}, lignes : $spellRows',
         );
       }
 
@@ -455,6 +508,17 @@ void main() {
       // `classes.id = 1` est Barbare) — utilisé ici précisément pour ça.
       final classOption = classCatalog.classes.singleWhere(
         (c) => c.id == reference.classId,
+      );
+      // Précondition : sans elle, une classe de référence devenue lanceuse
+      // (ordre des lignes, contenu) ferait échouer ce test comme un faux bug
+      // de création, ce qui est arrivé le 26/11/2026 (Clerc au lieu du
+      // Barbare, voir `fetchReferenceContent`).
+      expect(
+        SpellcastingRules.isSpellcastingClass(classOption.name),
+        isFalse,
+        reason:
+            'la classe de référence « ${classOption.name} » doit être non '
+            'lanceuse de sorts',
       );
       final backgroundOption = backgroundCatalog.backgrounds.singleWhere(
         (b) => b.id == reference.backgroundId,

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/features/character_creation/domain/spellcasting_rules.dart';
 import 'package:personnages/features/characters/domain/spell_slot_progression.dart';
 import 'package:personnages/features/xml_import/data/xml_import_repository.dart';
 import 'package:personnages/features/xml_import/domain/xml_import_save_data.dart';
@@ -118,7 +119,15 @@ void main() {
 
       // `reference.classId` n'est pas garanti lanceur de sorts (contenu
       // peuplé actuel : Barbare) — voir la documentation de
-      // `ReferenceContent.spellcastingClassId`.
+      // `ReferenceContent.spellcastingClassId`. Précondition explicite, même
+      // raison que le test équivalent de createCharacter.
+      expect(
+        SpellcastingRules.isSpellcastingClass(reference.className),
+        isFalse,
+        reason:
+            'la classe de référence « ${reference.className} » doit être non '
+            'lanceuse de sorts',
+      );
       final data = _minimalSaveData(
         classId: reference.classId as int,
         className: reference.className,

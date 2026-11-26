@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/cache/app_database.dart';
 import 'package:personnages/core/cache/pending_character_write_queue.dart';
 import 'package:personnages/core/cache/reference_data_cache.dart';
+import 'package:personnages/core/utils/french_text_normalizer.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -244,18 +245,21 @@ void main() {
         detail.classFeatures.map((f) => f.id),
         containsAll(attainedFeatureRows.map((r) => r['id'] as int)),
       );
-      // Ordre déterministe (`.order('level')` côté requête, voir
-      // `SupabaseCharacterRepository._buildCharacterDetailPayload`/
-      // `_mapCharacterDetailPayload`) : les niveaux
-      // affichés ne doivent jamais redescendre — signalé en revue QA
-      // (dépendait auparavant de l'ordre non garanti renvoyé par
-      // PostgREST).
-      final levels = detail.classFeatures.map((f) => f.level).toList();
-      expect(
-        levels,
-        List<int>.from(levels)..sort(),
-        reason: 'detail.classFeatures doit être trié par level croissant.',
-      );
+      // Ordre affiché : alphabétique français, depuis 6b37e4a (03/10/2026,
+      // demande utilisateur, voir `_mapCharacterDetailPayload`). L'ancienne
+      // attente « par level croissant » est périmée : l'`.order('level')` de
+      // la requête ne sert plus qu'au déterminisme du cache. Paire par paire
+      // (`List.sort` n'est pas stable, voir le test des catalogues).
+      final names = detail.classFeatures.map((f) => f.name).toList();
+      for (var i = 1; i < names.length; i++) {
+        expect(
+          FrenchTextNormalizer.compare(names[i - 1], names[i]),
+          lessThanOrEqualTo(0),
+          reason:
+              'detail.classFeatures doit être trié par ordre alphabétique : '
+              '« ${names[i - 1]} » avant « ${names[i]} ».',
+        );
+      }
 
       if (limitedFeatureRow.isNotEmpty) {
         final limitedFeature = detail.classFeatures.singleWhere(
