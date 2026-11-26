@@ -351,6 +351,10 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
     une v1.0.9 reçoit une erreur au lieu d'effacer), appliqué **avant** la publication de la v1.0.10, **plus mise à jour
     forcée** (`app_versions.min_supported_version` = 1.0.10 à la publication). Choix du chef de projet : le butin affiche
     toujours ses 5 tuiles de monnaie (sinon impossible d'y ajouter du platine ou de l'électrum).
+    Précision validée par Matthias (26/11, PR DeepCore #69) : pour éviter les objets **en double** (la 1.0.9 ajoute à
+    l'inventaire **avant** de réécrire le butin, sans transaction), le garde-fou **applique sans rien effacer** trois gestes
+    de la 1.0.9 (s'attribuer une partie ou la totalité d'un objet, ajouter seulement de la monnaie) et **refuse** tout le
+    reste avec « Mettez Nexus à jour pour modifier ce butin ».
 
 Choix du chef de projet (24/11, PR DeepCore #58) : noms anglais des 6 armes naturelles gardés (simples noms, hors SRD) ;
 coquille du SRD français (Méphite vaporeux) gardée par fidélité à la source ; initiative d'un monstre 2014 = modificateur
