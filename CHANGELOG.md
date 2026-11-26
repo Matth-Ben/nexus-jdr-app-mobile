@@ -42,8 +42,8 @@ _Rien pour l'instant._
 ```
 <fr-FR>
 Nouveautés :
-• Combat en direct lancé par le MJ (dans l'app ou sur Grimoire) : initiative au d20, alerte « À toi de jouer »
-• Sorts : textes officiels du SRD (319 sorts), données et pastille de dégâts corrigées, filtres, rituels
+• Combat en direct lancé par le MJ : initiative au d20, alerte « À toi de jouer »
+• Sorts : textes officiels en français (319 sorts), dés de dégâts et infos corrigés, filtres, rituels
 • Fiche : états (à terre, agrippé…), armes et armures personnalisées, avantage/désavantage
 • Hors ligne : monnaies, états, journal et inventaire aussi enregistrés
 • App disponible en anglais (Profil > Langue)
@@ -97,13 +97,15 @@ Nouveautés :
   réglages d'état, journal et inventaire (ajout, retrait, usage, catalogue,
   butin) (#258, #260 à #265) ; bandeau de synchronisation, dernière
   synchro dans le Profil (#254), alertes de conflit (#266) et panneau des
-  alertes (#289, #298).
+  alertes (#289).
 - « Signaler un bug » : type « Contenu à corriger » et capture d'écran
   facultative (#185).
 - Connexion avec Apple, sur iOS seulement (#192).
 
 ### Modifié
-- Liste des personnages en un seul défilement (#286).
+- Liste des personnages en un seul défilement (#286) ; bandeau « Nouvelle
+  version » réduit à une ligne pendant une alerte de synchronisation
+  (#298).
 - Une seule armure et un seul bouclier équipés à la fois ; la CA retient la
   meilleure combinaison (#305).
 - Police pixel plafonnée avec un texte agrandi, textes courants en police
@@ -153,8 +155,8 @@ Nouveautés :
 
 ### Interne
 - Documentation, CI, tests (scénarios d'intégration, harnais de la file
-  hors ligne, filet de la CA) et code généré : #184, #222, #224, #225,
-  #228, #229, #233, #235, #236, #245, #248, #255, #282, #292, #312.
+  hors ligne, filet de la CA) et code généré : #183, #184, #222, #224,
+  #225, #228, #229, #233, #235, #236, #245, #248, #255, #282, #292, #312.
 
 ---
 
