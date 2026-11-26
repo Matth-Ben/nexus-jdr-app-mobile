@@ -5524,6 +5524,9 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get groupErrorStateRetryButton => 'Réessayer';
+
+  @override
   String combatBannerTitle(int round) {
     return 'Combat en cours · round $round';
   }

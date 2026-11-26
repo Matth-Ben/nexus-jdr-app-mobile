@@ -37,8 +37,9 @@ dans la Play Console (« Notes de version », 500 caractères max, balise
   « Retirer du butin » (avec confirmation). Tout membre du groupe peut
   modifier ou retirer un objet, MJ sans personnage compris (#314).
 - Butin de groupe : la monnaie commune se modifie comme celle de
-  l'inventaire (ajouter, retirer, convertir, en touchant une pièce), en plus
-  de « Répartir vers mon inventaire » (#314).
+  l'inventaire (ajouter, retirer, convertir, en touchant une pièce ; les
+  cinq pièces restent affichées, même à 0), en plus de « Répartir vers mon
+  inventaire » (#314).
 
 ### Modifié
 - Butin de groupe : l'ajout d'objets reprend celui de l'inventaire

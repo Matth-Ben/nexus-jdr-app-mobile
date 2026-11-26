@@ -7135,6 +7135,8 @@
   "@groupTreasureClaimCurrencyCancelButton": {"description": "Sheet S'attribuer de la monnaie : bouton Annuler."},
   "groupTreasureClaimCurrencyMaxHint": "/ {max}",
   "@groupTreasureClaimCurrencyMaxHint": {"description": "Sheet S'attribuer de la monnaie : solde disponible sous un champ.", "placeholders": {"max": {"type": "int"}}},
+  "groupErrorStateRetryButton": "Réessayer",
+  "@groupErrorStateRetryButton": {"description": "Écran Groupe : bouton Réessayer de l'état d'erreur des onglets (détail du groupe, Butin, Notes)."},
   "combatBannerTitle": "Combat en cours · round {round}",
   "@combatBannerTitle": {"description": "Bandeau du combat, ligne 1.", "placeholders": {"round": {"type": "int"}}},
   "combatBannerTurn": "Tour de {name} · Ouvrir le combat",

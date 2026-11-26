@@ -1375,6 +1375,140 @@ void main() {
       expect(writtenItems(requests), isEmpty);
     });
 
+    // Entrée ancienne (avant la décision 91) : ni entry_id ni catégorie.
+    const legacyPotion = GroupTreasureItem(
+      itemId: 7,
+      displayName: 'Potion',
+      quantity: 3,
+    );
+    // Entrée voisine enrichie : tous les champs doivent survivre à une
+    // écriture qui ne la concerne pas.
+    final enrichedSword = GroupTreasureItem.custom(
+      entryId: 'e-sword',
+      name: 'Épée runique',
+      quantity: 1,
+      description: 'Gravée de runes.',
+      damageDice: '1d8',
+      damageType: 'tranchant',
+      properties: const ['polyvalente(1d10)'],
+      enrichment: const CustomItemEnrichment(
+        kind: CustomItemKinds.weapon,
+        magicBonus: 2,
+        weight: 1.5,
+        requiresAttunement: true,
+        weaponCategory: CustomWeaponCategories.martial,
+        weaponRange: CustomWeaponRanges.melee,
+      ),
+      extra: const {
+        'future_key': {'a': 1},
+      },
+    );
+    const legacyRope = {
+      'custom_name': 'Corde',
+      'display_name': 'Corde',
+      'quantity': 1,
+    };
+
+    void expectEveryEntryHasId(List<dynamic> items) {
+      for (final entry in items) {
+        expect(
+          (entry as Map)['entry_id'],
+          isA<String>().having((id) => id.isNotEmpty, 'non vide', isTrue),
+          reason: '$entry',
+        );
+      }
+    }
+
+    test('modification d\'une entrée ancienne (sans entry_id) : retrouvée, '
+        'réécrite avec un entry_id comme toutes les autres', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        clientWith([legacyPotion.toJson(), legacyRope], requests),
+      );
+
+      await repository.updateTreasureItem(
+        groupId: groupId,
+        expected: legacyPotion,
+        updated: legacyPotion.copyWith(quantity: 5),
+      );
+
+      final items = writtenItems(requests);
+      expect(items, hasLength(2));
+      expect((items.first as Map)['item_id'], 7);
+      expect((items.first as Map)['quantity'], 5);
+      expectEveryEntryHasId(items);
+    });
+
+    test('retrait d\'une entrée ancienne (sans entry_id) : retirée, les '
+        'autres entrées anciennes reçoivent un entry_id', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        clientWith([legacyPotion.toJson(), legacyRope], requests),
+      );
+
+      await repository.removeTreasureItem(
+        groupId: groupId,
+        expected: legacyPotion,
+      );
+
+      final items = writtenItems(requests);
+      expect(items, hasLength(1));
+      expect((items.single as Map)['custom_name'], 'Corde');
+      expectEveryEntryHasId(items);
+    });
+
+    test('entrée voisine enrichie : tous ses champs (et ses clés inconnues) '
+        'conservés à l\'identique par chaque écriture du tableau', () async {
+      final writes =
+          <String, Future<void> Function(SupabaseGroupRepository repository)>{
+            'ajout': (repository) => repository.addTreasureItems(
+              groupId: groupId,
+              items: const [
+                GroupTreasureItem.catalog(
+                  itemId: 9,
+                  displayName: 'Dague',
+                  quantity: 1,
+                ),
+              ],
+            ),
+            'modification': (repository) => repository.updateTreasureItem(
+              groupId: groupId,
+              expected: legacyPotion,
+              updated: legacyPotion.copyWith(quantity: 1),
+            ),
+            'retrait': (repository) => repository.removeTreasureItem(
+              groupId: groupId,
+              expected: legacyPotion,
+            ),
+            'attribution': (repository) => repository.claimTreasureItem(
+              groupId: groupId,
+              characterId: 'char-1',
+              item: legacyPotion,
+              quantity: 1,
+            ),
+          };
+      for (final write in writes.entries) {
+        final requests = <http.Request>[];
+        final repository = SupabaseGroupRepository(
+          clientWith([
+            legacyPotion.toJson(),
+            enrichedSword.toJson(),
+            legacyRope,
+          ], requests),
+        );
+
+        await write.value(repository);
+
+        final items = writtenItems(requests);
+        final sword = items.firstWhere(
+          (entry) => (entry as Map)['entry_id'] == 'e-sword',
+        );
+        expect(sword, enrichedSword.toJson(), reason: write.key);
+        // Garde-fou DeepCore à venir : jamais d'entrée sans entry_id.
+        expectEveryEntryHasId(items);
+      }
+    });
+
     test('modifier ou retirer une entrée changée entre-temps : rien n\'est '
         'écrit, treasureStale', () async {
       final requests = <http.Request>[];

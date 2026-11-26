@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/connectivity_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -24,8 +26,10 @@ enum GroupTreasureItemAction { claim, edit, remove }
 /// précédé de « Provenance » et « Quantité ».
 ///
 /// Pied : « S'attribuer » (désactivé sans personnage, avec une légende),
-/// puis « Modifier » et « Retirer du butin ». [isBusy] et [isOffline]
-/// désactivent les trois (hors connexion : légende dédiée).
+/// puis « Modifier » et « Retirer du butin ». [isBusy] et l'absence de
+/// connexion désactivent les trois (hors connexion : légende dédiée). La
+/// connexion est **surveillée en direct** ([connectivityStatusProvider]) : les
+/// actions se réactivent dès le retour du réseau, sans rouvrir la fiche.
 ///
 /// [loadDetails] : relecture de la description et des détails d'un objet du
 /// catalogue (par `item_id`) ; pendant le chargement, un indicateur remplace
@@ -36,7 +40,6 @@ Future<GroupTreasureItemAction?> showGroupTreasureItemSheet(
   required GroupTreasureItem item,
   required bool canClaim,
   required bool isBusy,
-  required bool isOffline,
   Future<CharacterInventoryItem> Function()? loadDetails,
 }) {
   return showModalBottomSheet<GroupTreasureItemAction>(
@@ -47,18 +50,16 @@ Future<GroupTreasureItemAction?> showGroupTreasureItemSheet(
       item: item,
       canClaim: canClaim,
       isBusy: isBusy,
-      isOffline: isOffline,
       loadDetails: loadDetails,
     ),
   );
 }
 
-class GroupTreasureItemSheet extends StatefulWidget {
+class GroupTreasureItemSheet extends ConsumerStatefulWidget {
   const GroupTreasureItemSheet({
     required this.item,
     required this.canClaim,
     required this.isBusy,
-    required this.isOffline,
     this.loadDetails,
     super.key,
   });
@@ -66,14 +67,15 @@ class GroupTreasureItemSheet extends StatefulWidget {
   final GroupTreasureItem item;
   final bool canClaim;
   final bool isBusy;
-  final bool isOffline;
   final Future<CharacterInventoryItem> Function()? loadDetails;
 
   @override
-  State<GroupTreasureItemSheet> createState() => _GroupTreasureItemSheetState();
+  ConsumerState<GroupTreasureItemSheet> createState() =>
+      _GroupTreasureItemSheetState();
 }
 
-class _GroupTreasureItemSheetState extends State<GroupTreasureItemSheet> {
+class _GroupTreasureItemSheetState
+    extends ConsumerState<GroupTreasureItemSheet> {
   late CharacterInventoryItem _item =
       GroupTreasureInventoryAdapter.toInventoryItem(widget.item);
   late bool _loading = widget.loadDetails != null;
@@ -153,7 +155,8 @@ class _GroupTreasureItemSheetState extends State<GroupTreasureItemSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final item = widget.item;
-    final actionsEnabled = !widget.isBusy && !widget.isOffline;
+    final offline = ref.watch(connectivityStatusProvider).isKnownOffline;
+    final actionsEnabled = !widget.isBusy && !offline;
     final stacked = MediaQuery.textScalerOf(context).scale(14) / 14 >= 1.5;
     void pop(GroupTreasureItemAction action) =>
         Navigator.of(context).pop(action);
@@ -242,7 +245,7 @@ class _GroupTreasureItemSheetState extends State<GroupTreasureItemSheet> {
                           Expanded(child: remove),
                         ],
                       ),
-                    if (widget.isOffline)
+                    if (offline)
                       Semantics(
                         liveRegion: true,
                         child: _caption(l10n.groupTreasureOfflineBanner),

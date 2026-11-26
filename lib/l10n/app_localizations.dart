@@ -8841,6 +8841,12 @@ abstract class AppLocalizations {
   /// **'/ {max}'**
   String groupTreasureClaimCurrencyMaxHint(int max);
 
+  /// Écran Groupe : bouton Réessayer de l'état d'erreur des onglets (détail du groupe, Butin, Notes).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get groupErrorStateRetryButton;
+
   /// Bandeau du combat, ligne 1.
   ///
   /// In fr, this message translates to:

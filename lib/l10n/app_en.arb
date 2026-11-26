@@ -1674,6 +1674,7 @@
   "groupTreasureClaimCurrencySheetTitle": "CLAIM CURRENCY",
   "groupTreasureClaimCurrencyCancelButton": "Cancel",
   "groupTreasureClaimCurrencyMaxHint": "/ {max}",
+  "groupErrorStateRetryButton": "Try again",
   "combatBannerTitle": "Combat in progress · round {round}",
   "combatBannerTurn": "{name}'s turn · Open combat",
   "combatBannerNoTurn": "No active turn · Open combat",

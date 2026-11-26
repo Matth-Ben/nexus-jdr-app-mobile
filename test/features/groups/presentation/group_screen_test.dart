@@ -1869,6 +1869,188 @@ void main() {
       expect(find.text(banner), findsNWidgets(2));
     });
 
+    testWidgets('fiche : la connexion est surveillée en direct, les actions '
+        'se réactivent au retour du réseau sans rouvrir la fiche', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = GroupTreasure(
+        groupId: 'group-1',
+        items: [moonVial],
+      );
+      final connectivity = FakeConnectivityChecker(connected: false);
+
+      await tester.pumpWidget(
+        _buildTestWidget(fakeRepository, connectivity: connectivity),
+      );
+      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
+      await tester.tap(find.text('Fiole de lune'));
+      await tester.pumpAndSettle();
+
+      VoidCallback? claimAction() => tester
+          .widget<PrimaryButton>(
+            find.byKey(const Key('groupTreasureItemClaimButton')),
+          )
+          .onPressed;
+      VoidCallback? removeAction() => tester
+          .widget<DestructiveButton>(
+            find.byKey(const Key('groupTreasureItemRemoveButton')),
+          )
+          .onPressed;
+      expect(claimAction(), isNull);
+      expect(removeAction(), isNull);
+
+      connectivity.goOnline();
+      await tester.pumpAndSettle();
+
+      expect(claimAction(), isNotNull);
+      expect(removeAction(), isNotNull);
+      expect(
+        find.text(
+          "Pas de connexion : le butin est en lecture seule jusqu'au retour "
+          'du réseau.',
+        ),
+        findsNothing,
+      );
+    });
+
+    group('bandeau « en ligne » mais vérification « hors connexion » juste '
+        'avant l\'écriture : aucune écriture ne part', () {
+      const offlineError =
+          "Pas de connexion : le butin n'a pas été modifié. Réessaie une fois "
+          'connecté.';
+
+      /// Ouvre l'onglet en ligne puis coupe le réseau **sans** prévenir le
+      /// flux de connectivité : le bandeau reste « en ligne », seule la
+      /// vérification faite au moment d'écrire voit la coupure.
+      Future<FakeConnectivityChecker> openOnlineThenCut(
+        WidgetTester tester,
+        GroupTreasure treasure,
+      ) async {
+        fakeRepository.detailToReturn = ownerViewDetail();
+        fakeRepository.treasureToReturn = treasure;
+        final connectivity = FakeConnectivityChecker();
+        await tester.pumpWidget(
+          _buildTestWidget(fakeRepository, connectivity: connectivity),
+        );
+        await tester.pumpAndSettle();
+        await openTreasureTab(tester);
+        connectivity.connected = false;
+        return connectivity;
+      }
+
+      testWidgets('attribution d\'un objet', (tester) async {
+        await openOnlineThenCut(
+          tester,
+          const GroupTreasure(groupId: 'group-1', items: [potion]),
+        );
+        await tester.tap(find.text('Potion'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('groupTreasureItemClaimButton')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text("S'ATTRIBUER"));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.lastClaimedQuantity, isNull);
+        expect(find.text(offlineError), findsOneWidget);
+      });
+
+      testWidgets('modification', (tester) async {
+        await openOnlineThenCut(
+          tester,
+          const GroupTreasure(groupId: 'group-1', items: [potion]),
+        );
+        await tester.tap(find.text('Potion'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('groupTreasureItemEditButton')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byIcon(Icons.add).last);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('ENREGISTRER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.lastUpdatedItem, isNull);
+        expect(find.text(offlineError), findsOneWidget);
+      });
+
+      testWidgets('retrait', (tester) async {
+        await openOnlineThenCut(
+          tester,
+          GroupTreasure(groupId: 'group-1', items: [moonVial]),
+        );
+        await tester.tap(find.text('Fiole de lune'));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const Key('groupTreasureItemRemoveButton')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Retirer'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.lastRemovedItem, isNull);
+        expect(find.text(offlineError), findsOneWidget);
+      });
+
+      testWidgets('ajustement de la monnaie', (tester) async {
+        await openOnlineThenCut(
+          tester,
+          const GroupTreasure(groupId: 'group-1', currencyGp: 12),
+        );
+        await tester.tap(find.text('12'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).last, '5');
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('APPLIQUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.lastAddedTotals, isNull);
+        expect(find.text(offlineError), findsOneWidget);
+      });
+
+      testWidgets('répartition de la monnaie (« Répartir vers mon '
+          'inventaire »)', (tester) async {
+        await openOnlineThenCut(
+          tester,
+          const GroupTreasure(groupId: 'group-1', currencyGp: 20),
+        );
+        await tester.tap(find.text('Répartir vers mon inventaire'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextFormField).at(0), '5');
+        await tester.pumpAndSettle();
+        await tester.tap(find.text("S'ATTRIBUER"));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.claimCurrencyCallCount, 0);
+        expect(find.text(offlineError), findsOneWidget);
+      });
+    });
+
+    testWidgets('platine à 0 : sa tuile reste affichée et permet d\'en '
+        'ajouter (décision 92)', (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = const GroupTreasure(
+        groupId: 'group-1',
+        currencyGp: 12,
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
+
+      expect(find.text('PP'), findsOneWidget);
+      expect(find.text('PE'), findsOneWidget);
+      await tester.tap(find.text('PP'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, '2');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.lastCurrencyExpected, {CurrencyKind.platinum: 0});
+      expect(fakeRepository.lastAddedTotals, {CurrencyKind.platinum: 2});
+    });
+
     testWidgets(
       "réclamer de la monnaie : succès total appelle claimTreasureCurrency "
       "pour chaque dénomination saisie et affiche 'Monnaie récupérée.'",

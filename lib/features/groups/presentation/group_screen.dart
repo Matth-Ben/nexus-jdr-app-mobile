@@ -254,9 +254,6 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         CurrencyKind.copper => treasure.currencyCp,
       };
 
-  bool get _isTreasureOffline =>
-      ref.read(connectivityStatusProvider).value == false;
-
   void _refreshTreasure() =>
       ref.invalidate(groupTreasureProvider(widget.groupId));
 
@@ -382,7 +379,6 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       item: item,
       canClaim: detail.currentMember?.characterId != null,
       isBusy: _isWritingTreasure,
-      isOffline: _isTreasureOffline,
       loadDetails: item.isCustom
           ? null
           : () => repository.fetchTreasureItemDetails(item),
@@ -698,7 +694,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     final treasureAsync = ref.watch(groupTreasureProvider(widget.groupId));
     // Hors connexion : écritures du butin désactivées (pas de file hors
     // ligne, données partagées). Une erreur du flux vaut « en ligne ».
-    final offline = ref.watch(connectivityStatusProvider).value == false;
+    final offline = ref.watch(connectivityStatusProvider).isKnownOffline;
     return treasureAsync.when(
       data: (treasure) => GroupTreasureTabBody(
         treasure: treasure,
@@ -782,7 +778,7 @@ class _ErrorState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             SecondaryButton(
-              label: 'Réessayer',
+              label: AppLocalizations.of(context)!.groupErrorStateRetryButton,
               surface: SecondaryButtonSurface.parchment,
               onPressed: onRetry,
             ),

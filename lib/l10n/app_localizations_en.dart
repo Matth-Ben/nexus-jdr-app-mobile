@@ -5473,6 +5473,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get groupErrorStateRetryButton => 'Try again';
+
+  @override
   String combatBannerTitle(int round) {
     return 'Combat in progress · round $round';
   }
