@@ -7,13 +7,16 @@ séparé du monorepo web — voir `13-depot-versioning-publication.md` du cahier
 
 Utiliser ces noms dans les échanges, les tickets et les documents :
 
-- **Nexus** : cette app mobile (ce dépôt).
+- **Nexus** : cette app mobile (ce dépôt, GitHub `Matth-Ben/nexus-mobile` depuis le 26/11/2026, ex
+  `Matth-Ben/nexus-jdr-app-mobile` ; le dossier local garde son nom `H:\Projets\Labo\nexus-jdr-app-mobile`).
 - **Grimoire** : l'app de bureau Electron du MJ, dépôt `Coudercf/grimoire-du-mj`
   (local `H:\Projets\Labo\grimoire-du-mj`, branche de travail `dev/nexus-desktop` : PR mergées
   sur accord explicite de Matthias, `main` gardée par Florian). Ex « outil de Florian ». Sa feuille de route de
   référence est `FEUILLE-DE-ROUTE.md` sur cette branche.
-- **DeepCore** : l'API et la base Supabase communes, et leur dépôt (ex `markdown-editor`,
-  « dépôt web », local `H:\Projets\Labo\markdown-editor`) : migrations SQL et edge functions.
+- **DeepCore** : l'API et la base Supabase communes, et leur dépôt (GitHub `Matth-Ben/deepcore`, **privé**, depuis le
+  26/11/2026 ; ex `Matth-Ben/markdown-editor`, « dépôt web » ; le dossier local garde son nom
+  `H:\Projets\Labo\markdown-editor`, et la pile Supabase locale son `project_id` « markdown-editor ») : migrations SQL et
+  edge functions.
   Partout où ce fichier dit « dépôt web », il s'agit de DeepCore.
 - **Compte Nexus** : le nom affiché du compte utilisateur commun (géré par DeepCore).
 
