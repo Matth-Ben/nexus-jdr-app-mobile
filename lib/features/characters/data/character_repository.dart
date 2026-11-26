@@ -5535,6 +5535,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
           code: CharacterErrorCode.invalidQuantity,
         );
       }
+      // Formulaire en deux temps (décision 91) : mêmes règles que
+      // [addCustomInventoryItem] (invalide refusé, vide non écrit).
+      final enrichment = itemId == null ? item.customEnrichment : null;
+      if (enrichment != null && !enrichment.isValid) {
+        throw const CharacterFailure(
+          "Les caractéristiques de l'objet ne sont pas valides.",
+        );
+      }
       adds.add(
         PendingInventoryAdd(
           inventoryId: generateUuidV4(),
@@ -5547,6 +5555,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
                   customDamageDice: nonEmpty(item.customDamageDice),
                   customDamageType: nonEmpty(item.customDamageType),
                   customProperties: item.customProperties,
+                  enrichment: enrichment == null || enrichment.isEmpty
+                      ? null
+                      : enrichment,
                 ),
         ),
       );
@@ -5633,7 +5644,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     try {
       final rows = await _client
           .from('items')
-          .select(_inventoryCatalogSelect)
+          .select(inventoryCatalogItemColumns)
           .order('id', ascending: true);
       final ids = InventoryCatalogRowMapper.collectIds(rows);
       final nameRows = await _fetchTranslationRows(
@@ -5663,16 +5674,6 @@ class SupabaseCharacterRepository implements CharacterRepository {
       throw mapUnknownCharacterError();
     }
   }
-
-  /// Colonnes du catalogue d'inventaire : tout ce qu'il faut pour construire une
-  /// ligne d'inventaire complète hors ligne (mêmes colonnes `items` que le
-  /// détail de fiche, voir [fetchCharacterDetail]).
-  static const String _inventoryCatalogSelect = '''
-    id, category, weight, cost, rarity, requires_attunement, consumable,
-    ac_bonus, ac_bonus_kind,
-    weapon_properties(damage_dice, damage_type, properties, range),
-    armor_properties(ac_base, ac_dex_bonus, strength_requirement, stealth_disadvantage, slot)
-  ''';
 
   /// Durée de fraîcheur du cache du catalogue (comme `item_catalog`).
   static const Duration _catalogCacheTtl = Duration(hours: 48);

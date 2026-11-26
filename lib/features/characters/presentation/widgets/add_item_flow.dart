@@ -120,9 +120,10 @@ Future<AddItemEntryChoice?> showAddItemEntrySheet(BuildContext context) {
 /// ("la sheet retourne l'action/le choix, l'appelant orchestre la suite").
 ///
 /// [enriched] (`true` par défaut) : « Objet personnalisé » ouvre le
-/// formulaire en deux temps (type d'objet puis champs adaptés, P7). Les flux
-/// qui ne savent porter que la forme simple (récompense, butin de groupe)
-/// passent `false` et gardent l'ancienne feuille « Objet simple / Arme ».
+/// formulaire en deux temps (type d'objet puis champs adaptés, P7). `false`
+/// garde l'ancienne feuille « Objet simple / Arme » ; depuis la décision 91,
+/// la récompense et le butin de groupe utilisent eux aussi le formulaire en
+/// deux temps.
 /// [attunedCount] : nombre d'objets harmonisés du personnage, pour
 /// « Harmoniser maintenant » du formulaire enrichi.
 Future<PickedInventoryAddition?> pickInventoryAddition(
@@ -195,7 +196,8 @@ Future<PickedInventoryAddition?> _pickCustomAddition(
 /// le catalogue » ouvre le catalogue en sélection multiple ; « Objet
 /// personnalisé » reste unitaire (une saisie de nom). Liste vide si annulé.
 ///
-/// [enriched] : voir [pickInventoryAddition] (le butin de groupe passe `false`).
+/// [enriched]/[attunedCount] : voir [pickInventoryAddition] (le butin de
+/// groupe passe `attunedCount: null` : aucun personnage à harmoniser).
 Future<List<PickedInventoryAddition>> pickInventoryAdditions(
   BuildContext context, {
   bool enriched = true,
@@ -356,11 +358,11 @@ class _ItemCatalogPickerContentState
   }
 
   Future<void> _pickItem(InventoryCatalogItem item) async {
-    final quantity = await showModalBottomSheet<int>(
-      context: context,
-      backgroundColor: AppColors.parchmentCard,
-      isScrollControlled: true,
-      builder: (sheetContext) => _ItemQuantitySheetContent(item: item),
+    final l10n = AppLocalizations.of(context)!;
+    final quantity = await showItemQuantitySheet(
+      context,
+      title: l10n.addItemFlowQuantitySheetTitle(item.name),
+      buttonLabel: l10n.addItemFlowQuantitySheetAddButton,
     );
     if (quantity == null || !mounted) return;
     Navigator.of(context).pop(CatalogPickResult(item, quantity));
@@ -690,24 +692,72 @@ class _CatalogItemRow extends StatelessWidget {
   }
 }
 
-/// Sheet légère "Ajouter {nom}" (`StepperCounter` défaut 1, min 1) — pousse
-/// par [_ItemCatalogPickerContentState._pickItem].
-class _ItemQuantitySheetContent extends StatefulWidget {
-  const _ItemQuantitySheetContent({required this.item});
-
-  final InventoryCatalogItem item;
-
-  @override
-  State<_ItemQuantitySheetContent> createState() =>
-      _ItemQuantitySheetContentState();
+/// Ouvre la sheet légère de quantité ([ItemQuantitySheet]) : titre, valeur
+/// de départ [initialValue], bornes [min]/[max] (`null` : sans maximum) et
+/// libellé du bouton. Retourne la quantité choisie, `null` si fermée.
+///
+/// Partagée par l'ajout depuis le catalogue (« Ajouter {nom} »),
+/// l'attribution d'un objet du butin de groupe (plafonnée à la quantité
+/// disponible) et la quantité d'un objet du catalogue du butin (décision 91).
+Future<int?> showItemQuantitySheet(
+  BuildContext context, {
+  required String title,
+  required String buttonLabel,
+  int initialValue = 1,
+  int min = 1,
+  int? max,
+}) {
+  return showModalBottomSheet<int>(
+    context: context,
+    backgroundColor: AppColors.parchmentCard,
+    isScrollControlled: true,
+    builder: (sheetContext) => ItemQuantitySheet(
+      title: title,
+      buttonLabel: buttonLabel,
+      initialValue: initialValue,
+      min: min,
+      max: max,
+    ),
+  );
 }
 
-class _ItemQuantitySheetContentState extends State<_ItemQuantitySheetContent> {
-  int _quantity = 1;
+/// Sheet légère de quantité (`StepperCounter` entre [min] et [max]) — voir
+/// [showItemQuantitySheet].
+class ItemQuantitySheet extends StatefulWidget {
+  const ItemQuantitySheet({
+    required this.title,
+    required this.buttonLabel,
+    this.initialValue = 1,
+    this.min = 1,
+    this.max,
+    super.key,
+  });
+
+  final String title;
+  final String buttonLabel;
+  final int initialValue;
+  final int min;
+
+  /// `null` : sans maximum.
+  final int? max;
+
+  @override
+  State<ItemQuantitySheet> createState() => _ItemQuantitySheetState();
+}
+
+class _ItemQuantitySheetState extends State<ItemQuantitySheet> {
+  late int _quantity = _clamp(widget.initialValue);
+
+  int _clamp(int value) {
+    final max = widget.max;
+    if (max != null && value > max) return max;
+    return value < widget.min ? widget.min : value;
+  }
+
+  bool get _canIncrement => widget.max == null || _quantity < widget.max!;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -721,7 +771,7 @@ class _ItemQuantitySheetContentState extends State<_ItemQuantitySheetContent> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              l10n.addItemFlowQuantitySheetTitle(widget.item.name),
+              widget.title,
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -731,15 +781,17 @@ class _ItemQuantitySheetContentState extends State<_ItemQuantitySheetContent> {
             Center(
               child: StepperCounter(
                 value: _quantity,
-                onIncrement: () => setState(() => _quantity++),
-                onDecrement: _quantity > 1
+                onIncrement: _canIncrement
+                    ? () => setState(() => _quantity++)
+                    : null,
+                onDecrement: _quantity > widget.min
                     ? () => setState(() => _quantity--)
                     : null,
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             PrimaryButton(
-              label: l10n.addItemFlowQuantitySheetAddButton,
+              label: widget.buttonLabel,
               onPressed: () => Navigator.of(context).pop(_quantity),
             ),
           ],

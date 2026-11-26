@@ -12,10 +12,15 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/theme/app_spacing.dart';
+import 'package:personnages/core/widgets/destructive_button.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/core/widgets/wood_back_header.dart';
+import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
+import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
+import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
+import 'package:personnages/features/groups/data/group_treasure_inventory_adapter.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
 import 'package:personnages/features/combat/presentation/providers/grimoire_combat_providers.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
@@ -98,7 +103,20 @@ class _FakeGroupRepository implements GroupRepository {
   int? lastClaimedQuantity;
 
   Map<CurrencyKind, int>? lastAddedTotals;
+  Map<CurrencyKind, int>? lastCurrencyExpected;
   List<GroupTreasureItem>? lastAddedItems;
+  GroupTreasureItem? lastUpdatedExpected;
+  GroupTreasureItem? lastUpdatedItem;
+  GroupTreasureItem? lastRemovedItem;
+  GroupTreasureItem? lastClaimedItem;
+
+  /// Erreur levée par toutes les écritures du butin (hors monnaie RPC).
+  Object? treasureWriteError;
+
+  int detailsFetchCount = 0;
+  CharacterInventoryItem? detailsToReturn;
+  Object? detailsError;
+  Completer<CharacterInventoryItem>? detailsCompleter;
 
   List<GroupNoteEntry>? entriesToReturn;
   Object? entriesErrorToThrow;
@@ -221,17 +239,59 @@ class _FakeGroupRepository implements GroupRepository {
     required int quantity,
   }) async {
     lastClaimedQuantity = quantity;
+    lastClaimedItem = item;
     if (claimItemError != null) throw claimItemError!;
   }
 
   @override
-  Future<void> addToTreasure({
+  Future<void> addTreasureItems({
     required String groupId,
-    required Map<CurrencyKind, int> newCurrencyTotals,
-    required List<GroupTreasureItem> newItems,
+    required List<GroupTreasureItem> items,
   }) async {
-    lastAddedTotals = newCurrencyTotals;
-    lastAddedItems = newItems;
+    lastAddedItems = items;
+    if (treasureWriteError != null) throw treasureWriteError!;
+  }
+
+  @override
+  Future<void> updateTreasureItem({
+    required String groupId,
+    required GroupTreasureItem expected,
+    required GroupTreasureItem updated,
+  }) async {
+    lastUpdatedExpected = expected;
+    lastUpdatedItem = updated;
+    if (treasureWriteError != null) throw treasureWriteError!;
+  }
+
+  @override
+  Future<void> removeTreasureItem({
+    required String groupId,
+    required GroupTreasureItem expected,
+  }) async {
+    lastRemovedItem = expected;
+    if (treasureWriteError != null) throw treasureWriteError!;
+  }
+
+  @override
+  Future<void> setTreasureCurrency({
+    required String groupId,
+    required Map<CurrencyKind, int> expected,
+    required Map<CurrencyKind, int> newTotals,
+  }) async {
+    lastCurrencyExpected = expected;
+    lastAddedTotals = newTotals;
+    if (treasureWriteError != null) throw treasureWriteError!;
+  }
+
+  @override
+  Future<CharacterInventoryItem> fetchTreasureItemDetails(
+    GroupTreasureItem item,
+  ) async {
+    detailsFetchCount++;
+    if (detailsCompleter != null) return detailsCompleter!.future;
+    if (detailsError != null) throw detailsError!;
+    return detailsToReturn ??
+        GroupTreasureInventoryAdapter.toInventoryItem(item);
   }
 
   @override
@@ -356,6 +416,8 @@ Widget _buildTestWidget(
   _FakeGroupRepository repository, {
   bool realSettings = false,
   Locale locale = const Locale('fr'),
+  FakeConnectivityChecker? connectivity,
+  List<InventoryCatalogItem> catalog = const [],
 }) {
   return ProviderScope(
     overrides: [
@@ -365,7 +427,11 @@ Widget _buildTestWidget(
       grimoireCombatGatewayProvider.overrideWithValue(
         FakeGrimoireCombatGateway(),
       ),
-      connectivityCheckerProvider.overrideWithValue(FakeConnectivityChecker()),
+      connectivityCheckerProvider.overrideWithValue(
+        connectivity ?? FakeConnectivityChecker(),
+      ),
+      // Catalogue de l'ajout d'objets au butin (parcours de l'inventaire).
+      inventoryCatalogProvider.overrideWith((ref) async => catalog),
       currentUserFromTestOverride,
     ],
     child: MaterialApp.router(
@@ -1333,9 +1399,29 @@ void main() {
   });
 
   group('onglet Butin', () {
-    testWidgets('affiche les stat boxes et l\'état vide des objets', (
-      tester,
-    ) async {
+    // Objet personnalisé (description portée par l'entrée) et objet du
+    // catalogue (description relue par `item_id` à l'ouverture de la fiche).
+    final moonVial = GroupTreasureItem.custom(
+      entryId: 'entry-vial',
+      name: 'Fiole de lune',
+      quantity: 2,
+      description: 'Brille faiblement la nuit.',
+    );
+    const potion = GroupTreasureItem(
+      entryId: 'entry-potion',
+      itemId: 7,
+      displayName: 'Potion',
+      quantity: 3,
+      category: 'equipement_general',
+    );
+
+    Future<void> openTreasureTab(WidgetTester tester) async {
+      await tester.tap(find.text('BUTIN'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('affiche les tuiles de monnaie, l\'état vide des objets et la '
+        'tuile « Objet » de l\'inventaire', (tester) async {
       fakeRepository.detailToReturn = ownerViewDetail();
       fakeRepository.treasureToReturn = const GroupTreasure(
         groupId: 'group-1',
@@ -1344,13 +1430,13 @@ void main() {
 
       await tester.pumpWidget(_buildTestWidget(fakeRepository));
       await tester.pumpAndSettle();
-
-      await tester.tap(find.text('BUTIN'));
-      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
 
       expect(find.text('12'), findsOneWidget);
       expect(find.text('Aucun objet en attente.'), findsOneWidget);
-      expect(find.text('AJOUTER AU BUTIN DU GROUPE'), findsOneWidget);
+      expect(find.text('Objet'), findsOneWidget);
+      // L'ancien bouton unique « Ajouter au butin du groupe » a disparu.
+      expect(find.text('AJOUTER AU BUTIN DU GROUPE'), findsNothing);
     });
 
     testWidgets(
@@ -1363,36 +1449,424 @@ void main() {
 
         await tester.pumpWidget(_buildTestWidget(fakeRepository));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('BUTIN'));
-        await tester.pumpAndSettle();
+        await openTreasureTab(tester);
 
         await tester.tap(find.text('Répartir vers mon inventaire'));
         await tester.pumpAndSettle();
 
-        // Aucune sheet ne s'ouvre : le titre de la sheet de réclamation
-        // n'apparaît jamais.
         expect(find.text("S'ATTRIBUER DE LA MONNAIE"), findsNothing);
       },
     );
 
-    testWidgets('affiche un objet en attente avec un lien de réclamation', (
+    testWidgets('la ligne n\'a plus de raccourci « S\'attribuer » : toucher la '
+        'carte ouvre la fiche de l\'objet', (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = GroupTreasure(
+        groupId: 'group-1',
+        items: [moonVial],
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
+
+      expect(find.text('Fiole de lune'), findsOneWidget);
+      expect(find.text("S'attribuer"), findsNothing);
+
+      await tester.tap(find.text('Fiole de lune'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('FIOLE DE LUNE'), findsOneWidget);
+      expect(find.text('Provenance'), findsOneWidget);
+      expect(find.text('Objet personnalisé'), findsWidgets);
+      expect(find.text('×2'), findsOneWidget);
+      expect(find.text('Brille faiblement la nuit.'), findsOneWidget);
+      expect(find.text("S'ATTRIBUER"), findsOneWidget);
+      expect(find.text('MODIFIER'), findsOneWidget);
+      expect(find.text('Retirer du butin'), findsOneWidget);
+      // Objet personnalisé : aucune relecture réseau.
+      expect(fakeRepository.detailsFetchCount, 0);
+    });
+
+    testWidgets(
+      'objet du catalogue : description relue par item_id (indicateur '
+      'pendant le chargement, actions actives)',
+      (tester) async {
+        fakeRepository.detailToReturn = ownerViewDetail();
+        fakeRepository.treasureToReturn = const GroupTreasure(
+          groupId: 'group-1',
+          items: [potion],
+        );
+        final completer = Completer<CharacterInventoryItem>();
+        fakeRepository.detailsCompleter = completer;
+
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+        await openTreasureTab(tester);
+
+        await tester.tap(find.text('Potion'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        expect(fakeRepository.detailsFetchCount, 1);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.text('Catalogue'), findsOneWidget);
+        final claim = tester.widget<PrimaryButton>(
+          find.byKey(const Key('groupTreasureItemClaimButton')),
+        );
+        expect(claim.onPressed, isNotNull);
+
+        completer.complete(
+          GroupTreasureInventoryAdapter.toInventoryItem(
+            potion,
+            itemRow: const {'category': 'equipement_general', 'weight': 0.5},
+            description: 'Rend 2d4+2 points de vie.',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.text('Rend 2d4+2 points de vie.'), findsOneWidget);
+      },
+    );
+
+    testWidgets('objet du catalogue : erreur de lecture -> message et '
+        '« Réessayer » relance la lecture', (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = const GroupTreasure(
+        groupId: 'group-1',
+        items: [potion],
+      );
+      fakeRepository.detailsError = const GroupFailure(
+        'réseau',
+        code: GroupErrorCode.network,
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
+      await tester.tap(find.text('Potion'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Impossible de charger la description.'),
+        findsOneWidget,
+      );
+
+      fakeRepository.detailsError = null;
+      fakeRepository.detailsToReturn =
+          GroupTreasureInventoryAdapter.toInventoryItem(
+            potion,
+            description: 'Rend 2d4+2 points de vie.',
+          );
+      await tester.tap(find.byKey(const Key('groupTreasureItemDetailsRetry')));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.detailsFetchCount, 2);
+      expect(find.text('Rend 2d4+2 points de vie.'), findsOneWidget);
+    });
+
+    testWidgets("S'attribuer : fiche -> sheet de quantité plafonnée -> "
+        'claimTreasureItem avec l\'entrée vue, puis rechargement', (
       tester,
     ) async {
       fakeRepository.detailToReturn = ownerViewDetail();
       fakeRepository.treasureToReturn = const GroupTreasure(
         groupId: 'group-1',
-        items: [
-          GroupTreasureItem(itemId: 7, displayName: 'Potion', quantity: 3),
-        ],
+        items: [potion],
       );
 
       await tester.pumpWidget(_buildTestWidget(fakeRepository));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('BUTIN'));
+      await openTreasureTab(tester);
+      await tester.tap(find.text('Potion'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Potion'), findsOneWidget);
-      expect(find.text("S'attribuer"), findsOneWidget);
+      await tester.tap(find.byKey(const Key('groupTreasureItemClaimButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.text("S'attribuer Potion"), findsOneWidget);
+      // Plafond : la quantité disponible (3).
+      await tester.tap(find.byIcon(Icons.add).last);
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.add).last);
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.add).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("S'ATTRIBUER"));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.lastClaimedQuantity, 3);
+      expect(fakeRepository.lastClaimedItem, potion);
+      expect(find.text('Objet ajouté à ton inventaire.'), findsOneWidget);
+      expect(fakeRepository.treasureFetchCount, greaterThanOrEqualTo(2));
+    });
+
+    testWidgets('Retirer du butin : confirmation (titre et texte du butin), '
+        'puis removeTreasureItem et message', (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = GroupTreasure(
+        groupId: 'group-1',
+        items: [moonVial],
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
+      await tester.tap(find.text('Fiole de lune'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('groupTreasureItemRemoveButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Retirer Fiole de lune du butin ?'), findsOneWidget);
+      expect(
+        find.text(
+          'Les 2 exemplaires disparaissent du butin pour tout le groupe. '
+          'Cette action est définitive.',
+        ),
+        findsOneWidget,
+      );
+
+      // Annuler : rien n'est retiré.
+      await tester.tap(find.text('ANNULER'));
+      await tester.pumpAndSettle();
+      expect(fakeRepository.lastRemovedItem, isNull);
+
+      await tester.tap(find.text('Fiole de lune'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('groupTreasureItemRemoveButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Retirer'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.lastRemovedItem, moonVial);
+      expect(find.text('Fiole de lune retiré du butin.'), findsOneWidget);
+    });
+
+    testWidgets('Modifier un objet du catalogue : seulement sa quantité '
+        '(min 1, bouton Enregistrer)', (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = const GroupTreasure(
+        groupId: 'group-1',
+        items: [potion],
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
+      await tester.tap(find.text('Potion'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('groupTreasureItemEditButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Quantité de Potion'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.add).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ENREGISTRER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.lastUpdatedExpected, potion);
+      expect(fakeRepository.lastUpdatedItem?.quantity, 4);
+      expect(fakeRepository.lastUpdatedItem?.entryId, 'entry-potion');
+      expect(find.text('Objet modifié.'), findsOneWidget);
+    });
+
+    testWidgets('Modifier un objet personnalisé sans type : formulaire en deux '
+        'temps (mode « Enrichir »), quantité modifiable', (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = GroupTreasure(
+        groupId: 'group-1',
+        items: [moonVial],
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
+      await tester.tap(find.text('Fiole de lune'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('groupTreasureItemEditButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.text("ENRICHIR L'OBJET"), findsOneWidget);
+      await tester.tap(find.byKey(const Key('customItemKindOther')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('customItemNameField')),
+        'Fiole de lune pleine',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('QUANTITÉ'), findsOneWidget);
+      await tester.ensureVisible(find.byIcon(Icons.add).last);
+      await tester.tap(find.byIcon(Icons.add).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ENREGISTRER'));
+      await tester.pumpAndSettle();
+
+      final updated = fakeRepository.lastUpdatedItem!;
+      expect(fakeRepository.lastUpdatedExpected, moonVial);
+      expect(updated.customName, 'Fiole de lune pleine');
+      expect(updated.quantity, 3);
+      expect(updated.customDescription, 'Brille faiblement la nuit.');
+      expect(updated.enrichment?.kind, 'autre');
+    });
+
+    testWidgets('objet modifié entre-temps par un autre membre : message '
+        'dédié et butin rechargé', (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = const GroupTreasure(
+        groupId: 'group-1',
+        items: [potion],
+      );
+      fakeRepository.treasureWriteError = const GroupFailure(
+        'périmé',
+        code: GroupErrorCode.treasureStale,
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
+      final fetchesBefore = fakeRepository.treasureFetchCount;
+      await tester.tap(find.text('Potion'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('groupTreasureItemRemoveButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Retirer'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          "Un autre membre vient de modifier ou d'attribuer cet objet. "
+          'Vérifie et recommence.',
+        ),
+        findsOneWidget,
+      );
+      expect(fakeRepository.treasureFetchCount, greaterThan(fetchesBefore));
+    });
+
+    testWidgets('ajout par le parcours de l\'inventaire : « Objet » -> '
+        'catalogue en sélection multiple -> addTreasureItems', (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = const GroupTreasure(groupId: 'group-1');
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          fakeRepository,
+          catalog: const [
+            InventoryCatalogItem(
+              id: 3,
+              name: 'Corde',
+              category: 'equipement_general',
+              costAmount: 1,
+              weight: 5,
+            ),
+            InventoryCatalogItem(
+              id: 9,
+              name: 'Dague',
+              category: 'arme',
+              costAmount: 2,
+              weight: 0.5,
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
+
+      await tester.tap(find.text('Objet'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Depuis le catalogue'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Corde'));
+      await tester.tap(find.text('Dague'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('AJOUTER (2)'));
+      await tester.pumpAndSettle();
+
+      final added = fakeRepository.lastAddedItems!;
+      expect(added, hasLength(2));
+      expect(added.map((item) => item.itemId), [3, 9]);
+      expect(added.last.category, 'arme');
+      expect(added.last.weight, 0.5);
+      expect(find.text('Butin mis à jour.'), findsOneWidget);
+    });
+
+    testWidgets('monnaie modifiable comme dans l\'inventaire : toucher la '
+        'tuile PO, ajouter 5 -> setTreasureCurrency conditionnel', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = const GroupTreasure(
+        groupId: 'group-1',
+        currencyGp: 12,
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
+
+      await tester.tap(find.text('12'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, '5');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.lastCurrencyExpected, {CurrencyKind.gold: 12});
+      expect(fakeRepository.lastAddedTotals, {CurrencyKind.gold: 17});
+      expect(find.text('Butin mis à jour.'), findsOneWidget);
+    });
+
+    testWidgets('hors connexion : bandeau, tuiles de monnaie et « Objet » '
+        'désactivés, fiche en lecture (trois actions désactivées)', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = GroupTreasure(
+        groupId: 'group-1',
+        currencyGp: 12,
+        items: [moonVial],
+      );
+      final connectivity = FakeConnectivityChecker(connected: false);
+
+      await tester.pumpWidget(
+        _buildTestWidget(fakeRepository, connectivity: connectivity),
+      );
+      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
+
+      const banner =
+          "Pas de connexion : le butin est en lecture seule jusqu'au retour "
+          'du réseau.';
+      expect(find.text(banner), findsOneWidget);
+
+      // Tuile de monnaie : aucune sheet d'ajustement.
+      await tester.tap(find.text('12'));
+      await tester.pumpAndSettle();
+      expect(find.text('APPLIQUER'), findsNothing);
+      // Tuile « Objet » : aucune sheet d'entrée.
+      await tester.tap(find.text('Objet'));
+      await tester.pumpAndSettle();
+      expect(find.text('Depuis le catalogue'), findsNothing);
+
+      await tester.tap(find.text('Fiole de lune'));
+      await tester.pumpAndSettle();
+      for (final key in const [
+        'groupTreasureItemClaimButton',
+        'groupTreasureItemEditButton',
+        'groupTreasureItemRemoveButton',
+      ]) {
+        final finder = find.byKey(Key(key));
+        final widget = tester.widget(finder);
+        final onPressed = switch (widget) {
+          PrimaryButton(:final onPressed) => onPressed,
+          SecondaryButton(:final onPressed) => onPressed,
+          DestructiveButton(:final onPressed) => onPressed,
+          _ => throw StateError('bouton inattendu'),
+        };
+        expect(onPressed, isNull, reason: key);
+      }
+      expect(find.text(banner), findsNWidgets(2));
     });
 
     testWidgets(
@@ -1409,8 +1883,7 @@ void main() {
 
         await tester.pumpWidget(_buildTestWidget(fakeRepository));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('BUTIN'));
-        await tester.pumpAndSettle();
+        await openTreasureTab(tester);
 
         await tester.tap(find.text('Répartir vers mon inventaire'));
         await tester.pumpAndSettle();
@@ -1449,8 +1922,7 @@ void main() {
 
         await tester.pumpWidget(_buildTestWidget(fakeRepository));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('BUTIN'));
-        await tester.pumpAndSettle();
+        await openTreasureTab(tester);
 
         await tester.tap(find.text('Répartir vers mon inventaire'));
         await tester.pumpAndSettle();
@@ -1485,8 +1957,7 @@ void main() {
 
         await tester.pumpWidget(_buildTestWidget(fakeRepository));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('BUTIN'));
-        await tester.pumpAndSettle();
+        await openTreasureTab(tester);
 
         await tester.tap(find.text('Répartir vers mon inventaire'));
         await tester.pumpAndSettle();
@@ -1514,34 +1985,6 @@ void main() {
         );
       },
     );
-
-    testWidgets("réclamer un objet : ouvre la sheet de quantité, appelle "
-        "claimTreasureItem puis rafraîchit le butin", (tester) async {
-      fakeRepository.detailToReturn = ownerViewDetail();
-      fakeRepository.treasureToReturn = const GroupTreasure(
-        groupId: 'group-1',
-        items: [
-          GroupTreasureItem(itemId: 7, displayName: 'Potion', quantity: 3),
-        ],
-      );
-
-      await tester.pumpWidget(_buildTestWidget(fakeRepository));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('BUTIN'));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text("S'attribuer"));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Réclamer Potion'), findsOneWidget);
-
-      await tester.tap(find.text('RÉCLAMER'));
-      await tester.pumpAndSettle();
-
-      expect(fakeRepository.lastClaimedQuantity, 1);
-      expect(find.text('Objet ajouté à ton inventaire.'), findsOneWidget);
-      expect(fakeRepository.treasureFetchCount, greaterThanOrEqualTo(2));
-    });
   });
 
   group('onglet Notes (fractionné en entrées multiples le 07/11/2026, voir '
@@ -1747,8 +2190,9 @@ void main() {
     );
 
     testWidgets(
-      'onglet Butin : bandeau dédié, "Répartir vers mon inventaire" et '
-      '"S\'attribuer" assourdis',
+      'onglet Butin : bandeau dédié, "Répartir vers mon inventaire" assourdi ; '
+      'la fiche refuse "S\'attribuer" (légende) mais permet Modifier et '
+      'Retirer (décision 91 : tout membre)',
       (tester) async {
         fakeRepository.detailToReturn = gameMasterViewDetail();
         fakeRepository.treasureToReturn = const GroupTreasure(
@@ -1770,18 +2214,44 @@ void main() {
         );
 
         await tester.tap(find.text('Répartir vers mon inventaire'));
-        await tester.tap(find.text("S'attribuer"));
+        await tester.pumpAndSettle();
+        expect(fakeRepository.claimCurrencyCallCount, 0);
+        expect(find.text("S'ATTRIBUER DE LA MONNAIE"), findsNothing);
+
+        // Entrée ancienne (sans entry_id ni catégorie) : la carte s'affiche
+        // et ouvre la fiche.
+        await tester.tap(find.text('Potion'));
         await tester.pumpAndSettle();
 
-        expect(fakeRepository.claimCurrencyCallCount, 0);
-        expect(fakeRepository.lastClaimedQuantity, isNull);
-
-        // "Ajouter au butin du groupe" reste actif (n'a jamais dépendu d'un
-        // personnage).
-        final addButton = tester.widget<SecondaryButton>(
-          find.byType(SecondaryButton),
+        final claim = tester.widget<PrimaryButton>(
+          find.byKey(const Key('groupTreasureItemClaimButton')),
         );
-        expect(addButton.onPressed, isNotNull);
+        expect(claim.onPressed, isNull);
+        expect(
+          find.text(
+            "Il te faut un personnage dans ce groupe pour t'attribuer un "
+            'objet.',
+          ),
+          findsOneWidget,
+        );
+        final edit = tester.widget<SecondaryButton>(
+          find.byKey(const Key('groupTreasureItemEditButton')),
+        );
+        expect(edit.onPressed, isNotNull);
+        final remove = tester.widget<DestructiveButton>(
+          find.byKey(const Key('groupTreasureItemRemoveButton')),
+        );
+        expect(remove.onPressed, isNotNull);
+
+        // Le MJ sans personnage retire l'objet du butin.
+        await tester.tap(
+          find.byKey(const Key('groupTreasureItemRemoveButton')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Retirer'));
+        await tester.pumpAndSettle();
+        expect(fakeRepository.lastRemovedItem?.itemId, 7);
+        expect(fakeRepository.lastClaimedQuantity, isNull);
       },
     );
 

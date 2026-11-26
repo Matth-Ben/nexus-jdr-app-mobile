@@ -371,9 +371,14 @@ class _ItemActionSheetContent extends StatelessWidget {
 /// [itemName] en plus dans le titre et un texte fixe ("Cette action est
 /// définitive.") plutôt qu'aucun texte du tout (spec de la tâche). Retourne
 /// `true` si le joueur confirme, `false`/`null` sinon.
+///
+/// [title]/[body] remplacent le titre et le texte de l'inventaire (retrait
+/// d'un objet du butin de groupe, décision 91) ; boutons inchangés.
 Future<bool?> showRemoveInventoryItemConfirmationDialog(
   BuildContext context, {
   required String itemName,
+  String? title,
+  String? body,
 }) {
   return showDialog<bool>(
     context: context,
@@ -395,7 +400,7 @@ Future<bool?> showRemoveInventoryItemConfirmationDialog(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                l10n.itemActionSheetRemoveConfirmationTitle(itemName),
+                title ?? l10n.itemActionSheetRemoveConfirmationTitle(itemName),
                 style: AppTypography.body(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
@@ -403,7 +408,7 @@ Future<bool?> showRemoveInventoryItemConfirmationDialog(
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                l10n.itemActionSheetRemoveConfirmationBody,
+                body ?? l10n.itemActionSheetRemoveConfirmationBody,
                 style: AppTypography.body(
                   fontSize: 13,
                   color: AppColors.textSecondary,

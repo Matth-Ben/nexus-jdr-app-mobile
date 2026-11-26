@@ -1,3 +1,5 @@
+import 'custom_item_enrichment.dart';
+
 /// Une ligne d'objet en cours de composition dans la sheet "Ajouter une
 /// récompense" (`presentation/widgets/add_reward_sheet.dart`), avant tout
 /// appel réseau — voir `CharacterRepository.addReward`, qui insère toutes
@@ -22,6 +24,7 @@ class RewardItemDraft {
     this.customDamageDice,
     this.customDamageType,
     this.customProperties = const [],
+    this.customEnrichment,
   });
 
   final int? itemId;
@@ -39,6 +42,12 @@ class RewardItemDraft {
   final String? customDamageDice;
   final String? customDamageType;
   final List<String> customProperties;
+
+  /// Colonnes `custom_*` enrichies saisies par le formulaire en deux temps
+  /// (type, bonus magique, poids, harmonisation, arme, armure — décision 91 :
+  /// la récompense utilise le même formulaire que l'inventaire) ; `null` pour
+  /// un objet du catalogue.
+  final CustomItemEnrichment? customEnrichment;
 
   bool get isCustom => itemId == null;
 }

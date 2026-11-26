@@ -37,6 +37,8 @@ extension GroupFailureL10n on GroupFailure {
         return l10n.groupTransientConflictErrorMessage;
       case GroupErrorCode.serverOutdated:
         return l10n.groupServerOutdatedErrorMessage;
+      case GroupErrorCode.treasureStale:
+        return l10n.groupTreasureStaleError;
       case GroupErrorCode.generic:
         return message;
     }

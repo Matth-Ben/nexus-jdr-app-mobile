@@ -9596,6 +9596,204 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Retour à l\'accueil'**
   String get combatBackHome;
+
+  /// Fiche d'un objet du butin de groupe (décision 91) : libellé de la ligne Provenance.
+  ///
+  /// In fr, this message translates to:
+  /// **'Provenance'**
+  String get groupTreasureItemSourceLabel;
+
+  /// Fiche d'un objet du butin : valeur de Provenance pour un objet du catalogue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Catalogue'**
+  String get groupTreasureItemSourceCatalog;
+
+  /// Fiche d'un objet du butin : libellé de la ligne Quantité.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quantité'**
+  String get groupTreasureItemQuantityLabel;
+
+  /// Fiche d'un objet du butin : valeur de la ligne Quantité.
+  ///
+  /// In fr, this message translates to:
+  /// **'×{quantity}'**
+  String groupTreasureItemQuantityValue(int quantity);
+
+  /// Butin de groupe : bouton S'attribuer (fiche d'un objet, sheet de quantité, sheet de monnaie).
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'attribuer'**
+  String get groupTreasureClaimButton;
+
+  /// Titre de la sheet de quantité de l'attribution d'un objet du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'attribuer {itemName}'**
+  String groupTreasureClaimSheetTitle(String itemName);
+
+  /// Fiche d'un objet du butin : légende sous S'attribuer désactivé (MJ sans personnage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Il te faut un personnage dans ce groupe pour t\'attribuer un objet.'**
+  String get groupTreasureClaimNoCharacterCaption;
+
+  /// Fiche d'un objet du butin : bouton destructif de retrait.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer du butin'**
+  String get groupTreasureRemoveButton;
+
+  /// Titre du dialogue de confirmation du retrait d'un objet du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer {itemName} du butin ?'**
+  String groupTreasureRemoveConfirmTitle(String itemName);
+
+  /// Texte du dialogue de confirmation du retrait d'un objet du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'{quantity, plural, =1{L\'objet disparaît du butin pour tout le groupe.} other{Les {quantity} exemplaires disparaissent du butin pour tout le groupe.}} Cette action est définitive.'**
+  String groupTreasureRemoveConfirmBody(int quantity);
+
+  /// Snackbar après le retrait d'un objet du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'{itemName} retiré du butin.'**
+  String groupTreasureRemovedSnack(String itemName);
+
+  /// Snackbar après la modification d'un objet du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet modifié.'**
+  String get groupTreasureUpdatedSnack;
+
+  /// Titre de la sheet de quantité d'un objet du catalogue du butin (Modifier).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quantité de {itemName}'**
+  String groupTreasureQuantitySheetTitle(String itemName);
+
+  /// Butin modifié entre-temps par un autre membre : rien n'a été écrit, le butin est rechargé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un autre membre vient de modifier ou d\'attribuer cet objet. Vérifie et recommence.'**
+  String get groupTreasureStaleError;
+
+  /// Snackbar d'une écriture du butin impossible faute de réseau.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas de connexion : le butin n\'a pas été modifié. Réessaie une fois connecté.'**
+  String get groupTreasureOfflineError;
+
+  /// Bandeau de l'onglet Butin et légende de la fiche d'un objet hors connexion (actions désactivées).
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas de connexion : le butin est en lecture seule jusqu\'au retour du réseau.'**
+  String get groupTreasureOfflineBanner;
+
+  /// Fiche d'un objet du catalogue du butin : erreur de lecture de la description.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger la description.'**
+  String get groupTreasureDetailsLoadError;
+
+  /// Bandeau de l'onglet Butin pour un MJ sans personnage.
+  ///
+  /// In fr, this message translates to:
+  /// **'En tant que MJ sans personnage, tu peux gérer le butin commun mais pas t\'attribuer une part — seuls les membres avec un personnage le peuvent.'**
+  String get groupTreasureGameMasterBanner;
+
+  /// Onglet Butin : titre de la section monnaie.
+  ///
+  /// In fr, this message translates to:
+  /// **'MONNAIE COMMUNE'**
+  String get groupTreasureCurrencySectionLabel;
+
+  /// Onglet Butin : bouton qui ouvre la sheet S'attribuer de la monnaie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répartir vers mon inventaire'**
+  String get groupTreasureSplitCurrencyButton;
+
+  /// Onglet Butin : titre de la section objets.
+  ///
+  /// In fr, this message translates to:
+  /// **'OBJETS EN ATTENTE'**
+  String get groupTreasureItemsSectionLabel;
+
+  /// Onglet Butin : état vide de la liste d'objets.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun objet en attente.'**
+  String get groupTreasureEmptyItems;
+
+  /// Onglet Butin : erreur de chargement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger le butin commun. Réessaie.'**
+  String get groupTreasureLoadError;
+
+  /// Snackbar après un ajout d'objets ou un changement de monnaie du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Butin mis à jour.'**
+  String get groupTreasureSavedSnack;
+
+  /// Snackbar d'une écriture du butin en échec (cause inconnue).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de mettre à jour le butin. Réessaie.'**
+  String get groupTreasureWriteError;
+
+  /// Snackbar après l'attribution d'un objet du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet ajouté à ton inventaire.'**
+  String get groupTreasureClaimedItemSnack;
+
+  /// Snackbar d'une attribution d'objet en échec (cause inconnue).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de t\'attribuer cet objet. Réessaie.'**
+  String get groupTreasureClaimItemError;
+
+  /// Snackbar après Répartir vers mon inventaire réussi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Monnaie récupérée.'**
+  String get groupTreasureCurrencyClaimedSnack;
+
+  /// Snackbar quand aucune pièce n'a pu être récupérée (butin modifié entre-temps).
+  ///
+  /// In fr, this message translates to:
+  /// **'Un autre membre vient de modifier le butin. Réessaie.'**
+  String get groupTreasureCurrencyClaimFailed;
+
+  /// Snackbar d'une récupération de monnaie partielle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Butin modifié entretemps : {currencies} non récupérées, le reste a été ajouté à ton inventaire.'**
+  String groupTreasureCurrencyClaimPartial(String currencies);
+
+  /// Titre de la sheet Répartir vers mon inventaire.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'ATTRIBUER DE LA MONNAIE'**
+  String get groupTreasureClaimCurrencySheetTitle;
+
+  /// Sheet S'attribuer de la monnaie : bouton Annuler.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get groupTreasureClaimCurrencyCancelButton;
+
+  /// Sheet S'attribuer de la monnaie : solde disponible sous un champ.
+  ///
+  /// In fr, this message translates to:
+  /// **'/ {max}'**
+  String groupTreasureClaimCurrencyMaxHint(int max);
 }
 
 class _AppLocalizationsDelegate

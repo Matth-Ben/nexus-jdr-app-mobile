@@ -145,11 +145,162 @@ class _ItemInfoPanelContent extends StatelessWidget {
     final attunable = !readOnly && item.requiresAttunement;
     final atAttunementCap =
         !item.isAttuned && attunedCount >= CharacterDetail.attunementCap;
+
+    return SafeArea(
+      top: false,
+      child: FractionallySizedBox(
+        heightFactor: 0.88,
+        child: Container(
+          decoration: const BoxDecoration(color: AppColors.parchmentBg),
+          child: Column(
+            children: [
+              SheetHeaderBar(title: item.name.toUpperCase()),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (notProficient) ...[
+                        Semantics(
+                          label: l10n
+                              .characterInventoryItemCardNotProficientSemantics,
+                          container: true,
+                          excludeSemantics: true,
+                          child: const Align(
+                            alignment: Alignment.centerLeft,
+                            child: NotProficientBadge(),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
+                      if (attunable) ...[
+                        _ToggleAttunedLink(
+                          attuned: item.isAttuned,
+                          disabled: atAttunementCap,
+                          onTap: onToggleAttuned,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
+                      ItemInfoBody(
+                        item: item,
+                        weaponAttackBonus: weaponAttackBonus,
+                        weaponDamageModifier: weaponDamageModifier,
+                        weaponStats: weaponStats,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (notProficient)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    0,
+                  ),
+                  child: InfoBanner(
+                    icon: Icons.warning_amber_rounded,
+                    message: ArmorProficiencyRules.isShield(item)
+                        ? l10n.inventoryNotProficientShieldBanner
+                        : l10n.inventoryNotProficientArmorBanner,
+                  ),
+                ),
+              if (usable)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  child: PrimaryButton(
+                    label: l10n.itemInfoPanelUseButton,
+                    onPressed: () =>
+                        Navigator.of(context).pop(_ItemInfoPanelAction.use),
+                  ),
+                )
+              else if (equippable)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  child: PrimaryButton(
+                    label: item.equipped
+                        ? l10n.itemInfoPanelUnequipButton
+                        : l10n.itemInfoPanelEquipButton,
+                    onPressed: () =>
+                        Navigator.of(context)
+                            .pop(_ItemInfoPanelAction.toggleEquipped),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Une ligne « libellé / valeur » ajoutée en tête de [ItemInfoBody] par son
+/// appelant (ex. « Provenance » et « Quantité » de la fiche d'un objet du
+/// butin de groupe).
+typedef ItemInfoRowData = ({String label, String value});
+
+/// Corps du panneau « Infos » d'un objet (lignes d'information séparées par
+/// [SheetActionDivider], légendes, puis titre `DESCRIPTION` et son texte) —
+/// partagé par [showItemInfoPanel] et la fiche d'un objet du butin de groupe
+/// (`group_treasure_item_sheet.dart`, décision 91), pour ne rien dupliquer.
+///
+/// [withoutCharacter] : objet vu hors de tout personnage (butin commun) — ni
+/// « Attaque » ni « Set » ni modificateur de dégâts, et l'harmonisation d'un
+/// objet qui la requiert s'affiche « Requise » (catalogue compris).
+///
+/// [leadingRows] : lignes ajoutées en tête, avant celles de l'objet.
+///
+/// [descriptionOverride] remplace le texte de la description (chargement ou
+/// erreur de lecture) ; `null` affiche la description de l'objet.
+class ItemInfoBody extends StatelessWidget {
+  const ItemInfoBody({
+    required this.item,
+    this.withoutCharacter = false,
+    this.leadingRows = const [],
+    this.weaponAttackBonus,
+    this.weaponDamageModifier,
+    this.weaponStats,
+    this.descriptionOverride,
+    super.key,
+  });
+
+  final CharacterInventoryItem item;
+  final bool withoutCharacter;
+  final List<ItemInfoRowData> leadingRows;
+  final int? weaponAttackBonus;
+  final int? weaponDamageModifier;
+
+  /// Voir `_ItemInfoPanelContent.weaponStats`.
+  final WeaponAttackStats? weaponStats;
+  final Widget? descriptionOverride;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final weapon = item.weaponProperties;
     final armor = item.armorProperties;
     final rarity = item.rarity;
+    final weaponAttackBonus = withoutCharacter ? null : this.weaponAttackBonus;
+    final weaponDamageModifier = withoutCharacter
+        ? null
+        : this.weaponDamageModifier;
+    final weaponStats = withoutCharacter ? null : this.weaponStats;
 
     final infoRows = <Widget>[
+      for (final row in leadingRows)
+        _ItemInfoRow(label: row.label, value: row.value),
       // Objet personnalisé enrichi (P7) : type, bonus magique, harmonisation.
       // Un objet non enrichi (`customKind` nul) garde le rendu historique.
       if (item.isCustom && item.customKind != null)
@@ -176,14 +327,22 @@ class _ItemInfoPanelContent extends StatelessWidget {
           label: l10n.itemInfoPanelMagicBonusLabel,
           value: '+${item.magicBonus}',
         ),
-      if (item.isCustom && item.requiresAttunement)
+      if (withoutCharacter && item.requiresAttunement)
+        _ItemInfoRow(
+          label: l10n.itemInfoPanelAttunementLabel,
+          value: l10n.itemInfoPanelAttunementRequiredValue,
+        )
+      else if (item.isCustom && item.requiresAttunement)
         _ItemInfoRow(
           label: l10n.itemInfoPanelAttunementLabel,
           value: item.isAttuned
               ? l10n.itemInfoPanelAttunementAttunedValue
               : l10n.itemInfoPanelAttunementPendingValue,
         ),
-      if (item.isWeapon && item.equipped && item.weaponSlot != null)
+      if (!withoutCharacter &&
+          item.isWeapon &&
+          item.equipped &&
+          item.weaponSlot != null)
         _ItemInfoRow(
           label: l10n.itemInfoPanelSetLabel,
           value: item.weaponSlot!.label,
@@ -194,17 +353,17 @@ class _ItemInfoPanelContent extends StatelessWidget {
             label: l10n.itemInfoPanelAttackLabel,
             value: (weaponStats?.magicBonus ?? 0) > 0
                 ? l10n.itemInfoPanelAttackValueWithMagic(
-                    SignedModifierFormatter.format(weaponAttackBonus!),
+                    SignedModifierFormatter.format(weaponAttackBonus),
                     weaponStats!.magicBonus,
                   )
-                : SignedModifierFormatter.format(weaponAttackBonus!),
+                : SignedModifierFormatter.format(weaponAttackBonus),
           ),
         if (weapon.damageDice != null && weapon.damageType != null)
           _ItemInfoRow(
             label: l10n.itemInfoPanelDamageLabel,
             value:
                 '${weapon.damageDice}'
-                '${weaponDamageModifier == null || weaponDamageModifier == 0 ? '' : SignedModifierFormatter.format(weaponDamageModifier!)} '
+                '${weaponDamageModifier == null || weaponDamageModifier == 0 ? '' : SignedModifierFormatter.format(weaponDamageModifier)} '
                 '${weapon.damageType}',
           ),
         if (item.customWeaponCategory case final category?)
@@ -292,125 +451,37 @@ class _ItemInfoPanelContent extends StatelessWidget {
         ),
     ];
 
-    return SafeArea(
-      top: false,
-      child: FractionallySizedBox(
-        heightFactor: 0.88,
-        child: Container(
-          decoration: const BoxDecoration(color: AppColors.parchmentBg),
-          child: Column(
-            children: [
-              SheetHeaderBar(title: item.name.toUpperCase()),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (notProficient) ...[
-                        Semantics(
-                          label: l10n
-                              .characterInventoryItemCardNotProficientSemantics,
-                          container: true,
-                          excludeSemantics: true,
-                          child: const Align(
-                            alignment: Alignment.centerLeft,
-                            child: NotProficientBadge(),
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                      ],
-                      if (attunable) ...[
-                        _ToggleAttunedLink(
-                          attuned: item.isAttuned,
-                          disabled: atAttunementCap,
-                          onTap: onToggleAttuned,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                      ],
-                      if (infoRows.isNotEmpty)
-                        for (var i = 0; i < infoRows.length; i++) ...[
-                          infoRows[i],
-                          if (i < infoRows.length - 1)
-                            const SheetActionDivider(),
-                        ],
-                      if (item.isMagicBonusSuspended)
-                        _Legend(l10n.itemInfoPanelMagicBonusInactiveLegend),
-                      if (weaponStats?.proficiency ==
-                          WeaponProficiencyStatus.unknown)
-                        _Legend(l10n.itemInfoPanelProficiencyUnknownLegend),
-                      if (weaponStats?.rangeUnspecified ?? false)
-                        _Legend(l10n.itemInfoPanelRangeUnspecifiedLegend),
-                      if (infoRows.isNotEmpty)
-                        const SizedBox(height: AppSpacing.md),
-                      DisplayText(
-                        l10n.itemInfoPanelDescriptionSectionLabel,
-                        style: AppTypography.display(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        item.description?.isNotEmpty == true
-                            ? item.description!
-                            : l10n.itemInfoPanelDescriptionUnavailable,
-                        style: AppTypography.body(fontSize: 14, height: 1.4),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (notProficient)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    0,
-                  ),
-                  child: InfoBanner(
-                    icon: Icons.warning_amber_rounded,
-                    message: ArmorProficiencyRules.isShield(item)
-                        ? l10n.inventoryNotProficientShieldBanner
-                        : l10n.inventoryNotProficientArmorBanner,
-                  ),
-                ),
-              if (usable)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                  ),
-                  child: PrimaryButton(
-                    label: l10n.itemInfoPanelUseButton,
-                    onPressed: () =>
-                        Navigator.of(context).pop(_ItemInfoPanelAction.use),
-                  ),
-                )
-              else if (equippable)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                  ),
-                  child: PrimaryButton(
-                    label: item.equipped
-                        ? l10n.itemInfoPanelUnequipButton
-                        : l10n.itemInfoPanelEquipButton,
-                    onPressed: () =>
-                        Navigator.of(context)
-                            .pop(_ItemInfoPanelAction.toggleEquipped),
-                  ),
-                ),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (infoRows.isNotEmpty)
+          for (var i = 0; i < infoRows.length; i++) ...[
+            infoRows[i],
+            if (i < infoRows.length - 1) const SheetActionDivider(),
+          ],
+        if (item.isMagicBonusSuspended)
+          _Legend(l10n.itemInfoPanelMagicBonusInactiveLegend),
+        if (weaponStats?.proficiency == WeaponProficiencyStatus.unknown)
+          _Legend(l10n.itemInfoPanelProficiencyUnknownLegend),
+        if (weaponStats?.rangeUnspecified ?? false)
+          _Legend(l10n.itemInfoPanelRangeUnspecifiedLegend),
+        if (infoRows.isNotEmpty) const SizedBox(height: AppSpacing.md),
+        DisplayText(
+          l10n.itemInfoPanelDescriptionSectionLabel,
+          style: AppTypography.display(
+            fontSize: 11,
+            color: AppColors.textSecondary,
           ),
         ),
-      ),
+        const SizedBox(height: AppSpacing.xs),
+        descriptionOverride ??
+            Text(
+              item.description?.isNotEmpty == true
+                  ? item.description!
+                  : l10n.itemInfoPanelDescriptionUnavailable,
+              style: AppTypography.body(fontSize: 14, height: 1.4),
+            ),
+      ],
     );
   }
 }

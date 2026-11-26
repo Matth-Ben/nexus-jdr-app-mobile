@@ -69,9 +69,14 @@ class CustomItemInitialValues {
     this.armorCategory,
     this.weight,
     this.requiresAttunement = false,
+    this.quantity = 1,
   });
 
   final CustomItemEditMode mode;
+
+  /// Quantité actuelle (lue seulement quand le formulaire la propose en
+  /// édition, `showCustomItemFormSheet(editQuantity: true)`).
+  final int quantity;
   final String name;
 
   /// Type résolu (`null` : ancien objet sans type et sans dé de dégâts, aucune
@@ -100,6 +105,9 @@ final RegExp _dicePattern = RegExp(r'^(\d+)d(\d+)$');
 
 /// Valeurs de départ pour [item] (objet personnalisé, voir
 /// [customItemEditModeOf]). Dé « NdM » illisible : valeurs par défaut (1d6).
+///
+/// Sert aussi à un objet du butin de groupe, vu comme une ligne d'inventaire
+/// non équipée (`GroupTreasureInventoryAdapter`, décision 91).
 CustomItemInitialValues customItemInitialValuesOf(CharacterInventoryItem item) {
   final weapon = item.weaponProperties;
   var diceCount = 1;
@@ -133,5 +141,6 @@ CustomItemInitialValues customItemInitialValuesOf(CharacterInventoryItem item) {
     armorCategory: item.customArmorCategory,
     weight: item.unitWeight,
     requiresAttunement: item.customRequiresAttunement,
+    quantity: item.quantity,
   );
 }

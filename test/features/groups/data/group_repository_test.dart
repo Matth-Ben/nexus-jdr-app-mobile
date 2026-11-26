@@ -4,7 +4,8 @@
 // `MockClient`) : corps de requête envoyé aux 3 edge functions
 // (`create-group`/`preview-group-invite`/`join-group`), mapping des
 // réponses/erreurs, et écritures directes (`claim_group_treasure_currency`,
-// `claimTreasureItem`).
+// `claimTreasureItem`), et écritures du butin (décision 91 : ajout,
+// modification, retrait, monnaie conditionnelle, fiche d'un objet).
 
 import 'dart:convert';
 import 'dart:io';
@@ -13,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
+import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/group_character_reassignment_failure.dart';
 import 'package:personnages/features/groups/domain/group_failure.dart';
@@ -1121,8 +1123,20 @@ void main() {
     const groupId = 'group-1';
     const characterId = 'char-1';
 
-    test('quantité partielle réclamée : décrémente items sans retirer '
-        "l'entrée, insère dans l'inventaire personnel", () async {
+    http.Request patchOf(List<http.Request> requests) => requests.firstWhere(
+      (request) =>
+          request.url.path.endsWith('/group_treasure') &&
+          request.method == 'PATCH',
+    );
+
+    http.Request insertOf(List<http.Request> requests) => requests.firstWhere(
+      (request) =>
+          request.url.path.endsWith('/character_inventory') &&
+          request.method == 'POST',
+    );
+
+    test('entrée ancienne, quantité partielle : décrémente items (entry_id '
+        'attribué au passage), insère dans l\'inventaire personnel', () async {
       final requests = <http.Request>[];
       final client = _buildFakeClient(
         onRequest: requests.add,
@@ -1149,39 +1163,47 @@ void main() {
         quantity: 2,
       );
 
-      final updateRequest = requests.firstWhere(
-        (request) =>
-            request.url.path.endsWith('/group_treasure') &&
-            request.method == 'PATCH',
-      );
-      final updateBody = jsonDecode(updateRequest.body) as Map<String, dynamic>;
-      expect(updateBody['items'], [
-        {'item_id': 7, 'display_name': 'Potion', 'quantity': 3},
-      ]);
+      final updateBody =
+          jsonDecode(patchOf(requests).body) as Map<String, dynamic>;
+      final written = (updateBody['items'] as List).single as Map;
+      expect(written['item_id'], 7);
+      expect(written['quantity'], 3);
+      expect(written['entry_id'], isA<String>());
 
-      final insertRequest = requests.firstWhere(
-        (request) =>
-            request.url.path.endsWith('/character_inventory') &&
-            request.method == 'POST',
+      final insertBody =
+          jsonDecode(insertOf(requests).body) as Map<String, dynamic>;
+      expect(insertBody['character_id'], characterId);
+      expect(insertBody['item_id'], 7);
+      expect(insertBody['quantity'], 2);
+      expect(insertBody['id'], isA<String>());
+      expect(
+        insertBody.keys.where((key) => key.startsWith('custom_')),
+        isEmpty,
       );
-      final insertBody = jsonDecode(insertRequest.body) as Map<String, dynamic>;
-      expect(insertBody, {
-        'character_id': characterId,
-        'item_id': 7,
-        'quantity': 2,
-      });
     });
 
-    test('quantité totale réclamée : retire complètement l\'entrée', () async {
+    test('objet personnalisé enrichi : recopie complète dans '
+        'character_inventory, entrée retirée à 0', () async {
       final requests = <http.Request>[];
+      final sword = GroupTreasureItem.custom(
+        entryId: 'e-sword',
+        name: 'Épée runique',
+        quantity: 1,
+        description: 'Gravée de runes.',
+        damageDice: '1d8',
+        damageType: 'tranchant',
+        enrichment: const CustomItemEnrichment(
+          kind: CustomItemKinds.weapon,
+          magicBonus: 1,
+          requiresAttunement: true,
+        ),
+      );
       final client = _buildFakeClient(
         onRequest: requests.add,
         responses: {
           'group_treasure': [
             {
-              'items': [
-                {'item_id': 7, 'display_name': 'Potion', 'quantity': 2},
-              ],
+              'items': [sword.toJson()],
             },
           ],
         },
@@ -1191,56 +1213,318 @@ void main() {
       await repository.claimTreasureItem(
         groupId: groupId,
         characterId: characterId,
-        item: const GroupTreasureItem(
-          itemId: 7,
-          displayName: 'Potion',
-          quantity: 2,
-        ),
-        quantity: 2,
+        item: sword,
+        quantity: 1,
       );
 
-      final updateRequest = requests.firstWhere(
-        (request) =>
-            request.url.path.endsWith('/group_treasure') &&
-            request.method == 'PATCH',
+      final insertBody =
+          jsonDecode(insertOf(requests).body) as Map<String, dynamic>;
+      expect(insertBody, containsPair('custom_name', 'Épée runique'));
+      expect(
+        insertBody,
+        containsPair('custom_description', 'Gravée de runes.'),
       );
-      final updateBody = jsonDecode(updateRequest.body) as Map<String, dynamic>;
+      expect(insertBody, containsPair('custom_damage_dice', '1d8'));
+      expect(insertBody, containsPair('custom_damage_type', 'tranchant'));
+      expect(insertBody, containsPair('custom_kind', 'arme'));
+      expect(insertBody, containsPair('custom_magic_bonus', 1));
+      expect(insertBody, containsPair('custom_requires_attunement', true));
+      final updateBody =
+          jsonDecode(patchOf(requests).body) as Map<String, dynamic>;
       expect(updateBody['items'], isEmpty);
     });
 
-    test(
-      "entrée déjà retirée entretemps (course perdue) : n'écrit rien",
-      () async {
+    test('entrée déjà attribuée ou modifiée entre-temps : n\'écrit rien et '
+        'lève treasureStale', () async {
+      for (final remote in [
+        <Map<String, dynamic>>[],
+        [
+          {'item_id': 7, 'display_name': 'Potion', 'quantity': 1},
+        ],
+      ]) {
         final requests = <http.Request>[];
         final client = _buildFakeClient(
           onRequest: requests.add,
           responses: {
             'group_treasure': [
-              {'items': <Map<String, dynamic>>[]},
+              {'items': remote},
             ],
           },
         );
         final repository = SupabaseGroupRepository(client);
 
-        await repository.claimTreasureItem(
-          groupId: groupId,
-          characterId: characterId,
-          item: const GroupTreasureItem(
-            itemId: 7,
-            displayName: 'Potion',
-            quantity: 2,
+        await expectLater(
+          repository.claimTreasureItem(
+            groupId: groupId,
+            characterId: characterId,
+            item: const GroupTreasureItem(
+              itemId: 7,
+              displayName: 'Potion',
+              quantity: 2,
+            ),
+            quantity: 1,
           ),
-          quantity: 1,
+          throwsA(
+            isA<GroupFailure>().having(
+              (f) => f.code,
+              'code',
+              GroupErrorCode.treasureStale,
+            ),
+          ),
         );
-
         expect(
           requests.any(
             (request) => request.method == 'PATCH' || request.method == 'POST',
           ),
           isFalse,
         );
+      }
+    });
+  });
+
+  group('SupabaseGroupRepository : écriture des objets du butin', () {
+    const groupId = 'group-1';
+    final rope = GroupTreasureItem.custom(
+      entryId: 'rope',
+      name: 'Corde',
+      quantity: 2,
+    );
+
+    List<dynamic> writtenItems(List<http.Request> requests) {
+      final patch = requests.singleWhere(
+        (request) =>
+            request.url.path.endsWith('/group_treasure') &&
+            request.method == 'PATCH',
+      );
+      return (jsonDecode(patch.body) as Map<String, dynamic>)['items']
+          as List<dynamic>;
+    }
+
+    SupabaseClient clientWith(
+      List<Map<String, dynamic>> remote,
+      List<http.Request> requests,
+    ) => _buildFakeClient(
+      onRequest: requests.add,
+      responses: {
+        'group_treasure': [
+          {'items': remote},
+        ],
       },
     );
+
+    test('addTreasureItems relit items puis ajoute (entrée ancienne '
+        'identifiée au passage)', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        clientWith([
+          {'custom_name': 'Vieux', 'display_name': 'Vieux', 'quantity': 1},
+        ], requests),
+      );
+
+      await repository.addTreasureItems(
+        groupId: groupId,
+        items: const [
+          GroupTreasureItem.catalog(
+            itemId: 9,
+            displayName: 'Dague',
+            quantity: 1,
+            category: 'arme',
+          ),
+        ],
+      );
+
+      expect(requests.first.method, 'GET');
+      final items = writtenItems(requests);
+      expect(items, hasLength(2));
+      expect((items.first as Map)['entry_id'], isA<String>());
+      expect((items.last as Map)['item_id'], 9);
+      expect((items.last as Map)['category'], 'arme');
+    });
+
+    test('updateTreasureItem remplace l\'entrée inchangée', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        clientWith([rope.toJson()], requests),
+      );
+
+      await repository.updateTreasureItem(
+        groupId: groupId,
+        expected: rope,
+        updated: GroupTreasureItem.custom(
+          name: 'Corde elfique',
+          quantity: 3,
+          description: 'Solide.',
+        ),
+      );
+
+      final written = writtenItems(requests).single as Map;
+      expect(written['entry_id'], 'rope');
+      expect(written['custom_name'], 'Corde elfique');
+      expect(written['quantity'], 3);
+      expect(written['custom_description'], 'Solide.');
+    });
+
+    test('removeTreasureItem retire l\'entrée inchangée', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        clientWith([rope.toJson()], requests),
+      );
+
+      await repository.removeTreasureItem(groupId: groupId, expected: rope);
+
+      expect(writtenItems(requests), isEmpty);
+    });
+
+    test('modifier ou retirer une entrée changée entre-temps : rien n\'est '
+        'écrit, treasureStale', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        clientWith([rope.copyWith(quantity: 1).toJson()], requests),
+      );
+      final stale = throwsA(
+        isA<GroupFailure>().having(
+          (f) => f.code,
+          'code',
+          GroupErrorCode.treasureStale,
+        ),
+      );
+
+      await expectLater(
+        repository.removeTreasureItem(groupId: groupId, expected: rope),
+        stale,
+      );
+      await expectLater(
+        repository.updateTreasureItem(
+          groupId: groupId,
+          expected: rope,
+          updated: rope.copyWith(quantity: 9),
+        ),
+        stale,
+      );
+      expect(requests.any((request) => request.method == 'PATCH'), isFalse);
+    });
+  });
+
+  group('SupabaseGroupRepository.setTreasureCurrency', () {
+    test('mise à jour conditionnelle : soldes absolus, filtre sur les soldes '
+        'vus, une ligne renvoyée = succès', () async {
+      final requests = <http.Request>[];
+      final client = _buildFakeClient(
+        onRequest: requests.add,
+        responses: {
+          'group_treasure': [
+            {'group_id': 'group-1'},
+          ],
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await repository.setTreasureCurrency(
+        groupId: 'group-1',
+        expected: {CurrencyKind.gold: 12},
+        newTotals: {CurrencyKind.gold: 17},
+      );
+
+      final patch = requests.single;
+      expect(patch.method, 'PATCH');
+      expect(jsonDecode(patch.body), {'currency_gp': 17});
+      expect(patch.url.queryParameters['group_id'], 'eq.group-1');
+      expect(patch.url.queryParameters['currency_gp'], 'eq.12');
+    });
+
+    test(
+      'aucune ligne renvoyée (solde changé entre-temps) : treasureStale',
+      () {
+        final client = _buildFakeClient(
+          responses: {'group_treasure': <Map<String, dynamic>>[]},
+        );
+        final repository = SupabaseGroupRepository(client);
+
+        expect(
+          repository.setTreasureCurrency(
+            groupId: 'group-1',
+            expected: {CurrencyKind.gold: 12, CurrencyKind.silver: 0},
+            newTotals: {CurrencyKind.gold: 11, CurrencyKind.silver: 10},
+          ),
+          throwsA(
+            isA<GroupFailure>().having(
+              (f) => f.code,
+              'code',
+              GroupErrorCode.treasureStale,
+            ),
+          ),
+        );
+      },
+    );
+  });
+
+  group('SupabaseGroupRepository.fetchTreasureItemDetails', () {
+    test(
+      'objet du catalogue : ligne items par id et description traduite',
+      () async {
+        final requests = <http.Request>[];
+        final client = _buildFakeClient(
+          onRequest: requests.add,
+          responses: {
+            'items': [
+              {
+                'id': 9,
+                'category': 'arme',
+                'weight': 0.5,
+                'cost': {'amount': 2, 'currency': 'gp'},
+                'weapon_properties': {
+                  'damage_dice': '1d4',
+                  'damage_type': 'perforant',
+                  'properties': ['finesse'],
+                },
+              },
+            ],
+            'translations': [
+              {'entity_id': '9', 'value': 'Une lame courte.'},
+            ],
+          },
+        );
+        final repository = SupabaseGroupRepository(client);
+
+        final item = await repository.fetchTreasureItemDetails(
+          const GroupTreasureItem(itemId: 9, displayName: 'Dague', quantity: 2),
+        );
+
+        expect(item.name, 'Dague');
+        expect(item.quantity, 2);
+        expect(item.description, 'Une lame courte.');
+        expect(item.weaponProperties?.damageDice, '1d4');
+        final itemsRequest = requests.firstWhere(
+          (request) => request.url.path.endsWith('/items'),
+        );
+        expect(itemsRequest.url.queryParameters['id'], 'eq.9');
+        final translationsRequest = requests.firstWhere(
+          (request) => request.url.path.endsWith('/translations'),
+        );
+        expect(
+          translationsRequest.url.queryParameters['field_name'],
+          'eq.description',
+        );
+      },
+    );
+
+    test('objet personnalisé : aucun appel réseau', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        _buildFakeClient(onRequest: requests.add),
+      );
+
+      final item = await repository.fetchTreasureItemDetails(
+        GroupTreasureItem.custom(
+          name: 'Fiole',
+          quantity: 1,
+          description: 'Bleue.',
+        ),
+      );
+
+      expect(item.description, 'Bleue.');
+      expect(requests, isEmpty);
+    });
   });
 
   group('SupabaseGroupRepository.fetchGroupNoteEntries', () {

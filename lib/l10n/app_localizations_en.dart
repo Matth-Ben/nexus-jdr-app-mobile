@@ -5957,4 +5957,134 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get combatBackHome => 'Back to home';
+
+  @override
+  String get groupTreasureItemSourceLabel => 'Source';
+
+  @override
+  String get groupTreasureItemSourceCatalog => 'Catalog';
+
+  @override
+  String get groupTreasureItemQuantityLabel => 'Quantity';
+
+  @override
+  String groupTreasureItemQuantityValue(int quantity) {
+    return '×$quantity';
+  }
+
+  @override
+  String get groupTreasureClaimButton => 'Claim';
+
+  @override
+  String groupTreasureClaimSheetTitle(String itemName) {
+    return 'Claim $itemName';
+  }
+
+  @override
+  String get groupTreasureClaimNoCharacterCaption =>
+      'You need a character in this group to claim an item.';
+
+  @override
+  String get groupTreasureRemoveButton => 'Remove from loot';
+
+  @override
+  String groupTreasureRemoveConfirmTitle(String itemName) {
+    return 'Remove $itemName from the loot?';
+  }
+
+  @override
+  String groupTreasureRemoveConfirmBody(int quantity) {
+    String _temp0 = intl.Intl.pluralLogic(
+      quantity,
+      locale: localeName,
+      other:
+          'All $quantity copies disappear from the loot for the whole group.',
+      one: 'The item disappears from the loot for the whole group.',
+    );
+    return '$_temp0 This can\'t be undone.';
+  }
+
+  @override
+  String groupTreasureRemovedSnack(String itemName) {
+    return '$itemName removed from the loot.';
+  }
+
+  @override
+  String get groupTreasureUpdatedSnack => 'Item updated.';
+
+  @override
+  String groupTreasureQuantitySheetTitle(String itemName) {
+    return 'Quantity of $itemName';
+  }
+
+  @override
+  String get groupTreasureStaleError =>
+      'Another member just changed or claimed this item. Check and try again.';
+
+  @override
+  String get groupTreasureOfflineError =>
+      'No connection: the loot wasn\'t changed. Try again once you\'re online.';
+
+  @override
+  String get groupTreasureOfflineBanner =>
+      'No connection: the loot is read-only until you\'re back online.';
+
+  @override
+  String get groupTreasureDetailsLoadError => 'Couldn\'t load the description.';
+
+  @override
+  String get groupTreasureGameMasterBanner =>
+      'As a GM without a character, you can manage the shared loot but not claim a share — only members with a character can.';
+
+  @override
+  String get groupTreasureCurrencySectionLabel => 'SHARED CURRENCY';
+
+  @override
+  String get groupTreasureSplitCurrencyButton => 'Move to my inventory';
+
+  @override
+  String get groupTreasureItemsSectionLabel => 'PENDING ITEMS';
+
+  @override
+  String get groupTreasureEmptyItems => 'No pending items.';
+
+  @override
+  String get groupTreasureLoadError =>
+      'Couldn\'t load the shared loot. Try again.';
+
+  @override
+  String get groupTreasureSavedSnack => 'Loot updated.';
+
+  @override
+  String get groupTreasureWriteError => 'Couldn\'t update the loot. Try again.';
+
+  @override
+  String get groupTreasureClaimedItemSnack => 'Item added to your inventory.';
+
+  @override
+  String get groupTreasureClaimItemError =>
+      'Couldn\'t claim this item. Try again.';
+
+  @override
+  String get groupTreasureCurrencyClaimedSnack => 'Currency collected.';
+
+  @override
+  String get groupTreasureCurrencyClaimFailed =>
+      'Another member just changed the loot. Try again.';
+
+  @override
+  String groupTreasureCurrencyClaimPartial(String currencies) {
+    return 'Loot changed in the meantime: $currencies not collected, the rest was added to your inventory.';
+  }
+
+  @override
+  String get groupTreasureClaimCurrencySheetTitle => 'CLAIM CURRENCY';
+
+  @override
+  String get groupTreasureClaimCurrencyCancelButton => 'Cancel';
+
+  @override
+  String groupTreasureClaimCurrencyMaxHint(int max) {
+    return '/ $max';
+  }
 }

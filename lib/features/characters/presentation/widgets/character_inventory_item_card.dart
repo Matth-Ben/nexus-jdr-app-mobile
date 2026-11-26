@@ -78,9 +78,16 @@ class CharacterInventoryItemCard extends StatelessWidget {
                   item.quantity,
                 )
         : l10n.characterInventoryItemCardSubtitle(
-            InventoryCategoryRules.labelFor(
-              item.customCategoryKey ?? item.category,
-            ),
+            // Objet du catalogue sans catégorie connue (entrée ancienne du
+            // butin de groupe, décision 91) : libellé générique, jamais
+            // « Objet personnalisé ».
+            item.customCategoryKey == null &&
+                    item.category == null &&
+                    !item.isCustom
+                ? InventoryCategoryRules.unknownCategoryLabel
+                : InventoryCategoryRules.labelFor(
+                    item.customCategoryKey ?? item.category,
+                  ),
             item.quantity,
           );
     final attunementPending = item.requiresAttunement && !item.isAttuned;
@@ -102,7 +109,7 @@ class CharacterInventoryItemCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              _CategoryBadge(category: item.category),
+              _CategoryBadge(category: item.category, isCustom: item.isCustom),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
@@ -200,16 +207,27 @@ class CharacterInventoryItemCard extends StatelessWidget {
 /// arbitraire : ce n'est pas "une catégorie de plus", mais l'absence de
 /// catégorie (aucune ligne `items` du tout, voir `domain
 /// /inventory_category_rules.dart`).
+///
+/// Objet du catalogue sans catégorie connue (entrée ancienne du butin de
+/// groupe, décision 91) : badge générique `Icons.inventory_2_outlined` en
+/// `textMuted`, jamais le cadre « objet personnalisé ».
 class _CategoryBadge extends StatelessWidget {
-  const _CategoryBadge({required this.category});
+  const _CategoryBadge({required this.category, required this.isCustom});
 
   final String? category;
+  final bool isCustom;
 
   static const double _size = 40;
 
   @override
   Widget build(BuildContext context) {
     final category = this.category;
+    if (category == null && !isCustom) {
+      return const AccentIconBadge(
+        icon: Icons.inventory_2_outlined,
+        color: AppColors.textMuted,
+      );
+    }
     if (category == null) {
       return Container(
         width: _size,

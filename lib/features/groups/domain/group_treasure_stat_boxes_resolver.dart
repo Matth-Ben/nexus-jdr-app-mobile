@@ -5,10 +5,10 @@ import 'group_treasure.dart';
 /// Construit les [InventoryStatBox] de tête de l'onglet "Butin" — réutilise
 /// le même composant visuel que l'onglet "Inventaire" d'un personnage
 /// (`CharacterInventoryStatBoxesRow`, voir la spec de la tâche "Système de
-/// groupe" : "réutilisé à l'identique visuellement"), mais jamais cliquable
-/// ici (pas de tap pour ajuster une monnaie individuellement — seulement
-/// "Ajouter"/"S'attribuer", voir `presentation/group_screen.dart`) et sans
-/// box "poids" (le butin commun n'a pas de notion de poids porté).
+/// groupe" : "réutilisé à l'identique visuellement"), cliquable comme dans
+/// l'inventaire depuis la décision 91 (ajout, ajustement, retrait,
+/// conversion), sans box "poids" (le butin commun n'a pas de notion de poids
+/// porté).
 ///
 /// Même règle d'affichage que `InventoryStatBoxesResolver` pour
 /// or/argent/cuivre (toujours affichées) et platine/électrum (seulement si
