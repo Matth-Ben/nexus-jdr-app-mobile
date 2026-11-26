@@ -342,7 +342,9 @@ désavantage (PHB 2024 glossaire « Initiative », DMG 2014 p.270 et PHB 2014 p.
     fiche (description et détails), avec Modifier, Attribuer et Retirer du butin (avec confirmation). **Tout membre** du
     groupe peut modifier ou retirer, comme pour ajouter et attribuer. **Tous les champs** d'un objet personnalisé de la fiche
     sont modifiables (nom, description, quantité, détails d'arme et d'armure) ; ces détails suivent l'objet quand il est
-    attribué à un personnage.
+    attribué à un personnage. **L'ajout et la modification** d'un objet du butin reprennent **le même système que l'inventaire**
+    (Matthias : « je ne comprend pas pourquoi les 2 sont différents ») : mêmes écrans et même formulaire, seule la
+    destination change.
 
 Choix du chef de projet (24/11, PR DeepCore #58) : noms anglais des 6 armes naturelles gardés (simples noms, hors SRD) ;
 coquille du SRD français (Méphite vaporeux) gardée par fidélité à la source ; initiative d'un monstre 2014 = modificateur
