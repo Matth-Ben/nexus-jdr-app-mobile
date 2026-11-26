@@ -182,6 +182,13 @@ void main() {
             'plus tard.',
         "This action isn't available on the server yet. Try again later.",
       ),
+      // Décision 91 : butin modifié entre-temps par un autre membre.
+      GroupErrorCode.treasureStale: (
+        "Un autre membre vient de modifier ou d'attribuer cet objet. Vérifie "
+            'et recommence.',
+        'Another member just changed or claimed this item. Check and try '
+            'again.',
+      ),
     };
 
     test('chaque code (hors generic) a un texte FR et EN attendu', () {

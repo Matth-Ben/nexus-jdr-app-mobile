@@ -31,7 +31,31 @@ dans la Play Console (« Notes de version », 500 caractères max, balise
 
 ## [Non publié]
 
-_Rien pour l'instant._
+### Ajouté
+- Butin de groupe : toucher un objet ouvre sa fiche (provenance, quantité,
+  détails et description), avec « S'attribuer », « Modifier » et
+  « Retirer du butin » (avec confirmation). Tout membre du groupe peut
+  modifier ou retirer un objet, MJ sans personnage compris (#314).
+- Butin de groupe : la monnaie commune se modifie comme celle de
+  l'inventaire (ajouter, retirer, convertir, en touchant une pièce ; les
+  cinq pièces restent affichées, même à 0), en plus de « Répartir vers mon
+  inventaire » (#314).
+
+### Modifié
+- Butin de groupe : l'ajout d'objets reprend celui de l'inventaire
+  (catalogue avec sélection multiple, objet personnalisé en deux temps :
+  arme, armure, bouclier ou autre) et les objets s'affichent comme dans
+  l'inventaire ; le lien « S'attribuer » de chaque ligne laisse la place à
+  la fiche (#314).
+- Récompense de l'inventaire : l'objet personnalisé utilise le même
+  formulaire en deux temps que l'inventaire (#314).
+- Butin de groupe : un objet attribué arrive dans l'inventaire avec toutes
+  ses caractéristiques (description, dégâts, CA, bonus, harmonisation)
+  (#314).
+- Butin de groupe : hors connexion, le butin reste consultable mais ne se
+  modifie plus (message affiché) ; si un autre membre vient de modifier ou
+  d'attribuer le même objet, rien n'est écrasé et le butin se recharge
+  (#314).
 
 ---
 

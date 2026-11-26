@@ -164,15 +164,14 @@ void main() {
         ),
         findsOneWidget,
       );
-      await tapText(tester, 'AJOUTER AU BUTIN DU GROUPE');
+      // Décision 91 : la monnaie du butin se modifie comme dans
+      // l'inventaire -- toucher la tuile PO ouvre la sheet d'ajustement
+      // (mode « Ajouter » par défaut), saisie directe du montant.
+      await tapText(tester, 'PO');
       await pumpUntilSettled(tester, attempts: 4);
-      // Sheet "AJOUTER AU BUTIN DU GROUPE" : 5 champs de monnaie, ordre
-      // or/argent/cuivre/platine/électrum (voir
-      // add_to_group_treasure_sheet.dart::_currencyFieldsOrder) -- le
-      // premier est donc l'or.
-      await tester.enterText(find.byType(TextFormField).first, '15');
+      await tester.enterText(find.byType(TextField).last, '15');
       await tester.pump();
-      await tapText(tester, 'AJOUTER AU BUTIN');
+      await tapText(tester, 'APPLIQUER');
       await pumpUntilSettled(tester, attempts: 6);
       expect(
         find.text('15'),

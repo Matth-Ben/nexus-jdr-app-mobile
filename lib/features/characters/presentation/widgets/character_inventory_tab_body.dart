@@ -392,7 +392,7 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
             const SizedBox(height: AppSpacing.sm),
           ],
         if (isEmpty) const SizedBox(height: AppSpacing.md),
-        _AddRowButtons(
+        InventoryAddRowButtons(
           onAddItem: widget.actionsDisabled
               ? null
               : () => _openAddItem(context),
@@ -410,23 +410,35 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
 /// "+ Objet" qui affichait "+" deux fois) et "Récompense"
 /// (bouton secondaire avec icône cadeau, relogé depuis l'icône du bandeau
 /// bois — voir [CharacterInventoryTabBody.onAddReward]).
-class _AddRowButtons extends StatelessWidget {
-  const _AddRowButtons({required this.onAddItem, required this.onAddReward});
+///
+/// Repris tel quel en pied de l'onglet « Butin » de l'écran Groupe
+/// (décision 91) avec [showRewardButton] à `false` : la tuile « Objet » seule,
+/// la monnaie s'y modifie comme ici, par les tuiles de monnaie.
+class InventoryAddRowButtons extends StatelessWidget {
+  const InventoryAddRowButtons({
+    required this.onAddItem,
+    this.onAddReward,
+    this.showRewardButton = true,
+    super.key,
+  });
 
   final VoidCallback? onAddItem;
   final VoidCallback? onAddReward;
 
+  /// `false` : la tuile « Objet » occupe toute la largeur.
+  final bool showRewardButton;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final addItem = DashedAddTile(
+      label: l10n.characterInventoryTabBodyAddItemButtonLabel,
+      onTap: onAddItem,
+    );
+    if (!showRewardButton) return addItem;
     return Row(
       children: [
-        Expanded(
-          child: DashedAddTile(
-            label: l10n.characterInventoryTabBodyAddItemButtonLabel,
-            onTap: onAddItem,
-          ),
-        ),
+        Expanded(child: addItem),
         const SizedBox(width: AppSpacing.sm),
         Expanded(child: _RewardButton(onTap: onAddReward)),
       ],

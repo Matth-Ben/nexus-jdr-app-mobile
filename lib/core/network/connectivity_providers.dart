@@ -21,3 +21,12 @@ Stream<bool> connectivityStatus(Ref ref) async* {
   yield await checker.hasConnection();
   yield* checker.onConnectivityChanged;
 }
+
+/// Lecture de [connectivityStatusProvider] pour désactiver une action hors
+/// connexion (butin de groupe, décision 91).
+extension ConnectivityStatusValue on AsyncValue<bool> {
+  /// `true` seulement quand le flux a émis « hors ligne » : l'attente de la
+  /// première valeur ou une erreur du canal de plateforme valent « en
+  /// ligne » (jamais un faux hors-ligne ; le serveur reste l'autorité).
+  bool get isKnownOffline => value == false;
+}

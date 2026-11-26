@@ -90,7 +90,11 @@ abstract final class InventoryCategoryRules {
   /// `domain/character_inventory_item.dart::category`).
   static String labelFor(String? category) => category == null
       ? 'Objet personnalisé'
-      : (_frenchLabels[category] ?? 'Équipement');
+      : (_frenchLabels[category] ?? unknownCategoryLabel);
+
+  /// Libellé d'un objet du catalogue de catégorie inconnue (catégorie hors
+  /// liste, ou entrée ancienne du butin de groupe sans catégorie).
+  static const String unknownCategoryLabel = 'Équipement';
 
   /// Icône affichée dans l'[AccentIconBadge] du badge de catégorie —
   /// n'est jamais appelée pour `category == null` (voir la documentation de

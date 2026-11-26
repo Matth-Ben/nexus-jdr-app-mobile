@@ -5,105 +5,149 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/dashed_button.dart';
 import '../../../../core/widgets/info_banner.dart';
-import '../../../../core/widgets/secondary_button.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../characters/domain/currency_kind.dart';
+import '../../../characters/presentation/widgets/character_inventory_item_card.dart';
 import '../../../characters/presentation/widgets/character_inventory_stat_boxes_row.dart';
+import '../../../characters/presentation/widgets/character_inventory_tab_body.dart';
+import '../../../characters/presentation/widgets/currency_adjustment_sheet.dart';
+import '../../data/group_treasure_inventory_adapter.dart';
 import '../../domain/group_treasure.dart';
 import '../../domain/group_treasure_item.dart';
 import '../../domain/group_treasure_stat_boxes_resolver.dart';
 
-/// Callback "Réclamer" un objet du butin — voir
-/// `GroupRepository.claimTreasureItem`.
-typedef ClaimGroupTreasureItemCallback = void Function(GroupTreasureItem item);
-
 /// Contenu de l'onglet "Butin" de l'écran "Groupe" —
-/// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2.
+/// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2, aligné sur
+/// l'onglet « Inventaire » par la décision 91 (`docs/spec-butin-groupe.md`) :
+/// mêmes tuiles de monnaie (toucher une tuile l'ajuste, conversion
+/// comprise), mêmes cartes d'objet (toucher une carte ouvre la fiche de
+/// l'objet, jamais d'action directe sur la ligne) et même tuile « Objet » en
+/// pied de liste. Toutes les écritures sont orchestrées par l'appelant
+/// (`group_screen.dart`), comme pour l'inventaire.
 ///
-/// [isBusy] verrouille toutes les actions d'écriture pendant qu'un appel
-/// réseau (réclamation de monnaie/d'objet, ajout au butin) est en vol — même
-/// principe que `CharacterInventoryTabBody.actionsDisabled`.
+/// [isBusy] verrouille les écritures pendant qu'un appel réseau est en vol ;
+/// [isOffline] les verrouille hors connexion (pas de file hors ligne pour
+/// le butin, données partagées) avec un bandeau. Toucher une carte reste
+/// toujours possible (la fiche s'ouvre en lecture).
 ///
-/// [canClaim] `false` pour un MJ sans personnage (`GroupMember.isGameMaster`,
-/// voir `group_screen.dart::_buildTreasureTab`) : il peut gérer le butin
-/// commun mais pas s'en attribuer une part (aucun inventaire personnel à
-/// créditer) — assourdit "Répartir vers mon inventaire" et chaque ligne
-/// "S'attribuer", sans toucher au bouton "Ajouter au butin du groupe"
-/// (n'a jamais dépendu d'un personnage).
+/// [canClaim] `false` pour un MJ sans personnage (`GroupMember.isGameMaster`)
+/// : il gère le butin (ajout, modification, retrait, monnaie) mais ne peut
+/// pas s'en attribuer une part — assourdit « Répartir vers mon inventaire ».
 class GroupTreasureTabBody extends StatelessWidget {
   const GroupTreasureTabBody({
     required this.treasure,
     required this.isBusy,
     required this.canClaim,
     required this.onClaimCurrency,
-    required this.onClaimItem,
-    required this.onAddToTreasure,
+    required this.onOpenItem,
+    required this.onAddItems,
+    required this.onAdjustCurrency,
+    this.onConvertCurrency,
+    this.isOffline = false,
     super.key,
   });
 
   final GroupTreasure treasure;
   final bool isBusy;
   final bool canClaim;
+  final bool isOffline;
+
+  /// « Répartir vers mon inventaire ».
   final VoidCallback onClaimCurrency;
-  final ClaimGroupTreasureItemCallback onClaimItem;
-  final VoidCallback onAddToTreasure;
+
+  /// Toucher une carte : ouvre la fiche de l'objet.
+  final ValueChanged<GroupTreasureItem> onOpenItem;
+
+  /// Tuile « Objet » : ajout par le parcours de l'inventaire.
+  final VoidCallback onAddItems;
+
+  /// Nouveau solde **absolu** d'une monnaie (sheet d'ajustement de
+  /// l'inventaire).
+  final void Function(CurrencyKind currency, int newAmount) onAdjustCurrency;
+
+  /// Nouveaux soldes absolus des deux pièces d'une conversion ; `null`
+  /// masque « Changer ».
+  final ValueChanged<Map<CurrencyKind, int>>? onConvertCurrency;
+
+  bool get _writesEnabled => !isBusy && !isOffline;
+
+  int _amountOf(CurrencyKind currency) => switch (currency) {
+    CurrencyKind.platinum => treasure.currencyPp,
+    CurrencyKind.gold => treasure.currencyGp,
+    CurrencyKind.electrum => treasure.currencyEp,
+    CurrencyKind.silver => treasure.currencySp,
+    CurrencyKind.copper => treasure.currencyCp,
+  };
+
+  Future<void> _openCurrencyAdjustment(
+    BuildContext context,
+    CurrencyKind currency,
+  ) {
+    return showCurrencyAdjustmentSheet(
+      context,
+      currency: currency,
+      currentAmount: _amountOf(currency),
+      onApply: (newAmount) => onAdjustCurrency(currency, newAmount),
+      balances: {for (final kind in CurrencyKind.values) kind: _amountOf(kind)},
+      onConvert: onConvertCurrency,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final boxes = GroupTreasureStatBoxesResolver.resolve(treasure);
 
-    return Column(
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            children: [
-              if (!canClaim) ...[
-                const InfoBanner(
-                  icon: Icons.visibility_outlined,
-                  message:
-                      'En tant que MJ sans personnage, tu peux gérer le '
-                      "butin commun mais pas t'attribuer une part — seuls "
-                      'les membres avec un personnage le peuvent.',
-                ),
-                const SizedBox(height: AppSpacing.md),
-              ],
-              const _SectionLabel('MONNAIE COMMUNE'),
-              const SizedBox(height: AppSpacing.sm),
-              CharacterInventoryStatBoxesRow(boxes: boxes),
-              const SizedBox(height: AppSpacing.sm),
-              DashedButton(
-                icon: Icons.savings_outlined,
-                label: 'Répartir vers mon inventaire',
-                onPressed: (canClaim && !isBusy && !treasure.hasNoCurrency)
-                    ? onClaimCurrency
-                    : null,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              const _SectionLabel('OBJETS EN ATTENTE'),
-              const SizedBox(height: AppSpacing.sm),
-              if (treasure.items.isEmpty)
-                const _EmptyTreasureItemsState()
-              else
-                for (final item in treasure.items) ...[
-                  _TreasureItemRow(
-                    item: item,
-                    onClaim: (canClaim && !isBusy)
-                        ? () => onClaimItem(item)
-                        : null,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                ],
-            ],
+        if (isOffline) ...[
+          InfoBanner(
+            icon: Icons.cloud_off,
+            message: l10n.groupTreasureOfflineBanner,
           ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+        if (!canClaim) ...[
+          InfoBanner(
+            icon: Icons.visibility_outlined,
+            message: l10n.groupTreasureGameMasterBanner,
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+        _SectionLabel(l10n.groupTreasureCurrencySectionLabel),
+        const SizedBox(height: AppSpacing.sm),
+        CharacterInventoryStatBoxesRow(
+          boxes: boxes,
+          onTapCurrency: _writesEnabled
+              ? (currency) => _openCurrencyAdjustment(context, currency)
+              : null,
         ),
-        Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: SecondaryButton(
-            label: 'Ajouter au butin du groupe',
-            icon: Icons.card_giftcard,
-            surface: SecondaryButtonSurface.parchment,
-            borderColor: AppColors.goldEnd,
-            onPressed: isBusy ? null : onAddToTreasure,
-          ),
+        const SizedBox(height: AppSpacing.sm),
+        DashedButton(
+          icon: Icons.savings_outlined,
+          label: l10n.groupTreasureSplitCurrencyButton,
+          onPressed: (canClaim && _writesEnabled && !treasure.hasNoCurrency)
+              ? onClaimCurrency
+              : null,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _SectionLabel(l10n.groupTreasureItemsSectionLabel),
+        const SizedBox(height: AppSpacing.sm),
+        if (treasure.items.isEmpty)
+          const _EmptyTreasureItemsState()
+        else
+          for (final item in treasure.items) ...[
+            CharacterInventoryItemCard(
+              item: GroupTreasureInventoryAdapter.toInventoryItem(item),
+              onTap: () => onOpenItem(item),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        const SizedBox(height: AppSpacing.sm),
+        InventoryAddRowButtons(
+          onAddItem: _writesEnabled ? onAddItems : null,
+          showRewardButton: false,
         ),
       ],
     );
@@ -132,102 +176,8 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// Ligne d'objet en attente d'attribution — vignette carrée 40×40
-/// (placeholder, aucune image disponible pour ce butin dénormalisé, voir la
-/// doc de classe de [GroupTreasureItem]), nom/sous-titre sur 2 lignes puis
-/// lien texte "S'attribuer" (calque `GroupRepository.claimTreasureItem`) —
-/// recettage direction-artistique du 13/09/2026, remplace l'ancien
-/// `IconButton(Icons.call_split)`.
-class _TreasureItemRow extends StatelessWidget {
-  const _TreasureItemRow({required this.item, required this.onClaim});
-
-  final GroupTreasureItem item;
-  final VoidCallback? onClaim;
-
-  @override
-  Widget build(BuildContext context) {
-    final disabled = onClaim == null;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.parchmentCard,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.parchmentCardAlt,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  item.displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.body(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '× ${item.quantity}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.body(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Flexible(
-            child: InkWell(
-              onTap: onClaim,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 44),
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                    ),
-                    child: Text(
-                      "S'attribuer",
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.body(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: disabled
-                            ? AppColors.textMuted
-                            : AppColors.accentTeal,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// État vide (aucun objet en attente) — les stat boxes de monnaie restent
-/// affichées autour de cet état, voir [GroupTreasureTabBody.build].
+/// État vide (aucun objet en attente) — les tuiles de monnaie et la tuile
+/// « Objet » restent affichées autour de cet état.
 class _EmptyTreasureItemsState extends StatelessWidget {
   const _EmptyTreasureItemsState();
 
@@ -246,7 +196,7 @@ class _EmptyTreasureItemsState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Aucun objet en attente.',
+              AppLocalizations.of(context)!.groupTreasureEmptyItems,
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textMuted),
             ),

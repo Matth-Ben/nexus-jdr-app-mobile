@@ -1,6 +1,18 @@
 import '../../../core/cache/reference_data_cache.dart';
 import 'character_row_mapper.dart';
 
+/// Colonnes `items` du catalogue d'inventaire : tout ce qu'il faut pour
+/// construire une ligne d'inventaire complète (mêmes colonnes `items` que le
+/// détail de fiche, `SupabaseCharacterRepository.fetchCharacterDetail`).
+/// Partagées par le catalogue (`fetchInventoryCatalog`) et la fiche d'un objet
+/// du butin de groupe (`GroupRepository.fetchTreasureItemDetails`).
+const String inventoryCatalogItemColumns = '''
+    id, category, weight, cost, rarity, requires_attunement, consumable,
+    ac_bonus, ac_bonus_kind,
+    weapon_properties(damage_dice, damage_type, properties, range),
+    armor_properties(ac_base, ac_dex_bonus, strength_requirement, stealth_disadvantage, slot)
+  ''';
+
 /// Forme et lecture du cache du catalogue d'objets de l'onglet « Inventaire »
 /// (`SupabaseCharacterRepository.fetchInventoryCatalog`, T5b-2/F20), rangé
 /// dans [ReferenceDataCache] sous [key].

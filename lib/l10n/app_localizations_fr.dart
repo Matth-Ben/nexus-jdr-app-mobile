@@ -5391,6 +5391,142 @@ class AppLocalizationsFr extends AppLocalizations {
   String get spellInfoPanelRitualValue => 'Oui · +10 min d\'incantation';
 
   @override
+  String get groupTreasureItemSourceLabel => 'Provenance';
+
+  @override
+  String get groupTreasureItemSourceCatalog => 'Catalogue';
+
+  @override
+  String get groupTreasureItemQuantityLabel => 'Quantité';
+
+  @override
+  String groupTreasureItemQuantityValue(int quantity) {
+    return '×$quantity';
+  }
+
+  @override
+  String get groupTreasureClaimButton => 'S\'attribuer';
+
+  @override
+  String groupTreasureClaimSheetTitle(String itemName) {
+    return 'S\'attribuer $itemName';
+  }
+
+  @override
+  String get groupTreasureClaimNoCharacterCaption =>
+      'Il te faut un personnage dans ce groupe pour t\'attribuer un objet.';
+
+  @override
+  String get groupTreasureRemoveButton => 'Retirer du butin';
+
+  @override
+  String groupTreasureRemoveConfirmTitle(String itemName) {
+    return 'Retirer $itemName du butin ?';
+  }
+
+  @override
+  String groupTreasureRemoveConfirmBody(int quantity) {
+    String _temp0 = intl.Intl.pluralLogic(
+      quantity,
+      locale: localeName,
+      other:
+          'Les $quantity exemplaires disparaissent du butin pour tout le groupe.',
+      one: 'L\'objet disparaît du butin pour tout le groupe.',
+    );
+    return '$_temp0 Cette action est définitive.';
+  }
+
+  @override
+  String groupTreasureRemovedSnack(String itemName) {
+    return '$itemName retiré du butin.';
+  }
+
+  @override
+  String get groupTreasureUpdatedSnack => 'Objet modifié.';
+
+  @override
+  String groupTreasureQuantitySheetTitle(String itemName) {
+    return 'Quantité de $itemName';
+  }
+
+  @override
+  String get groupTreasureStaleError =>
+      'Un autre membre vient de modifier ou d\'attribuer cet objet. Vérifie et recommence.';
+
+  @override
+  String get groupTreasureOfflineError =>
+      'Pas de connexion : le butin n\'a pas été modifié. Réessaie une fois connecté.';
+
+  @override
+  String get groupTreasureOfflineBanner =>
+      'Pas de connexion : le butin est en lecture seule jusqu\'au retour du réseau.';
+
+  @override
+  String get groupTreasureDetailsLoadError =>
+      'Impossible de charger la description.';
+
+  @override
+  String get groupTreasureGameMasterBanner =>
+      'En tant que MJ sans personnage, tu peux gérer le butin commun mais pas t\'attribuer une part — seuls les membres avec un personnage le peuvent.';
+
+  @override
+  String get groupTreasureCurrencySectionLabel => 'MONNAIE COMMUNE';
+
+  @override
+  String get groupTreasureSplitCurrencyButton => 'Répartir vers mon inventaire';
+
+  @override
+  String get groupTreasureItemsSectionLabel => 'OBJETS EN ATTENTE';
+
+  @override
+  String get groupTreasureEmptyItems => 'Aucun objet en attente.';
+
+  @override
+  String get groupTreasureLoadError =>
+      'Impossible de charger le butin commun. Réessaie.';
+
+  @override
+  String get groupTreasureSavedSnack => 'Butin mis à jour.';
+
+  @override
+  String get groupTreasureWriteError =>
+      'Impossible de mettre à jour le butin. Réessaie.';
+
+  @override
+  String get groupTreasureClaimedItemSnack => 'Objet ajouté à ton inventaire.';
+
+  @override
+  String get groupTreasureClaimItemError =>
+      'Impossible de t\'attribuer cet objet. Réessaie.';
+
+  @override
+  String get groupTreasureCurrencyClaimedSnack => 'Monnaie récupérée.';
+
+  @override
+  String get groupTreasureCurrencyClaimFailed =>
+      'Un autre membre vient de modifier le butin. Réessaie.';
+
+  @override
+  String groupTreasureCurrencyClaimPartial(String currencies) {
+    return 'Butin modifié entretemps : $currencies non récupérées, le reste a été ajouté à ton inventaire.';
+  }
+
+  @override
+  String get groupTreasureClaimCurrencySheetTitle =>
+      'S\'ATTRIBUER DE LA MONNAIE';
+
+  @override
+  String get groupTreasureClaimCurrencyCancelButton => 'Annuler';
+
+  @override
+  String groupTreasureClaimCurrencyMaxHint(int max) {
+    return '/ $max';
+  }
+
+  @override
+  String get groupErrorStateRetryButton => 'Réessayer';
+
+  @override
   String combatBannerTitle(int round) {
     return 'Combat en cours · round $round';
   }

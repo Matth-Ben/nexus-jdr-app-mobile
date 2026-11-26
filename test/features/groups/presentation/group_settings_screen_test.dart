@@ -19,6 +19,7 @@ import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/core/widgets/alert_banner.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
+import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/combat/presentation/providers/character_combat_provider.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
@@ -174,11 +175,35 @@ class _FakeGroupRepository implements GroupRepository {
       throw UnimplementedError();
 
   @override
-  Future<void> addToTreasure({
+  Future<void> addTreasureItems({
     required String groupId,
-    required Map<CurrencyKind, int> newCurrencyTotals,
-    required List<GroupTreasureItem> newItems,
+    required List<GroupTreasureItem> items,
   }) => throw UnimplementedError();
+
+  @override
+  Future<void> updateTreasureItem({
+    required String groupId,
+    required GroupTreasureItem expected,
+    required GroupTreasureItem updated,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> removeTreasureItem({
+    required String groupId,
+    required GroupTreasureItem expected,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> setTreasureCurrency({
+    required String groupId,
+    required Map<CurrencyKind, int> expected,
+    required Map<CurrencyKind, int> newTotals,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<CharacterInventoryItem> fetchTreasureItemDetails(
+    GroupTreasureItem item,
+  ) => throw UnimplementedError();
 
   @override
   Future<bool> claimTreasureCurrency({

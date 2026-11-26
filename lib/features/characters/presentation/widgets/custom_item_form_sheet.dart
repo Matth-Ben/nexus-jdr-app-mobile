@@ -95,27 +95,44 @@ int? parseCustomItemIntInput(String raw) => int.tryParse(raw.trim());
 /// l'objet », bouton « Enregistrer », pas de quantité (autre action) ni
 /// d'« Harmoniser maintenant » ; un objet équipé ne peut pas changer de type
 /// ([isCustomKindChangeBlockedFor]).
+///
+/// [editQuantity] (édition seulement) : la quantité se modifie aussi dans le
+/// formulaire, à partir de `initial.quantity` (objet du butin de groupe,
+/// décision 91 : aucune autre action n'y change la quantité). L'inventaire
+/// la masque en édition (« Utiliser » a sa propre action).
 Future<CustomItemFormResult?> showCustomItemFormSheet(
   BuildContext context, {
   int? attunedCount,
   CustomItemInitialValues? initial,
+  bool editQuantity = false,
 }) {
   return showModalBottomSheet<CustomItemFormResult>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (context) =>
-        CustomItemFormSheet(attunedCount: attunedCount, initial: initial),
+    builder: (context) => CustomItemFormSheet(
+      attunedCount: attunedCount,
+      initial: initial,
+      editQuantity: editQuantity,
+    ),
   );
 }
 
 class CustomItemFormSheet extends StatefulWidget {
-  const CustomItemFormSheet({this.attunedCount, this.initial, super.key});
+  const CustomItemFormSheet({
+    this.attunedCount,
+    this.initial,
+    this.editQuantity = false,
+    super.key,
+  });
 
   final int? attunedCount;
 
   /// Valeurs de départ d'une édition (`null` : création).
   final CustomItemInitialValues? initial;
+
+  /// Voir [showCustomItemFormSheet].
+  final bool editQuantity;
 
   @override
   State<CustomItemFormSheet> createState() => _CustomItemFormSheetState();
@@ -178,6 +195,9 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
     _weaponRange = initial.weaponRange;
     _magicBonus = initial.magicBonus.clamp(0, customMagicBonusMax);
     _requiresAttunement = initial.requiresAttunement;
+    if (widget.editQuantity && initial.quantity >= 1) {
+      _quantity = initial.quantity;
+    }
     _armorCategory = initial.armorCategory ?? CustomArmorCategories.light;
     final acBase = initial.acBase;
     if (initial.kind == CustomItemKinds.armor && acBase != null) {
@@ -636,8 +656,9 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
             ),
           ),
         ),
-        // La quantité a sa propre action : jamais modifiée par l'édition.
-        if (!_isEditing) ...[
+        // Inventaire : la quantité a sa propre action, jamais modifiée par
+        // l'édition ; butin de groupe : modifiable ici ([editQuantity]).
+        if (!_isEditing || widget.editQuantity) ...[
           const SizedBox(height: AppSpacing.md),
           _label(l10n.addItemFlowCustomQuantitySectionLabel),
           StepperCounter(

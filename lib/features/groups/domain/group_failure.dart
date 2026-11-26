@@ -42,6 +42,11 @@ enum GroupErrorCode {
   /// DeepCore pas encore appliquée sur ce projet).
   serverOutdated,
 
+  /// Butin commun modifié entre-temps par un autre membre (objet modifié,
+  /// attribué ou retiré, monnaie changée) : rien n'a été écrit, l'appelant
+  /// recharge le butin (décision 91).
+  treasureStale,
+
   /// Tout le reste : [GroupFailure.message] (brut) fait foi.
   generic,
 }

@@ -107,8 +107,9 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
   bool get _canApply => _currencyDeltas.isNotEmpty || _items.isNotEmpty;
 
   Future<void> _addItem() async {
-    // Forme simple : une récompense ne porte pas les colonnes enrichies.
-    final picked = await pickInventoryAddition(context, enriched: false);
+    // Formulaire en deux temps, comme l'inventaire (décision 91) ; sans
+    // « Harmoniser maintenant » (`attunedCount` inconnu ici).
+    final picked = await pickInventoryAddition(context);
     if (picked == null || !mounted) return;
 
     setState(() {
@@ -122,6 +123,7 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
                 customDamageDice: picked.customDamageDice,
                 customDamageType: picked.customDamageType,
                 customProperties: picked.customProperties,
+                customEnrichment: picked.customEnrichment,
               )
             : RewardItemDraft(
                 itemId: picked.item!.id,
