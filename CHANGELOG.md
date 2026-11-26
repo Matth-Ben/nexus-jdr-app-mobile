@@ -35,6 +35,129 @@ _Rien pour l'instant._
 
 ---
 
+## [1.0.9] — 2026-11-26 (build 10)
+
+### Notes de version (stores)
+
+```
+<fr-FR>
+Nouveautés :
+• Combat en direct lancé par le MJ (dans l'app ou sur Grimoire) : initiative au d20, alerte « À toi de jouer »
+• Sorts : textes officiels du SRD (319 sorts), données et pastille de dégâts corrigées, filtres, rituels
+• Fiche : états (à terre, agrippé…), armes et armures personnalisées, avantage/désavantage
+• Hors ligne : monnaies, états, journal et inventaire aussi enregistrés
+• App disponible en anglais (Profil > Langue)
+</fr-FR>
+```
+
+### Ajouté
+- Combat de groupe : le MJ lance un combat depuis l'onglet Membres,
+  ajoute des monstres et départage les égalités ; l'ordre d'initiative est
+  partagé en direct ; le joueur saisit son initiative (jet de d20 intégré) ;
+  bandeau de combat sur l'écran du groupe et sur la fiche (#299, #300,
+  #301).
+- Combat mené depuis Grimoire : suivi en direct de l'ordre d'initiative,
+  envoi de l'initiative au MJ, « À toi de jouer », MJ hors ligne (#307) ;
+  signal visible sur tous les écrans, suivi de tous les groupes,
+  notifications de combat et interrupteur « Combat et révélations du MJ »
+  dans Profil > Notifications (#308).
+- Groupes : « Devenir MJ » dans les paramètres du groupe pour le
+  propriétaire qui y joue un personnage (#303) ; carte « Campagne » (titre
+  et résumé de l'histoire) et aperçu du groupe avant de le rejoindre
+  (#304).
+- Groupes : carnet de notes ouvert au MJ sans personnage (#226) et découpé
+  en plusieurs entrées (#230) ; badge de statut (morts, PV bas) par groupe
+  dans la liste (#227) ; option MJ sans personnage expliquée (#223) ;
+  pastille « +N » des états d'un membre qui ouvre la liste complète (#285).
+- Langue de l'app : français ou anglais, d'après le téléphone ou au choix
+  dans Profil > Langue (#196) ; tous les textes de l'app traduits (#197,
+  #198, #200 à #221, #284).
+- États (conditions) informatifs sur la fiche, visibles du MJ (#252,
+  #253, #280).
+- Objets personnalisés : description et dégâts d'arme (#186) ; formulaire
+  en deux temps, armes équipables avec attaque et dégâts calculés, armures
+  et boucliers avec CA calculée, modification d'un objet existant (#293 à
+  #297).
+- Jets de dés : avantage et désavantage, jets de sauvegarde touchables
+  (#275) ; dé 3D animé pour le d20 (#276).
+- Sorts : annuler un lancer et corriger les emplacements à la main (#269) ;
+  filtres par niveau, école et concentration (#272) ; avertissement de
+  concentration (#273) ; pastille « R » des rituels et durée dans le
+  panneau Infos (#302) ; filtre de préparation mémorisé (#187).
+- Fiche : carte « Emplacements de sorts » par niveau, message dédié pour
+  un personnage qui ne lance pas de sorts, signal « À 0 PV » (#241) ;
+  saisie directe des PV et des monnaies, conversion de pièces (#242) ;
+  avertissement d'armure ou de bouclier non maîtrisé (#274).
+- Montée de niveau : bouton Info sur les choix (sorts, invocations,
+  manœuvres...) (#191) ; dons étiquetés « Épopée » ou « Campagne » (#291).
+- Liste des personnages : PV et CA sur chaque carte, tri, annulation d'un
+  archivage (#279, #290).
+- Hors ligne : liste des personnages en cache (#195) et fiches en jeu
+  préchargées (#288) ; file d'attente étendue aux états, monnaies,
+  réglages d'état, journal et inventaire (ajout, retrait, usage, catalogue,
+  butin) (#258, #260 à #265) ; bandeau de synchronisation, dernière
+  synchro dans le Profil (#254), alertes de conflit (#266) et panneau des
+  alertes (#289, #298).
+- « Signaler un bug » : type « Contenu à corriger » et capture d'écran
+  facultative (#185).
+- Connexion avec Apple, sur iOS seulement (#192).
+
+### Modifié
+- Liste des personnages en un seul défilement (#286).
+- Une seule armure et un seul bouclier équipés à la fois ; la CA retient la
+  meilleure combinaison (#305).
+- Police pixel plafonnée avec un texte agrandi, textes courants en police
+  de corps (#247, #249, #250, #256, #257, #259).
+- « Réussite/Échec critique » devient « 20 naturel/1 naturel » hors
+  attaques (#275).
+- Favoris de sorts retirés (#268) ; case « KG » de l'inventaire retirée,
+  en double avec la jauge de charge (#188).
+- Export des données plus complet (profil, groupes, notes de groupe),
+  textes de confidentialité et de permission iOS précisés (#193, #194).
+- Crédits & licences : mentions exactes du SRD 5.1 et du SRD 5.2 (#310).
+- Démarrage à froid borné, même sans réseau (#271) ; FAQ mise à jour (#244,
+  #270).
+
+### Corrigé
+- Pastille de dégâts des sorts : plus de soins, durées ni dégâts subis par
+  le lanceur ; 7 sorts offensifs reçoivent la leur (#311).
+- Création : races et sous-races sans contenu 2024 masquées, nom suggéré
+  en race personnalisée (#189, #190).
+- Montée de niveau : les sorts déjà au grimoire ne sont plus proposés comme
+  nouveaux (#240) ; fiche à jour juste après (#231).
+- Repos long après un repos court : dés de vie bien récupérés, et leur
+  nombre affiché (#277).
+- Maîtrise des armes et import XML alignés sur les noms du catalogue (#237,
+  #239) ; vitesse affichée en mètres (#238).
+- Groupes : arrivée et départ d'un membre en temps réel (#232, #234) ;
+  onglet Membres en grand texte et textes de « Rejoindre un groupe »
+  (#306).
+- Partage d'un personnage : message d'activation et écran traduit (#246,
+  #278).
+- Hors ligne : écritures en attente plus fiables (#251, #267, #281), liste
+  affichée tout de suite (#290), bouton « Récompense » utilisable (#271).
+- Chevalier occulte et Escroc arcanique sans emplacements : message exact
+  (#280).
+- Compte : un nom, un avatar ou une langue changés ailleurs ne sont plus
+  écrasés, et la suppression de l'avatar est effective (#309).
+- Débordements avec un texte agrandi (#243, #283, #287).
+
+### Côté serveur (DeepCore, visible dans l'app)
+- Texte officiel du SRD 5.1 français pour les 319 sorts du SRD (DeepCore
+  #63, #64) ; école, portée, temps ou durée corrigés pour 20 sorts
+  (DeepCore #65).
+- Objets 2014 : textes du SRD 5.1, 9 valeurs corrigées (DeepCore #60).
+- Import XML : une ébauche (race, historique ou sort inconnu) n'est
+  supprimable que par son auteur, vide pour les autres joueurs, et leur
+  nombre est plafonné (DeepCore #62, #66).
+
+### Interne
+- Documentation, CI, tests (scénarios d'intégration, harnais de la file
+  hors ligne, filet de la CA) et code généré : #184, #222, #224, #225,
+  #228, #229, #233, #235, #236, #245, #248, #255, #282, #292, #312.
+
+---
+
 ## [1.0.8] — 2026-10-26 (build 9)
 
 ### Notes de version (stores)
