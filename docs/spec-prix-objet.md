@@ -29,11 +29,14 @@ Dans `_ItemInfoPanelContent` (`item_info_panel.dart:152-173`) et son équivalent
 existante (`item.costAmount`) devient une ligne **« Prix »** à 3 états, toujours à la même position dans la liste
 (juste après le poids, avant le bonus magique — ordre inchangé) :
 
-1. **Prix officiel sans surcharge** (objet du catalogue, `item.costAmount` non nul, pas de surcharge posée) : identique
-   à aujourd'hui mais formatage **devise-agnostique** (actuellement codé en dur `"{cost} po"`,
-   `itemInfoPanelCostValue`, `app_fr.arb:3844`) : remplacer par un formateur générique `{montant} {unitLabel}` — tant
-   que `items.cost.currency` ne vaut que `"gp"` en pratique, le rendu visuel ne change pas (toujours « X po »), mais la
-   fonction ne doit plus supposer l'or en dur.
+1. **Prix officiel sans surcharge** (objet du catalogue, `item.costAmount` non nul, pas de surcharge posée) :
+   formatage **devise-agnostique** (actuellement codé en dur `"{cost} po"`, `itemInfoPanelCostValue`,
+   `app_fr.arb:3844`) : remplacé par un formateur générique `{montant} {unitLabel}`, avec `CurrencyKind.unitLabel`
+   (PP/PO/PE/PA/PC, majuscules) — **changement visuel accepté par Matthias le 27/11/2026** (trouvé par `qa-testeur` :
+   la ligne « le rendu visuel ne change pas » ci-dessous était une supposition erronée de cette spec, pas une
+   exigence ; le prix d'un objet du catalogue passe de « 15 po » à « 15 PO », cohérent avec les tuiles de monnaie, la
+   conversion et l'ajustement qui utilisent déjà ces majuscules partout ailleurs dans l'app). Aucune correction de
+   code nécessaire : l'implémentation de `dev-flutter` produisait déjà ce résultat.
 2. **Prix surchargé** (objet du catalogue avec une surcharge posée, **ou** objet personnalisé avec un prix fixé) :
    même ligne, valeur dans la devise choisie (ex. « 15 pa »), **plus une pastille « Modifié »** juste après la valeur
    — *nouvelle pastille à ajouter au design system* (voir §7, point à valider) : gabarit de `NotProficientBadge`
