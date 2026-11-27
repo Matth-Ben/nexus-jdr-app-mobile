@@ -164,22 +164,18 @@ réutilisées telles quelles par le widget extrait.
 `SheetActionRow`/`SheetActionDivider`, le motif `_chips` de `currency_conversion_sheet.dart` (à extraire), le gabarit
 de `_ToggleAttunedLink` (pour les deux liens de ce ticket). Aucun nouveau token de couleur/espacement/rayon requis.
 
-## 7. Décisions à trancher par Matthias avant que dev-flutter ne commence
+## 7. Décisions (tranchées le 27/11/2026)
 
-1. **Prix absent → « Non estimé » + lien « Fixer un prix »** (ma recommandation, §1.3) plutôt que masquer la ligne —
-   confirmer : c'est le point qui rend visible le manque de prix sur les objets magiques, but premier du ticket.
-2. **Montant à 0 = aucun prix stocké** (pas « objet gratuit ») — confirmer, change la sémantique du « 0 » par rapport
-   aux sheets de monnaie existantes où 0 est un solde réel.
-3. **Nouvelle pastille « Modifié »** (gabarit `NotProficientBadge` neutre, §1.2) : à valider comme ajout au design
-   system — aucun précédent neutre de ce type n'existe aujourd'hui.
-4. **Libellé de la ligne** : garder « Coût » (`itemInfoPanelCostLabel`) ou renommer en « Prix » partout — je
-   recommande « Prix » (plus cohérent avec « surcharge du prix », « fixer un prix ») mais c'est un simple choix de mot.
-5. **Entrée « Modifier » nouvelle sur un objet du catalogue dans l'inventaire solo** (§2b) : confirmer qu'elle ne sert
-   **que** le prix et ne doit pas, par la même occasion, ouvrir la porte à modifier la quantité (hors périmètre de ce
-   ticket, à garder explicitement séparé).
-6. **Dépendance butin** (§2c) : confirmer l'état d'avancement réel de la généralisation de `_ItemQuantitySheetContent`
-   avant de lancer le volet butin de ce ticket.
-7. **Stockage des données** (hors périmètre visuel, signalé pour `dev-backend-supabase`/`dev-flutter`) : deux colonnes
-   `price_override_amount`/`price_override_currency` sur `character_inventory` (servent à la fois de prix pour un
-   objet personnalisé et de surcharge pour un objet du catalogue), et les deux clés jsonb équivalentes côté
-   `group_treasure.items` — à valider, ce n'est pas une décision visuelle.
+1. **Prix absent → « Non estimé » + lien « Fixer un prix »** (décision de Matthias) : retenu.
+2. **Montant à 0 = aucun prix stocké** (pas « objet gratuit ») : retenu (décision du chef de projet, par défaut à
+   faible risque).
+3. **Nouvelle pastille « Modifié »** (gabarit `NotProficientBadge` neutre, §1.2) : retenu.
+4. **Libellé de la ligne** : renommée « Prix » partout (`itemInfoPanelCostLabel` → `itemPriceLabel`).
+5. **Entrée « Modifier » nouvelle sur un objet du catalogue dans l'inventaire solo** (§2b) : ne sert **que** le prix,
+   jamais la quantité (hors périmètre de ce ticket).
+6. **Dépendance butin** (§2c) : vérifiée directement sur `origin/main` le 27/11/2026 — déjà livrée (voir §2c). Aucune
+   dépendance restante.
+7. **Stockage des données** : deux colonnes `price_override_amount`/`price_override_currency` sur
+   `character_inventory` (servent à la fois de prix pour un objet personnalisé et de surcharge pour un objet du
+   catalogue), et les deux clés jsonb équivalentes côté `group_treasure.items`. Retenu, confié à
+   `dev-backend-supabase`.
