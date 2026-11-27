@@ -3869,18 +3869,71 @@
       }
     }
   },
-  "itemInfoPanelCostLabel": "Coût",
-  "@itemInfoPanelCostLabel": {
-    "description": "Libellé de la ligne \"Coût\" du panneau \"Infos\" d'un objet."
+  "itemPriceLabel": "Prix",
+  "@itemPriceLabel": {
+    "description": "Libellé de la ligne \"Prix\" du panneau \"Infos\" d'un objet (spec du prix d'un objet modifiable) — remplace l'ancienne ligne \"Coût\" (`itemInfoPanelCostLabel`, retirée)."
   },
-  "itemInfoPanelCostValue": "{cost} po",
-  "@itemInfoPanelCostValue": {
-    "description": "Valeur de la ligne \"Coût\" du panneau \"Infos\" d'un objet — unité \"po\" volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.",
+  "itemPriceValue": "{amount} {unit}",
+  "@itemPriceValue": {
+    "description": "Valeur de la ligne \"Prix\" d'un objet — devise-agnostique (`unit` = `CurrencyKind.unitLabel`, ex. \"PO\"), remplace l'ancienne `itemInfoPanelCostValue` qui codait \"po\" en dur.",
     "placeholders": {
-      "cost": {
+      "amount": {
+        "type": "String"
+      },
+      "unit": {
         "type": "String"
       }
     }
+  },
+  "itemPriceNotEstimatedValue": "Non estimé",
+  "@itemPriceNotEstimatedValue": {
+    "description": "Valeur de la ligne \"Prix\" quand aucun prix n'est connu (objet personnalisé sans prix fixé, ou objet du catalogue sans coût officiel ni surcharge — spec du prix d'un objet modifiable)."
+  },
+  "itemPriceOverriddenBadge": "Modifié",
+  "@itemPriceOverriddenBadge": {
+    "description": "Texte de la pastille \"Modifié\" (`core/widgets/modified_badge.dart`) affichée à côté du prix d'un objet du catalogue dont le prix officiel a été surchargé."
+  },
+  "itemPriceSetLink": "Fixer un prix",
+  "@itemPriceSetLink": {
+    "description": "Lien \"Fixer un prix\" affiché à droite de \"Non estimé\" (module personnages, vouvoiement) — ouvre l'éditeur de prix pertinent."
+  },
+  "itemPriceOverrideSheetTitle": "Prix de {itemName}",
+  "@itemPriceOverrideSheetTitle": {
+    "description": "Titre de la sheet autonome de surcharge de prix d'un objet du catalogue (`item_price_override_sheet.dart`) — `itemName` reste le nom de l'objet, donnée de contenu D&D.",
+    "placeholders": {
+      "itemName": {
+        "type": "String"
+      }
+    }
+  },
+  "itemPriceOverrideOfficialCaption": "Prix officiel : {officialPrice}",
+  "@itemPriceOverrideOfficialCaption": {
+    "description": "Légende rappelant le prix officiel actuel d'un objet du catalogue, dans la sheet de surcharge de prix et la section \"Prix\" de la sheet de quantité du butin — `officialPrice` est déjà formaté (`itemPriceValue`).",
+    "placeholders": {
+      "officialPrice": {
+        "type": "String"
+      }
+    }
+  },
+  "itemPriceOverrideRemoveLink": "Retirer la surcharge",
+  "@itemPriceOverrideRemoveLink": {
+    "description": "Lien \"Retirer la surcharge\" (module personnages, vouvoiement) de la sheet de surcharge de prix d'un objet du catalogue — visible seulement si une surcharge existe déjà, aucune confirmation."
+  },
+  "itemPriceOverrideRemovedSnack": "Prix réinitialisé.",
+  "@itemPriceOverrideRemovedSnack": {
+    "description": "Snackbar affiché après le lien \"Retirer la surcharge\" (module personnages)."
+  },
+  "itemPriceOverrideSaveButton": "Enregistrer",
+  "@itemPriceOverrideSaveButton": {
+    "description": "Bouton principal de la sheet de surcharge de prix d'un objet du catalogue."
+  },
+  "customItemPriceSectionLabel": "Prix",
+  "@customItemPriceSectionLabel": {
+    "description": "Libellé \"Prix\" du champ de prix du formulaire d'objet personnalisé (`AdvancedSection`, spec du prix d'un objet modifiable, §2a) et de la section \"Prix\" de la sheet de quantité du butin — formulaire partagé, une seule clé."
+  },
+  "customItemPriceCurrencySectionLabel": "Devise",
+  "@customItemPriceCurrencySectionLabel": {
+    "description": "Libellé \"Devise\" du sélecteur de devise du champ de prix du formulaire d'objet personnalisé (`CurrencyPickerChips`, spec du prix d'un objet modifiable, §2a)."
   },
   "itemInfoPanelSetLabel": "Set",
   "@itemInfoPanelSetLabel": {
@@ -7095,6 +7148,12 @@
   "@groupTreasureUpdatedSnack": {"description": "Snackbar après la modification d'un objet du butin."},
   "groupTreasureQuantitySheetTitle": "Quantité de {itemName}",
   "@groupTreasureQuantitySheetTitle": {"description": "Titre de la sheet de quantité d'un objet du catalogue du butin (Modifier).", "placeholders": {"itemName": {"type": "String"}}},
+  "groupTreasureItemPriceSetLink": "Fixe un prix",
+  "@groupTreasureItemPriceSetLink": {"description": "Lien « Fixer un prix » de la fiche d'un objet du butin (tutoiement, spec du prix d'un objet modifiable) — ouvre l'éditeur de prix pertinent (rejoue l'action Modifier)."},
+  "groupTreasureItemPriceOverrideRemoveLink": "Retire la surcharge",
+  "@groupTreasureItemPriceOverrideRemoveLink": {"description": "Lien « Retirer la surcharge » (tutoiement) de la section Prix de la sheet de quantité d'un objet du catalogue du butin — visible seulement si une surcharge existe déjà, aucune confirmation."},
+  "groupTreasureItemPriceOverrideRemovedSnack": "Prix réinitialisé.",
+  "@groupTreasureItemPriceOverrideRemovedSnack": {"description": "Snackbar après le lien « Retirer la surcharge » d'un objet du catalogue du butin."},
   "groupTreasureStaleError": "Un autre membre vient de modifier ou d'attribuer cet objet. Vérifie et recommence.",
   "@groupTreasureStaleError": {"description": "Butin modifié entre-temps par un autre membre : rien n'a été écrit, le butin est rechargé."},
   "groupTreasureOfflineError": "Pas de connexion : le butin n'a pas été modifié. Réessaie une fois connecté.",

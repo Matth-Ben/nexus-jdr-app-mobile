@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/info_banner.dart';
+import '../../../../core/widgets/modified_badge.dart';
 import '../../../../core/widgets/not_proficient_badge.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
@@ -14,6 +15,7 @@ import '../../../character_creation/domain/gold_amount_formatter.dart';
 import '../../domain/armor_proficiency_rules.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
+import '../../domain/currency_kind.dart';
 import '../../domain/custom_item_enrichment.dart';
 import '../../domain/inventory_armor_dex_bonus_formatter.dart';
 import '../../domain/inventory_rarity_formatter.dart';
@@ -73,6 +75,7 @@ Future<void> showItemInfoPanel(
   int? weaponDamageModifier,
   WeaponAttackStats? weaponStats,
   bool notProficient = false,
+  VoidCallback? onEditPrice,
 }) async {
   final action = await showModalBottomSheet<_ItemInfoPanelAction>(
     context: context,
@@ -90,6 +93,7 @@ Future<void> showItemInfoPanel(
         onToggleAttuned(item);
         Navigator.of(sheetContext).pop();
       },
+      canEditPrice: !readOnly && onEditPrice != null,
     ),
   );
   if (action == null || !context.mounted) return;
@@ -99,10 +103,12 @@ Future<void> showItemInfoPanel(
       onUseItem(item);
     case _ItemInfoPanelAction.toggleEquipped:
       onToggleEquipped(item);
+    case _ItemInfoPanelAction.editPrice:
+      onEditPrice?.call();
   }
 }
 
-enum _ItemInfoPanelAction { use, toggleEquipped }
+enum _ItemInfoPanelAction { use, toggleEquipped, editPrice }
 
 class _ItemInfoPanelContent extends StatelessWidget {
   const _ItemInfoPanelContent({
@@ -114,7 +120,14 @@ class _ItemInfoPanelContent extends StatelessWidget {
     this.weaponDamageModifier,
     this.weaponStats,
     this.notProficient = false,
+    this.canEditPrice = false,
   });
+
+  /// `true` : la ligne "Prix" affiche le lien "Fixer un prix" quand aucun
+  /// prix n'est connu (spec du prix d'un objet modifiable, §1.3) — déjà
+  /// restreint à `!readOnly` et à la présence d'un `onEditPrice` par
+  /// [showItemInfoPanel].
+  final bool canEditPrice;
 
   /// Armure/bouclier non maîtrisé (P10/F16) : pastille en tête du contenu et
   /// bannière informative en pied, au-dessus du bouton « Équiper ».
@@ -187,6 +200,11 @@ class _ItemInfoPanelContent extends StatelessWidget {
                         weaponAttackBonus: weaponAttackBonus,
                         weaponDamageModifier: weaponDamageModifier,
                         weaponStats: weaponStats,
+                        onEditPrice: canEditPrice
+                            ? () =>
+                                  Navigator.of(context)
+                                      .pop(_ItemInfoPanelAction.editPrice)
+                            : null,
                       ),
                     ],
                   ),
@@ -273,6 +291,8 @@ class ItemInfoBody extends StatelessWidget {
     this.weaponDamageModifier,
     this.weaponStats,
     this.descriptionOverride,
+    this.onEditPrice,
+    this.priceSetLinkLabel,
     super.key,
   });
 
@@ -285,6 +305,18 @@ class ItemInfoBody extends StatelessWidget {
   /// Voir `_ItemInfoPanelContent.weaponStats`.
   final WeaponAttackStats? weaponStats;
   final Widget? descriptionOverride;
+
+  /// Lien « Fixer un prix » de la ligne "Prix" (spec du prix d'un objet
+  /// modifiable, §1.3) — affiché seulement quand aucun prix n'est connu et
+  /// que ce callback est non nul ; `null` : aucune écriture possible dans ce
+  /// contexte (vue en lecture seule, ou butin hors connexion/en cours
+  /// d'écriture), la ligne affiche alors « Non estimé » sans lien.
+  final VoidCallback? onEditPrice;
+
+  /// Libellé du lien « Fixer un prix » — `null` : `l10n.itemPriceSetLink`
+  /// (module personnages, vouvoiement). Le butin de groupe (tutoiement)
+  /// fournit `l10n.groupTreasureItemPriceSetLink`.
+  final String? priceSetLinkLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -315,13 +347,11 @@ class ItemInfoBody extends StatelessWidget {
             WeightFormatter.format(unitWeight),
           ),
         ),
-      if (item.costAmount case final costAmount?)
-        _ItemInfoRow(
-          label: l10n.itemInfoPanelCostLabel,
-          value: l10n.itemInfoPanelCostValue(
-            GoldAmountFormatter.format(costAmount),
-          ),
-        ),
+      _ItemPriceRow(
+        item: item,
+        onEditPrice: onEditPrice,
+        setPriceLinkLabel: priceSetLinkLabel,
+      ),
       if (item.magicBonus > 0)
         _ItemInfoRow(
           label: l10n.itemInfoPanelMagicBonusLabel,
@@ -569,6 +599,132 @@ class _ToggleAttunedLink extends StatelessWidget {
                 style: AppTypography.body(fontSize: 11, color: color),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Ligne "Prix" — spec du prix d'un objet modifiable (§1) : 3 états (prix
+/// officiel sans surcharge, prix surchargé/personnalisé avec [ModifiedBadge],
+/// ou « Non estimé » avec un lien « Fixer un prix » optionnel) — toujours
+/// affichée (jamais masquée, contrairement à l'ancienne ligne "Coût"), même
+/// position dans [ItemInfoBody.build] (juste après le poids, avant le bonus
+/// magique).
+class _ItemPriceRow extends StatelessWidget {
+  const _ItemPriceRow({
+    required this.item,
+    this.onEditPrice,
+    this.setPriceLinkLabel,
+  });
+
+  final CharacterInventoryItem item;
+  final VoidCallback? onEditPrice;
+  final String? setPriceLinkLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final amount = item.displayedPriceAmount;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              l10n.itemPriceLabel,
+              style: AppTypography.body(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: amount == null
+                ? Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpacing.sm,
+                    children: [
+                      Text(
+                        l10n.itemPriceNotEstimatedValue,
+                        style: AppTypography.body(
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (onEditPrice != null)
+                        _SetPriceLink(
+                          label: setPriceLinkLabel ?? l10n.itemPriceSetLink,
+                          onTap: onEditPrice!,
+                        ),
+                    ],
+                  )
+                : Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpacing.xs,
+                    children: [
+                      Text(
+                        l10n.itemPriceValue(
+                          GoldAmountFormatter.format(amount),
+                          item.displayedPriceCurrency.unitLabel,
+                        ),
+                        style: AppTypography.body(
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (item.priceIsOverridden) const ModifiedBadge(),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Lien "Fixer un prix" — même gabarit que [_ToggleAttunedLink] (`body` 13
+/// w700 `textSecondary`, zone de tap 44 px min-height), icône
+/// [Icons.sell_outlined].
+class _SetPriceLink extends StatelessWidget {
+  const _SetPriceLink({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.sell_outlined,
+                size: 14,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: AppTypography.body(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

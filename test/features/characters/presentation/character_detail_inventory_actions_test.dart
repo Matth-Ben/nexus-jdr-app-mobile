@@ -53,6 +53,7 @@ class FakeRepository implements CharacterRepository {
   int useInventoryItemCallCount = 0;
   int setEquippedCallCount = 0;
   int setAttunedCallCount = 0;
+  int setPriceOverrideCallCount = 0;
   int removeInventoryItemCallCount = 0;
   int adjustCurrencyCallCount = 0;
   int addCustomInventoryItemCallCount = 0;
@@ -65,6 +66,8 @@ class FakeRepository implements CharacterRepository {
   int? lastNewQuantity;
   bool? lastEquipped;
   bool? lastAttuned;
+  num? lastPriceOverrideAmount;
+  CurrencyKind? lastPriceOverrideCurrency;
   List<String> setEquippedCallOrder = [];
   List<String> equipWeaponToSlotCallOrder = [];
   WeaponSlot? lastEquippedWeaponSlot;
@@ -294,6 +297,49 @@ class FakeRepository implements CharacterRepository {
               notes: item.notes,
               weaponProperties: item.weaponProperties,
               armorProperties: item.armorProperties,
+            )
+          else
+            item,
+      ],
+    );
+    return outcomeToReturn;
+  }
+
+  @override
+  Future<WriteOutcome> setInventoryItemPriceOverride({
+    required String characterId,
+    required String inventoryId,
+    required num? amount,
+    required CurrencyKind? currency,
+  }) async {
+    setPriceOverrideCallCount++;
+    lastInventoryId = inventoryId;
+    lastPriceOverrideAmount = amount;
+    lastPriceOverrideCurrency = currency;
+    current = current.copyWith(
+      inventory: [
+        for (final item in current.inventory)
+          if (item.id == inventoryId)
+            CharacterInventoryItem(
+              id: item.id,
+              itemId: item.itemId,
+              name: item.name,
+              category: item.category,
+              quantity: item.quantity,
+              equipped: item.equipped,
+              totalWeight: item.totalWeight,
+              unitWeight: item.unitWeight,
+              costAmount: item.costAmount,
+              description: item.description,
+              rarity: item.rarity,
+              requiresAttunement: item.requiresAttunement,
+              isAttuned: item.isAttuned,
+              consumable: item.consumable,
+              notes: item.notes,
+              weaponProperties: item.weaponProperties,
+              armorProperties: item.armorProperties,
+              priceOverrideAmount: amount,
+              priceOverrideCurrency: currency,
             )
           else
             item,
@@ -1006,9 +1052,9 @@ void main() {
       expect(find.text('Objet mis à jour'), findsNothing);
     });
 
-    testWidgets('un objet du catalogue n\'a pas d\'action « Modifier »', (
-      tester,
-    ) async {
+    testWidgets('un objet du catalogue : « Modifier » ouvre la sheet de '
+        'surcharge de prix, jamais le formulaire d\'objet personnalisé '
+        '(spec du prix d\'un objet modifiable, §2b)', (tester) async {
       final repository = await pumpDetail(tester);
       await openInventoryTab(tester);
 
@@ -1016,8 +1062,36 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Infos'), findsOneWidget);
-      expect(find.text('Modifier'), findsNothing);
+      expect(find.text('Modifier'), findsOneWidget);
+
+      await tester.tap(find.text('Modifier'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Prix de Dague'), findsOneWidget);
       expect(repository.updateCustomInventoryItemCallCount, 0);
+    });
+
+    testWidgets('Enregistrer une surcharge de prix appelle '
+        'setInventoryItemPriceOverride', (tester) async {
+      final repository = await pumpDetail(tester);
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Dague'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Modifier'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, '2');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'PA'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+      await tester.pumpAndSettle();
+
+      expect(repository.setPriceOverrideCallCount, 1);
+      expect(repository.lastInventoryId, 'inv-1');
+      expect(repository.lastPriceOverrideAmount, 2);
+      expect(repository.lastPriceOverrideCurrency, CurrencyKind.silver);
     });
   });
 

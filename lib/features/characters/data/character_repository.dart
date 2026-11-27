@@ -546,6 +546,30 @@ abstract class CharacterRepository {
     required bool attuned,
   });
 
+  /// Action « Fixer un prix »/« Modifier »/« Retirer la surcharge » d'un objet
+  /// du catalogue (spec du prix d'un objet modifiable, §2b/§2d) — écrit
+  /// `character_inventory.price_override_amount`/`price_override_currency`
+  /// tels quels, aucun calcul ici (même principe que
+  /// [setInventoryItemAttuned]). [amount]/[currency] `null` ensemble retire
+  /// la surcharge ; sinon les deux sont renseignés (validé côté UI avant
+  /// l'appel, [isValidPriceOverrideAmount]).
+  ///
+  /// Un objet personnalisé fixe son prix via le formulaire dédié
+  /// (`custom_item_form_sheet.dart`, `CustomItemEnrichment
+  /// .priceOverrideAmount`) plutôt que cette méthode — réservée à la
+  /// surcharge d'un objet du catalogue, mais fonctionne de la même façon sur
+  /// les deux (la colonne n'est pas réservée à un objet personnalisé).
+  ///
+  /// Mode hors ligne (P15) : mis en file (`inventoryState`, `targetId` =
+  /// [inventoryId]) ; hors ligne, le plafond de
+  /// `CharacterDetail.attunementCap` n'est pas concerné ici.
+  Future<WriteOutcome> setInventoryItemPriceOverride({
+    required String characterId,
+    required String inventoryId,
+    required num? amount,
+    required CurrencyKind? currency,
+  });
+
   /// Action "Retirer" (avec confirmation côté sheet) — supprime la ligne
   /// `character_inventory` [inventoryId].
   ///
@@ -1702,7 +1726,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
               id, item_id, quantity, equipped, is_attuned,
               custom_kind, custom_magic_bonus, custom_ac_base, custom_armor_category,
               custom_weight, custom_requires_attunement, custom_weapon_category,
-              custom_weapon_range,
+              custom_weapon_range, price_override_amount, price_override_currency,
               items(
                 category, requires_attunement, ac_bonus, ac_bonus_kind,
                 armor_properties(ac_base, ac_dex_bonus, slot)
@@ -1942,7 +1966,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
               custom_description, custom_damage_dice, custom_damage_type, custom_properties,
               custom_kind, custom_magic_bonus, custom_ac_base, custom_armor_category,
               custom_weight, custom_requires_attunement, custom_weapon_category,
-              custom_weapon_range,
+              custom_weapon_range, price_override_amount, price_override_currency,
               items(
                 category, weight, cost, rarity, requires_attunement, consumable,
                 ac_bonus, ac_bonus_kind,
@@ -2231,8 +2255,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
               ],
             );
           case PendingCharacterWriteKind.inventoryState:
-            // T5a : équipé/set d'arme/harmonisé de l'objet `targetId` (CA,
-            // nombre d'objets harmonisés : getters dérivés de l'inventaire).
+            // T5a : équipé/set d'arme/harmonisé/surcharge de prix de l'objet
+            // `targetId` (CA, nombre d'objets harmonisés : getters dérivés de
+            // l'inventaire).
             final patch = parseInventoryStatePayload(write.payload);
             if (!isValidInventoryTargetId(write.targetId) || patch == null) {
               break;
@@ -2246,6 +2271,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
                       changeWeaponSlot: patch.hasWeaponSlot,
                       weaponSlot: patch.weaponSlot,
                       isAttuned: patch.attuned,
+                      changePriceOverride: patch.hasPriceOverride,
+                      priceOverrideAmount: patch.priceOverrideAmount,
+                      priceOverrideCurrency: patch.priceOverrideCurrency,
                     )
                   else
                     item,
@@ -4926,6 +4954,22 @@ class SupabaseCharacterRepository implements CharacterRepository {
     characterId: characterId,
     inventoryId: inventoryId,
     change: InventoryStatePatch(attuned: attuned),
+  );
+
+  @override
+  Future<WriteOutcome> setInventoryItemPriceOverride({
+    required String characterId,
+    required String inventoryId,
+    required num? amount,
+    required CurrencyKind? currency,
+  }) => _writeInventoryState(
+    characterId: characterId,
+    inventoryId: inventoryId,
+    change: InventoryStatePatch(
+      hasPriceOverride: true,
+      priceOverrideAmount: amount,
+      priceOverrideCurrency: currency,
+    ),
   );
 
   @override

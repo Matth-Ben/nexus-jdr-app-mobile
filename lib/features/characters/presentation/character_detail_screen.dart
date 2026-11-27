@@ -1882,6 +1882,42 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Action « Modifier » (surcharge de prix) d'un objet du **catalogue**
+  /// (spec du prix d'un objet modifiable, §2b/§2d) : écrit
+  /// `price_override_amount`/`price_override_currency` tels quels, aucune
+  /// confirmation (même contrat que [_toggleInventoryItemAttuned]).
+  /// [amount]/[currency] `null` ensemble : retrait de la surcharge.
+  Future<void> _editInventoryItemPrice(
+    CharacterInventoryItem item,
+    num? amount,
+    CurrencyKind? currency,
+  ) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _isWritingInventory = true);
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .setInventoryItemPriceOverride(
+            characterId: widget.characterId,
+            inventoryId: item.id,
+            amount: amount,
+            currency: currency,
+          );
+      await _refreshCharacterDetail();
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineQueuedMessage(l10n));
+      }
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.localizedWith(l10n));
+    } catch (_) {
+      _showSnackBar('Impossible de mettre à jour le prix. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
   /// Ajoute une récompense (`add_reward_sheet.dart`) : [currencyDeltas] sont
   /// des montants à *ajouter* (pas des valeurs absolues, contrairement à
   /// [_adjustCurrency]) — recalculés ici en valeurs absolues à partir de
@@ -3145,6 +3181,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         onAddInventoryItem: _addInventoryItem,
         onAddCustomInventoryItem: _addCustomInventoryItem,
         onUpdateCustomInventoryItem: _updateCustomInventoryItem,
+        onEditItemPrice: _editInventoryItemPrice,
         onEquipWeaponToSlot: (item, slot) =>
             _equipWeaponToSlot(detail, item, slot),
         onAddReward: () => showAddRewardSheet(

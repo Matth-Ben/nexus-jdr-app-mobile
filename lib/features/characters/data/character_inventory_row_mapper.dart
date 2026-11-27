@@ -1,4 +1,5 @@
 import '../domain/character_inventory_item.dart';
+import '../domain/currency_kind.dart';
 import '../domain/custom_armor_properties.dart';
 import '../domain/weapon_slot.dart';
 
@@ -70,6 +71,21 @@ abstract final class CharacterInventoryRowMapper {
     final amount = raw['amount'];
     return amount is num ? amount.toDouble() : null;
   }
+
+  /// Extrait `character_inventory.price_override_amount` — spec du prix
+  /// d'un objet modifiable : posable sur **toute** ligne, catalogue ou
+  /// personnalisée (contrairement à `custom_weight`, réservé à un objet
+  /// personnalisé), lu ici indépendamment de `item_id`. `null` si absent ou
+  /// d'un type inattendu.
+  static num? parsePriceOverrideAmount(Map<String, dynamic> row) {
+    final amount = row['price_override_amount'];
+    return amount is num ? amount : null;
+  }
+
+  /// Extrait `character_inventory.price_override_currency` — `null` si
+  /// absente ou hors des 5 codes connus ([currencyKindFromCode]).
+  static CurrencyKind? parsePriceOverrideCurrency(Map<String, dynamic> row) =>
+      currencyKindFromCode(row['price_override_currency']);
 
   /// Normalise une relation embarquée à cardinalité 1-1 (`weapon_properties`/
   /// `armor_properties`, jointes par `item_id` qui est leur clé primaire) en
@@ -281,6 +297,11 @@ abstract final class CharacterInventoryRowMapper {
           customWeaponRange: itemId == null
               ? row['custom_weapon_range'] as String?
               : null,
+          // Surcharge de prix (spec du prix d'un objet modifiable) : lue
+          // indépendamment de `item_id`, posable sur un objet du catalogue
+          // comme sur un objet personnalisé.
+          priceOverrideAmount: parsePriceOverrideAmount(row),
+          priceOverrideCurrency: parsePriceOverrideCurrency(row),
         ),
       );
     }

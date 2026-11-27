@@ -4,6 +4,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/data/character_inventory_row_mapper.dart';
+import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/features/characters/domain/offline_inventory_writes.dart';
 import 'package:personnages/features/characters/domain/offline_state_writes.dart';
@@ -206,6 +207,8 @@ void main() {
         'custom_weapon_range': null,
         'custom_ac_base': null,
         'custom_armor_category': null,
+        'price_override_amount': null,
+        'price_override_currency': null,
       });
     });
 
@@ -268,6 +271,117 @@ void main() {
         {'customRequiresAttunement': null},
         {'customWeaponCategory': 3},
         {'itemId': 2, 'customKind': 'arme'},
+      ]) {
+        expect(
+          parseInventoryItemPayload({
+            'op': 'add',
+            'customName': 'X',
+            'quantity': 1,
+            ...bad,
+          }),
+          isNull,
+          reason: '$bad',
+        );
+      }
+    });
+  });
+
+  group('prix d\'un objet personnalisé (spec du prix d\'un objet '
+      'modifiable, §2a)', () {
+    test('isValid : montant et devise toujours ensemble', () {
+      expect(
+        const CustomItemEnrichment(
+          kind: 'autre',
+          priceOverrideAmount: 15,
+          priceOverrideCurrency: CurrencyKind.silver,
+        ).isValid,
+        isTrue,
+      );
+      expect(
+        const CustomItemEnrichment(
+          kind: 'autre',
+          priceOverrideAmount: 15,
+        ).isValid,
+        isFalse,
+      );
+      expect(
+        const CustomItemEnrichment(
+          kind: 'autre',
+          priceOverrideCurrency: CurrencyKind.silver,
+        ).isValid,
+        isFalse,
+      );
+    });
+
+    test('isValid : montant hors 0 < x <= 999999 refusé', () {
+      for (final amount in [0, -1, 1000000, double.nan]) {
+        expect(
+          CustomItemEnrichment(
+            kind: 'autre',
+            priceOverrideAmount: amount,
+            priceOverrideCurrency: CurrencyKind.gold,
+          ).isValid,
+          isFalse,
+          reason: '$amount',
+        );
+      }
+    });
+
+    test('isEmpty : un prix fixé n\'est jamais vide', () {
+      expect(
+        const CustomItemEnrichment(
+          priceOverrideAmount: 15,
+          priceOverrideCurrency: CurrencyKind.silver,
+        ).isEmpty,
+        isFalse,
+      );
+    });
+
+    test('colonnes/payload : amount et code court de la devise', () {
+      const e = CustomItemEnrichment(
+        kind: 'autre',
+        priceOverrideAmount: 15,
+        priceOverrideCurrency: CurrencyKind.silver,
+      );
+
+      expect(e.toInsertColumns(), {
+        'custom_kind': 'autre',
+        'price_override_amount': 15,
+        'price_override_currency': 'sp',
+      });
+      expect(e.toPayload(), {
+        'customKind': 'autre',
+        'priceOverrideAmount': 15,
+        'priceOverrideCurrency': 'sp',
+      });
+      expect(e.toRowColumns()['price_override_amount'], 15);
+      expect(e.toRowColumns()['price_override_currency'], 'sp');
+    });
+
+    test('aller-retour payload -> parse -> payload identique', () {
+      final payload = {
+        'op': 'add',
+        'customName': 'Amulette',
+        'quantity': 1,
+        'customKind': 'autre',
+        'priceOverrideAmount': 250,
+        'priceOverrideCurrency': 'gp',
+      };
+
+      final write = parseInventoryItemPayload(payload)!;
+
+      expect(write.toPayload(), payload);
+      expect(write.enrichment!.priceOverrideAmount, 250);
+      expect(write.enrichment!.priceOverrideCurrency, CurrencyKind.gold);
+    });
+
+    test('un seul des deux champs présent : payload refusé', () {
+      for (final bad in <Map<String, dynamic>>[
+        {'priceOverrideAmount': 15},
+        {'priceOverrideCurrency': 'sp'},
+        {'priceOverrideAmount': 0},
+        {'priceOverrideAmount': 1000000, 'priceOverrideCurrency': 'gp'},
+        {'priceOverrideAmount': 15, 'priceOverrideCurrency': 'xx'},
       ]) {
         expect(
           parseInventoryItemPayload({

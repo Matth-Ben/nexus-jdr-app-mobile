@@ -4786,17 +4786,77 @@ abstract class AppLocalizations {
   /// **'{weight} kg'**
   String itemInfoPanelWeightValue(String weight);
 
-  /// Libellé de la ligne "Coût" du panneau "Infos" d'un objet.
+  /// Libellé de la ligne "Prix" du panneau "Infos" d'un objet (spec du prix d'un objet modifiable) — remplace l'ancienne ligne "Coût" (`itemInfoPanelCostLabel`, retirée).
   ///
   /// In fr, this message translates to:
-  /// **'Coût'**
-  String get itemInfoPanelCostLabel;
+  /// **'Prix'**
+  String get itemPriceLabel;
 
-  /// Valeur de la ligne "Coût" du panneau "Infos" d'un objet — unité "po" volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  /// Valeur de la ligne "Prix" d'un objet — devise-agnostique (`unit` = `CurrencyKind.unitLabel`, ex. "PO"), remplace l'ancienne `itemInfoPanelCostValue` qui codait "po" en dur.
   ///
   /// In fr, this message translates to:
-  /// **'{cost} po'**
-  String itemInfoPanelCostValue(String cost);
+  /// **'{amount} {unit}'**
+  String itemPriceValue(String amount, String unit);
+
+  /// Valeur de la ligne "Prix" quand aucun prix n'est connu (objet personnalisé sans prix fixé, ou objet du catalogue sans coût officiel ni surcharge — spec du prix d'un objet modifiable).
+  ///
+  /// In fr, this message translates to:
+  /// **'Non estimé'**
+  String get itemPriceNotEstimatedValue;
+
+  /// Texte de la pastille "Modifié" (`core/widgets/modified_badge.dart`) affichée à côté du prix d'un objet du catalogue dont le prix officiel a été surchargé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifié'**
+  String get itemPriceOverriddenBadge;
+
+  /// Lien "Fixer un prix" affiché à droite de "Non estimé" (module personnages, vouvoiement) — ouvre l'éditeur de prix pertinent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fixer un prix'**
+  String get itemPriceSetLink;
+
+  /// Titre de la sheet autonome de surcharge de prix d'un objet du catalogue (`item_price_override_sheet.dart`) — `itemName` reste le nom de l'objet, donnée de contenu D&D.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix de {itemName}'**
+  String itemPriceOverrideSheetTitle(String itemName);
+
+  /// Légende rappelant le prix officiel actuel d'un objet du catalogue, dans la sheet de surcharge de prix et la section "Prix" de la sheet de quantité du butin — `officialPrice` est déjà formaté (`itemPriceValue`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix officiel : {officialPrice}'**
+  String itemPriceOverrideOfficialCaption(String officialPrice);
+
+  /// Lien "Retirer la surcharge" (module personnages, vouvoiement) de la sheet de surcharge de prix d'un objet du catalogue — visible seulement si une surcharge existe déjà, aucune confirmation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer la surcharge'**
+  String get itemPriceOverrideRemoveLink;
+
+  /// Snackbar affiché après le lien "Retirer la surcharge" (module personnages).
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix réinitialisé.'**
+  String get itemPriceOverrideRemovedSnack;
+
+  /// Bouton principal de la sheet de surcharge de prix d'un objet du catalogue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get itemPriceOverrideSaveButton;
+
+  /// Libellé "Prix" du champ de prix du formulaire d'objet personnalisé (`AdvancedSection`, spec du prix d'un objet modifiable, §2a) et de la section "Prix" de la sheet de quantité du butin — formulaire partagé, une seule clé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix'**
+  String get customItemPriceSectionLabel;
+
+  /// Libellé "Devise" du sélecteur de devise du champ de prix du formulaire d'objet personnalisé (`CurrencyPickerChips`, spec du prix d'un objet modifiable, §2a).
+  ///
+  /// In fr, this message translates to:
+  /// **'Devise'**
+  String get customItemPriceCurrencySectionLabel;
 
   /// Libellé de la ligne "Set" du panneau "Infos" d'une arme équipée dont le set est connu — la valeur affichée reste `WeaponSlot.label`, non traduite (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
   ///
@@ -8720,6 +8780,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Quantité de {itemName}'**
   String groupTreasureQuantitySheetTitle(String itemName);
+
+  /// Lien « Fixer un prix » de la fiche d'un objet du butin (tutoiement, spec du prix d'un objet modifiable) — ouvre l'éditeur de prix pertinent (rejoue l'action Modifier).
+  ///
+  /// In fr, this message translates to:
+  /// **'Fixe un prix'**
+  String get groupTreasureItemPriceSetLink;
+
+  /// Lien « Retirer la surcharge » (tutoiement) de la section Prix de la sheet de quantité d'un objet du catalogue du butin — visible seulement si une surcharge existe déjà, aucune confirmation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retire la surcharge'**
+  String get groupTreasureItemPriceOverrideRemoveLink;
+
+  /// Snackbar après le lien « Retirer la surcharge » d'un objet du catalogue du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix réinitialisé.'**
+  String get groupTreasureItemPriceOverrideRemovedSnack;
 
   /// Butin modifié entre-temps par un autre membre : rien n'a été écrit, le butin est rechargé.
   ///

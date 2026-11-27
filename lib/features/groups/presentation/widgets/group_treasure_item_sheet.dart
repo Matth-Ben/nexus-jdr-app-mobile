@@ -194,6 +194,15 @@ class _GroupTreasureItemSheetState
                   child: ItemInfoBody(
                     item: _item,
                     withoutCharacter: true,
+                    // Lien « Fixer un prix » (spec du prix d'un objet
+                    // modifiable, §1.3) : rejoue exactement l'action
+                    // « Modifier » du pied de cette fiche (même routage
+                    // catalogue/personnalisé côté `group_screen.dart
+                    // ::_editTreasureItem`).
+                    onEditPrice: actionsEnabled
+                        ? () => pop(GroupTreasureItemAction.edit)
+                        : null,
+                    priceSetLinkLabel: l10n.groupTreasureItemPriceSetLink,
                     leadingRows: [
                       (
                         label: l10n.groupTreasureItemSourceLabel,

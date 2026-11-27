@@ -201,6 +201,8 @@ void main() {
         'custom_weapon_range': null,
         'custom_ac_base': 16,
         'custom_armor_category': 'lourde',
+        'price_override_amount': null,
+        'price_override_currency': null,
         'is_attuned': false,
       });
       expect((write.body! as Map).containsKey('quantity'), isFalse);

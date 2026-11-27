@@ -95,6 +95,7 @@ void main() {
   List<CharacterInventoryItem> toggleAttunedCalls = [];
   List<CharacterInventoryItem> removeCalls = [];
   List<(CharacterInventoryItem, WeaponSlot)> equipWeaponCalls = [];
+  int editPriceCallCount = 0;
 
   Future<void> pumpSheet(
     WidgetTester tester, {
@@ -104,12 +105,14 @@ void main() {
     int? weaponAttackBonus,
     int? weaponDamageModifier,
     Locale locale = const Locale('fr'),
+    bool enableEditItemPrice = false,
   }) async {
     useCalls = [];
     toggleCalls = [];
     toggleAttunedCalls = [];
     removeCalls = [];
     equipWeaponCalls = [];
+    editPriceCallCount = 0;
     await tester.pumpWidget(
       MaterialApp(
         // `weapon_slot_picker_sheet.dart` (sheet "Choisir un set", ouverte
@@ -138,6 +141,9 @@ void main() {
                       equipWeaponCalls.add((item, slot)),
                   weaponAttackBonus: weaponAttackBonus,
                   weaponDamageModifier: weaponDamageModifier,
+                  onEditItemPrice: enableEditItemPrice
+                      ? () => editPriceCallCount++
+                      : null,
                 ),
                 child: const Text('Ouvrir'),
               ),
@@ -369,6 +375,51 @@ void main() {
     );
   });
 
+  group('action « Modifier » (surcharge de prix, spec du prix d\'un objet '
+      'modifiable, §2b)', () {
+    testWidgets('objet du catalogue + onEditItemPrice fourni : « Modifier » '
+        'apparaît, le tap la ferme et appelle le callback', (tester) async {
+      await pumpSheet(tester, item: _sword, enableEditItemPrice: true);
+
+      expect(find.text('Modifier'), findsOneWidget);
+      await tester.tap(find.text('Modifier'));
+      await tester.pumpAndSettle();
+
+      expect(editPriceCallCount, 1);
+      // La sheet d'actions s'est fermée (pas de double affichage).
+      expect(find.text('Infos'), findsNothing);
+    });
+
+    testWidgets('objet du catalogue sans onEditItemPrice : pas de '
+        '« Modifier »', (tester) async {
+      await pumpSheet(tester, item: _sword);
+
+      expect(find.text('Modifier'), findsNothing);
+    });
+
+    testWidgets('objet personnalisé : jamais « Modifier » (le prix se fixe '
+        'dans le formulaire complet)', (tester) async {
+      await pumpSheet(tester, item: _customItem, enableEditItemPrice: true);
+
+      expect(find.text('Modifier'), findsNothing);
+    });
+
+    testWidgets('lien « Fixer un prix » du panneau « Infos » : ferme le '
+        'panneau et appelle le même callback', (tester) async {
+      await pumpSheet(tester, item: _magicItem, enableEditItemPrice: true);
+
+      await tester.tap(find.text('Infos'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Non estimé'), findsOneWidget);
+      await tester.tap(find.text('Fixer un prix'));
+      await tester.pumpAndSettle();
+
+      expect(editPriceCallCount, 1);
+      expect(find.text('AMULETTE DE VITALITÉ'), findsNothing);
+    });
+  });
+
   group('panneau "Infos"', () {
     testWidgets('une arme non équipée : poids unitaire, coût, dégâts, '
         'propriétés, description, AUCUN bouton en pied (choisir un set ne '
@@ -383,8 +434,8 @@ void main() {
       expect(find.text('ÉPÉE LONGUE'), findsOneWidget);
       expect(find.text('Poids unitaire'), findsOneWidget);
       expect(find.text('1,5 kg'), findsOneWidget);
-      expect(find.text('Coût'), findsOneWidget);
-      expect(find.text('15 po'), findsOneWidget);
+      expect(find.text('Prix'), findsOneWidget);
+      expect(find.text('15 PO'), findsOneWidget);
       expect(find.text('Dégâts'), findsOneWidget);
       expect(find.text('1d8 tranchant'), findsOneWidget);
       expect(find.text('Propriétés'), findsOneWidget);
@@ -653,7 +704,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Unit weight'), findsOneWidget);
-        expect(find.text('Cost'), findsOneWidget);
+        expect(find.text('Price'), findsOneWidget);
         expect(find.text('Damage'), findsOneWidget);
         expect(find.text('Properties'), findsOneWidget);
         expect(find.text('DESCRIPTION'), findsOneWidget);

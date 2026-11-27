@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
+import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/offline_state_writes.dart';
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 
@@ -68,6 +69,52 @@ void main() {
       expect(parseInventoryStatePayload({}), isNull);
     });
 
+    test('objet : surcharge de prix (spec du prix d\'un objet modifiable, '
+        '§2b) — l\'un est nul si et seulement si l\'autre l\'est', () {
+      final set = parseInventoryStatePayload({
+        'priceOverrideAmount': 15,
+        'priceOverrideCurrency': 'sp',
+      })!;
+      expect(set.hasPriceOverride, isTrue);
+      expect(set.priceOverrideAmount, 15);
+      expect(set.priceOverrideCurrency, CurrencyKind.silver);
+
+      final cleared = parseInventoryStatePayload({
+        'priceOverrideAmount': null,
+        'priceOverrideCurrency': null,
+      })!;
+      expect(cleared.hasPriceOverride, isTrue);
+      expect(cleared.priceOverrideAmount, isNull);
+      expect(cleared.priceOverrideCurrency, isNull);
+
+      expect(parseInventoryStatePayload({'priceOverrideAmount': 15}), isNull);
+      expect(
+        parseInventoryStatePayload({'priceOverrideCurrency': 'sp'}),
+        isNull,
+      );
+      expect(
+        parseInventoryStatePayload({
+          'priceOverrideAmount': 15,
+          'priceOverrideCurrency': 'xx',
+        }),
+        isNull,
+      );
+      expect(
+        parseInventoryStatePayload({
+          'priceOverrideAmount': 'x',
+          'priceOverrideCurrency': 'sp',
+        }),
+        isNull,
+      );
+      expect(
+        parseInventoryStatePayload({
+          'priceOverrideAmount': 0,
+          'priceOverrideCurrency': 'sp',
+        }),
+        isNull,
+      );
+    });
+
     test('réglages : bonus de CA entier dans les bornes', () {
       for (final ok in [100, -100, 2147483647, -2147483648]) {
         expect(parseCharacterFlagsPayload({'armorClassBonus': ok}), isNotNull);
@@ -120,6 +167,41 @@ void main() {
         'weapon_slot': null,
         'is_attuned': true,
       });
+    });
+
+    test('objet : la dernière surcharge de prix gagne', () {
+      final merged =
+          const InventoryStatePatch(
+            hasPriceOverride: true,
+            priceOverrideAmount: 15,
+            priceOverrideCurrency: CurrencyKind.silver,
+          ).merge(
+            const InventoryStatePatch(
+              hasPriceOverride: true,
+              priceOverrideAmount: 250,
+              priceOverrideCurrency: CurrencyKind.gold,
+            ),
+          );
+      expect(merged.toPayload(), {
+        'priceOverrideAmount': 250,
+        'priceOverrideCurrency': 'gp',
+      });
+      expect(merged.toColumns(), {
+        'price_override_amount': 250,
+        'price_override_currency': 'gp',
+      });
+    });
+
+    test('objet : un réglage équipé/harmonisé ne touche pas une surcharge '
+        'de prix déjà en file', () {
+      final merged = const InventoryStatePatch(
+        hasPriceOverride: true,
+        priceOverrideAmount: 15,
+        priceOverrideCurrency: CurrencyKind.silver,
+      ).merge(const InventoryStatePatch(attuned: true));
+      expect(merged.priceOverrideAmount, 15);
+      expect(merged.priceOverrideCurrency, CurrencyKind.silver);
+      expect(merged.attuned, isTrue);
     });
 
     test('réglages', () {
@@ -178,6 +260,27 @@ void main() {
       );
       expect(copy.equipped, isFalse);
       expect(copy.weaponSlot, isNull);
+    });
+
+    test('surcharge de prix posée, puis retirée (spec du prix d\'un objet '
+        'modifiable)', () {
+      final overridden = base.copyWithPendingState(
+        changePriceOverride: true,
+        priceOverrideAmount: 15,
+        priceOverrideCurrency: CurrencyKind.silver,
+      );
+      expect(overridden.priceOverrideAmount, 15);
+      expect(overridden.priceOverrideCurrency, CurrencyKind.silver);
+      // Un autre réglage (ex. harmoniser) ne doit pas effacer la surcharge
+      // déjà superposée.
+      final stillOverridden = overridden.copyWithPendingState(isAttuned: false);
+      expect(stillOverridden.priceOverrideAmount, 15);
+
+      final removed = overridden.copyWithPendingState(
+        changePriceOverride: true,
+      );
+      expect(removed.priceOverrideAmount, isNull);
+      expect(removed.priceOverrideCurrency, isNull);
     });
   });
 }

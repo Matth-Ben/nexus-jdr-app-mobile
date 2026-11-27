@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/dashed_add_tile.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
+import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/add_item_flow.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_inventory_tab_body.dart';
@@ -88,13 +89,148 @@ void main() {
     });
   });
 
+  group('ItemInfoBody — ligne « Prix » (spec du prix d\'un objet '
+      'modifiable)', () {
+    testWidgets('prix officiel sans surcharge : devise-agnostique, pas de '
+        'pastille', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          const ItemInfoBody(
+            item: CharacterInventoryItem(
+              id: 'inv-2',
+              itemId: 5,
+              name: 'Dague',
+              quantity: 1,
+              equipped: false,
+              costAmount: 2.5,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Prix'), findsOneWidget);
+      expect(find.text('2,5 PO'), findsOneWidget);
+      expect(find.text('Modifié'), findsNothing);
+      expect(find.text('Non estimé'), findsNothing);
+    });
+
+    testWidgets('surcharge d\'un objet du catalogue : valeur dans la '
+        'nouvelle devise + pastille « Modifié »', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          const ItemInfoBody(
+            item: CharacterInventoryItem(
+              id: 'inv-3',
+              itemId: 5,
+              name: 'Dague',
+              quantity: 1,
+              equipped: false,
+              costAmount: 2,
+              priceOverrideAmount: 15,
+              priceOverrideCurrency: CurrencyKind.silver,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('15 PA'), findsOneWidget);
+      expect(find.text('Modifié'), findsOneWidget);
+    });
+
+    testWidgets('prix fixé d\'un objet personnalisé : jamais de pastille '
+        '« Modifié » (aucun prix officiel à surcharger)', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          const ItemInfoBody(
+            item: CharacterInventoryItem(
+              id: 'inv-4',
+              name: 'Amulette',
+              quantity: 1,
+              equipped: false,
+              priceOverrideAmount: 250,
+              priceOverrideCurrency: CurrencyKind.gold,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('250 PO'), findsOneWidget);
+      expect(find.text('Modifié'), findsNothing);
+    });
+
+    testWidgets('aucun prix connu, lecture seule : « Non estimé » sans '
+        'lien', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          const ItemInfoBody(
+            item: CharacterInventoryItem(
+              id: 'inv-5',
+              name: 'Objet magique',
+              quantity: 1,
+              equipped: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Non estimé'), findsOneWidget);
+      expect(find.text('Fixer un prix'), findsNothing);
+    });
+
+    testWidgets('aucun prix connu, écriture possible : lien « Fixer un '
+        'prix » qui ferme le panneau et appelle le callback', (tester) async {
+      var tapped = false;
+      await tester.pumpWidget(
+        _app(
+          ItemInfoBody(
+            item: const CharacterInventoryItem(
+              id: 'inv-6',
+              name: 'Objet magique',
+              quantity: 1,
+              equipped: false,
+            ),
+            onEditPrice: () => tapped = true,
+          ),
+        ),
+      );
+
+      expect(find.text('Non estimé'), findsOneWidget);
+      expect(find.text('Fixer un prix'), findsOneWidget);
+      await tester.tap(find.text('Fixer un prix'));
+      await tester.pumpAndSettle();
+      expect(tapped, isTrue);
+    });
+
+    testWidgets('butin de groupe : lien tutoyé « Fixe un prix »', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          ItemInfoBody(
+            item: const CharacterInventoryItem(
+              id: 'inv-7',
+              name: 'Objet magique',
+              quantity: 1,
+              equipped: false,
+            ),
+            withoutCharacter: true,
+            onEditPrice: () {},
+            priceSetLinkLabel: 'Fixe un prix',
+          ),
+        ),
+      );
+
+      expect(find.text('Fixe un prix'), findsOneWidget);
+    });
+  });
+
   group('showItemQuantitySheet', () {
     Future<int?> open(
       WidgetTester tester, {
       int initialValue = 1,
       int? max,
     }) async {
-      int? result;
+      ItemQuantitySheetResult? result;
       await tester.pumpWidget(
         _app(
           Builder(
@@ -120,7 +256,7 @@ void main() {
       }
       await tester.tap(find.text('ENREGISTRER'));
       await tester.pumpAndSettle();
-      return result;
+      return result?.quantity;
     }
 
     testWidgets('plafonnée au maximum', (tester) async {
@@ -131,6 +267,96 @@ void main() {
       tester,
     ) async {
       expect(await open(tester, initialValue: 5), 9);
+    });
+
+    testWidgets('showPrice : section « Prix » optionnelle sous le stepper '
+        'de quantité (spec du prix d\'un objet modifiable, §4)', (
+      tester,
+    ) async {
+      ItemQuantitySheetResult? result;
+      await tester.pumpWidget(
+        _app(
+          Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () async => result = await showItemQuantitySheet(
+                context,
+                title: 'Quantité de Bouclier',
+                buttonLabel: 'Enregistrer',
+                showPrice: true,
+                initialPriceAmount: 15,
+                initialPriceCurrency: CurrencyKind.silver,
+              ),
+              child: const Text('Ouvrir'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Ouvrir'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Prix'), findsOneWidget);
+      expect(find.text('15'), findsOneWidget);
+      expect(find.text('Retire la surcharge'), findsOneWidget);
+
+      await tester.tap(find.text('ENREGISTRER'));
+      await tester.pumpAndSettle();
+      expect(result?.priceAmount, 15);
+      expect(result?.priceCurrency, CurrencyKind.silver);
+      expect(result?.removedViaLink, isFalse);
+    });
+
+    testWidgets('showPrice : « Retire la surcharge » ferme directement '
+        'avec un prix nul', (tester) async {
+      ItemQuantitySheetResult? result;
+      await tester.pumpWidget(
+        _app(
+          Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () async => result = await showItemQuantitySheet(
+                context,
+                title: 'Quantité de Bouclier',
+                buttonLabel: 'Enregistrer',
+                showPrice: true,
+                initialPriceAmount: 15,
+                initialPriceCurrency: CurrencyKind.silver,
+              ),
+              child: const Text('Ouvrir'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Ouvrir'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Retire la surcharge'));
+      await tester.pumpAndSettle();
+
+      expect(result?.priceAmount, isNull);
+      expect(result?.priceCurrency, isNull);
+      expect(result?.removedViaLink, isTrue);
+    });
+
+    testWidgets('showPrice sans surcharge existante : pas de lien « Retire '
+        'la surcharge »', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () async => showItemQuantitySheet(
+                context,
+                title: 'Quantité de Bouclier',
+                buttonLabel: 'Enregistrer',
+                showPrice: true,
+              ),
+              child: const Text('Ouvrir'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Ouvrir'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Retire la surcharge'), findsNothing);
     });
   });
 

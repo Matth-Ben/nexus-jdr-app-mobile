@@ -1,5 +1,6 @@
 import '../../characters/data/character_inventory_row_mapper.dart';
 import '../../characters/domain/character_inventory_item.dart';
+import '../../characters/domain/currency_kind.dart';
 import '../../characters/domain/offline_inventory_writes.dart';
 import '../domain/group_treasure_item.dart';
 
@@ -30,6 +31,11 @@ abstract final class GroupTreasureInventoryAdapter {
     'is_attuned': false,
     'notes': null,
     'weapon_slot': null,
+    // Surcharge de prix (spec du prix d'un objet modifiable) : lue
+    // indépendamment de `item_id`, posable sur une entrée du catalogue
+    // comme sur une entrée personnalisée.
+    'price_override_amount': item.priceOverrideAmount,
+    'price_override_currency': item.priceOverrideCurrency?.code,
     if (item.isCustom) ...{
       'custom_description': item.customDescription,
       'custom_damage_dice': item.customDamageDice,
@@ -95,9 +101,22 @@ abstract final class GroupTreasureInventoryAdapter {
             itemId: claimed.itemId,
             quantity: claimed.quantity,
           );
-    return write.toInsertColumns(
-      inventoryId: inventoryId,
-      characterId: characterId,
-    );
+    return {
+      ...write.toInsertColumns(
+        inventoryId: inventoryId,
+        characterId: characterId,
+      ),
+      // Surcharge de prix (spec du prix d'un objet modifiable) : recopiée à
+      // l'attribution comme `category`/`weight` d'un objet du catalogue,
+      // pour ne pas la perdre — `InventoryItemWrite.toInsertColumns` ne la
+      // porte que pour un objet personnalisé (via `enrichment`), jamais pour
+      // un objet du catalogue (`item_id` seul) ; réécrite ici dans les deux
+      // cas plutôt que dans `enrichment`, qui reste réservé aux colonnes
+      // `custom_*`.
+      if (claimed.priceOverrideAmount != null) ...{
+        'price_override_amount': claimed.priceOverrideAmount,
+        'price_override_currency': claimed.priceOverrideCurrency?.code,
+      },
+    };
   }
 }

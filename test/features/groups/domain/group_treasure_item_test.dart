@@ -2,6 +2,7 @@
 // (décision 91), entrées anciennes comprises.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/features/groups/domain/group_treasure_item.dart';
 
@@ -264,6 +265,76 @@ void main() {
       expect(updated.entryId, 'e');
       expect(updated.itemId, 1);
       expect(updated.category, 'arme');
+    });
+  });
+
+  group('surcharge de prix (spec du prix d\'un objet modifiable)', () {
+    test('objet du catalogue : surcharge en clés jsonb top-level, '
+        'aller-retour identique', () {
+      const item = GroupTreasureItem.catalog(
+        itemId: 7,
+        displayName: 'Bouclier',
+        quantity: 1,
+        priceOverrideAmount: 15,
+        priceOverrideCurrency: CurrencyKind.silver,
+      );
+      final json = item.toJson();
+      expect(json['price_override_amount'], 15);
+      expect(json['price_override_currency'], 'sp');
+      expect(GroupTreasureItem.fromJson(json), item);
+    });
+
+    test('objet personnalisé : prix extrait de l\'enrichissement du '
+        'formulaire, jamais sous les clés custom_*', () {
+      final item = GroupTreasureItem.custom(
+        name: 'Amulette',
+        quantity: 1,
+        enrichment: const CustomItemEnrichment(
+          kind: CustomItemKinds.other,
+          priceOverrideAmount: 250,
+          priceOverrideCurrency: CurrencyKind.gold,
+        ),
+      );
+      final json = item.toJson();
+      expect(json['price_override_amount'], 250);
+      expect(json['price_override_currency'], 'gp');
+      expect(json.containsKey('custom_price_override_amount'), isFalse);
+      expect(GroupTreasureItem.fromJson(json).priceOverrideAmount, 250);
+      expect(
+        GroupTreasureItem.fromJson(json).priceOverrideCurrency,
+        CurrencyKind.gold,
+      );
+    });
+
+    test('fromJson : un seul des deux champs présent -> aucune surcharge '
+        'retenue', () {
+      final item = GroupTreasureItem.fromJson(const {
+        'item_id': 7,
+        'display_name': 'Bouclier',
+        'quantity': 1,
+        'price_override_amount': 15,
+      });
+      expect(item.priceOverrideAmount, isNull);
+      expect(item.priceOverrideCurrency, isNull);
+    });
+
+    test('copyWith : null explicite retire la surcharge, omis la conserve', () {
+      const item = GroupTreasureItem.catalog(
+        itemId: 7,
+        displayName: 'Bouclier',
+        quantity: 1,
+        priceOverrideAmount: 15,
+        priceOverrideCurrency: CurrencyKind.silver,
+      );
+      final kept = item.copyWith(quantity: 2);
+      expect(kept.priceOverrideAmount, 15);
+
+      final removed = item.copyWith(
+        priceOverrideAmount: null,
+        priceOverrideCurrency: null,
+      );
+      expect(removed.priceOverrideAmount, isNull);
+      expect(removed.priceOverrideCurrency, isNull);
     });
   });
 }
