@@ -1,7 +1,13 @@
+import 'currency_kind.dart';
+
 /// Caractéristiques enrichies d'un objet personnalisé (P7) : type d'objet,
 /// bonus magique, poids, harmonisation, catégorie/portée d'arme (et, réservés
-/// à la PR 3, CA de base/catégorie d'armure). Ce sont les colonnes `custom_*`
-/// de `character_inventory` ajoutées par la migration P7 du dépôt web.
+/// à la PR 3, CA de base/catégorie d'armure), plus le prix (spec du prix d'un
+/// objet modifiable, §2a : `price_override_amount`/`price_override_currency`,
+/// réutilisés tels quels pour un objet personnalisé — voir
+/// [priceOverrideAmount]). Ce sont les colonnes `custom_*`/`price_override_*`
+/// de `character_inventory` ajoutées par la migration P7 et la PR DeepCore
+/// #71 du dépôt web.
 ///
 /// Ce fichier porte les **valeurs admises** et leur **validation stricte**,
 /// appliquée à l'enfilage ET au rejeu de la file hors ligne
@@ -66,6 +72,11 @@ const int customAcBaseMax = 30;
 const double customWeightMax = 9999.99;
 const int customDiceCountMax = 10;
 
+/// Borne haute d'un montant de prix (`price_override_amount`) — spec du prix
+/// d'un objet modifiable, même plafond de saisie que [NumericAmountStepper]
+/// (`core/widgets/numeric_amount_stepper.dart`, `max: 999999`).
+const int priceOverrideAmountMax = 999999;
+
 bool isValidCustomMagicBonus(Object? value) =>
     value is int && value >= 0 && value <= customMagicBonusMax;
 
@@ -78,6 +89,15 @@ bool isValidCustomWeight(Object? value) =>
     value.isFinite &&
     value >= 0 &&
     value.toDouble() <= customWeightMax;
+
+/// Montant d'un prix (personnalisé ou surcharge) : nombre fini dans
+/// `0..999999` — `0` n'est jamais stocké (décision 2, voir
+/// [CustomItemEnrichment.priceOverrideAmount]).
+bool isValidPriceOverrideAmount(Object? value) =>
+    value is num &&
+    value.isFinite &&
+    value > 0 &&
+    value.toDouble() <= priceOverrideAmountMax;
 
 /// Enrichissement d'un objet personnalisé tel qu'écrit en base. Un champ
 /// `null`/neutre n'est jamais envoyé (pas de `null` explicite, même
@@ -93,6 +113,8 @@ class CustomItemEnrichment {
     this.acBase,
     this.armorCategory,
     this.attuneNow = false,
+    this.priceOverrideAmount,
+    this.priceOverrideCurrency,
   });
 
   /// `custom_kind` : voir [CustomItemKinds].
@@ -124,7 +146,17 @@ class CustomItemEnrichment {
   /// état initial `is_attuned`.
   final bool attuneNow;
 
-  /// `true` si aucune colonne `custom_*` n'est à écrire.
+  /// `price_override_amount` — prix de cet objet personnalisé (spec du prix
+  /// d'un objet modifiable, §2a), `null` = aucun prix stocké (décision 2 :
+  /// un montant de stepper à `0` se traduit par `null`, jamais un prix nul
+  /// explicite). Va toujours de pair avec [priceOverrideCurrency] (l'un est
+  /// nul si et seulement si l'autre l'est, même contrainte que la colonne).
+  final num? priceOverrideAmount;
+
+  /// `price_override_currency` (`'cp'`/`'sp'`/`'ep'`/`'gp'`/`'pp'`).
+  final CurrencyKind? priceOverrideCurrency;
+
+  /// `true` si aucune colonne `custom_*`/`price_override_*` n'est à écrire.
   bool get isEmpty =>
       kind == null &&
       magicBonus == 0 &&
@@ -133,7 +165,8 @@ class CustomItemEnrichment {
       weaponCategory == null &&
       weaponRange == null &&
       acBase == null &&
-      armorCategory == null;
+      armorCategory == null &&
+      priceOverrideAmount == null;
 
   /// Validité (mêmes règles que les `CHECK` de la table) : valeurs dans leurs
   /// ensembles/bornes, bonus magique seulement pour arme/armure/bouclier,
@@ -174,6 +207,13 @@ class CustomItemEnrichment {
     // type) ni pour un autre type.
     if (armorCategory != null && kind != CustomItemKinds.armor) return false;
     if (kind == CustomItemKinds.shield && acBase == null) return false;
+    if ((priceOverrideAmount == null) != (priceOverrideCurrency == null)) {
+      return false;
+    }
+    if (priceOverrideAmount != null &&
+        !isValidPriceOverrideAmount(priceOverrideAmount)) {
+      return false;
+    }
     return true;
   }
 
@@ -187,6 +227,8 @@ class CustomItemEnrichment {
     CustomItemPayloadKeys.weaponRange: ?weaponRange,
     CustomItemPayloadKeys.acBase: ?acBase,
     CustomItemPayloadKeys.armorCategory: ?armorCategory,
+    CustomItemPayloadKeys.priceOverrideAmount: ?priceOverrideAmount,
+    CustomItemPayloadKeys.priceOverrideCurrency: ?priceOverrideCurrency?.code,
   };
 
   /// Colonnes de l'`INSERT` (valeurs non neutres seulement).
@@ -199,6 +241,8 @@ class CustomItemEnrichment {
     'custom_weapon_range': ?weaponRange,
     'custom_ac_base': ?acBase,
     'custom_armor_category': ?armorCategory,
+    'price_override_amount': ?priceOverrideAmount,
+    'price_override_currency': ?priceOverrideCurrency?.code,
   };
 
   /// Colonnes de la ligne brute équivalente (superposition hors ligne) : même
@@ -213,6 +257,8 @@ class CustomItemEnrichment {
     'custom_weapon_range': weaponRange,
     'custom_ac_base': acBase,
     'custom_armor_category': armorCategory,
+    'price_override_amount': priceOverrideAmount,
+    'price_override_currency': priceOverrideCurrency?.code,
   };
 }
 
@@ -225,6 +271,8 @@ abstract final class CustomItemPayloadKeys {
   static const weaponRange = 'customWeaponRange';
   static const acBase = 'customAcBase';
   static const armorCategory = 'customArmorCategory';
+  static const priceOverrideAmount = 'priceOverrideAmount';
+  static const priceOverrideCurrency = 'priceOverrideCurrency';
 
   static const List<String> all = [
     kind,
@@ -235,6 +283,8 @@ abstract final class CustomItemPayloadKeys {
     weaponRange,
     acBase,
     armorCategory,
+    priceOverrideAmount,
+    priceOverrideCurrency,
   ];
 }
 
@@ -315,6 +365,24 @@ ParsedCustomItemEnrichment parseCustomItemEnrichment(
       if (value is! bool) return ParsedCustomItemEnrichment.invalid;
       requiresAttunement = value;
     }
+    num? priceOverrideAmount;
+    if (raw.containsKey(CustomItemPayloadKeys.priceOverrideAmount)) {
+      final value = raw[CustomItemPayloadKeys.priceOverrideAmount];
+      if (!isValidPriceOverrideAmount(value)) {
+        return ParsedCustomItemEnrichment.invalid;
+      }
+      priceOverrideAmount = value as num;
+    }
+    CurrencyKind? priceOverrideCurrency;
+    if (raw.containsKey(CustomItemPayloadKeys.priceOverrideCurrency)) {
+      final value = raw[CustomItemPayloadKeys.priceOverrideCurrency];
+      priceOverrideCurrency = value is String
+          ? currencyKindFromCode(value)
+          : null;
+      if (priceOverrideCurrency == null) {
+        return ParsedCustomItemEnrichment.invalid;
+      }
+    }
 
     final enrichment = CustomItemEnrichment(
       kind: kind,
@@ -325,6 +393,8 @@ ParsedCustomItemEnrichment parseCustomItemEnrichment(
       weaponRange: weaponRange,
       acBase: acBase,
       armorCategory: armorCategory,
+      priceOverrideAmount: priceOverrideAmount,
+      priceOverrideCurrency: priceOverrideCurrency,
     );
     if (!enrichment.isValid) return ParsedCustomItemEnrichment.invalid;
     return ParsedCustomItemEnrichment._(true, enrichment);

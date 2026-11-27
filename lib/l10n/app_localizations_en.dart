@@ -2894,12 +2894,46 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get itemInfoPanelCostLabel => 'Cost';
+  String get itemPriceLabel => 'Price';
 
   @override
-  String itemInfoPanelCostValue(String cost) {
-    return '$cost po';
+  String itemPriceValue(String amount, String unit) {
+    return '$amount $unit';
   }
+
+  @override
+  String get itemPriceNotEstimatedValue => 'Not estimated';
+
+  @override
+  String get itemPriceOverriddenBadge => 'Modified';
+
+  @override
+  String get itemPriceSetLink => 'Set a price';
+
+  @override
+  String itemPriceOverrideSheetTitle(String itemName) {
+    return 'Price of $itemName';
+  }
+
+  @override
+  String itemPriceOverrideOfficialCaption(String officialPrice) {
+    return 'Official price: $officialPrice';
+  }
+
+  @override
+  String get itemPriceOverrideRemoveLink => 'Remove override';
+
+  @override
+  String get itemPriceOverrideRemovedSnack => 'Price reset.';
+
+  @override
+  String get itemPriceOverrideSaveButton => 'Save';
+
+  @override
+  String get customItemPriceSectionLabel => 'Price';
+
+  @override
+  String get customItemPriceCurrencySectionLabel => 'Currency';
 
   @override
   String get itemInfoPanelSetLabel => 'Set';
@@ -5400,6 +5434,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String groupTreasureQuantitySheetTitle(String itemName) {
     return 'Quantity of $itemName';
   }
+
+  @override
+  String get groupTreasureItemPriceSetLink => 'Set a price';
+
+  @override
+  String get groupTreasureItemPriceOverrideRemoveLink => 'Remove override';
+
+  @override
+  String get groupTreasureItemPriceOverrideRemovedSnack => 'Price reset.';
 
   @override
   String get groupTreasureStaleError =>

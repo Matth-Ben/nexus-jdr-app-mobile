@@ -401,13 +401,13 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     final characterId = detail.currentMember?.characterId;
     if (characterId == null) return;
     final l10n = AppLocalizations.of(context)!;
-    final quantity = await showItemQuantitySheet(
+    final result = await showItemQuantitySheet(
       context,
       title: l10n.groupTreasureClaimSheetTitle(item.displayName),
       buttonLabel: l10n.groupTreasureClaimButton,
       max: item.quantity,
     );
-    if (quantity == null || quantity <= 0 || !mounted) return;
+    if (result == null || result.quantity <= 0 || !mounted) return;
     await _runTreasureWrite(
       () => ref
           .read(groupRepositoryProvider)
@@ -415,7 +415,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             groupId: widget.groupId,
             characterId: characterId,
             item: item,
-            quantity: quantity,
+            quantity: result.quantity,
           ),
       successMessage: l10n.groupTreasureClaimedItemSnack,
       fallbackErrorMessage: l10n.groupTreasureClaimItemError,
@@ -429,6 +429,9 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
   Future<void> _editTreasureItem(GroupTreasureItem item) async {
     final l10n = AppLocalizations.of(context)!;
     final GroupTreasureItem updated;
+    // Lien « Retire la surcharge » (§2d) : snackbar dédié plutôt que le
+    // générique `groupTreasureUpdatedSnack`.
+    var priceOverrideRemovedViaLink = false;
     if (item.isCustom) {
       final result = await showCustomItemFormSheet(
         context,
@@ -449,14 +452,32 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         extra: item.unknownFields,
       );
     } else {
-      final quantity = await showItemQuantitySheet(
+      final result = await showItemQuantitySheet(
         context,
         title: l10n.groupTreasureQuantitySheetTitle(item.displayName),
         buttonLabel: l10n.customItemSaveButton,
         initialValue: item.quantity,
+        showPrice: true,
+        // Prix officiel non rappelé ici (pas encore chargé à ce point du
+        // flux « Modifier », contrairement à la fiche de l'objet qui le
+        // relit par `item_id` via `loadDetails`) — simple légende
+        // optionnelle, son absence n'empêche pas de fixer une surcharge.
+        initialPriceAmount: item.priceOverrideAmount,
+        initialPriceCurrency: item.priceOverrideCurrency,
       );
-      if (quantity == null || quantity == item.quantity || !mounted) return;
-      updated = item.copyWith(quantity: quantity);
+      if (result == null || !mounted) return;
+      if (!result.removedViaLink &&
+          result.quantity == item.quantity &&
+          result.priceAmount == item.priceOverrideAmount &&
+          result.priceCurrency == item.priceOverrideCurrency) {
+        return;
+      }
+      priceOverrideRemovedViaLink = result.removedViaLink;
+      updated = item.copyWith(
+        quantity: result.quantity,
+        priceOverrideAmount: result.priceAmount,
+        priceOverrideCurrency: result.priceCurrency,
+      );
     }
     await _runTreasureWrite(
       () => ref
@@ -466,7 +487,9 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             expected: item,
             updated: updated,
           ),
-      successMessage: l10n.groupTreasureUpdatedSnack,
+      successMessage: priceOverrideRemovedViaLink
+          ? l10n.groupTreasureItemPriceOverrideRemovedSnack
+          : l10n.groupTreasureUpdatedSnack,
     );
   }
 

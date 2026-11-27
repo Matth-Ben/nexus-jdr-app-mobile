@@ -3,6 +3,7 @@
 // recopie complète de ses données à l'attribution.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/custom_item_edit_rules.dart';
 import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/features/groups/data/group_treasure_inventory_adapter.dart';
@@ -120,6 +121,22 @@ void main() {
       expect(initial.equipped, isFalse);
       expect(initial.quantity, 4);
     });
+
+    test('catalogue avec surcharge de prix : lue indépendamment de item_id '
+        '(spec du prix d\'un objet modifiable)', () {
+      final item = GroupTreasureInventoryAdapter.toInventoryItem(
+        const GroupTreasureItem.catalog(
+          itemId: 9,
+          displayName: 'Dague',
+          quantity: 1,
+          priceOverrideAmount: 15,
+          priceOverrideCurrency: CurrencyKind.silver,
+        ),
+      );
+      expect(item.priceOverrideAmount, 15);
+      expect(item.priceOverrideCurrency, CurrencyKind.silver);
+      expect(item.priceIsOverridden, isTrue);
+    });
   });
 
   group('toInsertColumns (attribution)', () {
@@ -219,6 +236,53 @@ void main() {
       );
       expect(columns.containsKey('custom_kind'), isFalse);
       expect(columns.containsKey('custom_weapon_category'), isFalse);
+    });
+
+    test('surcharge de prix recopiée à l\'attribution, catalogue comme '
+        'personnalisé (spec du prix d\'un objet modifiable)', () {
+      final catalogColumns = GroupTreasureInventoryAdapter.toInsertColumns(
+        const GroupTreasureItem.catalog(
+          itemId: 9,
+          displayName: 'Dague',
+          quantity: 1,
+          priceOverrideAmount: 15,
+          priceOverrideCurrency: CurrencyKind.silver,
+        ),
+        characterId: 'char-1',
+        inventoryId: 'inv-1',
+      );
+      expect(catalogColumns['price_override_amount'], 15);
+      expect(catalogColumns['price_override_currency'], 'sp');
+
+      final customColumns = GroupTreasureInventoryAdapter.toInsertColumns(
+        GroupTreasureItem.custom(
+          name: 'Amulette',
+          quantity: 1,
+          enrichment: const CustomItemEnrichment(
+            kind: CustomItemKinds.other,
+            priceOverrideAmount: 250,
+            priceOverrideCurrency: CurrencyKind.gold,
+          ),
+        ),
+        characterId: 'char-1',
+        inventoryId: 'inv-1',
+      );
+      expect(customColumns['price_override_amount'], 250);
+      expect(customColumns['price_override_currency'], 'gp');
+    });
+
+    test('aucune surcharge : les clés de prix ne sont pas écrites', () {
+      final columns = GroupTreasureInventoryAdapter.toInsertColumns(
+        const GroupTreasureItem.catalog(
+          itemId: 9,
+          displayName: 'Dague',
+          quantity: 1,
+        ),
+        characterId: 'char-1',
+        inventoryId: 'inv-1',
+      );
+      expect(columns.containsKey('price_override_amount'), isFalse);
+      expect(columns.containsKey('price_override_currency'), isFalse);
     });
   });
 }

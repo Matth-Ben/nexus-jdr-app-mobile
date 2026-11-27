@@ -1,4 +1,5 @@
 import 'character_inventory_item.dart';
+import 'currency_kind.dart';
 import 'custom_item_enrichment.dart';
 
 /// Règles de l'édition d'un objet personnalisé existant (P7 PR 4) : quelle
@@ -70,6 +71,8 @@ class CustomItemInitialValues {
     this.weight,
     this.requiresAttunement = false,
     this.quantity = 1,
+    this.priceOverrideAmount,
+    this.priceOverrideCurrency,
   });
 
   final CustomItemEditMode mode;
@@ -99,6 +102,12 @@ class CustomItemInitialValues {
   /// Poids unitaire en kg (`null` : non renseigné).
   final double? weight;
   final bool requiresAttunement;
+
+  /// Prix de l'objet personnalisé (spec du prix d'un objet modifiable, §2a) —
+  /// `null` : aucun prix fixé. Toujours renseigné en même temps que
+  /// [priceOverrideCurrency].
+  final num? priceOverrideAmount;
+  final CurrencyKind? priceOverrideCurrency;
 }
 
 final RegExp _dicePattern = RegExp(r'^(\d+)d(\d+)$');
@@ -142,5 +151,7 @@ CustomItemInitialValues customItemInitialValuesOf(CharacterInventoryItem item) {
     weight: item.unitWeight,
     requiresAttunement: item.customRequiresAttunement,
     quantity: item.quantity,
+    priceOverrideAmount: item.priceOverrideAmount,
+    priceOverrideCurrency: item.priceOverrideCurrency,
   );
 }

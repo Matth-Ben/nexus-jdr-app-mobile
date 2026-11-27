@@ -14,7 +14,9 @@ import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/theme/app_spacing.dart';
 import 'package:personnages/core/widgets/destructive_button.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
+import 'package:personnages/core/widgets/numeric_amount_stepper.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
+import 'package:personnages/core/widgets/stepper_counter.dart';
 import 'package:personnages/core/widgets/wood_back_header.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
@@ -1661,7 +1663,15 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Quantité de Potion'), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.add).last);
+      // Le stepper de quantité (`StepperCounter`), distinct du stepper de
+      // prix (`NumericAmountStepper`, spec du prix d'un objet modifiable,
+      // §4) qui porte lui aussi une icône `Icons.add`.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(StepperCounter),
+          matching: find.byIcon(Icons.add),
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('ENREGISTRER'));
       await tester.pumpAndSettle();
@@ -1670,6 +1680,79 @@ void main() {
       expect(fakeRepository.lastUpdatedItem?.quantity, 4);
       expect(fakeRepository.lastUpdatedItem?.entryId, 'entry-potion');
       expect(find.text('Objet modifié.'), findsOneWidget);
+    });
+
+    testWidgets('Modifier un objet du catalogue : section « Prix » sous le '
+        'stepper de quantité (spec du prix d\'un objet modifiable, §4)', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = const GroupTreasure(
+        groupId: 'group-1',
+        items: [potion],
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
+      await tester.tap(find.text('Potion'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('groupTreasureItemEditButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Prix'), findsOneWidget);
+      expect(find.text('Retire la surcharge'), findsNothing);
+
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(NumericAmountStepper),
+          matching: find.byType(TextField),
+        ),
+        '15',
+      );
+      await tester.pump();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'PA'));
+      await tester.pump();
+      await tester.tap(find.text('ENREGISTRER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.lastUpdatedItem?.priceOverrideAmount, 15);
+      expect(
+        fakeRepository.lastUpdatedItem?.priceOverrideCurrency,
+        CurrencyKind.silver,
+      );
+      expect(find.text('Objet modifié.'), findsOneWidget);
+    });
+
+    testWidgets('« Retire la surcharge » : ferme directement, prix nul, '
+        'snackbar dédié (spec du prix d\'un objet modifiable, §2d)', (
+      tester,
+    ) async {
+      final overriddenPotion = potion.copyWith(
+        priceOverrideAmount: 15,
+        priceOverrideCurrency: CurrencyKind.silver,
+      );
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = GroupTreasure(
+        groupId: 'group-1',
+        items: [overriddenPotion],
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await openTreasureTab(tester);
+      await tester.tap(find.text('Potion'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('groupTreasureItemEditButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Retire la surcharge'), findsOneWidget);
+      await tester.tap(find.text('Retire la surcharge'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.lastUpdatedItem?.priceOverrideAmount, isNull);
+      expect(fakeRepository.lastUpdatedItem?.priceOverrideCurrency, isNull);
+      expect(find.text('Prix réinitialisé.'), findsOneWidget);
     });
 
     testWidgets('Modifier un objet personnalisé sans type : formulaire en deux '

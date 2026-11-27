@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/data/character_inventory_row_mapper.dart';
+import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 
 void main() {
@@ -57,6 +58,45 @@ void main() {
     test('null/type inattendu retombe sur null (jamais 0)', () {
       expect(CharacterInventoryRowMapper.parseCostAmount(null), isNull);
       expect(CharacterInventoryRowMapper.parseCostAmount({}), isNull);
+    });
+  });
+
+  group('CharacterInventoryRowMapper.parsePriceOverrideAmount/Currency '
+      '(spec du prix d\'un objet modifiable)', () {
+    test('extrait price_override_amount/currency, indépendamment de '
+        'item_id', () {
+      expect(
+        CharacterInventoryRowMapper.parsePriceOverrideAmount({
+          'price_override_amount': 15,
+        }),
+        15,
+      );
+      expect(
+        CharacterInventoryRowMapper.parsePriceOverrideCurrency({
+          'price_override_currency': 'sp',
+        }),
+        CurrencyKind.silver,
+      );
+    });
+
+    test('absent/type inattendu/code inconnu retombe sur null', () {
+      expect(CharacterInventoryRowMapper.parsePriceOverrideAmount({}), isNull);
+      expect(
+        CharacterInventoryRowMapper.parsePriceOverrideAmount({
+          'price_override_amount': 'x',
+        }),
+        isNull,
+      );
+      expect(
+        CharacterInventoryRowMapper.parsePriceOverrideCurrency({}),
+        isNull,
+      );
+      expect(
+        CharacterInventoryRowMapper.parsePriceOverrideCurrency({
+          'price_override_currency': 'xx',
+        }),
+        isNull,
+      );
     });
   });
 
@@ -225,6 +265,62 @@ void main() {
       expect(result.single.totalWeight, 1.0);
       expect(result.single.unitWeight, 0.5);
       expect(result.single.isCustom, isFalse);
+    });
+
+    test('un objet du catalogue avec une surcharge de prix la lit '
+        'indépendamment de item_id (spec du prix d\'un objet modifiable)', () {
+      final rows = [
+        {
+          'id': 'inv-1',
+          'item_id': 1,
+          'quantity': 1,
+          'equipped': false,
+          'items': {
+            'category': 'arme',
+            'weight': 0.5,
+            'cost': {'amount': 2},
+          },
+          'price_override_amount': 15,
+          'price_override_currency': 'sp',
+        },
+      ];
+
+      final result = CharacterInventoryRowMapper.toCharacterInventoryItems(
+        rows,
+        names: const {'1': 'Dague'},
+        descriptions: const {},
+      );
+
+      expect(result.single.costAmount, 2);
+      expect(result.single.priceOverrideAmount, 15);
+      expect(result.single.priceOverrideCurrency, CurrencyKind.silver);
+      expect(result.single.displayedPriceAmount, 15);
+      expect(result.single.displayedPriceCurrency, CurrencyKind.silver);
+      expect(result.single.priceIsOverridden, isTrue);
+    });
+
+    test('un objet personnalisé avec un prix fixé n\'est jamais considéré '
+        'comme « surchargé » (aucun prix officiel à surcharger)', () {
+      final rows = [
+        {
+          'id': 'inv-2',
+          'item_id': null,
+          'custom_name': 'Amulette',
+          'quantity': 1,
+          'equipped': false,
+          'price_override_amount': 250,
+          'price_override_currency': 'gp',
+        },
+      ];
+
+      final result = CharacterInventoryRowMapper.toCharacterInventoryItems(
+        rows,
+        names: const {},
+        descriptions: const {},
+      );
+
+      expect(result.single.displayedPriceAmount, 250);
+      expect(result.single.priceIsOverridden, isFalse);
     });
 
     test('un item_id sans traduction résolue retombe sur un libellé '

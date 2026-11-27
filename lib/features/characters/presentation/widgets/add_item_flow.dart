@@ -6,7 +6,9 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/french_text_normalizer.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
+import '../../../../core/widgets/currency_picker_chips.dart';
 import '../../../../core/widgets/error_retry_state.dart';
+import '../../../../core/widgets/numeric_amount_stepper.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/segmented_toggle.dart';
@@ -16,6 +18,7 @@ import '../../../../core/widgets/stepper_counter.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../character_creation/domain/gold_amount_formatter.dart';
 import '../../domain/character_failure.dart';
+import '../../domain/currency_kind.dart';
 import '../../domain/custom_item_enrichment.dart';
 import '../../domain/inventory_catalog_item.dart';
 import '../../domain/inventory_category_rules.dart';
@@ -359,13 +362,13 @@ class _ItemCatalogPickerContentState
 
   Future<void> _pickItem(InventoryCatalogItem item) async {
     final l10n = AppLocalizations.of(context)!;
-    final quantity = await showItemQuantitySheet(
+    final result = await showItemQuantitySheet(
       context,
       title: l10n.addItemFlowQuantitySheetTitle(item.name),
       buttonLabel: l10n.addItemFlowQuantitySheetAddButton,
     );
-    if (quantity == null || !mounted) return;
-    Navigator.of(context).pop(CatalogPickResult(item, quantity));
+    if (result == null || !mounted) return;
+    Navigator.of(context).pop(CatalogPickResult(item, result.quantity));
   }
 
   @override
@@ -692,22 +695,55 @@ class _CatalogItemRow extends StatelessWidget {
   }
 }
 
+/// Résultat de [showItemQuantitySheet] : quantité choisie, et le prix si
+/// [ItemQuantitySheet.showPrice] (spec du prix d'un objet modifiable, §4) —
+/// `priceAmount`/`priceCurrency` restent `null` sinon.
+class ItemQuantitySheetResult {
+  const ItemQuantitySheetResult({
+    required this.quantity,
+    this.priceAmount,
+    this.priceCurrency,
+    this.removedViaLink = false,
+  });
+
+  final int quantity;
+  final num? priceAmount;
+  final CurrencyKind? priceCurrency;
+
+  /// `true` : résultat produit par le lien « Retire la surcharge » plutôt
+  /// que par le bouton principal — l'appelant affiche alors
+  /// `groupTreasureItemPriceOverrideRemovedSnack` plutôt que
+  /// `groupTreasureUpdatedSnack` (spec du prix d'un objet modifiable, §2d).
+  final bool removedViaLink;
+}
+
 /// Ouvre la sheet légère de quantité ([ItemQuantitySheet]) : titre, valeur
 /// de départ [initialValue], bornes [min]/[max] (`null` : sans maximum) et
-/// libellé du bouton. Retourne la quantité choisie, `null` si fermée.
+/// libellé du bouton. Retourne la quantité (et le prix si [showPrice])
+/// choisis, `null` si fermée.
 ///
 /// Partagée par l'ajout depuis le catalogue (« Ajouter {nom} »),
 /// l'attribution d'un objet du butin de groupe (plafonnée à la quantité
 /// disponible) et la quantité d'un objet du catalogue du butin (décision 91).
-Future<int?> showItemQuantitySheet(
+///
+/// [showPrice] (spec du prix d'un objet modifiable, §4) : ajoute une section
+/// « Prix » optionnelle sous le stepper de quantité, séparée par un
+/// [SheetActionDivider] — seulement pertinente pour « Modifier » un objet du
+/// catalogue du butin, jamais pour choisir une quantité à s'attribuer ou à
+/// ajouter (ces deux appels laissent [showPrice] à `false`).
+Future<ItemQuantitySheetResult?> showItemQuantitySheet(
   BuildContext context, {
   required String title,
   required String buttonLabel,
   int initialValue = 1,
   int min = 1,
   int? max,
+  bool showPrice = false,
+  double? officialPriceAmount,
+  num? initialPriceAmount,
+  CurrencyKind? initialPriceCurrency,
 }) {
-  return showModalBottomSheet<int>(
+  return showModalBottomSheet<ItemQuantitySheetResult>(
     context: context,
     backgroundColor: AppColors.parchmentCard,
     isScrollControlled: true,
@@ -717,12 +753,16 @@ Future<int?> showItemQuantitySheet(
       initialValue: initialValue,
       min: min,
       max: max,
+      showPrice: showPrice,
+      officialPriceAmount: officialPriceAmount,
+      initialPriceAmount: initialPriceAmount,
+      initialPriceCurrency: initialPriceCurrency,
     ),
   );
 }
 
-/// Sheet légère de quantité (`StepperCounter` entre [min] et [max]) — voir
-/// [showItemQuantitySheet].
+/// Sheet légère de quantité (`StepperCounter` entre [min] et [max]), plus une
+/// section « Prix » optionnelle ([showPrice]) — voir [showItemQuantitySheet].
 class ItemQuantitySheet extends StatefulWidget {
   const ItemQuantitySheet({
     required this.title,
@@ -730,6 +770,10 @@ class ItemQuantitySheet extends StatefulWidget {
     this.initialValue = 1,
     this.min = 1,
     this.max,
+    this.showPrice = false,
+    this.officialPriceAmount,
+    this.initialPriceAmount,
+    this.initialPriceCurrency,
     super.key,
   });
 
@@ -741,12 +785,27 @@ class ItemQuantitySheet extends StatefulWidget {
   /// `null` : sans maximum.
   final int? max;
 
+  /// Voir [showItemQuantitySheet].
+  final bool showPrice;
+
+  /// Prix officiel (en or) rappelé en légende, voir
+  /// `item_price_override_sheet.dart`. `null` : aucune légende.
+  final double? officialPriceAmount;
+  final num? initialPriceAmount;
+  final CurrencyKind? initialPriceCurrency;
+
   @override
   State<ItemQuantitySheet> createState() => _ItemQuantitySheetState();
 }
 
 class _ItemQuantitySheetState extends State<ItemQuantitySheet> {
   late int _quantity = _clamp(widget.initialValue);
+  late int _priceAmount = (widget.initialPriceAmount ?? 0).round().clamp(
+    0,
+    priceOverrideAmountMax,
+  );
+  late CurrencyKind _priceCurrency =
+      widget.initialPriceCurrency ?? CurrencyKind.gold;
 
   int _clamp(int value) {
     final max = widget.max;
@@ -756,45 +815,166 @@ class _ItemQuantitySheetState extends State<ItemQuantitySheet> {
 
   bool get _canIncrement => widget.max == null || _quantity < widget.max!;
 
+  void _submit() {
+    Navigator.of(context).pop(
+      ItemQuantitySheetResult(
+        quantity: _quantity,
+        priceAmount: widget.showPrice && _priceAmount > 0 ? _priceAmount : null,
+        priceCurrency: widget.showPrice && _priceAmount > 0
+            ? _priceCurrency
+            : null,
+      ),
+    );
+  }
+
+  /// Lien « Retire la surcharge » (§2d) : aucune confirmation, ferme
+  /// directement avec la quantité choisie et un prix nul — l'appelant
+  /// affiche un snackbar dédié ([ItemQuantitySheetResult.removedViaLink]).
+  void _removePriceOverride() {
+    Navigator.of(
+      context,
+    ).pop(ItemQuantitySheetResult(quantity: _quantity, removedViaLink: true));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final official = widget.officialPriceAmount;
     return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.lg,
-          AppSpacing.lg + MediaQuery.of(context).viewInsets.bottom,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.lg + MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.title,
+                style: AppTypography.body(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Center(
+                child: StepperCounter(
+                  value: _quantity,
+                  onIncrement: _canIncrement
+                      ? () => setState(() => _quantity++)
+                      : null,
+                  onDecrement: _quantity > widget.min
+                      ? () => setState(() => _quantity--)
+                      : null,
+                ),
+              ),
+              if (widget.showPrice) ...[
+                const SheetActionDivider(),
+                Text(
+                  l10n.customItemPriceSectionLabel,
+                  style: AppTypography.body(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                if (official != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xs),
+                    child: Text(
+                      l10n.itemPriceOverrideOfficialCaption(
+                        l10n.itemPriceValue(
+                          GoldAmountFormatter.format(official),
+                          CurrencyKind.gold.unitLabel,
+                        ),
+                      ),
+                      style: AppTypography.body(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: AppSpacing.xs),
+                Center(
+                  child: NumericAmountStepper(
+                    value: _priceAmount,
+                    max: priceOverrideAmountMax,
+                    fieldLabel: l10n.customItemPriceSectionLabel,
+                    decrementLabel: l10n.numericAmountDecreaseLabel,
+                    incrementLabel: l10n.numericAmountIncreaseLabel,
+                    onChanged: (value) => setState(() => _priceAmount = value),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                CurrencyPickerChips(
+                  value: _priceCurrency,
+                  onChanged: (value) => setState(() => _priceCurrency = value),
+                ),
+                if (widget.initialPriceAmount != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Center(
+                    child: _RemovePriceOverrideLink(
+                      onTap: _removePriceOverride,
+                    ),
+                  ),
+                ],
+              ],
+              const SizedBox(height: AppSpacing.md),
+              PrimaryButton(label: widget.buttonLabel, onPressed: _submit),
+            ],
+          ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.title,
-              style: AppTypography.body(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+}
+
+/// Lien « Retire la surcharge » (butin de groupe, tutoiement) — même
+/// gabarit que `item_price_override_sheet.dart::_RemoveOverrideLink` (`body`
+/// 13 w700 `textSecondary`, zone de tap 44 px min-height), icône
+/// [Icons.remove_circle_outline]. Dupliqué ici plutôt que partagé : ce
+/// fichier reste indépendant des widgets de `item_price_override_sheet.dart`
+/// (réservée au contexte catalogue de l'inventaire solo), même rationale de
+/// duplication que le reste de ce dépôt.
+class _RemovePriceOverrideLink extends StatelessWidget {
+  const _RemovePriceOverrideLink({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Semantics(
+      button: true,
+      label: l10n.groupTreasureItemPriceOverrideRemoveLink,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.remove_circle_outline,
+                size: 14,
+                color: AppColors.textSecondary,
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Center(
-              child: StepperCounter(
-                value: _quantity,
-                onIncrement: _canIncrement
-                    ? () => setState(() => _quantity++)
-                    : null,
-                onDecrement: _quantity > widget.min
-                    ? () => setState(() => _quantity--)
-                    : null,
+              const SizedBox(width: 4),
+              Text(
+                l10n.groupTreasureItemPriceOverrideRemoveLink,
+                style: AppTypography.body(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            PrimaryButton(
-              label: widget.buttonLabel,
-              onPressed: () => Navigator.of(context).pop(_quantity),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

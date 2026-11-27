@@ -7,6 +7,7 @@ import '../../characters/domain/character_gallery_photo.dart';
 import '../../characters/domain/character_inventory_item.dart';
 import '../../characters/domain/character_journal_entry.dart';
 import '../../characters/domain/character_skill_row.dart';
+import '../../characters/domain/currency_kind.dart';
 import '../../characters/domain/character_spell_entry.dart';
 import '../../characters/domain/character_spell_slot.dart';
 import '../../characters/domain/condition_type.dart';
@@ -549,6 +550,13 @@ CharacterInventoryItem _mapInventoryItem(Map<String, dynamic> row) {
     customWeaponRange: itemId == null
         ? row['custom_weapon_range'] as String?
         : null,
+    // Surcharge de prix (spec du prix d'un objet modifiable) : exposée par
+    // `build_character_sheet_json` indépendamment de `item_id`, même règle
+    // que côté fiche authentifiée (`CharacterInventoryRowMapper`).
+    priceOverrideAmount: row['price_override_amount'] is num
+        ? row['price_override_amount'] as num
+        : null,
+    priceOverrideCurrency: currencyKindFromCode(row['price_override_currency']),
   );
 }
 

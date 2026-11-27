@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../characters/domain/currency_kind.dart';
 import '../../characters/domain/custom_item_enrichment.dart';
 
 /// Clés jsonb d'une entrée de `group_treasure.items`. Les champs d'un objet
@@ -28,6 +29,14 @@ abstract final class GroupTreasureItemKeys {
   static const customAcBase = 'custom_ac_base';
   static const customArmorCategory = 'custom_armor_category';
 
+  /// Surcharge de prix (spec du prix d'un objet modifiable, §7) — mêmes noms
+  /// que les colonnes `character_inventory`, posable sur une entrée du
+  /// catalogue comme sur une entrée personnalisée (contrairement aux clés
+  /// `custom_*` ci-dessus, réservées à une entrée personnalisée) : voir
+  /// [priceOverrideAmount].
+  static const priceOverrideAmount = 'price_override_amount';
+  static const priceOverrideCurrency = 'price_override_currency';
+
   /// Toutes les clés lues par cette version ; les autres sont conservées
   /// telles quelles ([GroupTreasureItem.fromJson]).
   static const Set<String> known = {
@@ -50,6 +59,8 @@ abstract final class GroupTreasureItemKeys {
     customWeaponRange,
     customAcBase,
     customArmorCategory,
+    priceOverrideAmount,
+    priceOverrideCurrency,
   };
 }
 
@@ -75,6 +86,10 @@ abstract final class GroupTreasureItemKeys {
 /// display_name, quantity}`) se lit, s'affiche et s'attribue comme avant ; une
 /// clé inconnue (version plus récente de l'app) est conservée à la réécriture
 /// ([extra]) plutôt que perdue.
+/// Sentinelle de [GroupTreasureItem.copyWith] — distingue « ne pas toucher »
+/// de « mettre explicitement à `null` », même principe que `CharacterInventoryItem._keep`.
+const Object _unset = Object();
+
 class GroupTreasureItem {
   const GroupTreasureItem({
     this.entryId,
@@ -89,17 +104,23 @@ class GroupTreasureItem {
     this.customDamageType,
     this.customProperties = const [],
     this.enrichment,
+    this.priceOverrideAmount,
+    this.priceOverrideCurrency,
     this.extra = const {},
   });
 
   /// Objet du catalogue : [category]/[weight] sont l'instantané de `items`
   /// (badge et poids de la carte), jamais recopiés à l'attribution.
+  /// [priceOverrideAmount]/[priceOverrideCurrency] : surcharge de prix (spec
+  /// du prix d'un objet modifiable), `null` : aucune.
   const GroupTreasureItem.catalog({
     required int this.itemId,
     required this.displayName,
     required this.quantity,
     this.category,
     this.weight,
+    this.priceOverrideAmount,
+    this.priceOverrideCurrency,
   }) : entryId = null,
        customName = null,
        customDescription = null,
@@ -149,6 +170,12 @@ class GroupTreasureItem {
       customDamageType: nonEmpty(damageType),
       customProperties: properties,
       enrichment: kept,
+      // Surcharge de prix (spec du prix d'un objet modifiable) : portée par
+      // des clés jsonb top-level (comme pour un objet du catalogue), pas
+      // sous `enrichment`/`custom_*` — extraite ici de [enrichment] (même
+      // champ que le formulaire d'objet personnalisé, §2a).
+      priceOverrideAmount: enrichment?.priceOverrideAmount,
+      priceOverrideCurrency: enrichment?.priceOverrideCurrency,
       extra: extra,
     );
   }
@@ -179,6 +206,14 @@ class GroupTreasureItem {
   /// objet personnalisé sans type.
   final CustomItemEnrichment? enrichment;
 
+  /// Surcharge de prix (spec du prix d'un objet modifiable) — posable sur
+  /// une entrée du catalogue (surcharge du prix officiel) comme sur une
+  /// entrée personnalisée (prix fixé, extrait de [CustomItemEnrichment
+  /// .priceOverrideAmount] par [GroupTreasureItem.custom]), `null` ensemble
+  /// = aucun prix connu.
+  final num? priceOverrideAmount;
+  final CurrencyKind? priceOverrideCurrency;
+
   /// Valeurs jsonb réécrites telles quelles : clés inconnues de cette version
   /// **et** valeurs d'une clé connue d'un type inattendu ou hors de leur
   /// ensemble (ex. futur type d'objet), ignorées à l'affichage (voir
@@ -197,22 +232,37 @@ class GroupTreasureItem {
 
   bool get isCustom => itemId == null;
 
-  GroupTreasureItem copyWith({int? quantity, String? entryId}) =>
-      GroupTreasureItem(
-        entryId: entryId ?? this.entryId,
-        itemId: itemId,
-        customName: customName,
-        displayName: displayName,
-        quantity: quantity ?? this.quantity,
-        category: category,
-        weight: weight,
-        customDescription: customDescription,
-        customDamageDice: customDamageDice,
-        customDamageType: customDamageType,
-        customProperties: customProperties,
-        enrichment: enrichment,
-        extra: extra,
-      );
+  /// [priceOverrideAmount]/[priceOverrideCurrency] : sentinelle [_unset] par
+  /// défaut (garde la valeur courante) — un appelant qui veut explicitement
+  /// retirer la surcharge passe `null` pour les deux (spec du prix d'un
+  /// objet modifiable, §2d), ce qu'omettre le paramètre ne permettrait pas
+  /// de distinguer de « ne pas toucher ».
+  GroupTreasureItem copyWith({
+    int? quantity,
+    String? entryId,
+    Object? priceOverrideAmount = _unset,
+    Object? priceOverrideCurrency = _unset,
+  }) => GroupTreasureItem(
+    entryId: entryId ?? this.entryId,
+    itemId: itemId,
+    customName: customName,
+    displayName: displayName,
+    quantity: quantity ?? this.quantity,
+    category: category,
+    weight: weight,
+    customDescription: customDescription,
+    customDamageDice: customDamageDice,
+    customDamageType: customDamageType,
+    customProperties: customProperties,
+    enrichment: enrichment,
+    priceOverrideAmount: identical(priceOverrideAmount, _unset)
+        ? this.priceOverrideAmount
+        : priceOverrideAmount as num?,
+    priceOverrideCurrency: identical(priceOverrideCurrency, _unset)
+        ? this.priceOverrideCurrency
+        : priceOverrideCurrency as CurrencyKind?,
+    extra: extra,
+  );
 
   /// Même contenu que [other], hors [entryId] et [quantity] : deux ajouts du
   /// même objet se fusionnent (`GroupTreasureItems.merge`).
@@ -248,6 +298,8 @@ class GroupTreasureItem {
         GroupTreasureItemKeys.customAcBase: ?e.acBase,
         GroupTreasureItemKeys.customArmorCategory: ?e.armorCategory,
       },
+      GroupTreasureItemKeys.priceOverrideAmount: ?priceOverrideAmount,
+      GroupTreasureItemKeys.priceOverrideCurrency: ?priceOverrideCurrency?.code,
     };
     final json = <String, dynamic>{
       ...extra,
@@ -337,6 +389,26 @@ class GroupTreasureItem {
       ),
     );
 
+    // Surcharge de prix (spec du prix d'un objet modifiable) : l'un est nul
+    // si et seulement si l'autre l'est, même contrainte app-level que
+    // `character_inventory` (pas de `CHECK` possible sur un sous-champ
+    // jsonb) ; sinon les deux sont ignorés pour l'affichage (gardés dans
+    // [extra] via [read]).
+    final rawPriceOverrideAmount = read(
+      GroupTreasureItemKeys.priceOverrideAmount,
+      (raw) => isValidPriceOverrideAmount(raw) ? raw as num : null,
+    );
+    final rawPriceOverrideCurrency = read(
+      GroupTreasureItemKeys.priceOverrideCurrency,
+      (raw) => raw is String ? currencyKindFromCode(raw) : null,
+    );
+    final priceConsistent =
+        (rawPriceOverrideAmount == null) == (rawPriceOverrideCurrency == null);
+    final priceOverrideAmount = priceConsistent ? rawPriceOverrideAmount : null;
+    final priceOverrideCurrency = priceConsistent
+        ? rawPriceOverrideCurrency
+        : null;
+
     return GroupTreasureItem(
       entryId: nonEmpty(text(GroupTreasureItemKeys.entryId)),
       itemId: whole(GroupTreasureItemKeys.itemId),
@@ -364,6 +436,8 @@ class GroupTreasureItem {
           ) ??
           const [],
       enrichment: enrichment.isEmpty ? null : enrichment,
+      priceOverrideAmount: priceOverrideAmount,
+      priceOverrideCurrency: priceOverrideCurrency,
       extra: extra,
     );
   }

@@ -52,7 +52,31 @@ extension CurrencyKindProperties on CurrencyKind {
     CurrencyKind.silver => "pièces d'argent",
     CurrencyKind.copper => 'pièces de cuivre',
   };
+
+  /// Code court stocké en base (`character_inventory.price_override_currency`,
+  /// `group_treasure.items[].price_override_currency`) — spec du prix d'un
+  /// objet modifiable (§7, décision 7) : `'pp'`/`'gp'`/`'ep'`/`'sp'`/`'cp'`,
+  /// distinct de [columnName] (préfixé `currency_`) et de [unitLabel]
+  /// (abréviation FR affichée).
+  String get code => switch (this) {
+    CurrencyKind.platinum => 'pp',
+    CurrencyKind.gold => 'gp',
+    CurrencyKind.electrum => 'ep',
+    CurrencyKind.silver => 'sp',
+    CurrencyKind.copper => 'cp',
+  };
 }
+
+/// Résout un [CurrencyKind.code] (`'pp'`/`'gp'`/`'ep'`/`'sp'`/`'cp'`) ; `null`
+/// si [raw] n'est pas l'un de ces 5 codes connus.
+CurrencyKind? currencyKindFromCode(Object? raw) => switch (raw) {
+  'pp' => CurrencyKind.platinum,
+  'gp' => CurrencyKind.gold,
+  'ep' => CurrencyKind.electrum,
+  'sp' => CurrencyKind.silver,
+  'cp' => CurrencyKind.copper,
+  _ => null,
+};
 
 /// Colonnes `characters.currency_*` valides d'un payload de file `currency`.
 const _currencyColumns = {
