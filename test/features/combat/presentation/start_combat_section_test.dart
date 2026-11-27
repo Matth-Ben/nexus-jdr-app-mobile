@@ -11,6 +11,7 @@ import 'package:personnages/core/widgets/info_banner.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/combat/domain/combat_failure.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
+import 'package:personnages/features/combat/presentation/providers/grimoire_combat_providers.dart';
 import 'package:personnages/features/combat/presentation/widgets/start_combat_section.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/l10n/app_localizations.dart';
@@ -19,6 +20,7 @@ import '../../../support/combat_fixtures.dart';
 import '../../../support/fake_combat_repository.dart';
 import '../../../support/fake_connectivity_checker.dart';
 import '../../../support/fake_current_user.dart';
+import '../../../support/fake_grimoire_combat_gateway.dart';
 import 'combat_test_harness.dart';
 
 class _Env {
@@ -40,6 +42,9 @@ Future<void> _pump(WidgetTester tester, _Env env) async {
       overrides: [
         currentUserFromTestOverride,
         combatRepositoryProvider.overrideWithValue(env.repo),
+        grimoireCombatGatewayProvider.overrideWithValue(
+          FakeGrimoireCombatGateway(),
+        ),
         connectivityCheckerProvider.overrideWithValue(env.connectivity),
       ],
       child: MaterialApp(

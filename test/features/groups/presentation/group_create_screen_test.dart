@@ -15,6 +15,7 @@ import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
+import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
@@ -317,6 +318,16 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<WriteOutcome> setInventoryItemPriceOverride({
+    required String characterId,
+    required String inventoryId,
+    required num? amount,
+    required CurrencyKind? currency,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<WriteOutcome> removeInventoryItem({
     required String characterId,
     required String inventoryId,
@@ -447,6 +458,10 @@ class _FakeGroupRepository implements GroupRepository {
   Future<void> dissolveGroup(String groupId) => throw UnimplementedError();
 
   @override
+  Future<void> becomeGroupGameMaster(String groupId) =>
+      throw UnimplementedError();
+
+  @override
   Future<void> leaveGroup(String groupId) => throw UnimplementedError();
 
   @override
@@ -466,11 +481,35 @@ class _FakeGroupRepository implements GroupRepository {
       throw UnimplementedError();
 
   @override
-  Future<void> addToTreasure({
+  Future<void> addTreasureItems({
     required String groupId,
-    required Map<CurrencyKind, int> newCurrencyTotals,
-    required List<GroupTreasureItem> newItems,
+    required List<GroupTreasureItem> items,
   }) => throw UnimplementedError();
+
+  @override
+  Future<void> updateTreasureItem({
+    required String groupId,
+    required GroupTreasureItem expected,
+    required GroupTreasureItem updated,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> removeTreasureItem({
+    required String groupId,
+    required GroupTreasureItem expected,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> setTreasureCurrency({
+    required String groupId,
+    required Map<CurrencyKind, int> expected,
+    required Map<CurrencyKind, int> newTotals,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<CharacterInventoryItem> fetchTreasureItemDetails(
+    GroupTreasureItem item,
+  ) => throw UnimplementedError();
 
   @override
   Future<bool> claimTreasureCurrency({

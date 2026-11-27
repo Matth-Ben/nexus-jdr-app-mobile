@@ -533,11 +533,14 @@ void main() {
     await pumpUntilSettled(tester, attempts: 6);
     await tapText(tester, 'BUTIN');
     await pumpUntilSettled(tester, attempts: 4);
-    await tapText(tester, 'AJOUTER AU BUTIN DU GROUPE');
-    await pumpUntilSettled(tester, attempts: 4);
-    await tapText(tester, 'Ajouter des objets');
+    // Décision 91 : tuile « Objet » de l'inventaire, puis objet
+    // personnalisé en deux temps (type d'objet, puis nom) ; l'objet est
+    // écrit dans le butin dès « AJOUTER ».
+    await tapText(tester, 'Objet');
     await pumpUntilSettled(tester, attempts: 4);
     await tapText(tester, 'Objet personnalisé');
+    await pumpUntilSettled(tester, attempts: 4);
+    await tester.tap(find.byKey(const Key('customItemKindOther')));
     await pumpUntilSettled(tester, attempts: 4);
     const lootItemName = 'QA Potion de Soins';
     await tester.enterText(
@@ -545,13 +548,10 @@ void main() {
       lootItemName,
     );
     await tester.pump();
-    await tapText(tester, 'AJOUTER');
-    await pumpUntilSettled(tester, attempts: 6);
     // `PrimaryButton` met TOUJOURS son libellé en majuscules (voir
-    // `core/widgets/primary_button.dart`) -- "Ajouter au butin" (casse
-    // source du libellé passé à `add_to_group_treasure_sheet.dart`) est
-    // introuvable tel quel, même piège que "VALEUR MOYENNE" plus haut.
-    await tapText(tester, 'AJOUTER AU BUTIN');
+    // `core/widgets/primary_button.dart`), même piège que "VALEUR MOYENNE"
+    // plus haut.
+    await tapText(tester, 'AJOUTER');
     await pumpUntilSettled(tester, attempts: 6);
     observe('Etape8 - onglet BUTIN (MJ) apres ajout', visibleTexts());
     if (find.textContaining(lootItemName).evaluate().isEmpty) {
@@ -568,9 +568,13 @@ void main() {
     await pumpUntilSettled(tester, attempts: 6);
     await tapText(tester, 'BUTIN');
     await pumpUntilSettled(tester, attempts: 4);
-    await tapText(tester, "S'attribuer");
+    // Décision 91 : toucher l'objet ouvre sa fiche, « S'attribuer » ouvre
+    // la sheet de quantité (même libellé sur son bouton).
+    await tapText(tester, lootItemName);
     await pumpUntilSettled(tester, attempts: 4);
-    await tapText(tester, 'RÉCLAMER');
+    await tester.tap(find.byKey(const Key('groupTreasureItemClaimButton')));
+    await pumpUntilSettled(tester, attempts: 4);
+    await tapText(tester, "S'ATTRIBUER");
     await pumpUntilSettled(tester, attempts: 6);
     observe('Etape8 - onglet BUTIN (joueur) apres reclamation', visibleTexts());
 

@@ -4,7 +4,8 @@
 // `MockClient`) : corps de requête envoyé aux 3 edge functions
 // (`create-group`/`preview-group-invite`/`join-group`), mapping des
 // réponses/erreurs, et écritures directes (`claim_group_treasure_currency`,
-// `claimTreasureItem`).
+// `claimTreasureItem`), et écritures du butin (décision 91 : ajout,
+// modification, retrait, monnaie conditionnelle, fiche d'un objet).
 
 import 'dart:convert';
 import 'dart:io';
@@ -13,10 +14,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
+import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/group_character_reassignment_failure.dart';
 import 'package:personnages/features/groups/domain/group_failure.dart';
 import 'package:personnages/features/groups/domain/group_invite_failure.dart';
+import 'package:personnages/features/groups/domain/group_preview.dart';
 import 'package:personnages/features/groups/domain/group_treasure_item.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -142,6 +145,74 @@ void main() {
       expect(body, {'code': 'AB3F7K2M'});
       expect(preview.name, 'Les Lames');
       expect(preview.memberCount, 3);
+    });
+
+    // Étape 4 : `story_title` (décision n° 33), jamais le résumé.
+    test('mappe story_title quand la campagne est associée', () async {
+      final client = _buildFakeClient(
+        responses: {
+          'preview-group-invite': {
+            'name': 'Les Lames',
+            'member_count': 3,
+            'story_title': 'La Mine perdue',
+          },
+        },
+      );
+
+      final preview = await SupabaseGroupRepository(client)
+          .previewGroupInvite('AB3F7K2M');
+
+      expect(preview.storyTitle, 'La Mine perdue');
+    });
+
+    test('story_title null : aucune campagne', () async {
+      final client = _buildFakeClient(
+        responses: {
+          'preview-group-invite': {
+            'name': 'Les Lames',
+            'member_count': 3,
+            'story_title': null,
+          },
+        },
+      );
+
+      final preview = await SupabaseGroupRepository(client)
+          .previewGroupInvite('AB3F7K2M');
+
+      expect(preview.storyTitle, isNull);
+    });
+
+    test('story_title absent (fonction antérieure à l\'étape 4) : null, sans '
+        'erreur', () async {
+      final client = _buildFakeClient(
+        responses: {
+          'preview-group-invite': {'name': 'Les Lames', 'member_count': 3},
+        },
+      );
+
+      final preview = await SupabaseGroupRepository(client)
+          .previewGroupInvite('AB3F7K2M');
+
+      expect(preview, const GroupPreview(name: 'Les Lames', memberCount: 3));
+    });
+
+    test('un résumé renvoyé par erreur n\'est jamais exposé, une valeur non '
+        'textuelle est ignorée', () async {
+      final client = _buildFakeClient(
+        responses: {
+          'preview-group-invite': {
+            'name': 'Les Lames',
+            'member_count': 3,
+            'story_title': 42,
+            'story_summary_public': 'Résumé réservé aux membres.',
+          },
+        },
+      );
+
+      final preview = await SupabaseGroupRepository(client)
+          .previewGroupInvite('AB3F7K2M');
+
+      expect(preview, const GroupPreview(name: 'Les Lames', memberCount: 3));
     });
 
     test('404 invalid_code -> GroupInviteFailureKind.invalidCode', () async {
@@ -612,6 +683,169 @@ void main() {
       expect(member.armorClass, 13);
       expect(member.armorClassBonus, 1);
     });
+
+    // Étape 4 : campagne associée (`story_title`, `story_summary_public`).
+    group('campagne associée', () {
+      Map<String, dynamic> groupRow([Map<String, dynamic> extra = const {}]) =>
+          {
+            'id': groupId,
+            'name': 'Les Lames',
+            'owner_id': ownerId,
+            'invite_code': 'AB3F7K2M',
+            ...extra,
+          };
+
+      bool isGroupsRequest(http.Request request) =>
+          request.url.path.endsWith('/groups');
+
+      test(
+        'sélectionne story_title/story_summary_public et les mappe',
+        () async {
+          final requests = <http.Request>[];
+          final client = await _buildSignedInFakeClient(
+            ownerId: ownerId,
+            onRequest: requests.add,
+            tableRows: {
+              'groups': [
+                groupRow({
+                  'story_title': 'La Mine perdue',
+                  'story_summary_public': 'Phandaline.\nUne mine.',
+                }),
+              ],
+            },
+          );
+
+          final detail = await SupabaseGroupRepository(client)
+              .fetchGroupDetail(groupId);
+
+          final select = requests
+              .firstWhere(isGroupsRequest)
+              .url
+              .queryParameters['select'];
+          expect(select, contains('story_title'));
+          expect(select, contains('story_summary_public'));
+          expect(detail.storyTitle, 'La Mine perdue');
+          expect(detail.storySummaryPublic, 'Phandaline.\nUne mine.');
+        },
+      );
+
+      test('colonnes à NULL : aucune campagne', () async {
+        final client = await _buildSignedInFakeClient(
+          ownerId: ownerId,
+          tableRows: {
+            'groups': [
+              groupRow({'story_title': null, 'story_summary_public': null}),
+            ],
+          },
+        );
+
+        final detail = await SupabaseGroupRepository(client)
+            .fetchGroupDetail(groupId);
+
+        expect(detail.storyTitle, isNull);
+        expect(detail.storySummaryPublic, isNull);
+        expect(detail.hasCampaignCard, isFalse);
+      });
+
+      test('aucune ligne (groupe supprimé ou RLS) : groupNotFound, requête '
+          'limitée à une ligne', () async {
+        final requests = <http.Request>[];
+        final client = await _buildSignedInFakeClient(
+          ownerId: ownerId,
+          onRequest: requests.add,
+        );
+
+        await expectLater(
+          SupabaseGroupRepository(client).fetchGroupDetail(groupId),
+          throwsA(
+            isA<GroupFailure>().having(
+              (f) => f.code,
+              'code',
+              GroupErrorCode.groupNotFound,
+            ),
+          ),
+        );
+        final groupRequests = requests.where(isGroupsRequest).toList();
+        expect(groupRequests, hasLength(1));
+        expect(groupRequests.single.url.queryParameters['limit'], '1');
+        expect(groupRequests.single.url.queryParameters['id'], 'eq.$groupId');
+      });
+
+      test('colonnes absentes de la réponse : null, sans erreur', () async {
+        final client = await _buildSignedInFakeClient(
+          ownerId: ownerId,
+          tableRows: {
+            'groups': [groupRow()],
+          },
+        );
+
+        final detail = await SupabaseGroupRepository(client)
+            .fetchGroupDetail(groupId);
+
+        expect(detail.name, 'Les Lames');
+        expect(detail.storyTitle, isNull);
+        expect(detail.storySummaryPublic, isNull);
+      });
+
+      for (final (status, code) in const [(400, '42703'), (400, 'PGRST204')]) {
+        test('colonnes inexistantes côté DeepCore ($code, retour arrière) : '
+            'relit sans elles, l\'écran reste utilisable', () async {
+          final groupSelects = <String>[];
+          final client = await _buildSignedInFakeClient(
+            ownerId: ownerId,
+            tableRows: {
+              'groups': [groupRow()],
+            },
+            respond: (request) {
+              if (!isGroupsRequest(request)) return null;
+              final select = request.url.queryParameters['select'] ?? '';
+              groupSelects.add(select);
+              if (!select.contains('story_title')) return null;
+              return http.Response(
+                jsonEncode({
+                  'code': code,
+                  'message': 'column groups.story_title does not exist',
+                }),
+                status,
+                request: request,
+                headers: {'content-type': 'application/json'},
+              );
+            },
+          );
+
+          final detail = await SupabaseGroupRepository(client)
+              .fetchGroupDetail(groupId);
+
+          expect(groupSelects, hasLength(2));
+          expect(groupSelects.last, isNot(contains('story_title')));
+          expect(detail.name, 'Les Lames');
+          expect(detail.storyTitle, isNull);
+        });
+      }
+
+      test(
+        'une autre erreur sur groups n\'est pas masquée par le repli',
+        () async {
+          final requests = <http.Request>[];
+          final client = await _buildSignedInFakeClient(
+            ownerId: ownerId,
+            onRequest: requests.add,
+            failingTables: {'groups'},
+            failingBody: const {
+              'code': '42501',
+              'message': 'permission denied',
+            },
+            failingStatus: 403,
+          );
+
+          await expectLater(
+            SupabaseGroupRepository(client).fetchGroupDetail(groupId),
+            throwsA(isA<GroupFailure>()),
+          );
+          expect(requests.where(isGroupsRequest), hasLength(1));
+        },
+      );
+    });
   });
 
   group('SupabaseGroupRepository.setGroupCharacter', () {
@@ -889,8 +1123,20 @@ void main() {
     const groupId = 'group-1';
     const characterId = 'char-1';
 
-    test('quantité partielle réclamée : décrémente items sans retirer '
-        "l'entrée, insère dans l'inventaire personnel", () async {
+    http.Request patchOf(List<http.Request> requests) => requests.firstWhere(
+      (request) =>
+          request.url.path.endsWith('/group_treasure') &&
+          request.method == 'PATCH',
+    );
+
+    http.Request insertOf(List<http.Request> requests) => requests.firstWhere(
+      (request) =>
+          request.url.path.endsWith('/character_inventory') &&
+          request.method == 'POST',
+    );
+
+    test('entrée ancienne, quantité partielle : décrémente items (entry_id '
+        'attribué au passage), insère dans l\'inventaire personnel', () async {
       final requests = <http.Request>[];
       final client = _buildFakeClient(
         onRequest: requests.add,
@@ -917,39 +1163,47 @@ void main() {
         quantity: 2,
       );
 
-      final updateRequest = requests.firstWhere(
-        (request) =>
-            request.url.path.endsWith('/group_treasure') &&
-            request.method == 'PATCH',
-      );
-      final updateBody = jsonDecode(updateRequest.body) as Map<String, dynamic>;
-      expect(updateBody['items'], [
-        {'item_id': 7, 'display_name': 'Potion', 'quantity': 3},
-      ]);
+      final updateBody =
+          jsonDecode(patchOf(requests).body) as Map<String, dynamic>;
+      final written = (updateBody['items'] as List).single as Map;
+      expect(written['item_id'], 7);
+      expect(written['quantity'], 3);
+      expect(written['entry_id'], isA<String>());
 
-      final insertRequest = requests.firstWhere(
-        (request) =>
-            request.url.path.endsWith('/character_inventory') &&
-            request.method == 'POST',
+      final insertBody =
+          jsonDecode(insertOf(requests).body) as Map<String, dynamic>;
+      expect(insertBody['character_id'], characterId);
+      expect(insertBody['item_id'], 7);
+      expect(insertBody['quantity'], 2);
+      expect(insertBody['id'], isA<String>());
+      expect(
+        insertBody.keys.where((key) => key.startsWith('custom_')),
+        isEmpty,
       );
-      final insertBody = jsonDecode(insertRequest.body) as Map<String, dynamic>;
-      expect(insertBody, {
-        'character_id': characterId,
-        'item_id': 7,
-        'quantity': 2,
-      });
     });
 
-    test('quantité totale réclamée : retire complètement l\'entrée', () async {
+    test('objet personnalisé enrichi : recopie complète dans '
+        'character_inventory, entrée retirée à 0', () async {
       final requests = <http.Request>[];
+      final sword = GroupTreasureItem.custom(
+        entryId: 'e-sword',
+        name: 'Épée runique',
+        quantity: 1,
+        description: 'Gravée de runes.',
+        damageDice: '1d8',
+        damageType: 'tranchant',
+        enrichment: const CustomItemEnrichment(
+          kind: CustomItemKinds.weapon,
+          magicBonus: 1,
+          requiresAttunement: true,
+        ),
+      );
       final client = _buildFakeClient(
         onRequest: requests.add,
         responses: {
           'group_treasure': [
             {
-              'items': [
-                {'item_id': 7, 'display_name': 'Potion', 'quantity': 2},
-              ],
+              'items': [sword.toJson()],
             },
           ],
         },
@@ -959,56 +1213,518 @@ void main() {
       await repository.claimTreasureItem(
         groupId: groupId,
         characterId: characterId,
-        item: const GroupTreasureItem(
-          itemId: 7,
-          displayName: 'Potion',
-          quantity: 2,
-        ),
-        quantity: 2,
+        item: sword,
+        quantity: 1,
       );
 
-      final updateRequest = requests.firstWhere(
-        (request) =>
-            request.url.path.endsWith('/group_treasure') &&
-            request.method == 'PATCH',
+      final insertBody =
+          jsonDecode(insertOf(requests).body) as Map<String, dynamic>;
+      expect(insertBody, containsPair('custom_name', 'Épée runique'));
+      expect(
+        insertBody,
+        containsPair('custom_description', 'Gravée de runes.'),
       );
-      final updateBody = jsonDecode(updateRequest.body) as Map<String, dynamic>;
+      expect(insertBody, containsPair('custom_damage_dice', '1d8'));
+      expect(insertBody, containsPair('custom_damage_type', 'tranchant'));
+      expect(insertBody, containsPair('custom_kind', 'arme'));
+      expect(insertBody, containsPair('custom_magic_bonus', 1));
+      expect(insertBody, containsPair('custom_requires_attunement', true));
+      final updateBody =
+          jsonDecode(patchOf(requests).body) as Map<String, dynamic>;
       expect(updateBody['items'], isEmpty);
     });
 
-    test(
-      "entrée déjà retirée entretemps (course perdue) : n'écrit rien",
-      () async {
+    test('entrée déjà attribuée ou modifiée entre-temps : n\'écrit rien et '
+        'lève treasureStale', () async {
+      for (final remote in [
+        <Map<String, dynamic>>[],
+        [
+          {'item_id': 7, 'display_name': 'Potion', 'quantity': 1},
+        ],
+      ]) {
         final requests = <http.Request>[];
         final client = _buildFakeClient(
           onRequest: requests.add,
           responses: {
             'group_treasure': [
-              {'items': <Map<String, dynamic>>[]},
+              {'items': remote},
             ],
           },
         );
         final repository = SupabaseGroupRepository(client);
 
-        await repository.claimTreasureItem(
-          groupId: groupId,
-          characterId: characterId,
-          item: const GroupTreasureItem(
-            itemId: 7,
-            displayName: 'Potion',
-            quantity: 2,
+        await expectLater(
+          repository.claimTreasureItem(
+            groupId: groupId,
+            characterId: characterId,
+            item: const GroupTreasureItem(
+              itemId: 7,
+              displayName: 'Potion',
+              quantity: 2,
+            ),
+            quantity: 1,
           ),
-          quantity: 1,
+          throwsA(
+            isA<GroupFailure>().having(
+              (f) => f.code,
+              'code',
+              GroupErrorCode.treasureStale,
+            ),
+          ),
         );
-
         expect(
           requests.any(
             (request) => request.method == 'PATCH' || request.method == 'POST',
           ),
           isFalse,
         );
+      }
+    });
+  });
+
+  group('SupabaseGroupRepository : écriture des objets du butin', () {
+    const groupId = 'group-1';
+    final rope = GroupTreasureItem.custom(
+      entryId: 'rope',
+      name: 'Corde',
+      quantity: 2,
+    );
+
+    List<dynamic> writtenItems(List<http.Request> requests) {
+      final patch = requests.singleWhere(
+        (request) =>
+            request.url.path.endsWith('/group_treasure') &&
+            request.method == 'PATCH',
+      );
+      return (jsonDecode(patch.body) as Map<String, dynamic>)['items']
+          as List<dynamic>;
+    }
+
+    SupabaseClient clientWith(
+      List<Map<String, dynamic>> remote,
+      List<http.Request> requests,
+    ) => _buildFakeClient(
+      onRequest: requests.add,
+      responses: {
+        'group_treasure': [
+          {'items': remote},
+        ],
       },
     );
+
+    test('addTreasureItems relit items puis ajoute (entrée ancienne '
+        'identifiée au passage)', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        clientWith([
+          {'custom_name': 'Vieux', 'display_name': 'Vieux', 'quantity': 1},
+        ], requests),
+      );
+
+      await repository.addTreasureItems(
+        groupId: groupId,
+        items: const [
+          GroupTreasureItem.catalog(
+            itemId: 9,
+            displayName: 'Dague',
+            quantity: 1,
+            category: 'arme',
+          ),
+        ],
+      );
+
+      expect(requests.first.method, 'GET');
+      final items = writtenItems(requests);
+      expect(items, hasLength(2));
+      expect((items.first as Map)['entry_id'], isA<String>());
+      expect((items.last as Map)['item_id'], 9);
+      expect((items.last as Map)['category'], 'arme');
+    });
+
+    test('updateTreasureItem remplace l\'entrée inchangée', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        clientWith([rope.toJson()], requests),
+      );
+
+      await repository.updateTreasureItem(
+        groupId: groupId,
+        expected: rope,
+        updated: GroupTreasureItem.custom(
+          name: 'Corde elfique',
+          quantity: 3,
+          description: 'Solide.',
+        ),
+      );
+
+      final written = writtenItems(requests).single as Map;
+      expect(written['entry_id'], 'rope');
+      expect(written['custom_name'], 'Corde elfique');
+      expect(written['quantity'], 3);
+      expect(written['custom_description'], 'Solide.');
+    });
+
+    test('removeTreasureItem retire l\'entrée inchangée', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        clientWith([rope.toJson()], requests),
+      );
+
+      await repository.removeTreasureItem(groupId: groupId, expected: rope);
+
+      expect(writtenItems(requests), isEmpty);
+    });
+
+    // Entrée ancienne (avant la décision 91) : ni entry_id ni catégorie.
+    const legacyPotion = GroupTreasureItem(
+      itemId: 7,
+      displayName: 'Potion',
+      quantity: 3,
+    );
+    // Entrée voisine enrichie : tous les champs doivent survivre à une
+    // écriture qui ne la concerne pas.
+    final enrichedSword = GroupTreasureItem.custom(
+      entryId: 'e-sword',
+      name: 'Épée runique',
+      quantity: 1,
+      description: 'Gravée de runes.',
+      damageDice: '1d8',
+      damageType: 'tranchant',
+      properties: const ['polyvalente(1d10)'],
+      enrichment: const CustomItemEnrichment(
+        kind: CustomItemKinds.weapon,
+        magicBonus: 2,
+        weight: 1.5,
+        requiresAttunement: true,
+        weaponCategory: CustomWeaponCategories.martial,
+        weaponRange: CustomWeaponRanges.melee,
+      ),
+      extra: const {
+        'future_key': {'a': 1},
+      },
+    );
+    const legacyRope = {
+      'custom_name': 'Corde',
+      'display_name': 'Corde',
+      'quantity': 1,
+    };
+
+    void expectEveryEntryHasId(List<dynamic> items) {
+      for (final entry in items) {
+        expect(
+          (entry as Map)['entry_id'],
+          isA<String>().having((id) => id.isNotEmpty, 'non vide', isTrue),
+          reason: '$entry',
+        );
+      }
+    }
+
+    test('modification d\'une entrée ancienne (sans entry_id) : retrouvée, '
+        'réécrite avec un entry_id comme toutes les autres', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        clientWith([legacyPotion.toJson(), legacyRope], requests),
+      );
+
+      await repository.updateTreasureItem(
+        groupId: groupId,
+        expected: legacyPotion,
+        updated: legacyPotion.copyWith(quantity: 5),
+      );
+
+      final items = writtenItems(requests);
+      expect(items, hasLength(2));
+      expect((items.first as Map)['item_id'], 7);
+      expect((items.first as Map)['quantity'], 5);
+      expectEveryEntryHasId(items);
+    });
+
+    test('retrait d\'une entrée ancienne (sans entry_id) : retirée, les '
+        'autres entrées anciennes reçoivent un entry_id', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        clientWith([legacyPotion.toJson(), legacyRope], requests),
+      );
+
+      await repository.removeTreasureItem(
+        groupId: groupId,
+        expected: legacyPotion,
+      );
+
+      final items = writtenItems(requests);
+      expect(items, hasLength(1));
+      expect((items.single as Map)['custom_name'], 'Corde');
+      expectEveryEntryHasId(items);
+    });
+
+    test('entrée voisine enrichie : tous ses champs (et ses clés inconnues) '
+        'conservés à l\'identique par chaque écriture du tableau', () async {
+      final writes =
+          <String, Future<void> Function(SupabaseGroupRepository repository)>{
+            'ajout': (repository) => repository.addTreasureItems(
+              groupId: groupId,
+              items: const [
+                GroupTreasureItem.catalog(
+                  itemId: 9,
+                  displayName: 'Dague',
+                  quantity: 1,
+                ),
+              ],
+            ),
+            'modification': (repository) => repository.updateTreasureItem(
+              groupId: groupId,
+              expected: legacyPotion,
+              updated: legacyPotion.copyWith(quantity: 1),
+            ),
+            'retrait': (repository) => repository.removeTreasureItem(
+              groupId: groupId,
+              expected: legacyPotion,
+            ),
+            'attribution': (repository) => repository.claimTreasureItem(
+              groupId: groupId,
+              characterId: 'char-1',
+              item: legacyPotion,
+              quantity: 1,
+            ),
+          };
+      for (final write in writes.entries) {
+        final requests = <http.Request>[];
+        final repository = SupabaseGroupRepository(
+          clientWith([
+            legacyPotion.toJson(),
+            enrichedSword.toJson(),
+            legacyRope,
+          ], requests),
+        );
+
+        await write.value(repository);
+
+        final items = writtenItems(requests);
+        final sword = items.firstWhere(
+          (entry) => (entry as Map)['entry_id'] == 'e-sword',
+        );
+        expect(sword, enrichedSword.toJson(), reason: write.key);
+        // Garde-fou DeepCore à venir : jamais d'entrée sans entry_id.
+        expectEveryEntryHasId(items);
+      }
+    });
+
+    test('une entrée d\'un type inattendu ne fait pas échouer le chargement '
+        'du butin, et sa valeur brute est réécrite telle quelle', () async {
+      const odd = {
+        'entry_id': 'odd',
+        'custom_name': 'Truc',
+        'display_name': 7,
+        'quantity': '2',
+        'custom_kind': 'dragon',
+      };
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        _buildFakeClient(
+          onRequest: requests.add,
+          responses: {
+            'group_treasure': [
+              {
+                'group_id': groupId,
+                'items': [odd, rope.toJson()],
+              },
+            ],
+          },
+        ),
+      );
+
+      final treasure = await repository.fetchGroupTreasure(groupId);
+      expect(treasure.items, hasLength(2));
+      expect(treasure.items.first.displayName, '');
+
+      await repository.removeTreasureItem(groupId: groupId, expected: rope);
+      expect(writtenItems(requests), [odd]);
+    });
+
+    test('aucune ligne modifiée (membre retiré du groupe entre la lecture et '
+        'l\'écriture) : erreur, jamais un faux succès', () async {
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'owner-1',
+        tableRows: {
+          'group_treasure': [
+            {
+              'items': [rope.toJson()],
+            },
+          ],
+        },
+        respond: (request) => request.method == 'PATCH'
+            ? http.Response(
+                '[]',
+                200,
+                request: request,
+                headers: {'content-type': 'application/json'},
+              )
+            : null,
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await expectLater(
+        repository.removeTreasureItem(groupId: groupId, expected: rope),
+        throwsA(
+          isA<GroupFailure>().having(
+            (f) => f.code,
+            'code',
+            GroupErrorCode.notMember,
+          ),
+        ),
+      );
+    });
+
+    test('modifier ou retirer une entrée changée entre-temps : rien n\'est '
+        'écrit, treasureStale', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        clientWith([rope.copyWith(quantity: 1).toJson()], requests),
+      );
+      final stale = throwsA(
+        isA<GroupFailure>().having(
+          (f) => f.code,
+          'code',
+          GroupErrorCode.treasureStale,
+        ),
+      );
+
+      await expectLater(
+        repository.removeTreasureItem(groupId: groupId, expected: rope),
+        stale,
+      );
+      await expectLater(
+        repository.updateTreasureItem(
+          groupId: groupId,
+          expected: rope,
+          updated: rope.copyWith(quantity: 9),
+        ),
+        stale,
+      );
+      expect(requests.any((request) => request.method == 'PATCH'), isFalse);
+    });
+  });
+
+  group('SupabaseGroupRepository.setTreasureCurrency', () {
+    test('mise à jour conditionnelle : soldes absolus, filtre sur les soldes '
+        'vus, une ligne renvoyée = succès', () async {
+      final requests = <http.Request>[];
+      final client = _buildFakeClient(
+        onRequest: requests.add,
+        responses: {
+          'group_treasure': [
+            {'group_id': 'group-1'},
+          ],
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await repository.setTreasureCurrency(
+        groupId: 'group-1',
+        expected: {CurrencyKind.gold: 12},
+        newTotals: {CurrencyKind.gold: 17},
+      );
+
+      final patch = requests.single;
+      expect(patch.method, 'PATCH');
+      expect(jsonDecode(patch.body), {'currency_gp': 17});
+      expect(patch.url.queryParameters['group_id'], 'eq.group-1');
+      expect(patch.url.queryParameters['currency_gp'], 'eq.12');
+    });
+
+    test(
+      'aucune ligne renvoyée (solde changé entre-temps) : treasureStale',
+      () {
+        final client = _buildFakeClient(
+          responses: {'group_treasure': <Map<String, dynamic>>[]},
+        );
+        final repository = SupabaseGroupRepository(client);
+
+        expect(
+          repository.setTreasureCurrency(
+            groupId: 'group-1',
+            expected: {CurrencyKind.gold: 12, CurrencyKind.silver: 0},
+            newTotals: {CurrencyKind.gold: 11, CurrencyKind.silver: 10},
+          ),
+          throwsA(
+            isA<GroupFailure>().having(
+              (f) => f.code,
+              'code',
+              GroupErrorCode.treasureStale,
+            ),
+          ),
+        );
+      },
+    );
+  });
+
+  group('SupabaseGroupRepository.fetchTreasureItemDetails', () {
+    test(
+      'objet du catalogue : ligne items par id et description traduite',
+      () async {
+        final requests = <http.Request>[];
+        final client = _buildFakeClient(
+          onRequest: requests.add,
+          responses: {
+            'items': [
+              {
+                'id': 9,
+                'category': 'arme',
+                'weight': 0.5,
+                'cost': {'amount': 2, 'currency': 'gp'},
+                'weapon_properties': {
+                  'damage_dice': '1d4',
+                  'damage_type': 'perforant',
+                  'properties': ['finesse'],
+                },
+              },
+            ],
+            'translations': [
+              {'entity_id': '9', 'value': 'Une lame courte.'},
+            ],
+          },
+        );
+        final repository = SupabaseGroupRepository(client);
+
+        final item = await repository.fetchTreasureItemDetails(
+          const GroupTreasureItem(itemId: 9, displayName: 'Dague', quantity: 2),
+        );
+
+        expect(item.name, 'Dague');
+        expect(item.quantity, 2);
+        expect(item.description, 'Une lame courte.');
+        expect(item.weaponProperties?.damageDice, '1d4');
+        final itemsRequest = requests.firstWhere(
+          (request) => request.url.path.endsWith('/items'),
+        );
+        expect(itemsRequest.url.queryParameters['id'], 'eq.9');
+        final translationsRequest = requests.firstWhere(
+          (request) => request.url.path.endsWith('/translations'),
+        );
+        expect(
+          translationsRequest.url.queryParameters['field_name'],
+          'eq.description',
+        );
+      },
+    );
+
+    test('objet personnalisé : aucun appel réseau', () async {
+      final requests = <http.Request>[];
+      final repository = SupabaseGroupRepository(
+        _buildFakeClient(onRequest: requests.add),
+      );
+
+      final item = await repository.fetchTreasureItemDetails(
+        GroupTreasureItem.custom(
+          name: 'Fiole',
+          quantity: 1,
+          description: 'Bleue.',
+        ),
+      );
+
+      expect(item.description, 'Bleue.');
+      expect(requests, isEmpty);
+    });
   });
 
   group('SupabaseGroupRepository.fetchGroupNoteEntries', () {
@@ -1247,7 +1963,361 @@ void main() {
       );
     });
   });
+
+  // RPC `become_group_game_master` (migration DeepCore `20261119090000`,
+  // PR #49) : contrat d'appel et correspondance de chaque erreur.
+  group('SupabaseGroupRepository.becomeGroupGameMaster', () {
+    test('POST /rpc/become_group_game_master avec {p_group_id}, aucune autre '
+        'requête', () async {
+      final requests = <http.Request>[];
+      final client = _buildFakeClient(
+        onRequest: requests.add,
+        responses: {
+          // Ligne `group_members` du propriétaire, désormais MJ.
+          'become_group_game_master': {
+            'id': 'membership-1',
+            'group_id': 'group-1',
+            'user_id': 'user-1',
+            'character_id': null,
+            'is_game_master': true,
+            'role': 'owner',
+          },
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await repository.becomeGroupGameMaster('group-1');
+
+      expect(requests, hasLength(1));
+      final request = requests.single;
+      expect(request.method, 'POST');
+      expect(
+        request.url.path,
+        endsWith('/rest/v1/rpc/become_group_game_master'),
+      );
+      expect(jsonDecode(request.body), {'p_group_id': 'group-1'});
+    });
+
+    // (statut HTTP, corps d'erreur PostgREST, code attendu)
+    const cases = <(int, Map<String, dynamic>, GroupErrorCode)>[
+      (
+        400,
+        {'code': 'P0001', 'message': 'combat_active'},
+        GroupErrorCode.combatActive,
+      ),
+      (
+        400,
+        {'code': 'P0001', 'message': 'mj_already_assigned'},
+        GroupErrorCode.mjAlreadyAssigned,
+      ),
+      (
+        403,
+        {'code': '42501', 'message': 'not_group_owner'},
+        GroupErrorCode.notGroupOwner,
+      ),
+      // `not_member` / `group_not_found` (P0002) arrivent en HTTP 500.
+      (
+        500,
+        {'code': 'P0002', 'message': 'not_member'},
+        GroupErrorCode.notMember,
+      ),
+      (
+        500,
+        {'code': 'P0002', 'message': 'group_not_found'},
+        GroupErrorCode.groupNotFound,
+      ),
+      (
+        401,
+        {'code': '28000', 'message': 'not_authenticated'},
+        GroupErrorCode.sessionExpired,
+      ),
+      (
+        500,
+        {'code': '40P01', 'message': 'deadlock detected'},
+        GroupErrorCode.transientConflict,
+      ),
+      (
+        500,
+        {
+          'code': '40001',
+          'message': 'could not serialize access due to concurrent update',
+        },
+        GroupErrorCode.transientConflict,
+      ),
+      // Migration pas encore appliquée : PostgREST ne trouve pas la fonction.
+      (
+        404,
+        {
+          'code': 'PGRST202',
+          'message':
+              'Could not find the function '
+              'public.become_group_game_master(p_group_id) in the schema '
+              'cache',
+          'hint': null,
+          'details': null,
+        },
+        GroupErrorCode.serverOutdated,
+      ),
+    ];
+    for (final (status, body, expected) in cases) {
+      test('HTTP $status « ${body['message']} » (${body['code']}) -> '
+          '$expected', () async {
+        final client = _buildFakeClient(
+          statusCode: status,
+          responses: {'become_group_game_master': body},
+        );
+        final repository = SupabaseGroupRepository(client);
+
+        await expectLater(
+          repository.becomeGroupGameMaster('group-1'),
+          throwsA(isA<GroupFailure>().having((f) => f.code, 'code', expected)),
+        );
+      });
+    }
+
+    test('pas de réseau -> GroupErrorCode.network', () async {
+      final client = _buildFakeClient(throwOnRequest: true);
+      final repository = SupabaseGroupRepository(client);
+
+      await expectLater(
+        repository.becomeGroupGameMaster('group-1'),
+        throwsA(
+          isA<GroupFailure>().having(
+            (f) => f.code,
+            'code',
+            GroupErrorCode.network,
+          ),
+        ),
+      );
+    });
+  });
+
+  // Abonnement Realtime (canal enregistreur, aucune connexion) : `INSERT` et
+  // `UPDATE` de `group_members` filtrés sur le groupe, `DELETE` sans filtre.
+  // L'`UPDATE` porte « Devenir MJ » (ligne du propriétaire modifiée) : sans
+  // lui, les écrans Groupe des coéquipiers restaient périmés.
+  group('SupabaseGroupRepository.subscribeToMemberUpdates', () {
+    test('UPDATE de group_members filtré sur le groupe : relecture', () {
+      final channel = _RecordingChannel();
+      final repository = SupabaseGroupRepository(_RecordingClient(channel));
+      var changes = 0;
+
+      repository.subscribeToMemberUpdates(
+        groupId: 'group-1',
+        characterIds: const ['char-1', 'char-2'],
+        isKnownMembershipId: (_) => false,
+        onChanged: () => changes++,
+      );
+
+      expect(channel.subscribed, isTrue);
+      final members = channel.bindings
+          .where((binding) => binding.table == 'group_members')
+          .toList();
+      expect(
+        members.map((binding) => binding.event),
+        containsAll([
+          PostgresChangeEvent.insert,
+          PostgresChangeEvent.update,
+          PostgresChangeEvent.delete,
+        ]),
+      );
+      for (final event in [
+        PostgresChangeEvent.insert,
+        PostgresChangeEvent.update,
+      ]) {
+        final binding = members.singleWhere((b) => b.event == event);
+        expect(binding.schema, 'public', reason: '$event');
+        expect(
+          binding.filter?.type,
+          PostgresChangeFilterType.eq,
+          reason: '$event',
+        );
+        expect(binding.filter?.column, 'group_id', reason: '$event');
+        expect(binding.filter?.value, 'group-1', reason: '$event');
+      }
+
+      // « Devenir MJ » du propriétaire, vu par un coéquipier.
+      members
+          .singleWhere((b) => b.event == PostgresChangeEvent.update)
+          .callback(
+            _payload(
+              PostgresChangeEvent.update,
+              newRecord: {
+                'id': 'membership-1',
+                'group_id': 'group-1',
+                'user_id': 'user-owner',
+                'character_id': null,
+                'is_game_master': true,
+              },
+              oldRecord: {'id': 'membership-1'},
+            ),
+          );
+      expect(changes, 1);
+    });
+
+    test('DELETE : relecture seulement pour un membre connu du groupe', () {
+      final channel = _RecordingChannel();
+      final repository = SupabaseGroupRepository(_RecordingClient(channel));
+      var changes = 0;
+
+      repository.subscribeToMemberUpdates(
+        groupId: 'group-1',
+        characterIds: const ['char-1'],
+        isKnownMembershipId: (id) => id == 'membership-1',
+        onChanged: () => changes++,
+      );
+
+      final delete = channel.bindings.singleWhere(
+        (b) =>
+            b.table == 'group_members' && b.event == PostgresChangeEvent.delete,
+      );
+      expect(delete.filter, isNull);
+      delete.callback(
+        _payload(PostgresChangeEvent.delete, oldRecord: {'id': 'autre-groupe'}),
+      );
+      expect(changes, 0);
+      delete.callback(
+        _payload(PostgresChangeEvent.delete, oldRecord: {'id': 'membership-1'}),
+      );
+      expect(changes, 1);
+    });
+  });
+
+  // Gardes « combat actif » de DeepCore (triggers BEFORE DELETE) : le refus
+  // `combat_active` de la dissolution et du départ du propriétaire.
+  group('refus combat_active de la dissolution et du départ', () {
+    test('dissolveGroup : DELETE groups refusé -> combatActive', () async {
+      final client = _buildFakeClient(
+        statusCode: 400,
+        responses: {
+          'groups': {'code': 'P0001', 'message': 'combat_active'},
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await expectLater(
+        repository.dissolveGroup('group-1'),
+        throwsA(
+          isA<GroupFailure>().having(
+            (f) => f.code,
+            'code',
+            GroupErrorCode.combatActive,
+          ),
+        ),
+      );
+    });
+
+    test('leaveGroup : DELETE group_members refusé -> combatActive', () async {
+      final client = await _buildSignedInFakeClient(
+        ownerId: 'user-1',
+        failingTables: const {'group_members'},
+        failingBody: const {'code': 'P0001', 'message': 'combat_active'},
+        failingStatus: 400,
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await expectLater(
+        repository.leaveGroup('group-1'),
+        throwsA(
+          isA<GroupFailure>().having(
+            (f) => f.code,
+            'code',
+            GroupErrorCode.combatActive,
+          ),
+        ),
+      );
+    });
+  });
 }
+
+/// Liaison `postgres_changes` enregistrée par [_RecordingChannel].
+class _RecordedBinding {
+  _RecordedBinding({
+    required this.event,
+    required this.schema,
+    required this.table,
+    required this.filter,
+    required this.callback,
+  });
+
+  final PostgresChangeEvent event;
+  final String? schema;
+  final String? table;
+  final PostgresChangeFilter? filter;
+  final void Function(PostgresChangePayload payload) callback;
+}
+
+/// Canal Realtime enregistreur : garde les liaisons déclarées, ne se connecte
+/// jamais (aucun WebSocket en test).
+class _RecordingChannel extends Fake implements RealtimeChannel {
+  final List<_RecordedBinding> bindings = [];
+  bool subscribed = false;
+
+  @override
+  RealtimeChannel onPostgresChanges({
+    required PostgresChangeEvent event,
+    String? schema,
+    String? table,
+    PostgresChangeFilter? filter,
+    List<PostgresChangeFilter>? filters,
+    List<String>? select,
+    required void Function(PostgresChangePayload payload) callback,
+  }) {
+    bindings.add(
+      _RecordedBinding(
+        event: event,
+        schema: schema,
+        table: table,
+        filter: filter,
+        callback: callback,
+      ),
+    );
+    return this;
+  }
+
+  @override
+  RealtimeChannel subscribe([
+    void Function(RealtimeSubscribeStatus status, Object? error)? callback,
+    Duration? timeout,
+  ]) {
+    subscribed = true;
+    return this;
+  }
+}
+
+/// `SupabaseClient` réel dont `channel` renvoie [_RecordingChannel].
+class _RecordingClient extends SupabaseClient {
+  _RecordingClient(this._channel)
+    : super(
+        'https://fake.supabase.test',
+        'fake-anon-key',
+        authOptions: const AuthClientOptions(
+          authFlowType: AuthFlowType.implicit,
+        ),
+      );
+
+  final _RecordingChannel _channel;
+
+  @override
+  RealtimeChannel channel(
+    String name, {
+    RealtimeChannelConfig opts = const RealtimeChannelConfig(),
+  }) => _channel;
+}
+
+PostgresChangePayload _payload(
+  PostgresChangeEvent event, {
+  Map<String, dynamic> newRecord = const {},
+  Map<String, dynamic> oldRecord = const {},
+}) => PostgresChangePayload(
+  schema: 'public',
+  table: 'group_members',
+  commitTimestamp: DateTime.utc(2026, 11, 19),
+  eventType: event,
+  newRecord: newRecord,
+  oldRecord: oldRecord,
+  errors: null,
+);
 
 /// Fabrique un `SupabaseClient` réel dont le transport HTTP est fabriqué de
 /// toutes pièces — [responses] associe un segment de chemin final (nom de
@@ -1304,18 +2374,27 @@ Future<SupabaseClient> _buildSignedInFakeClient({
   // vue/table temporairement inaccessible pour le point 1 (résilience de
   // `fetchMyGroups` face à un échec de `group_character_status_overview`).
   Set<String> failingTables = const {},
+  // Corps et statut de l'erreur renvoyée pour [failingTables] (par défaut :
+  // vue temporairement indisponible, `PGRST000`, 500).
+  Map<String, dynamic> failingBody = const {
+    'message': 'Vue temporairement indisponible (double de test).',
+    'code': 'PGRST000',
+  },
+  int failingStatus = 500,
   void Function(http.Request request)? onRequest,
+  // Réponse imposée pour une requête précise (ex. 42703 au `select` qui cite
+  // une colonne absente) ; `null` : réponse habituelle.
+  http.Response? Function(http.Request request)? respond,
 }) async {
   Future<http.Response> handler(http.Request request) async {
     onRequest?.call(request);
+    final imposed = respond?.call(request);
+    if (imposed != null) return imposed;
     final key = request.url.pathSegments.last;
     if (failingTables.contains(key)) {
       return http.Response(
-        jsonEncode({
-          'message': 'Vue temporairement indisponible (double de test).',
-          'code': 'PGRST000',
-        }),
-        500,
+        jsonEncode(failingBody),
+        failingStatus,
         request: request,
         headers: {'content-type': 'application/json'},
       );

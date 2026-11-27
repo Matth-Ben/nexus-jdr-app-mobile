@@ -27,6 +27,7 @@ import 'custom_item_form_sheet.dart';
 import 'inventory_category_filter_sheet.dart';
 import 'item_action_sheet.dart';
 import 'item_info_panel.dart';
+import 'item_price_override_sheet.dart';
 
 /// Contenu de l'onglet "Inventaire" de la fiche personnage — voir
 /// `docs/cahier-des-charges/09-maquettes-captures.md`, section "Onglet
@@ -71,6 +72,7 @@ class CharacterInventoryTabBody extends StatefulWidget {
     this.onAddReward,
     this.onConvertCurrency,
     this.onUpdateCustomInventoryItem,
+    this.onEditItemPrice,
     this.actionsDisabled = false,
     this.filterAnchorKey,
     this.showArmorProficiencyWarning = false,
@@ -113,6 +115,18 @@ class CharacterInventoryTabBody extends StatefulWidget {
   /// aucune action de modification (vue en lecture seule).
   final void Function(CharacterInventoryItem item, CustomItemFormResult result)?
   onUpdateCustomInventoryItem;
+
+  /// Action « Modifier » (surcharge de prix) d'un objet du **catalogue**
+  /// (spec du prix d'un objet modifiable, §2b/§2d) — reçoit le nouveau
+  /// montant/devise absolus déjà choisis par la sheet (`null` ensemble :
+  /// retrait de la surcharge). `null` masque entièrement cette action (vue
+  /// en lecture seule).
+  final void Function(
+    CharacterInventoryItem item,
+    num? amount,
+    CurrencyKind? currency,
+  )?
+  onEditItemPrice;
 
   /// Action "Équiper"/"Changer de set" d'une arme (sheet "Actions d'objet",
   /// choix du set via `weapon_slot_picker_sheet.dart`) — voir
@@ -219,6 +233,9 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
       onEditCustomItem: widget.onUpdateCustomInventoryItem == null
           ? null
           : (item) => _editCustomItem(context, item),
+      onEditItemPrice: widget.onEditItemPrice == null
+          ? null
+          : () => _editItemPrice(context, item),
     );
   }
 
@@ -236,6 +253,40 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
     );
     if (result == null || !mounted) return;
     update(item, result);
+  }
+
+  /// Ouvre l'éditeur de prix pertinent (spec du prix d'un objet modifiable,
+  /// §1.3/§2) : le formulaire d'objet personnalisé complet (son prix est un
+  /// champ de ce formulaire, §2a) pour un objet personnalisé, ou la sheet
+  /// autonome de surcharge (§2b) pour un objet du catalogue — appelée aussi
+  /// bien depuis la nouvelle action « Modifier » de `item_action_sheet.dart`
+  /// (objet du catalogue seulement) que depuis le lien « Fixer un prix » du
+  /// panneau « Infos » (les deux types d'objet).
+  Future<void> _editItemPrice(
+    BuildContext context,
+    CharacterInventoryItem item,
+  ) async {
+    if (item.isCustom) {
+      await _editCustomItem(context, item);
+      return;
+    }
+    final onEditItemPrice = widget.onEditItemPrice;
+    if (onEditItemPrice == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    final result = await showItemPriceOverrideSheet(
+      context,
+      itemName: item.name,
+      officialPriceAmount: item.costAmount,
+      initialAmount: item.priceOverrideAmount,
+      initialCurrency: item.priceOverrideCurrency,
+    );
+    if (result == null || !context.mounted) return;
+    onEditItemPrice(item, result.amount, result.currency);
+    if (result.removedViaLink) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.itemPriceOverrideRemovedSnack)),
+      );
+    }
   }
 
   /// Panneau "Infos" en lecture seule, ouvert directement au tap sur une
@@ -392,7 +443,7 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
             const SizedBox(height: AppSpacing.sm),
           ],
         if (isEmpty) const SizedBox(height: AppSpacing.md),
-        _AddRowButtons(
+        InventoryAddRowButtons(
           onAddItem: widget.actionsDisabled
               ? null
               : () => _openAddItem(context),
@@ -410,23 +461,35 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
 /// "+ Objet" qui affichait "+" deux fois) et "Récompense"
 /// (bouton secondaire avec icône cadeau, relogé depuis l'icône du bandeau
 /// bois — voir [CharacterInventoryTabBody.onAddReward]).
-class _AddRowButtons extends StatelessWidget {
-  const _AddRowButtons({required this.onAddItem, required this.onAddReward});
+///
+/// Repris tel quel en pied de l'onglet « Butin » de l'écran Groupe
+/// (décision 91) avec [showRewardButton] à `false` : la tuile « Objet » seule,
+/// la monnaie s'y modifie comme ici, par les tuiles de monnaie.
+class InventoryAddRowButtons extends StatelessWidget {
+  const InventoryAddRowButtons({
+    required this.onAddItem,
+    this.onAddReward,
+    this.showRewardButton = true,
+    super.key,
+  });
 
   final VoidCallback? onAddItem;
   final VoidCallback? onAddReward;
 
+  /// `false` : la tuile « Objet » occupe toute la largeur.
+  final bool showRewardButton;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final addItem = DashedAddTile(
+      label: l10n.characterInventoryTabBodyAddItemButtonLabel,
+      onTap: onAddItem,
+    );
+    if (!showRewardButton) return addItem;
     return Row(
       children: [
-        Expanded(
-          child: DashedAddTile(
-            label: l10n.characterInventoryTabBodyAddItemButtonLabel,
-            onTap: onAddItem,
-          ),
-        ),
+        Expanded(child: addItem),
         const SizedBox(width: AppSpacing.sm),
         Expanded(child: _RewardButton(onTap: onAddReward)),
       ],

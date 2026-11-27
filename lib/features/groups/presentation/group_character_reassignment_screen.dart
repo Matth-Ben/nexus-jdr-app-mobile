@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../combat/presentation/providers/character_combat_provider.dart';
 
 import 'package:flutter/material.dart';
@@ -98,10 +100,11 @@ class _GroupCharacterReassignmentScreenState
   Future<void> _confirmLeaveGroupGuarded() async {
     // Garde du propriétaire : pas de départ pendant un combat actif.
     // Le détail n'est pas forcément déjà chargé (route autonome) : on
-    // l'attend. Si son chargement échoue, la garde est ignorée (fail-open) : le
-    // serveur n'applique PAS cette règle (ticket web « Combat : règle serveur,
-    // le propriétaire ne quitte ni ne dissout pendant un combat actif »), la
-    // garde cliente est donc la seule protection tant qu'il n'existe pas.
+    // l'attend. Si son chargement échoue, la garde est ignorée (fail-open) :
+    // le serveur est l'autorité (DeepCore refuse le départ du propriétaire
+    // pendant un combat actif avec `combat_active`, migration
+    // `20261119090000`), refus traduit plus bas ; cette garde cliente évite
+    // seulement un dialogue inutile.
     GroupDetail? detail;
     try {
       detail = await ref.read(groupDetailProvider(widget.groupId).future);
@@ -143,7 +146,16 @@ class _GroupCharacterReassignmentScreenState
       context.go('/groups');
     } on GroupFailure catch (failure) {
       if (!mounted) return;
-      setState(() => _bannerMessage = failure.localized(context));
+      if (failure.code == GroupErrorCode.combatActive) {
+        // Refus serveur (état local périmé) : on relit le combat.
+        unawaited(ref.read(combatProvider(widget.groupId).notifier).refresh());
+      }
+      setState(
+        () => _bannerMessage = failure.localized(
+          context,
+          combatActiveMessage: AppLocalizations.of(context)?.combatLeaveBlocked,
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(

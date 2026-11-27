@@ -6,7 +6,9 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
 import '../../../../core/widgets/advanced_section.dart';
+import '../../../../core/widgets/currency_picker_chips.dart';
 import '../../../../core/widgets/display_text.dart';
+import '../../../../core/widgets/numeric_amount_stepper.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/segmented_toggle.dart';
@@ -15,6 +17,7 @@ import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../../../core/widgets/stepper_counter.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
+import '../../domain/currency_kind.dart';
 import '../../domain/custom_item_edit_rules.dart';
 import '../../domain/custom_item_enrichment.dart';
 import '../../domain/inventory_category_rules.dart';
@@ -95,27 +98,44 @@ int? parseCustomItemIntInput(String raw) => int.tryParse(raw.trim());
 /// l'objet », bouton « Enregistrer », pas de quantité (autre action) ni
 /// d'« Harmoniser maintenant » ; un objet équipé ne peut pas changer de type
 /// ([isCustomKindChangeBlockedFor]).
+///
+/// [editQuantity] (édition seulement) : la quantité se modifie aussi dans le
+/// formulaire, à partir de `initial.quantity` (objet du butin de groupe,
+/// décision 91 : aucune autre action n'y change la quantité). L'inventaire
+/// la masque en édition (« Utiliser » a sa propre action).
 Future<CustomItemFormResult?> showCustomItemFormSheet(
   BuildContext context, {
   int? attunedCount,
   CustomItemInitialValues? initial,
+  bool editQuantity = false,
 }) {
   return showModalBottomSheet<CustomItemFormResult>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (context) =>
-        CustomItemFormSheet(attunedCount: attunedCount, initial: initial),
+    builder: (context) => CustomItemFormSheet(
+      attunedCount: attunedCount,
+      initial: initial,
+      editQuantity: editQuantity,
+    ),
   );
 }
 
 class CustomItemFormSheet extends StatefulWidget {
-  const CustomItemFormSheet({this.attunedCount, this.initial, super.key});
+  const CustomItemFormSheet({
+    this.attunedCount,
+    this.initial,
+    this.editQuantity = false,
+    super.key,
+  });
 
   final int? attunedCount;
 
   /// Valeurs de départ d'une édition (`null` : création).
   final CustomItemInitialValues? initial;
+
+  /// Voir [showCustomItemFormSheet].
+  final bool editQuantity;
 
   @override
   State<CustomItemFormSheet> createState() => _CustomItemFormSheetState();
@@ -150,6 +170,12 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
   bool _attuneNow = false;
   int _quantity = 1;
 
+  /// Prix de l'objet personnalisé (spec du prix d'un objet modifiable, §2a) —
+  /// `0` = aucun prix stocké (décision 2), même convention que [_quantity]
+  /// pour la monnaie.
+  int _priceAmount = 0;
+  CurrencyKind _priceCurrency = CurrencyKind.gold;
+
   /// Plafond du stepper de dés : 10, ou la valeur déjà stockée si elle est
   /// plus grande (jamais de troncature silencieuse en édition).
   int _diceCountMax = customDiceCountMax;
@@ -178,6 +204,14 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
     _weaponRange = initial.weaponRange;
     _magicBonus = initial.magicBonus.clamp(0, customMagicBonusMax);
     _requiresAttunement = initial.requiresAttunement;
+    if (widget.editQuantity && initial.quantity >= 1) {
+      _quantity = initial.quantity;
+    }
+    final priceAmount = initial.priceOverrideAmount;
+    if (priceAmount != null) {
+      _priceAmount = priceAmount.round().clamp(0, priceOverrideAmountMax);
+      _priceCurrency = initial.priceOverrideCurrency ?? CurrencyKind.gold;
+    }
     _armorCategory = initial.armorCategory ?? CustomArmorCategories.light;
     final acBase = initial.acBase;
     if (initial.kind == CustomItemKinds.armor && acBase != null) {
@@ -301,6 +335,7 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
   bool get _hasAdvancedValue =>
       _weightController.text.trim().isNotEmpty ||
       _requiresAttunement ||
+      _priceAmount > 0 ||
       (_hasMagicBonus &&
           (_magicBonus > 0 || _descriptionController.text.trim().isNotEmpty)) ||
       (_isWeapon && _propertiesController.text.trim().isNotEmpty);
@@ -343,6 +378,10 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
           // déduit du type).
           armorCategory: _isArmor ? _armorCategory : null,
           attuneNow: attuneNow,
+          // `0` = aucun prix stocké (décision 2, spec du prix d'un objet
+          // modifiable).
+          priceOverrideAmount: _priceAmount > 0 ? _priceAmount : null,
+          priceOverrideCurrency: _priceAmount > 0 ? _priceCurrency : null,
         ),
       ),
     );
@@ -627,6 +666,8 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
                 if (_isWeapon) ..._weaponPropertiesFields(l10n),
                 ..._weightField(l10n),
                 const SizedBox(height: AppSpacing.md),
+                ..._priceFields(l10n),
+                const SizedBox(height: AppSpacing.md),
                 ..._attunementFields(l10n),
                 if (_hasMagicBonus) ...[
                   const SizedBox(height: AppSpacing.md),
@@ -636,8 +677,9 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
             ),
           ),
         ),
-        // La quantité a sa propre action : jamais modifiée par l'édition.
-        if (!_isEditing) ...[
+        // Inventaire : la quantité a sa propre action, jamais modifiée par
+        // l'édition ; butin de groupe : modifiable ici ([editQuantity]).
+        if (!_isEditing || widget.editQuantity) ...[
           const SizedBox(height: AppSpacing.md),
           _label(l10n.addItemFlowCustomQuantitySectionLabel),
           StepperCounter(
@@ -870,6 +912,31 @@ class _CustomItemFormSheetState extends State<CustomItemFormSheet> {
         hintText: l10n.customItemWeightHint,
         errorText: _weightInvalid ? l10n.customItemWeightError : null,
       ),
+    ),
+  ];
+
+  /// Prix de l'objet personnalisé (spec du prix d'un objet modifiable, §2a) :
+  /// `NumericAmountStepper` centré + [CurrencyPickerChips], même recette que
+  /// `currency_adjustment_sheet.dart`. Devise par défaut : or (cohérent avec
+  /// l'affichage d'un prix officiel, toujours en « po »).
+  List<Widget> _priceFields(AppLocalizations l10n) => [
+    _label(l10n.customItemPriceSectionLabel),
+    Center(
+      child: NumericAmountStepper(
+        key: const Key('customItemPriceAmountStepper'),
+        value: _priceAmount,
+        max: priceOverrideAmountMax,
+        fieldLabel: l10n.customItemPriceSectionLabel,
+        decrementLabel: l10n.numericAmountDecreaseLabel,
+        incrementLabel: l10n.numericAmountIncreaseLabel,
+        onChanged: (value) => setState(() => _priceAmount = value),
+      ),
+    ),
+    const SizedBox(height: AppSpacing.sm),
+    _label(l10n.customItemPriceCurrencySectionLabel),
+    CurrencyPickerChips(
+      value: _priceCurrency,
+      onChanged: (value) => setState(() => _priceCurrency = value),
     ),
   ];
 

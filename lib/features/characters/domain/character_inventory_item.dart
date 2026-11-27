@@ -1,3 +1,4 @@
+import 'currency_kind.dart';
 import 'custom_item_enrichment.dart';
 import 'weapon_slot.dart';
 
@@ -40,6 +41,8 @@ class CharacterInventoryItem {
     this.customRequiresAttunement = false,
     this.customWeaponCategory,
     this.customWeaponRange,
+    this.priceOverrideAmount,
+    this.priceOverrideCurrency,
   });
 
   /// `character_inventory.custom_kind` brut ('arme'/'armure'/'bouclier'/
@@ -185,6 +188,34 @@ class CharacterInventoryItem {
   /// /item_info_panel.dart`.
   final double? costAmount;
 
+  /// `character_inventory.price_override_amount` — spec du prix d'un objet
+  /// modifiable : surcharge du [costAmount] officiel pour un objet du
+  /// catalogue, ou prix fixé pour un objet personnalisé (même colonne dans
+  /// les deux cas, posable sur toute ligne, voir
+  /// `domain/offline_state_writes.dart::InventoryStatePatch`). `null` =
+  /// aucune surcharge/aucun prix fixé. Toujours non nul en même temps que
+  /// [priceOverrideCurrency] (contrainte de cohérence côté base).
+  final num? priceOverrideAmount;
+
+  /// `character_inventory.price_override_currency`.
+  final CurrencyKind? priceOverrideCurrency;
+
+  /// Montant effectivement affiché (surcharge si posée, sinon [costAmount]
+  /// officiel) ; `null` = « Non estimé » (ni prix officiel ni surcharge/prix
+  /// personnalisé), voir `presentation/widgets/item_info_panel.dart`.
+  num? get displayedPriceAmount => priceOverrideAmount ?? costAmount;
+
+  /// Devise de [displayedPriceAmount] — toujours l'or pour un prix officiel
+  /// (`items.cost.currency` toujours `"gp"` en pratique, voir [costAmount]).
+  CurrencyKind get displayedPriceCurrency => priceOverrideAmount != null
+      ? (priceOverrideCurrency ?? CurrencyKind.gold)
+      : CurrencyKind.gold;
+
+  /// `true` si [displayedPriceAmount] est une **surcharge** du prix officiel
+  /// d'un objet du catalogue (pastille « Modifié ») — jamais pour un objet
+  /// personnalisé, qui n'a pas de prix officiel à surcharger (spec §1.2).
+  bool get priceIsOverridden => !isCustom && priceOverrideAmount != null;
+
   /// Description : résolue via `translations` (`entity_type = 'item'`,
   /// `field_name = 'description'`) pour un objet du catalogue, ou
   /// `character_inventory.custom_description` (texte libre saisi à la
@@ -276,18 +307,30 @@ class CharacterInventoryItem {
         : null,
   );
 
-  /// Copie avec l'état équipé/set d'arme/harmonisé superposé depuis la file
-  /// hors ligne (T5a). [weaponSlot] n'est pris en compte que si
-  /// [changeWeaponSlot] (distingue « ne pas toucher » de « effacer »).
+  /// Copie avec l'état équipé/set d'arme/harmonisé/surcharge de prix
+  /// superposé depuis la file hors ligne (T5a, spec du prix d'un objet
+  /// modifiable). [weaponSlot] n'est pris en compte que si
+  /// [changeWeaponSlot] (distingue « ne pas toucher » de « effacer »), même
+  /// principe pour [priceOverrideAmount]/[priceOverrideCurrency] avec
+  /// [changePriceOverride].
   CharacterInventoryItem copyWithPendingState({
     bool? equipped,
     bool changeWeaponSlot = false,
     WeaponSlot? weaponSlot,
     bool? isAttuned,
+    bool changePriceOverride = false,
+    num? priceOverrideAmount,
+    CurrencyKind? priceOverrideCurrency,
   }) => _copy(
     equipped: equipped,
     isAttuned: isAttuned,
     weaponSlot: changeWeaponSlot ? weaponSlot : this.weaponSlot,
+    priceOverrideAmount: changePriceOverride
+        ? priceOverrideAmount
+        : this.priceOverrideAmount,
+    priceOverrideCurrency: changePriceOverride
+        ? priceOverrideCurrency
+        : this.priceOverrideCurrency,
   );
 
   /// Unique point où tous les champs sont recopiés à la main : les deux
@@ -298,6 +341,8 @@ class CharacterInventoryItem {
     bool? isAttuned,
     Object? totalWeight = _keep,
     Object? weaponSlot = _keep,
+    Object? priceOverrideAmount = _keep,
+    Object? priceOverrideCurrency = _keep,
   }) => CharacterInventoryItem(
     id: id,
     itemId: itemId,
@@ -330,6 +375,12 @@ class CharacterInventoryItem {
     customRequiresAttunement: customRequiresAttunement,
     customWeaponCategory: customWeaponCategory,
     customWeaponRange: customWeaponRange,
+    priceOverrideAmount: identical(priceOverrideAmount, _keep)
+        ? this.priceOverrideAmount
+        : priceOverrideAmount as num?,
+    priceOverrideCurrency: identical(priceOverrideCurrency, _keep)
+        ? this.priceOverrideCurrency
+        : priceOverrideCurrency as CurrencyKind?,
   );
 }
 

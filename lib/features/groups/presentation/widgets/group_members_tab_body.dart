@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/widgets/display_text.dart';
@@ -7,11 +8,13 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/info_banner.dart';
 import '../../../../core/widgets/portrait_frame.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../characters/domain/signed_modifier_formatter.dart';
 import '../../../characters/presentation/widgets/condition_chips.dart';
 import '../../domain/character_vital_status.dart';
 import '../../domain/group_detail.dart';
 import '../../domain/group_member.dart';
+import 'group_campaign_card.dart';
 import 'group_invite_code_chip.dart';
 import 'member_conditions_sheet.dart';
 
@@ -32,14 +35,25 @@ typedef RemoveGroupMemberCallback = void Function(GroupMember member);
 /// nécessaire ici pour éviter tout flash visuel. [_LiveUpdateIndicator] en
 /// tête de liste rend ce comportement explicite pour le joueur plutôt que de
 /// rester un détail d'implémentation invisible.
+///
+/// La carte « Campagne » ([GroupCampaignCard], étape 4 de Grimoire) le
+/// précède quand le groupe a une campagne associée. `groups` n'étant pas
+/// diffusée en temps réel, son titre est celui de la dernière lecture du
+/// détail (ouverture de l'écran, rafraîchissement).
 class GroupMembersTabBody extends StatelessWidget {
   const GroupMembersTabBody({
     required this.detail,
     required this.onRemoveMember,
     required this.onLeaveGroup,
     this.combatSection,
+    this.removingUserIds = const {},
     super.key,
   });
+
+  /// Membres ([GroupMember.userId]) dont l'exclusion est en cours, fournis
+  /// par `group_screen.dart` (D232) : leur commande « Exclure » est
+  /// désactivée et montre un indicateur. Vide hors exclusion.
+  final Set<String> removingUserIds;
 
   /// Entrée « Lancer un combat » / bandeau « Pas de combat sans MJ » (voir
   /// `StartCombatSection`), fournie par `group_screen.dart` pour que cet
@@ -93,6 +107,15 @@ class GroupMembersTabBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
+        // Campagne associée (étape 4) : défile avec la liste, jamais de
+        // bandeau fixe. Ni carte ni espace sans campagne à montrer.
+        if (detail.hasCampaignCard) ...[
+          GroupCampaignCard(
+            title: detail.campaignTitle,
+            summary: detail.campaignSummary,
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
         const _LiveUpdateIndicator(),
         const SizedBox(height: AppSpacing.md),
         ?combatSection,
@@ -133,6 +156,7 @@ class GroupMembersTabBody extends StatelessWidget {
                         : '/groups/${detail.id}/members/${member.characterId}',
                   ),
             canRemove: detail.isOwner && member.userId != detail.currentUserId,
+            isRemoving: removingUserIds.contains(member.userId),
             onRemove: () => onRemoveMember(member),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -176,12 +200,20 @@ class _LiveUpdateIndicator extends StatelessWidget {
   }
 }
 
+/// Carte d'un membre. Grande taille de texte (D232, à partir de
+/// [AppTypography.isLargeText], ×1,4) : la jauge PV occupe seule la largeur de
+/// la colonne, la fraction et la puce PV temporaires passent dessous, et
+/// « Exclure » descend en pied de carte (lien icône + texte, aligné à droite),
+/// pour toutes les cartes (personnage, MJ, orpheline). Sous le seuil, rendu
+/// habituel : « Exclure » en icône 48×48 sur la rangée du nom, lue en dernier
+/// (voir [_readBeforeRemoveButton]).
 class _MemberCard extends StatelessWidget {
   const _MemberCard({
     required this.member,
     required this.isSelf,
     required this.onOpen,
     required this.canRemove,
+    required this.isRemoving,
     required this.onRemove,
   });
 
@@ -196,21 +228,28 @@ class _MemberCard extends StatelessWidget {
   /// personnage — voir `GroupMembersTabBody.build`.
   final VoidCallback? onOpen;
   final bool canRemove;
+
+  /// Exclusion de ce membre en cours : « Exclure » désactivé, avec indicateur.
+  final bool isRemoving;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
+    final largeText = AppTypography.isLargeText(context);
+
     // Carte MJ volontaire : jamais de `Material`/`InkWell` (pas de zone de
     // tap morte, rien à ouvrir), jamais le fond/la bordure "MORT", jamais de
     // jauge PV factice (voir [_buildGameMasterCard]).
-    if (member.isGameMaster) return _buildGameMasterCard();
+    if (member.isGameMaster) return _buildGameMasterCard(largeText: largeText);
 
     // Carte "en attente d'un personnage" (voir
     // [GroupMember.isAwaitingCharacter]) : même discipline que la carte MJ
     // (jamais le fond/la bordure "MORT", jamais de jauge PV factice) — mais
     // SA PROPRE ligne reste tappable ([onOpen] non `null` dans ce cas
     // uniquement, voir `GroupMembersTabBody.build`).
-    if (member.isAwaitingCharacter) return _buildAwaitingCharacterCard();
+    if (member.isAwaitingCharacter) {
+      return _buildAwaitingCharacterCard(largeText: largeText);
+    }
 
     final isDead = member.vitalStatus == CharacterVitalStatus.dead;
     final nameColor = isDead ? AppColors.textMuted : AppColors.textPrimary;
@@ -227,16 +266,64 @@ class _MemberCard extends StatelessWidget {
           isDead: isDead,
           nameColor: nameColor,
           portrait: portrait,
+          largeText: largeText,
         ),
       ),
     );
   }
+
+  /// Commande « Exclure » de ce membre : lien de pied de carte en grande
+  /// taille de texte ([asLink]), icône sur la rangée du nom sinon (lue après
+  /// la colonne d'informations, voir [_readBeforeRemoveButton]).
+  Widget _removeButton({required bool asLink}) {
+    return _RemoveMemberButton(
+      key: ValueKey('removeMember-${member.userId}'),
+      memberName: member.name,
+      isRemoving: isRemoving,
+      asLink: asLink,
+      sortKey: asLink ? null : const OrdinalSortKey(1),
+      onRemove: onRemove,
+    );
+  }
+
+  /// Ordre de lecture sous le seuil de grande taille de texte (D232) : le
+  /// nom, les PV, la CA et le statut sont lus avec la carte elle-même (un
+  /// seul nœud pour le lecteur d'écran) ; les états ([ConditionsZone]) forment
+  /// le seul nœud distinct de la colonne. « Exclure », en haut à droite, serait
+  /// lu avant eux : clé 0 ici, 1 sur le bouton. En grande taille de texte, le
+  /// lien est en pied de carte : l'ordre naturel suffit.
+  Widget _readBeforeRemoveButton(Widget child, {required bool largeText}) {
+    if (largeText || !canRemove) return child;
+    return Semantics(
+      container: true,
+      sortKey: const OrdinalSortKey(0),
+      child: child,
+    );
+  }
+
+  /// Bouton « Exclure » en fin de rangée du nom, sous le seuil seulement.
+  List<Widget> _trailingRemoveButton({required bool largeText}) => [
+    if (canRemove && !largeText) _removeButton(asLink: false),
+  ];
+
+  /// Lien « Exclure » en pied de carte, aligné à droite, à partir du seuil de
+  /// grande taille de texte (après le badge de statut éventuel).
+  List<Widget> _removeFooter({required bool largeText}) => [
+    if (canRemove && largeText) ...[
+      const SizedBox(height: AppSpacing.xs),
+      Align(
+        alignment: AlignmentDirectional.centerEnd,
+        child: _removeButton(asLink: true),
+      ),
+    ],
+  ];
 
   Widget _buildCard(
     BuildContext context, {
     required bool isDead,
     required Color nameColor,
     required Widget portrait,
+    required bool largeText,
   }) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -298,41 +385,24 @@ class _MemberCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    // Ligne 2 : jauge + fraction PV sur la même ligne (recettage
-                    // direction-artistique du 13/09 — auparavant la fraction PV
-                    // (+ éventuel chip PV temp.) formait une 3e ligne sous la
-                    // jauge ; la ligne "résumé race/classe/niveau" est retirée).
-                    Row(
-                      children: [
-                        Expanded(child: _MemberHpGauge(ratio: member.hpRatio)),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          '${member.currentHp}/${member.maxHp}',
-                          style: AppTypography.body(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        if ((member.temporaryHp ?? 0) > 0) ...[
-                          const SizedBox(width: AppSpacing.xs),
-                          _TemporaryHpChip(amount: member.temporaryHp!),
-                        ],
-                      ],
-                    ),
+                    _buildHpLine(largeText: largeText),
                     // Conditions actives (P6) : pastilles compactes en lecture
                     // seule, sans zone de tap propre (la carte reste tappable) ;
                     // seule « +N » ouvre la feuille de tous les états (V3-5) ;
                     // aucune ligne — donc aucune hauteur en plus — sans condition.
                     if (member.conditions.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.xs),
-                      ConditionsZone(
-                        conditions: member.conditions,
-                        maxFullChips: 2,
-                        compact: true,
-                        onTapMore: () => showMemberConditionsSheet(
-                          context,
-                          member.name,
-                          member.conditions,
+                      _readBeforeRemoveButton(
+                        largeText: largeText,
+                        ConditionsZone(
+                          conditions: member.conditions,
+                          maxFullChips: 2,
+                          compact: true,
+                          onTapMore: () => showMemberConditionsSheet(
+                            context,
+                            member.name,
+                            member.conditions,
+                          ),
                         ),
                       ),
                     ],
@@ -353,11 +423,7 @@ class _MemberCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (canRemove)
-                _RemoveMemberButton(
-                  memberName: member.name,
-                  onRemove: onRemove,
-                ),
+              ..._trailingRemoveButton(largeText: largeText),
             ],
           ),
           // Badge « MORT » / « INCONSCIENT » sur sa propre ligne, pleine
@@ -368,8 +434,62 @@ class _MemberCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             _StatusBadge(status: member.vitalStatus!),
           ],
+          ..._removeFooter(largeText: largeText),
         ],
       ),
+    );
+  }
+
+  /// Ligne des PV. Sous le seuil de grande taille de texte : jauge et
+  /// fraction sur la même ligne (recettage direction-artistique du 13/09) ;
+  /// la puce PV temporaires passe dessous (D232 : à côté, elle débordait de
+  /// la carte dès ×1,0 sur 320 dp avec « Exclure », et ne laissait qu'une
+  /// jauge de quelques dp sur 360 dp). À partir du seuil : jauge seule sur
+  /// toute la largeur de la colonne, puis fraction et puce dans un `Wrap`.
+  Widget _buildHpLine({required bool largeText}) {
+    final fraction = Text(
+      '${member.currentHp}/${member.maxHp}',
+      style: AppTypography.body(fontSize: 13, fontWeight: FontWeight.w700),
+    );
+    final temporaryHp = member.temporaryHp ?? 0;
+    final chip = temporaryHp > 0 ? _TemporaryHpChip(amount: temporaryHp) : null;
+
+    if (largeText) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: _MemberHpGauge(ratio: member.hpRatio),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [fraction, ?chip],
+          ),
+        ],
+      );
+    }
+
+    final gaugeRow = Row(
+      children: [
+        Expanded(child: _MemberHpGauge(ratio: member.hpRatio)),
+        const SizedBox(width: AppSpacing.sm),
+        fraction,
+      ],
+    );
+    if (chip == null) return gaugeRow;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        gaugeRow,
+        const SizedBox(height: AppSpacing.xs),
+        chip,
+      ],
     );
   }
 
@@ -384,8 +504,8 @@ class _MemberCard extends StatelessWidget {
   /// mourir", contre-sens grave). Fond de carte "vivant" normal, jamais
   /// `deadCardBackground`. Pas de `Material`/`InkWell` : aucune zone de tap,
   /// rien à ouvrir pour un MJ volontaire. Le bouton "Exclure" (logique de
-  /// permission inchangée) reste affiché à l'identique.
-  Widget _buildGameMasterCard() {
+  /// permission inchangée) suit la même règle que les autres cartes (D232).
+  Widget _buildGameMasterCard({required bool largeText}) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -393,67 +513,73 @@ class _MemberCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const PortraitFrame(
-            portraitUrl: null,
-            fallbackIcon: Icons.visibility_outlined,
-            classThemeColor: AppColors.woodMedium,
-            size: 64,
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text.rich(
-                  TextSpan(
-                    children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const PortraitFrame(
+                portraitUrl: null,
+                fallbackIcon: Icons.visibility_outlined,
+                classThemeColor: AppColors.woodMedium,
+                size: 64,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text.rich(
                       TextSpan(
-                        text: 'MJ - ',
-                        style: AppTypography.body(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      TextSpan(
-                        text: member.name,
-                        style: AppTypography.body(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      if (isSelf)
-                        TextSpan(
-                          text: ' (toi)',
-                          style: AppTypography.body(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textMuted,
+                        children: [
+                          TextSpan(
+                            text: 'MJ - ',
+                            style: AppTypography.body(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                          TextSpan(
+                            text: member.name,
+                            style: AppTypography.body(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          if (isSelf)
+                            TextSpan(
+                              text: ' (toi)',
+                              style: AppTypography.body(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Ne suit pas ses PV ici.',
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Ne suit pas ses PV ici.',
-                  style: AppTypography.body(
-                    fontSize: 13,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
+              ),
+              ..._trailingRemoveButton(largeText: largeText),
+            ],
           ),
-          if (canRemove)
-            _RemoveMemberButton(memberName: member.name, onRemove: onRemove),
+          ..._removeFooter(largeText: largeText),
         ],
       ),
     );
@@ -471,8 +597,9 @@ class _MemberCard extends StatelessWidget {
   /// (rien à ouvrir) — [onOpen] n'est non-`null` que pour sa propre ligne
   /// (voir `GroupMembersTabBody.build`), géré ici de la même façon que
   /// [_buildGameMasterCard] gère son absence de zone de tap : si [onOpen]
-  /// est fourni, la carte entière devient tappable.
-  Widget _buildAwaitingCharacterCard() {
+  /// est fourni, la carte entière devient tappable. « Exclure » : même règle
+  /// que les autres cartes (D232).
+  Widget _buildAwaitingCharacterCard({required bool largeText}) {
     final card = Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -480,70 +607,81 @@ class _MemberCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const PortraitFrame(
-            portraitUrl: null,
-            fallbackIcon: Icons.hourglass_empty_rounded,
-            classThemeColor: AppColors.accentViolet,
-            size: 64,
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text.rich(
-                  TextSpan(
-                    children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const PortraitFrame(
+                portraitUrl: null,
+                fallbackIcon: Icons.hourglass_empty_rounded,
+                classThemeColor: AppColors.accentViolet,
+                size: 64,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text.rich(
                       TextSpan(
-                        text: member.name,
-                        style: AppTypography.body(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                        ),
+                        children: [
+                          TextSpan(
+                            text: member.name,
+                            style: AppTypography.body(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          if (isSelf)
+                            TextSpan(
+                              text: ' (toi)',
+                              style: AppTypography.body(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                        ],
                       ),
-                      if (isSelf)
-                        TextSpan(
-                          text: ' (toi)',
-                          style: AppTypography.body(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textMuted,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.hourglass_empty_rounded,
+                          size: 16,
+                          color: AppColors.accentViolet,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        // `Flexible` (D232) : sans lui, la ligne débordait de la
+                        // carte dès ×1,0 sur 320 dp (de 42 px, 86 px avec
+                        // « Exclure »).
+                        Flexible(
+                          child: Text(
+                            "En attente d'un personnage",
+                            style: AppTypography.body(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         ),
-                    ],
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.hourglass_empty_rounded,
-                      size: 16,
-                      color: AppColors.accentViolet,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      "En attente d'un personnage",
-                      style: AppTypography.body(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textSecondary,
-                      ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              ..._trailingRemoveButton(largeText: largeText),
+            ],
           ),
-          if (canRemove)
-            _RemoveMemberButton(memberName: member.name, onRemove: onRemove),
+          ..._removeFooter(largeText: largeText),
         ],
       ),
     );
@@ -560,26 +698,132 @@ class _MemberCard extends StatelessWidget {
   }
 }
 
-/// Bouton "Exclure {member}" en fin de carte — logique de permission gérée
-/// par l'appelant ([_MemberCard]), extrait pour être partagé à l'identique
-/// entre la carte personnage et la carte MJ sans personnage.
+/// Commande « Exclure {member} » — logique de permission gérée par l'appelant
+/// ([_MemberCard]), partagée à l'identique entre les cartes personnage, MJ et
+/// orpheline. Deux gabarits (D232) : icône seule 48×48 en fin de rangée du
+/// nom, ou, en grande taille de texte ([asLink]), lien de pied de carte calqué
+/// sur [_LeaveGroupLink] (icône 24, écart `xs`, « Exclure » en `body`
+/// 13/700 `accentBrick`, cible d'au moins 48×48). Lecteur d'écran :
+/// « Exclure {nom} », ou « {nom} : exclusion en cours » pendant l'exclusion
+/// ([isRemoving]) : commande désactivée (texte du lien en `textMuted`),
+/// indicateur de 20 dp à la place de l'icône, sans changer l'emprise.
 class _RemoveMemberButton extends StatelessWidget {
-  const _RemoveMemberButton({required this.memberName, required this.onRemove});
+  const _RemoveMemberButton({
+    required this.memberName,
+    required this.isRemoving,
+    required this.asLink,
+    required this.sortKey,
+    required this.onRemove,
+    super.key,
+  });
 
   final String memberName;
+  final bool isRemoving;
+  final bool asLink;
+
+  /// Place dans l'ordre de lecture de la carte (voir
+  /// `_MemberCard._readBeforeRemoveButton`).
+  final SemanticsSortKey? sortKey;
   final VoidCallback onRemove;
+
+  /// Cible tactile minimale (D232, `10-design-system.md` §7).
+  static const double _minTapTarget = 48;
+
+  /// Taille de l'icône, que l'indicateur « en cours » occupe aussi.
+  static const double _iconSize = 24;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: IconButton(
-        tooltip: 'Exclure $memberName',
-        onPressed: onRemove,
-        icon: const Icon(
-          Icons.person_remove_outlined,
-          color: AppColors.accentBrick,
+    final l10n = AppLocalizations.of(context)!;
+    final label = isRemoving
+        ? l10n.groupMemberRemoveInProgress(memberName)
+        : l10n.groupMemberRemoveLabel(memberName);
+    final onTap = isRemoving ? null : onRemove;
+    final leading = isRemoving
+        ? const SizedBox.square(
+            dimension: _iconSize,
+            child: Center(
+              child: SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.woodMedium,
+                ),
+              ),
+            ),
+          )
+        : const Icon(
+            Icons.person_remove_outlined,
+            size: _iconSize,
+            color: AppColors.accentBrick,
+          );
+
+    final control = asLink
+        ? _buildLink(context, leading: leading, onTap: onTap)
+        : SizedBox.square(
+            dimension: _minTapTarget,
+            child: IconButton(tooltip: label, onPressed: onTap, icon: leading),
+          );
+
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: !isRemoving,
+      label: label,
+      sortKey: sortKey,
+      onTap: onTap,
+      excludeSemantics: true,
+      // Désactivée, la commande garde le toucher : sinon il passerait à la
+      // carte, qui ouvrirait la fiche du membre en cours d'exclusion.
+      child: isRemoving
+          ? GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {},
+              child: control,
+            )
+          : control,
+    );
+  }
+
+  Widget _buildLink(
+    BuildContext context, {
+    required Widget leading,
+    required VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: _minTapTarget,
+            minWidth: _minTapTarget,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                leading,
+                const SizedBox(width: AppSpacing.xs),
+                Flexible(
+                  child: Text(
+                    AppLocalizations.of(context)!.groupMemberRemoveAction,
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      // Désactivé pendant l'exclusion : plus en couleur
+                      // d'action.
+                      color: isRemoving
+                          ? AppColors.textMuted
+                          : AppColors.accentBrick,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -845,12 +1089,18 @@ class _LeaveGroupLinkLabel extends StatelessWidget {
       children: [
         const Icon(Icons.logout, size: 14, color: AppColors.accentBrick),
         const SizedBox(width: 4),
-        Text(
-          'Quitter le groupe',
-          style: AppTypography.body(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: AppColors.accentBrick,
+        // `Flexible` (D232) : sans lui, le lien débordait de 104 px à ×3,0
+        // sur 320 dp.
+        Flexible(
+          child: Text(
+            'Quitter le groupe',
+            // Sur deux lignes à ×3,0 : centrées comme le lien.
+            textAlign: TextAlign.center,
+            style: AppTypography.body(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.accentBrick,
+            ),
           ),
         ),
       ],

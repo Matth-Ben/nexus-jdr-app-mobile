@@ -254,15 +254,23 @@ void main() {
       );
     });
 
-    test('deux armures équipées : la première (14, pas 18)', () {
-      _expectAll(
-        _character([
-          _customRow('a', kind: 'armure', acBase: 11, category: 'legere'),
-          _customRow('b', kind: 'armure', acBase: 18, category: 'lourde'),
-        ]),
-        14,
-        'deux armures',
+    // Décision n° 37 (20/11/2026) : la meilleure combinaison, quel que soit
+    // l'ordre (avant : la première armure de la liste, 14).
+    test('deux armures équipées : la meilleure (18), dans les deux ordres', () {
+      final light = _customRow(
+        'a',
+        kind: 'armure',
+        acBase: 11,
+        category: 'legere',
       );
+      final heavy = _customRow(
+        'b',
+        kind: 'armure',
+        acBase: 18,
+        category: 'lourde',
+      );
+      _expectAll(_character([light, heavy]), 18, 'deux armures');
+      _expectAll(_character([heavy, light]), 18, 'deux armures, inversées');
     });
 
     test('Dex négative (6 = -2) : légère 11 = 9 ; bonus manuel +1 = 10', () {

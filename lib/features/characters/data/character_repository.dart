@@ -17,6 +17,7 @@ import '../../../core/network/transport_failure.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
 import '../../character_creation/domain/spell_selection_resolver.dart';
 import '../../character_creation/domain/spellcasting_rules.dart';
+import '../domain/armor_slot_rules.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
@@ -29,6 +30,7 @@ import '../domain/condition_type.dart';
 import '../domain/character_summary.dart';
 import '../domain/hit_point_bonus_rules.dart';
 import '../domain/currency_kind.dart';
+import '../domain/custom_item_edit_rules.dart';
 import '../domain/custom_item_enrichment.dart';
 import '../domain/edition_content_resolver.dart';
 import '../domain/gallery_photo_storage_path_resolver.dart';
@@ -498,6 +500,12 @@ abstract class CharacterRepository {
   /// [inventoryId], dernière valeur gagnante) hors ligne ou sur erreur de
   /// transport — [WriteOutcome.queued] ; un refus ou zéro ligne affectée est
   /// un échec, jamais mis en file.
+  ///
+  /// Décision n° 37 : équiper une seconde armure ou un second bouclier lève
+  /// une [CharacterFailure] (`armorAlreadyEquipped`/`shieldAlreadyEquipped`)
+  /// sans rien écrire ni mettre en file, en ligne comme hors ligne, vérifié
+  /// sur l'état effectif de la fiche (cache + file, voir
+  /// `domain/armor_slot_rules.dart`). L'écran le vérifie aussi avant l'appel.
   Future<WriteOutcome> setInventoryItemEquipped({
     required String characterId,
     required String inventoryId,
@@ -536,6 +544,30 @@ abstract class CharacterRepository {
     required String characterId,
     required String inventoryId,
     required bool attuned,
+  });
+
+  /// Action « Fixer un prix »/« Modifier »/« Retirer la surcharge » d'un objet
+  /// du catalogue (spec du prix d'un objet modifiable, §2b/§2d) — écrit
+  /// `character_inventory.price_override_amount`/`price_override_currency`
+  /// tels quels, aucun calcul ici (même principe que
+  /// [setInventoryItemAttuned]). [amount]/[currency] `null` ensemble retire
+  /// la surcharge ; sinon les deux sont renseignés (validé côté UI avant
+  /// l'appel, [isValidPriceOverrideAmount]).
+  ///
+  /// Un objet personnalisé fixe son prix via le formulaire dédié
+  /// (`custom_item_form_sheet.dart`, `CustomItemEnrichment
+  /// .priceOverrideAmount`) plutôt que cette méthode — réservée à la
+  /// surcharge d'un objet du catalogue, mais fonctionne de la même façon sur
+  /// les deux (la colonne n'est pas réservée à un objet personnalisé).
+  ///
+  /// Mode hors ligne (P15) : mis en file (`inventoryState`, `targetId` =
+  /// [inventoryId]) ; hors ligne, le plafond de
+  /// `CharacterDetail.attunementCap` n'est pas concerné ici.
+  Future<WriteOutcome> setInventoryItemPriceOverride({
+    required String characterId,
+    required String inventoryId,
+    required num? amount,
+    required CurrencyKind? currency,
   });
 
   /// Action "Retirer" (avec confirmation côté sheet) — supprime la ligne
@@ -632,8 +664,13 @@ abstract class CharacterRepository {
   /// harmonisé (`is_attuned = false`, même requête) ; l'inverse n'harmonise
   /// jamais l'objet. Validé comme au rejeu de la file ([CharacterFailure] si le
   /// nom est vide/trop long ou l'enrichissement incohérent). Le contrôle « type
-  /// d'un objet équipé » est fait par l'interface (voir
-  /// `domain/custom_item_edit_rules.dart`), pas ici.
+  /// d'un objet équipé » (P7, `domain/custom_item_edit_rules.dart`) est fait
+  /// par l'interface ET ici, sur l'état effectif de la fiche (cache + file) :
+  /// un objet équipé qui changerait de type lève une [CharacterFailure]
+  /// `customItemKindChangeBlocked`, et une modification qui ferait d'un objet
+  /// équipé une seconde armure ou un second bouclier lève
+  /// `armorAlreadyEquipped`/`shieldAlreadyEquipped` (décision n° 37), sans
+  /// rien écrire ni mettre en file.
   ///
   /// Mode hors ligne : mis en file (`inventoryItem`, op `updateCustom`,
   /// instantané complet, dernière écriture gagnante — une seconde modification
@@ -1689,7 +1726,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
               id, item_id, quantity, equipped, is_attuned,
               custom_kind, custom_magic_bonus, custom_ac_base, custom_armor_category,
               custom_weight, custom_requires_attunement, custom_weapon_category,
-              custom_weapon_range,
+              custom_weapon_range, price_override_amount, price_override_currency,
               items(
                 category, requires_attunement, ac_bonus, ac_bonus_kind,
                 armor_properties(ac_base, ac_dex_bonus, slot)
@@ -1929,7 +1966,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
               custom_description, custom_damage_dice, custom_damage_type, custom_properties,
               custom_kind, custom_magic_bonus, custom_ac_base, custom_armor_category,
               custom_weight, custom_requires_attunement, custom_weapon_category,
-              custom_weapon_range,
+              custom_weapon_range, price_override_amount, price_override_currency,
               items(
                 category, weight, cost, rarity, requires_attunement, consumable,
                 ac_bonus, ac_bonus_kind,
@@ -2218,8 +2255,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
               ],
             );
           case PendingCharacterWriteKind.inventoryState:
-            // T5a : équipé/set d'arme/harmonisé de l'objet `targetId` (CA,
-            // nombre d'objets harmonisés : getters dérivés de l'inventaire).
+            // T5a : équipé/set d'arme/harmonisé/surcharge de prix de l'objet
+            // `targetId` (CA, nombre d'objets harmonisés : getters dérivés de
+            // l'inventaire).
             final patch = parseInventoryStatePayload(write.payload);
             if (!isValidInventoryTargetId(write.targetId) || patch == null) {
               break;
@@ -2233,6 +2271,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
                       changeWeaponSlot: patch.hasWeaponSlot,
                       weaponSlot: patch.weaponSlot,
                       isAttuned: patch.attuned,
+                      changePriceOverride: patch.hasPriceOverride,
+                      priceOverrideAmount: patch.priceOverrideAmount,
+                      priceOverrideCurrency: patch.priceOverrideCurrency,
                     )
                   else
                     item,
@@ -2986,6 +3027,173 @@ class SupabaseCharacterRepository implements CharacterRepository {
     }
   }
 
+  /// Décision n° 37 : refuse d'équiper une seconde armure ou un second
+  /// bouclier ([ArmorSlotRules.equipConflict]), vérifié sur l'état
+  /// **effectif** (cache + file) **en ligne comme hors ligne** : une armure
+  /// équipée hors ligne (encore en file) bloque la suivante, et une armure
+  /// déséquipée hors ligne libère sa place, exactement comme l'affiche la
+  /// fiche. Jamais revérifié au rejeu de la file (l'ordre de rejeu de deux
+  /// objets distincts n'est pas celui d'un échange). Fail-open si la fiche
+  /// n'est pas en cache ou si l'objet n'y figure pas.
+  Future<void> _enforceArmorSlotFree({
+    required String ownerId,
+    required String characterId,
+    required String inventoryId,
+  }) async {
+    final detail = await _effectiveDetailFromCache(
+      ownerId: ownerId,
+      characterId: characterId,
+    );
+    if (detail == null) return;
+    final conflict = ArmorSlotRules.equipConflict(
+      inventory: detail.inventory,
+      inventoryId: inventoryId,
+    );
+    if (conflict != null) throw conflict;
+  }
+
+  /// Périmètre du verrou des emplacements d'armure et de bouclier d'un
+  /// personnage (décision n° 37), voir [_withArmorSlotsLock]. Public pour que
+  /// les tests puissent tenir ce verrou et vérifier qui l'attend.
+  static const String armorSlotsLockScope = 'armorSlots';
+
+  /// Équiper [inventoryId] peut-il occuper un emplacement d'armure ou de
+  /// bouclier ? Décision à bas coût, avant le verrou des emplacements et la
+  /// vérification complète ([_enforceArmorSlotFree], qui reconstruit toute la
+  /// fiche) : seule la ligne brute du cache est relue et passée au même
+  /// mapper que la fiche, donc à la même règle ([ArmorSlotRules.slotOf]).
+  ///
+  /// Prudente : `true` (vérification complète) dès que la ligne en cache ne
+  /// suffit pas — un ajout ou une modification de cette ligne en file (son
+  /// type effectif peut différer du cache), ligne ou fiche absente du cache.
+  /// `false` seulement pour une ligne en cache qui n'est ni armure ni
+  /// bouclier : comportement d'avant la décision n° 37.
+  Future<bool> _mayOccupyArmorSlot({
+    required String ownerId,
+    required String characterId,
+    required String inventoryId,
+  }) async {
+    final pending = await _pendingWriteBeforeOnlineWrite(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: PendingCharacterWriteKind.inventoryItem,
+      targetId: inventoryId,
+    );
+    final pendingOp = pending == null
+        ? null
+        : parseInventoryItemPayload(pending.payload)?.op;
+    if (pendingOp == InventoryItemOp.add ||
+        pendingOp == InventoryItemOp.updateCustom) {
+      return true;
+    }
+    try {
+      final row = await _detailCache.readRow(
+        ownerId: ownerId,
+        characterId: characterId,
+      );
+      final lines = row?['character_inventory'];
+      if (lines is! List) return true;
+      for (final line in lines) {
+        if (line is Map && line['id'] == inventoryId) {
+          final items = CharacterInventoryRowMapper.toCharacterInventoryItems(
+            [Map<String, dynamic>.from(line)],
+            names: const <String, String>{},
+            descriptions: const <String, String>{},
+          );
+          return items.isEmpty || ArmorSlotRules.slotOf(items.single) != null;
+        }
+      }
+    } catch (_) {
+      // Ligne en cache illisible : vérification complète (prudence).
+    }
+    return true;
+  }
+
+  /// Exécute [action] sous le verrou des emplacements d'armure et de bouclier
+  /// de [characterId] (`PendingCharacterWriteQueue.runExclusiveScope`) : la
+  /// vérification ([_enforceArmorSlotFree], [_enforceEquippedCustomItemUpdate])
+  /// et l'écriture qui la suit (en ligne avec mise à jour du cache, ou mise
+  /// en file) forment un tout ; un second équipement concurrent attend la fin
+  /// du premier et lit l'état qu'il a laissé.
+  ///
+  /// **Ordre des verrous, toujours le même** : ligne d'inventaire
+  /// (`inventoryItem`, X) → emplacements du personnage → état de la ligne
+  /// (`inventoryState`, X, pris par l'écriture en ligne de
+  /// [_writeAbsoluteState] ou par [_clearPendingAttunement]). Pris seulement
+  /// par [_writeInventoryState] (équiper un objet qui peut occuper un
+  /// emplacement, voir [_mayOccupyArmorSlot]) et [updateCustomInventoryItem],
+  /// qui tiennent déjà le verrou de leur ligne ; sous ce verrou, on ne prend
+  /// jamais le verrou d'une autre ligne ni de nouveau ce périmètre. Aucun
+  /// détenteur d'un verrou `inventoryState` (rejeu du synchroniseur, purge,
+  /// harmonisation) ne demande ce périmètre ni un verrou `inventoryItem` :
+  /// aucun cycle d'attente possible. L'harmonisation (`attuned` seul), le
+  /// déséquipement et l'équipement d'un objet hors emplacement (arme,
+  /// anneau...) ne le prennent pas (ils ne peuvent pas créer un doublon).
+  Future<T> _withArmorSlotsLock<T>(
+    String characterId,
+    Future<T> Function() action,
+  ) => _pendingWrites.runExclusiveScope(
+    characterId: characterId,
+    scope: armorSlotsLockScope,
+    action: action,
+  );
+
+  /// Modification d'un objet personnalisé **équipé** ([update], opération
+  /// `updateCustom`), vérifiée sur l'état effectif (cache + file), sous
+  /// [_withArmorSlotsLock] :
+  /// 1. règle P7 (comme l'écran, `isCustomKindChangeBlocked`) : un objet
+  ///    équipé ne change pas de type — sinon une arme équipée deviendrait une
+  ///    armure (seconde armure, set d'arme incohérent) ;
+  /// 2. décision n° 37 sur le **résultat** : si, sans changer de type, la
+  ///    modification fait entrer l'objet dans un emplacement d'armure ou de
+  ///    bouclier déjà occupé (ancienne armure personnalisée sans catégorie qui
+  ///    en reçoit une), refus [ArmorSlotRules.equipConflict]. Seulement si
+  ///    l'emplacement **change** : une fiche ancienne qui porte déjà deux
+  ///    armures (décision n° 37) reste modifiable (nom, description, bonus
+  ///    magique...) sans déséquiper.
+  /// Objet non équipé, absent du cache ou fiche non mise en cache : rien à
+  /// vérifier.
+  Future<void> _enforceEquippedCustomItemUpdate({
+    required String ownerId,
+    required String characterId,
+    required String inventoryId,
+    required InventoryItemWrite update,
+  }) async {
+    final detail = await _effectiveDetailFromCache(
+      ownerId: ownerId,
+      characterId: characterId,
+    );
+    if (detail == null) return;
+    CharacterInventoryItem? current;
+    for (final item in detail.inventory) {
+      if (item.id == inventoryId) {
+        current = item;
+        break;
+      }
+    }
+    if (current == null || !current.equipped) return;
+    if (isCustomKindChangeBlocked(current, update.enrichment?.kind ?? '')) {
+      throw const CharacterFailure(
+        "Déséquipez l'objet avant de changer son type",
+        code: CharacterErrorCode.customItemKindChangeBlocked,
+      );
+    }
+    final updated = _withCustomUpdate(current, characterId, update);
+    // L'objet n'entre dans aucun nouvel emplacement : rien à refuser, même si
+    // la fiche porte déjà deux armures (données anciennes, décision n° 37).
+    if (ArmorSlotRules.slotOf(updated) == ArmorSlotRules.slotOf(current)) {
+      return;
+    }
+    final conflict = ArmorSlotRules.equipConflict(
+      inventory: [
+        for (final item in detail.inventory)
+          if (item.id == inventoryId) updated else item,
+      ],
+      inventoryId: inventoryId,
+    );
+    if (conflict != null) throw conflict;
+  }
+
   /// Écrit l'état d'un sort ([patch] : préparé). La limite de
   /// préparation n'est vérifiée que si [enforceLimit] : le rejeu de la file
   /// ne la revérifie jamais (elle l'a été à la mise en file, et une
@@ -3125,6 +3333,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// `UPDATE` sur zéro ligne échouerait ; la ligne part à la prochaine
   /// synchro ([WriteOutcome.queued]). Si un retrait de la ligne est en file,
   /// le réglage est refusé. Sinon : réglage d'état absolu habituel.
+  ///
+  /// Équiper ([InventoryStatePatch.equipped] vrai) une seconde armure ou un
+  /// second bouclier est refusé avant toute écriture ou mise en file, sur
+  /// tous ces chemins ([_enforceArmorSlotFree], décision n° 37). La
+  /// vérification ET l'écriture (en ligne, cache compris) ou la mise en file
+  /// se font sous le verrou des emplacements d'armure du personnage
+  /// ([_withArmorSlotsLock]) : deux équipements concurrents de deux objets
+  /// différents ne peuvent pas lire tous deux un emplacement libre. Un objet
+  /// qui n'occupe aucun emplacement ([_mayOccupyArmorSlot], lecture de sa
+  /// seule ligne en cache) garde le chemin d'avant : ni verrou ni relecture.
   Future<WriteOutcome> _writeInventoryState({
     required String characterId,
     required String inventoryId,
@@ -3137,46 +3355,37 @@ class SupabaseCharacterRepository implements CharacterRepository {
         kind: PendingCharacterWriteKind.inventoryItem,
         targetId: inventoryId,
         action: () async {
-          final pending = await _pendingWriteBeforeOnlineWrite(
-            characterId: characterId,
-            ownerId: ownerId,
-            kind: PendingCharacterWriteKind.inventoryItem,
-            targetId: inventoryId,
-          );
-          final pendingItem = pending == null
-              ? null
-              : parseInventoryItemPayload(pending.payload);
-          // Un usage en file (`quantity`, T5b-3) touche une autre colonne :
-          // indépendant du réglage d'état.
-          if (pendingItem == null ||
-              pendingItem.op == InventoryItemOp.quantity ||
-              pendingItem.op == InventoryItemOp.updateCustom) {
-            return _writeInventoryStateAbsolute(
+          // Déséquiper, harmoniser, ou équiper un objet qui n'occupe aucun
+          // emplacement d'armure (arme, anneau...) : comportement d'avant la
+          // décision n° 37, sans verrou des emplacements ni relecture de la
+          // fiche. Décidé sous le verrou de la ligne : son type ne peut pas
+          // changer pendant ce temps.
+          if (change.equipped != true ||
+              !await _mayOccupyArmorSlot(
+                ownerId: ownerId,
+                characterId: characterId,
+                inventoryId: inventoryId,
+              )) {
+            return _writeInventoryStateLocked(
+              ownerId: ownerId,
               characterId: characterId,
               inventoryId: inventoryId,
               change: change,
             );
           }
-          if (pendingItem.op == InventoryItemOp.delete) {
-            throw const CharacterFailure(
-              'Cet objet a déjà été retiré de l\'inventaire.',
-            );
-          }
-          if (change.attuned == true) {
-            await _enforceAttunementCapOffline(
+          return _withArmorSlotsLock(characterId, () async {
+            await _enforceArmorSlotFree(
               ownerId: ownerId,
               characterId: characterId,
               inventoryId: inventoryId,
             );
-          }
-          await _pendingWrites.enqueue(
-            characterId: characterId,
-            ownerId: ownerId,
-            kind: PendingCharacterWriteKind.inventoryItem,
-            targetId: inventoryId,
-            payload: mergeStateIntoPendingAdd(pendingItem, change).toPayload(),
-          );
-          return WriteOutcome.queued;
+            return _writeInventoryStateLocked(
+              ownerId: ownerId,
+              characterId: characterId,
+              inventoryId: inventoryId,
+              change: change,
+            );
+          });
         },
       );
     } on CharacterFailure {
@@ -3187,6 +3396,56 @@ class SupabaseCharacterRepository implements CharacterRepository {
       reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
     }
+  }
+
+  /// Corps de [_writeInventoryState], appelé sous le verrou de la ligne
+  /// (et, pour équiper, sous celui des emplacements d'armure).
+  Future<WriteOutcome> _writeInventoryStateLocked({
+    required String ownerId,
+    required String characterId,
+    required String inventoryId,
+    required InventoryStatePatch change,
+  }) async {
+    final pending = await _pendingWriteBeforeOnlineWrite(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: PendingCharacterWriteKind.inventoryItem,
+      targetId: inventoryId,
+    );
+    final pendingItem = pending == null
+        ? null
+        : parseInventoryItemPayload(pending.payload);
+    // Un usage en file (`quantity`, T5b-3) touche une autre colonne :
+    // indépendant du réglage d'état.
+    if (pendingItem == null ||
+        pendingItem.op == InventoryItemOp.quantity ||
+        pendingItem.op == InventoryItemOp.updateCustom) {
+      return _writeInventoryStateAbsolute(
+        characterId: characterId,
+        inventoryId: inventoryId,
+        change: change,
+      );
+    }
+    if (pendingItem.op == InventoryItemOp.delete) {
+      throw const CharacterFailure(
+        'Cet objet a déjà été retiré de l\'inventaire.',
+      );
+    }
+    if (change.attuned == true) {
+      await _enforceAttunementCapOffline(
+        ownerId: ownerId,
+        characterId: characterId,
+        inventoryId: inventoryId,
+      );
+    }
+    await _pendingWrites.enqueue(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: PendingCharacterWriteKind.inventoryItem,
+      targetId: inventoryId,
+      payload: mergeStateIntoPendingAdd(pendingItem, change).toPayload(),
+    );
+    return WriteOutcome.queued;
   }
 
   Future<WriteOutcome> _writeInventoryStateAbsolute({
@@ -4698,6 +4957,22 @@ class SupabaseCharacterRepository implements CharacterRepository {
   );
 
   @override
+  Future<WriteOutcome> setInventoryItemPriceOverride({
+    required String characterId,
+    required String inventoryId,
+    required num? amount,
+    required CurrencyKind? currency,
+  }) => _writeInventoryState(
+    characterId: characterId,
+    inventoryId: inventoryId,
+    change: InventoryStatePatch(
+      hasPriceOverride: true,
+      priceOverrideAmount: amount,
+      priceOverrideCurrency: currency,
+    ),
+  );
+
+  @override
   Future<WriteOutcome> removeInventoryItem({
     required String characterId,
     required String inventoryId,
@@ -5090,7 +5365,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
         characterId: characterId,
         kind: PendingCharacterWriteKind.inventoryItem,
         targetId: inventoryId,
-        action: () async {
+        // Verrou des emplacements d'armure pris après celui de la ligne (ordre
+        // documenté sur [_withArmorSlotsLock]) : la vérification de l'objet
+        // équipé et l'écriture qui suit ne s'intercalent jamais avec un
+        // équipement concurrent.
+        action: () => _withArmorSlotsLock(characterId, () async {
           final pending = await _pendingWriteBeforeOnlineWrite(
             characterId: characterId,
             ownerId: ownerId,
@@ -5109,6 +5388,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
               'Cet objet a déjà été retiré de l\'inventaire.',
             );
           }
+          // P7 et décision n° 37 pour un objet équipé : avant toute écriture
+          // ou mise en file.
+          await _enforceEquippedCustomItemUpdate(
+            ownerId: ownerId,
+            characterId: characterId,
+            inventoryId: inventoryId,
+            update: requested,
+          );
           final write = plan.write!;
           final dropsAttunement = !(requested.enrichment!.requiresAttunement);
 
@@ -5169,7 +5456,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             write: write,
           );
           return WriteOutcome.synced;
-        },
+        }),
       );
     } on CharacterFailure {
       rethrow;
@@ -5292,6 +5579,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
           code: CharacterErrorCode.invalidQuantity,
         );
       }
+      // Formulaire en deux temps (décision 91) : mêmes règles que
+      // [addCustomInventoryItem] (invalide refusé, vide non écrit).
+      final enrichment = itemId == null ? item.customEnrichment : null;
+      if (enrichment != null && !enrichment.isValid) {
+        throw const CharacterFailure(
+          "Les caractéristiques de l'objet ne sont pas valides.",
+        );
+      }
       adds.add(
         PendingInventoryAdd(
           inventoryId: generateUuidV4(),
@@ -5304,6 +5599,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
                   customDamageDice: nonEmpty(item.customDamageDice),
                   customDamageType: nonEmpty(item.customDamageType),
                   customProperties: item.customProperties,
+                  enrichment: enrichment == null || enrichment.isEmpty
+                      ? null
+                      : enrichment,
                 ),
         ),
       );
@@ -5390,7 +5688,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     try {
       final rows = await _client
           .from('items')
-          .select(_inventoryCatalogSelect)
+          .select(inventoryCatalogItemColumns)
           .order('id', ascending: true);
       final ids = InventoryCatalogRowMapper.collectIds(rows);
       final nameRows = await _fetchTranslationRows(
@@ -5420,16 +5718,6 @@ class SupabaseCharacterRepository implements CharacterRepository {
       throw mapUnknownCharacterError();
     }
   }
-
-  /// Colonnes du catalogue d'inventaire : tout ce qu'il faut pour construire une
-  /// ligne d'inventaire complète hors ligne (mêmes colonnes `items` que le
-  /// détail de fiche, voir [fetchCharacterDetail]).
-  static const String _inventoryCatalogSelect = '''
-    id, category, weight, cost, rarity, requires_attunement, consumable,
-    ac_bonus, ac_bonus_kind,
-    weapon_properties(damage_dice, damage_type, properties, range),
-    armor_properties(ac_base, ac_dex_bonus, strength_requirement, stealth_disadvantage, slot)
-  ''';
 
   /// Durée de fraîcheur du cache du catalogue (comme `item_catalog`).
   static const Duration _catalogCacheTtl = Duration(hours: 48);

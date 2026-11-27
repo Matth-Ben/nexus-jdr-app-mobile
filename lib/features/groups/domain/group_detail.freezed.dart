@@ -15,7 +15,11 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$GroupDetail {
 
- String get id; String get name; String get ownerId; String get inviteCode; String get currentUserId; List<GroupMember> get members;
+ String get id; String get name; String get ownerId; String get inviteCode; String get currentUserId; List<GroupMember> get members;/// `groups.story_title` brut : titre de la campagne associée, écrit par
+/// Grimoire. `null` : aucune campagne (ou colonne absente de DeepCore).
+ String? get storyTitle;/// `groups.story_summary_public` brut : résumé public de la campagne,
+/// lisible par les membres seulement. `null` : aucun résumé.
+ String? get storySummaryPublic;
 /// Create a copy of GroupDetail
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -26,16 +30,16 @@ $GroupDetailCopyWith<GroupDetail> get copyWith => _$GroupDetailCopyWithImpl<Grou
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.ownerId, ownerId) || other.ownerId == ownerId)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.currentUserId, currentUserId) || other.currentUserId == currentUserId)&&const DeepCollectionEquality().equals(other.members, members));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.ownerId, ownerId) || other.ownerId == ownerId)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.currentUserId, currentUserId) || other.currentUserId == currentUserId)&&const DeepCollectionEquality().equals(other.members, members)&&(identical(other.storyTitle, storyTitle) || other.storyTitle == storyTitle)&&(identical(other.storySummaryPublic, storySummaryPublic) || other.storySummaryPublic == storySummaryPublic));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,ownerId,inviteCode,currentUserId,const DeepCollectionEquality().hash(members));
+int get hashCode => Object.hash(runtimeType,id,name,ownerId,inviteCode,currentUserId,const DeepCollectionEquality().hash(members),storyTitle,storySummaryPublic);
 
 @override
 String toString() {
-  return 'GroupDetail(id: $id, name: $name, ownerId: $ownerId, inviteCode: $inviteCode, currentUserId: $currentUserId, members: $members)';
+  return 'GroupDetail(id: $id, name: $name, ownerId: $ownerId, inviteCode: $inviteCode, currentUserId: $currentUserId, members: $members, storyTitle: $storyTitle, storySummaryPublic: $storySummaryPublic)';
 }
 
 
@@ -46,7 +50,7 @@ abstract mixin class $GroupDetailCopyWith<$Res>  {
   factory $GroupDetailCopyWith(GroupDetail value, $Res Function(GroupDetail) _then) = _$GroupDetailCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String ownerId, String inviteCode, String currentUserId, List<GroupMember> members
+ String id, String name, String ownerId, String inviteCode, String currentUserId, List<GroupMember> members, String? storyTitle, String? storySummaryPublic
 });
 
 
@@ -63,7 +67,7 @@ class _$GroupDetailCopyWithImpl<$Res>
 
 /// Create a copy of GroupDetail
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? ownerId = null,Object? inviteCode = null,Object? currentUserId = null,Object? members = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? ownerId = null,Object? inviteCode = null,Object? currentUserId = null,Object? members = null,Object? storyTitle = freezed,Object? storySummaryPublic = freezed,}) {
   return _then(GroupDetail(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -71,7 +75,9 @@ as String,ownerId: null == ownerId ? _self.ownerId : ownerId // ignore: cast_nul
 as String,inviteCode: null == inviteCode ? _self.inviteCode : inviteCode // ignore: cast_nullable_to_non_nullable
 as String,currentUserId: null == currentUserId ? _self.currentUserId : currentUserId // ignore: cast_nullable_to_non_nullable
 as String,members: null == members ? _self.members : members // ignore: cast_nullable_to_non_nullable
-as List<GroupMember>,
+as List<GroupMember>,storyTitle: freezed == storyTitle ? _self.storyTitle : storyTitle // ignore: cast_nullable_to_non_nullable
+as String?,storySummaryPublic: freezed == storySummaryPublic ? _self.storySummaryPublic : storySummaryPublic // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -156,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String ownerId,  String inviteCode,  String currentUserId,  List<GroupMember> members)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String ownerId,  String inviteCode,  String currentUserId,  List<GroupMember> members,  String? storyTitle,  String? storySummaryPublic)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _GroupDetail() when $default != null:
-return $default(_that.id,_that.name,_that.ownerId,_that.inviteCode,_that.currentUserId,_that.members);case _:
+return $default(_that.id,_that.name,_that.ownerId,_that.inviteCode,_that.currentUserId,_that.members,_that.storyTitle,_that.storySummaryPublic);case _:
   return orElse();
 
 }
@@ -177,10 +183,10 @@ return $default(_that.id,_that.name,_that.ownerId,_that.inviteCode,_that.current
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String ownerId,  String inviteCode,  String currentUserId,  List<GroupMember> members)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String ownerId,  String inviteCode,  String currentUserId,  List<GroupMember> members,  String? storyTitle,  String? storySummaryPublic)  $default,) {final _that = this;
 switch (_that) {
 case _GroupDetail():
-return $default(_that.id,_that.name,_that.ownerId,_that.inviteCode,_that.currentUserId,_that.members);case _:
+return $default(_that.id,_that.name,_that.ownerId,_that.inviteCode,_that.currentUserId,_that.members,_that.storyTitle,_that.storySummaryPublic);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -197,10 +203,10 @@ return $default(_that.id,_that.name,_that.ownerId,_that.inviteCode,_that.current
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String ownerId,  String inviteCode,  String currentUserId,  List<GroupMember> members)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String ownerId,  String inviteCode,  String currentUserId,  List<GroupMember> members,  String? storyTitle,  String? storySummaryPublic)?  $default,) {final _that = this;
 switch (_that) {
 case _GroupDetail() when $default != null:
-return $default(_that.id,_that.name,_that.ownerId,_that.inviteCode,_that.currentUserId,_that.members);case _:
+return $default(_that.id,_that.name,_that.ownerId,_that.inviteCode,_that.currentUserId,_that.members,_that.storyTitle,_that.storySummaryPublic);case _:
   return null;
 
 }
@@ -212,7 +218,7 @@ return $default(_that.id,_that.name,_that.ownerId,_that.inviteCode,_that.current
 
 
 class _GroupDetail extends GroupDetail {
-  const _GroupDetail({required this.id, required this.name, required this.ownerId, required this.inviteCode, required this.currentUserId, required  List<GroupMember> members}): _members = members,super._();
+  const _GroupDetail({required this.id, required this.name, required this.ownerId, required this.inviteCode, required this.currentUserId, required  List<GroupMember> members, this.storyTitle, this.storySummaryPublic}): _members = members,super._();
   
 
 @override final  String id;
@@ -227,6 +233,12 @@ class _GroupDetail extends GroupDetail {
   return EqualUnmodifiableListView(_members);
 }
 
+/// `groups.story_title` brut : titre de la campagne associée, écrit par
+/// Grimoire. `null` : aucune campagne (ou colonne absente de DeepCore).
+@override final  String? storyTitle;
+/// `groups.story_summary_public` brut : résumé public de la campagne,
+/// lisible par les membres seulement. `null` : aucun résumé.
+@override final  String? storySummaryPublic;
 
 /// Create a copy of GroupDetail
 /// with the given fields replaced by the non-null parameter values.
@@ -238,16 +250,16 @@ _$GroupDetailCopyWith<_GroupDetail> get copyWith => __$GroupDetailCopyWithImpl<_
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.ownerId, ownerId) || other.ownerId == ownerId)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.currentUserId, currentUserId) || other.currentUserId == currentUserId)&&const DeepCollectionEquality().equals(other._members, _members));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.ownerId, ownerId) || other.ownerId == ownerId)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.currentUserId, currentUserId) || other.currentUserId == currentUserId)&&const DeepCollectionEquality().equals(other._members, _members)&&(identical(other.storyTitle, storyTitle) || other.storyTitle == storyTitle)&&(identical(other.storySummaryPublic, storySummaryPublic) || other.storySummaryPublic == storySummaryPublic));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,ownerId,inviteCode,currentUserId,const DeepCollectionEquality().hash(_members));
+int get hashCode => Object.hash(runtimeType,id,name,ownerId,inviteCode,currentUserId,const DeepCollectionEquality().hash(_members),storyTitle,storySummaryPublic);
 
 @override
 String toString() {
-  return 'GroupDetail(id: $id, name: $name, ownerId: $ownerId, inviteCode: $inviteCode, currentUserId: $currentUserId, members: $members)';
+  return 'GroupDetail(id: $id, name: $name, ownerId: $ownerId, inviteCode: $inviteCode, currentUserId: $currentUserId, members: $members, storyTitle: $storyTitle, storySummaryPublic: $storySummaryPublic)';
 }
 
 
@@ -258,7 +270,7 @@ abstract mixin class _$GroupDetailCopyWith<$Res> implements $GroupDetailCopyWith
   factory _$GroupDetailCopyWith(_GroupDetail value, $Res Function(_GroupDetail) _then) = __$GroupDetailCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String ownerId, String inviteCode, String currentUserId, List<GroupMember> members
+ String id, String name, String ownerId, String inviteCode, String currentUserId, List<GroupMember> members, String? storyTitle, String? storySummaryPublic
 });
 
 
@@ -275,7 +287,7 @@ class __$GroupDetailCopyWithImpl<$Res>
 
 /// Create a copy of GroupDetail
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? ownerId = null,Object? inviteCode = null,Object? currentUserId = null,Object? members = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? ownerId = null,Object? inviteCode = null,Object? currentUserId = null,Object? members = null,Object? storyTitle = freezed,Object? storySummaryPublic = freezed,}) {
   return _then(_GroupDetail(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -283,7 +295,9 @@ as String,ownerId: null == ownerId ? _self.ownerId : ownerId // ignore: cast_nul
 as String,inviteCode: null == inviteCode ? _self.inviteCode : inviteCode // ignore: cast_nullable_to_non_nullable
 as String,currentUserId: null == currentUserId ? _self.currentUserId : currentUserId // ignore: cast_nullable_to_non_nullable
 as String,members: null == members ? _self._members : members // ignore: cast_nullable_to_non_nullable
-as List<GroupMember>,
+as List<GroupMember>,storyTitle: freezed == storyTitle ? _self.storyTitle : storyTitle // ignore: cast_nullable_to_non_nullable
+as String?,storySummaryPublic: freezed == storySummaryPublic ? _self.storySummaryPublic : storySummaryPublic // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

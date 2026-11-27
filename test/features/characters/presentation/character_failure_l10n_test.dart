@@ -69,6 +69,20 @@ void main() {
         'This sheet has never been opened on this device. It will be '
             'available offline after you open it once while online.',
       ),
+      CharacterErrorCode.armorAlreadyEquipped: (
+        "Vous portez déjà une armure : déséquipez-la d'abord pour en équiper "
+            'une autre.',
+        "You're already wearing armor: unequip it first to equip another.",
+      ),
+      CharacterErrorCode.shieldAlreadyEquipped: (
+        "Vous portez déjà un bouclier : déséquipez-le d'abord pour en équiper "
+            'un autre.',
+        "You're already using a shield: unequip it first to equip another.",
+      ),
+      CharacterErrorCode.customItemKindChangeBlocked: (
+        "Déséquipez l'objet avant de changer son type",
+        'Unequip the item before changing its type',
+      ),
     };
 
     test('chaque code (hors generic) a un texte FR et EN attendu', () {
@@ -136,6 +150,44 @@ void main() {
       GroupErrorCode.inviteCodeGenerationFailed: (
         'Impossible de générer un nouveau code. Réessayez.',
         "Couldn't generate a new code. Try again.",
+      ),
+      // Étape 3b (migration DeepCore `20261119090000`).
+      GroupErrorCode.combatActive: (
+        "Action impossible pendant un combat en cours. Termine d'abord le "
+            'combat.',
+        'Not possible during a combat. End the combat first.',
+      ),
+      GroupErrorCode.mjAlreadyAssigned: (
+        "Un autre membre est déjà MJ de ce groupe. Rien n'a changé : il doit "
+            "d'abord quitter le groupe, ou tu peux l'exclure depuis l'onglet "
+            'Membres.',
+        'Another member is already the GM of this group. Nothing changed: '
+            'they must leave the group first, or you can remove them from the '
+            'Members tab.',
+      ),
+      GroupErrorCode.notGroupOwner: (
+        'Seul le créateur du groupe peut faire cela.',
+        "Only the group's creator can do this.",
+      ),
+      GroupErrorCode.notMember: (
+        'Tu ne fais plus partie de ce groupe.',
+        "You're no longer a member of this group.",
+      ),
+      GroupErrorCode.transientConflict: (
+        "Le serveur était occupé : rien n'a été modifié. Réessaie.",
+        'The server was busy: nothing was changed. Try again.',
+      ),
+      GroupErrorCode.serverOutdated: (
+        "Cette action n'est pas encore disponible sur le serveur. Réessaie "
+            'plus tard.',
+        "This action isn't available on the server yet. Try again later.",
+      ),
+      // Décision 91 : butin modifié entre-temps par un autre membre.
+      GroupErrorCode.treasureStale: (
+        "Un autre membre vient de modifier ou d'attribuer cet objet. Vérifie "
+            'et recommence.',
+        'Another member just changed or claimed this item. Check and try '
+            'again.',
       ),
     };
 

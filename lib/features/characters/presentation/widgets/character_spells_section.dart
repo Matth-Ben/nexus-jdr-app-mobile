@@ -415,7 +415,10 @@ class _SpellRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dice = SpellDamageDiceExtractor.extract(spell.description);
+    final dice = SpellDamageDiceExtractor.extract(
+      name: spell.name,
+      description: spell.description,
+    );
     final preparationLabel = SpellStatusFormatter.preparationLabel(spell);
     final unprepared = SpellStatusFormatter.isUnprepared(spell);
     // Sort inné de niveau >= 1 : pastille « INNÉ » + marqueur d'usage. Un

@@ -28,5 +28,29 @@ void main() {
       expect(CurrencyKind.silver.fullLabel, "pièces d'argent");
       expect(CurrencyKind.copper.fullLabel, 'pièces de cuivre');
     });
+
+    test('code mappe chaque monnaie vers son code court stocké en base '
+        '(spec du prix d\'un objet modifiable)', () {
+      expect(CurrencyKind.platinum.code, 'pp');
+      expect(CurrencyKind.gold.code, 'gp');
+      expect(CurrencyKind.electrum.code, 'ep');
+      expect(CurrencyKind.silver.code, 'sp');
+      expect(CurrencyKind.copper.code, 'cp');
+    });
+  });
+
+  group('currencyKindFromCode', () {
+    test('résout les 5 codes connus', () {
+      for (final currency in CurrencyKind.values) {
+        expect(currencyKindFromCode(currency.code), currency);
+      }
+    });
+
+    test('null pour un code inconnu ou un type inattendu', () {
+      expect(currencyKindFromCode('xx'), isNull);
+      expect(currencyKindFromCode('PP'), isNull);
+      expect(currencyKindFromCode(null), isNull);
+      expect(currencyKindFromCode(42), isNull);
+    });
   });
 }

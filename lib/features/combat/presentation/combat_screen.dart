@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/network/connectivity_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -28,11 +30,17 @@ import '../domain/combat_player_input.dart';
 import '../domain/combat_reorder.dart';
 import '../domain/combat_snapshot.dart';
 import '../domain/combat_view_state.dart';
+import '../domain/grimoire_combat_reducer.dart';
+import '../domain/grimoire_combat_session.dart';
+import '../domain/grimoire_combat_view.dart';
 import 'combat_announcer.dart';
 import 'combat_l10n.dart';
 import 'combat_motion.dart';
+import 'grimoire_combat_body.dart';
 import 'providers/combat_providers.dart';
 import 'providers/combat_read_only_provider.dart';
+import 'providers/grimoire_banner_provider.dart';
+import 'providers/grimoire_combat_providers.dart';
 import 'widgets/add_monster_sheet.dart';
 import 'widgets/combat_action_menu.dart';
 import 'widgets/combat_header.dart';
@@ -49,10 +57,17 @@ import 'widgets/initiative_sheet.dart';
 /// un seul [ScrollController], des lignes à clé stable par participant, un
 /// seul défilement initial vers le tour actif, puis seulement sur appui du
 /// bouton « Voir le tour en cours ».
+///
+/// Même route et mêmes widgets pour un combat **mené depuis Grimoire**
+/// (`docs/combat-grimoire-ui.md`) : tant qu'il est vivant, il est affiché en
+/// priorité (décision 61) par [GrimoireCombatBody] ; sinon le combat natif.
+/// Sans combat : « Connexion au combat… » (5 s au plus) puis « Aucun combat
+/// en cours », en continuant d'écouter.
 class CombatScreen extends ConsumerStatefulWidget {
   const CombatScreen({
     required this.groupId,
     this.announcer,
+    this.assertiveAnnouncer,
     this.rollOpener = defaultInitiativeRollOpener,
     super.key,
   });
@@ -61,6 +76,10 @@ class CombatScreen extends ConsumerStatefulWidget {
 
   /// Annonceur sémantique (surchargeable en test).
   final CombatSheetAnnouncer? announcer;
+
+  /// Annonceur **assertif** (« C'est ton tour. » d'un combat Grimoire),
+  /// surchargeable en test.
+  final CombatSheetAnnouncer? assertiveAnnouncer;
 
   /// Lanceur de d20 de la feuille d'initiative (surchargeable en test).
   final InitiativeRollOpener rollOpener;
@@ -83,9 +102,24 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
   String? _pendingAnnouncement;
   Timer? _announcementTimer;
 
+  /// Fenêtre « Connexion au combat… » (abonnement + `state_request`) avant
+  /// « Aucun combat en cours ».
+  Timer? _connectingTimer;
+  bool _connectingOver = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _connectingTimer = Timer(kGrimoireConnectingWindow, () {
+      _connectingTimer = null;
+      if (mounted) setState(() => _connectingOver = true);
+    });
+  }
+
   @override
   void dispose() {
     _announcementTimer?.cancel();
+    _connectingTimer?.cancel();
     _scroll.dispose();
     super.dispose();
   }
@@ -129,6 +163,51 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
         announcement.name ?? '',
       ),
     });
+  }
+
+  /// Évènements **reçus** du combat Grimoire (jamais au chargement ni sur un
+  /// `state` de reprise) : annonces polies fusionnées ; « C'est ton tour. »
+  /// assertive, avec un seul retour haptique.
+  void _onGrimoireEvents(int? previous, int next) {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final session = ref.read(grimoireCombatProvider(widget.groupId));
+    final group =
+        ref.read(groupDetailProvider(widget.groupId)).value?.name ?? '';
+    for (final event in session.events) {
+      final String? text = switch (event.kind) {
+        GrimoireCombatEventKind.combatStarted => l10n.combatAnnounceStart(
+          group,
+        ),
+        GrimoireCombatEventKind.initiativeRequested =>
+          l10n.combatAnnounceInitiativeRequested,
+        GrimoireCombatEventKind.initiativeSent =>
+          l10n.combatAnnounceInitiativeSent(event.value ?? 0),
+        GrimoireCombatEventKind.initiativeReceived =>
+          l10n.combatAnnounceInitiativeReceived,
+        GrimoireCombatEventKind.initiativeCorrected =>
+          l10n.combatAnnounceInitiativeCorrected(event.value ?? 0),
+        GrimoireCombatEventKind.orderRevealed =>
+          l10n.combatAnnounceOrderRevealed,
+        GrimoireCombatEventKind.turn => l10n.combatAnnounceTurn(
+          event.round ?? 0,
+          event.name ?? '',
+        ),
+        GrimoireCombatEventKind.gmOffline => l10n.combatAnnounceGmOffline,
+        GrimoireCombatEventKind.gmBack => l10n.combatAnnounceGmBack,
+        GrimoireCombatEventKind.ended => l10n.combatAnnounceEnded,
+        GrimoireCombatEventKind.yourTurn ||
+        GrimoireCombatEventKind.expired => null,
+      };
+      if (event.kind == GrimoireCombatEventKind.yourTurn) {
+        unawaited(HapticFeedback.mediumImpact());
+        final assertive =
+            widget.assertiveAnnouncer ?? defaultCombatAssertiveAnnouncer;
+        assertive(context, l10n.combatAnnounceYourTurn);
+      } else if (text != null) {
+        _announce(text);
+      }
+    }
   }
 
   /// Annonce polie ; les changements rapprochés sont fusionnés (au plus une
@@ -402,9 +481,38 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
     final l10n = AppLocalizations.of(context)!;
     final groupId = widget.groupId;
     ref.watch(combatRealtimeWatcherProvider(groupId));
+    // Écran ouvert : canal du groupe et état complet à l'ouverture.
+    ref.watch(grimoireCombatFocusProvider(groupId));
     ref.listen<CombatViewState>(combatProvider(groupId), _onStateChange);
+    ref
+      ..listen<int>(
+        grimoireCombatProvider(groupId)
+            .select((session) => session.eventSerial),
+        _onGrimoireEvents,
+      )
+      // Exclusion : une annonce polie du titre de l'état final.
+      ..listen<bool>(
+        grimoireCombatProvider(groupId).select((session) => session.isExcluded),
+        (previous, excluded) {
+          if (excluded && previous != true && mounted) {
+            _announce(AppLocalizations.of(context)!.combatNotMemberAnymore);
+          }
+        },
+      );
     final state = ref.watch(combatProvider(groupId));
     final detailAsync = ref.watch(groupDetailProvider(groupId));
+    final detail = detailAsync.value;
+    syncGrimoireIdentity(
+      context,
+      ref,
+      groupId,
+      detail == null
+          ? null
+          : (
+              userId: detail.currentUserId,
+              characterId: detail.currentMember?.characterId,
+            ),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.parchmentBg,
@@ -424,6 +532,35 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
     AsyncValue<GroupDetail> detailAsync,
   ) {
     final detail = detailAsync.value;
+    final grimoire = ref.watch(grimoireCombatProvider(widget.groupId));
+    if (grimoire.isExcluded) return _fade('excluded', _excluded(l10n));
+    final view = grimoire.view;
+    // Décision 61 : un combat Grimoire vivant passe avant le combat natif.
+    if (view.isAlive && detail != null) {
+      return _fade(
+        'grimoire',
+        GrimoireCombatBody(
+          groupId: widget.groupId,
+          detail: detail,
+          session: grimoire,
+          phoneOnline: ref.watch(connectivityStatusProvider).value != false,
+          dexModifier: _dexModifier,
+          sheetAnnouncer: widget.announcer ?? defaultCombatAnnouncer,
+          rollOpener: widget.rollOpener,
+        ),
+      );
+    }
+    // Fin ou expiration d'un combat Grimoire : seulement sans combat natif,
+    // ou si le dernier message de Grimoire est plus récent que la fin native
+    // (un combat natif lancé puis terminé après coup n'est jamais masqué).
+    if (detail != null && _grimoireEndPrevails(state, view)) {
+      if (view.status == GrimoireCombatStatus.ended) {
+        return _fade('grimoireEnded', _grimoireEnded(l10n, view));
+      }
+      if (view.isExpired) {
+        return _fade('grimoireInterrupted', _interrupted(l10n, view));
+      }
+    }
     if (state.phase == CombatPhase.error) {
       return ErrorRetryState(
         message: l10n.combatLoadError,
@@ -441,11 +578,25 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
     }
     switch (state.phase) {
       case CombatPhase.loading:
-        return _loading(l10n);
+        return _fade('connecting', _loading(l10n));
       case CombatPhase.error:
         return const SizedBox.shrink();
       case CombatPhase.none:
-        return _message(l10n, l10n.combatFailureNoActive);
+        // Remplace « Aucun combat actif. » : le combat (natif ou Grimoire)
+        // s'affichera ici dès qu'il reprend.
+        if (!_connectingOver &&
+            grimoire.link != GrimoireLinkStatus.lost &&
+            grimoire.link != GrimoireLinkStatus.unavailable) {
+          return _fade('connecting', _loading(l10n));
+        }
+        return _fade(
+          'none',
+          _emptyScreen(
+            key: const Key('combatNone'),
+            title: l10n.combatNoneTitle,
+            body: l10n.combatNoneBody,
+          ),
+        );
       case CombatPhase.ended:
         return _endedSummary(l10n, state.snapshot);
       case CombatPhase.active:
@@ -455,42 +606,175 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
     }
   }
 
+  /// La fin (ou l'expiration) du combat Grimoire l'emporte-t-elle sur le
+  /// combat natif ? Oui sans combat natif ; face à un combat natif terminé,
+  /// seulement si le dernier message de Grimoire a été reçu après la fin
+  /// native (même horloge, celle de Nexus) ; jamais face à un combat natif
+  /// actif, en chargement ou en erreur.
+  bool _grimoireEndPrevails(CombatViewState state, GrimoireCombatView view) {
+    switch (state.phase) {
+      case CombatPhase.none:
+        return true;
+      case CombatPhase.ended:
+        final nativeEnd = state.snapshot?.combat.endedAt ?? state.lastKnownAt;
+        final lastGrimoire = view.lastReceivedAt;
+        return nativeEnd != null &&
+            lastGrimoire != null &&
+            lastGrimoire.isAfter(nativeEnd);
+      case CombatPhase.loading:
+      case CombatPhase.active:
+      case CombatPhase.error:
+        return false;
+    }
+  }
+
+  /// Fondu de 200 ms entre les états propres au combat Grimoire et les états
+  /// sans combat (immédiat en reduce motion). Les états du combat natif ne
+  /// passent pas par ici.
+  Widget _fade(String kind, Widget child) {
+    if (combatReduceMotion(context)) return child;
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: KeyedSubtree(key: ValueKey('combatState-$kind'), child: child),
+    );
+  }
+
+  /// Chargement existant, avec le libellé visible « Connexion au combat… ».
   Widget _loading(AppLocalizations l10n) {
     return Center(
-      child: Semantics(
-        label: l10n.combatLoading,
-        child: const CircularProgressIndicator(color: AppColors.woodMedium),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            label: l10n.combatLoading,
+            child: const CircularProgressIndicator(color: AppColors.woodMedium),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Text(
+              l10n.combatConnecting,
+              textAlign: TextAlign.center,
+              style: AppTypography.body(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _message(AppLocalizations l10n, String text) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              text,
+  /// « Aucun combat en cours » / « Pas de nouvelles du MJ » : icône pixel 32,
+  /// titre 16/800, texte 13 `textSecondary`, « Retour au groupe ».
+  Widget _emptyScreen({
+    required Key key,
+    required String title,
+    String? body,
+    Widget icon = const PixelIcon(
+      matrix: kCombatSwordsMatrix,
+      size: 32,
+      color: AppColors.textSecondary,
+    ),
+    String? buttonLabel,
+    VoidCallback? onButton,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    return SingleChildScrollView(
+      key: key,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.lg),
+          icon,
+          const SizedBox(height: AppSpacing.sm),
+          Semantics(
+            header: true,
+            child: Text(
+              title,
               textAlign: TextAlign.center,
-              style: AppTypography.body(fontWeight: FontWeight.w700),
+              style: AppTypography.body(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-            const SizedBox(height: AppSpacing.md),
-            SecondaryButton(
-              label: l10n.combatBackToGroup,
-              surface: SecondaryButtonSurface.parchment,
-              onPressed: _goBack,
+          ),
+          if (body != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              body,
+              textAlign: TextAlign.center,
+              style: AppTypography.body(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
-        ),
+          const SizedBox(height: AppSpacing.md),
+          SecondaryButton(
+            label: buttonLabel ?? l10n.combatBackToGroup,
+            surface: SecondaryButtonSurface.parchment,
+            onPressed: onButton ?? _goBack,
+          ),
+        ],
       ),
+    );
+  }
+
+  /// Le joueur ne fait plus partie du groupe (`group_not_found`, décision
+  /// 50) : état final neutre, retour à l'accueil (le groupe n'est plus
+  /// accessible).
+  Widget _excluded(AppLocalizations l10n) {
+    return _emptyScreen(
+      key: const Key('combatExcluded'),
+      title: l10n.combatNotMemberAnymore,
+      icon: const Icon(
+        Icons.group_off_outlined,
+        size: 32,
+        color: AppColors.textSecondary,
+      ),
+      buttonLabel: l10n.combatBackHome,
+      onButton: () => context.go('/'),
+    );
+  }
+
+  /// 10 min sans message de Grimoire : on ne sait pas si le combat est
+  /// terminé, donc pas de résumé de fin.
+  Widget _interrupted(AppLocalizations l10n, GrimoireCombatView view) {
+    final last = view.lastSentAt ?? view.lastReceivedAt ?? DateTime.now();
+    return _emptyScreen(
+      key: const Key('combatInterrupted'),
+      title: l10n.combatInterruptedTitle,
+      body: l10n.combatInterruptedBody(combatClockLabel(l10n, last)),
+    );
+  }
+
+  /// Fin d'un combat Grimoire : résumé existant ; sans participant public
+  /// (fin avant le dévoilement), « Combat terminé » et son explication.
+  Widget _grimoireEnded(AppLocalizations l10n, GrimoireCombatView view) {
+    final count = view.endedParticipantCount ?? 0;
+    return _summary(
+      l10n,
+      title: count == 0
+          ? l10n.combatEndedTitle
+          : l10n.combatEndedSummary(view.endedRounds ?? 1, count),
+      body: count == 0 ? l10n.combatEndedBeforeOrder : null,
     );
   }
 
   Widget _endedSummary(AppLocalizations l10n, CombatSnapshot? snapshot) {
     final rounds = snapshot?.combat.round ?? 1;
     final count = snapshot?.summaryParticipantCount ?? 0;
+    return _summary(l10n, title: l10n.combatEndedSummary(rounds, count));
+  }
+
+  Widget _summary(
+    AppLocalizations l10n, {
+    required String title,
+    String? body,
+  }) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
@@ -507,15 +791,30 @@ class _CombatScreenState extends ConsumerState<CombatScreen> {
                 width: AppBorders.card,
               ),
             ),
-            child: Semantics(
-              header: true,
-              child: Text(
-                l10n.combatEndedSummary(rounds, count),
-                style: AppTypography.body(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    title,
+                    style: AppTypography.body(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
-              ),
+                if (body != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    body,
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: AppSpacing.md),

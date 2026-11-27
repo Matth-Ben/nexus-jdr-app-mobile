@@ -1,4 +1,5 @@
 import '../../character_creation/domain/ability_score_rules.dart';
+import 'armor_slot_rules.dart';
 import 'character_inventory_item.dart';
 
 /// Calcul pur de la Classe d'Armure (CA), affichée sur l'onglet "Personnage"
@@ -51,11 +52,23 @@ import 'character_inventory_item.dart';
 /// s'ajoute seulement s'ils sont équipés et harmonisés quand l'harmonisation
 /// est requise — leur CA de base, elle, compte toujours.
 ///
+/// Plusieurs armures ou plusieurs boucliers équipés (décision n° 37 du
+/// 20/11/2026 : l'app empêche désormais de les équiper, voir
+/// `armor_slot_rules.dart`, mais une fiche ancienne peut en avoir deux) :
+/// toutes les combinaisons « une armure × un bouclier » sont évaluées et la
+/// **meilleure CA** est retenue, quel que soit l'ordre de l'inventaire. Un
+/// objet non retenu ne donne **rien** : ni sa base, ni son bonus magique, ni
+/// son `ac_bonus` (quel que soit son type, `toujours` compris) ; le choix se
+/// fait bonus de chaque objet compris. Une seule armure (ou un seul bouclier)
+/// équipée est toujours retenue, même si s'en passer donnerait plus (Moine
+/// avec bouclier). Reproduction exacte de `private.character_armor_class`
+/// (DeepCore, migration `20261120090000`), dont les cas de parité (C1 à C27)
+/// sont rejoués par `armor_class_deepcore_parity_test.dart`.
+///
 /// Non couvert (hors périmètre, "reste un simple affichage", même principe
 /// que le statut "mort" qui ne simule pas les règles complètes) : pénalité
 /// de vitesse/désavantage Discrétion d'une armure trop lourde pour la Force
-/// du personnage, plusieurs armures/boucliers équipés simultanément (donnée
-/// incohérente, seul le premier trouvé de chaque emplacement compte).
+/// du personnage ; écarts RAW relevés en D234.
 abstract final class ArmorClassCalculator {
   /// Noms de classe (FR, `translations`) portant la Défense sans armure.
   static const String barbarianClassName = 'Barbare';
@@ -79,73 +92,126 @@ abstract final class ArmorClassCalculator {
     int modifier(String key) =>
         AbilityScoreRules.abilityModifier(abilityScores[key] ?? 10);
     final dexModifier = modifier('dex');
+    final defenseBonus = fightingStyles.contains(defenseFightingStyle) ? 1 : 0;
 
-    final equippedArmorItem = _firstEquippedWithArmorProperties(
-      inventory,
-      slot: 'armure',
-    );
-    final equippedShieldItem = _firstEquippedWithArmorProperties(
-      inventory,
-      slot: 'bouclier',
-    );
-    final equippedArmor = equippedArmorItem?.armorProperties;
-    final equippedShield = equippedShieldItem?.armorProperties;
-    final shieldBonus = equippedShield?.acBase ?? 0;
-
-    // Bonus magique d'une armure/d'un bouclier personnalisé (P7), seulement
-    // s'il est équipé et harmonisé quand l'harmonisation est requise (la base,
-    // elle, compte toujours). Toujours 0 pour le catalogue (`magicBonus` = 0,
-    // son bonus passe par `ac_bonus`) : jamais de double compte.
-    final armorMagicBonus = _magicBonusOf(equippedArmorItem);
-    final shieldMagicBonus = _magicBonusOf(equippedShieldItem);
-
-    // Bonus des objets magiques équipés (et harmonisés si nécessaire).
-    var itemBonus = armorMagicBonus + shieldMagicBonus;
-    final magicUnarmoredBases = <int>[];
+    // Objets équipés qui occupent un emplacement d'armure ou de bouclier (même
+    // règle que le refus d'équipement, `ArmorSlotRules.slotOf`) : chacun ne
+    // compte que dans SA combinaison. Les autres objets équipés (anneau,
+    // cape, bracelets, robe, « Armure +N »...) donnent des bonus communs à
+    // toutes les combinaisons.
+    final armors = <CharacterInventoryItem>[];
+    final shields = <CharacterInventoryItem>[];
+    var alwaysBonus = 0;
+    var withArmorBonus = 0;
+    var bareBonus = 0;
+    int? magicUnarmoredBase;
     for (final item in inventory) {
+      if (!item.equipped) continue;
+      switch (ArmorSlotRules.slotOf(item)) {
+        case ArmorSlot.armor:
+          armors.add(item);
+          continue;
+        case ArmorSlot.shield:
+          shields.add(item);
+          continue;
+        case null:
+          break;
+      }
       final bonus = item.acBonus;
       if (bonus == null || !_grantsMagicBonus(item)) continue;
       switch (item.acBonusKind) {
         case 'toujours':
-          itemBonus += bonus;
-        case 'avec_armure' when equippedArmor != null:
-          itemBonus += bonus;
-        case 'sans_armure_ni_bouclier'
-            when equippedArmor == null && equippedShield == null:
-          itemBonus += bonus;
-        case 'base_sans_armure' when equippedArmor == null:
-          magicUnarmoredBases.add(bonus + dexModifier);
+          alwaysBonus += bonus;
+        case 'avec_armure':
+          withArmorBonus += bonus;
+        case 'sans_armure_ni_bouclier':
+          bareBonus += bonus;
+        case 'base_sans_armure':
+          // Plusieurs objets : la plus haute base seule compte (pas de somme).
+          if (magicUnarmoredBase == null || bonus > magicUnarmoredBase) {
+            magicUnarmoredBase = bonus;
+          }
       }
     }
 
-    if (equippedArmor != null) {
-      final defenseBonus = fightingStyles.contains(defenseFightingStyle)
-          ? 1
-          : 0;
-      return equippedArmor.acBase +
-          _dexBonusFor(equippedArmor.acDexBonus, dexModifier) +
-          defenseBonus +
-          shieldBonus +
-          itemBonus;
+    final bestMagicUnarmoredBase = magicUnarmoredBase;
+
+    // CA de la combinaison `armor` (`null` : sans armure) × `shield` (`null` :
+    // sans bouclier).
+    int combination(
+      CharacterInventoryItem? armor,
+      CharacterInventoryItem? shield,
+    ) {
+      final armorOwnBonus = _ownBonusOf(armor);
+      final shieldOwnBonus = _ownBonusOf(shield);
+      final int base;
+      if (armor != null) {
+        final properties = armor.armorProperties!;
+        base =
+            properties.acBase +
+            _dexBonusFor(properties.acDexBonus, dexModifier) +
+            defenseBonus;
+      } else {
+        base = [
+          10 + dexModifier,
+          if (classNames.contains(barbarianClassName))
+            10 + dexModifier + modifier('con'),
+          if (classNames.contains(monkClassName) && shield == null)
+            10 + dexModifier + modifier('wis'),
+          if (subclassNames.contains(draconicSubclassName)) 13 + dexModifier,
+          if (bestMagicUnarmoredBase != null)
+            bestMagicUnarmoredBase + dexModifier,
+          // `ac_bonus` « base sans armure » du bouclier retenu (aucun objet
+          // du catalogue aujourd'hui, même règle que DeepCore).
+          if (shield?.acBonusKind == 'base_sans_armure' &&
+              shieldOwnBonus != null)
+            shieldOwnBonus + dexModifier,
+        ].reduce((a, b) => a > b ? a : b);
+      }
+      var total =
+          base +
+          (shield?.armorProperties!.acBase ?? 0) +
+          // Bonus magique d'une armure/d'un bouclier personnalisé (P7) retenu,
+          // seulement s'il compte (la base, elle, compte toujours). Toujours
+          // 0 pour le catalogue (son bonus passe par `ac_bonus`).
+          _magicBonusOf(armor) +
+          _magicBonusOf(shield) +
+          alwaysBonus;
+      if (armor != null) total += withArmorBonus;
+      if (armor == null && shield == null) total += bareBonus;
+      // `ac_bonus` de l'armure et du bouclier retenus, évalué pour CETTE
+      // combinaison (« sans armure ni bouclier » ne s'applique jamais à un
+      // objet qui occupe lui-même un emplacement).
+      if (armorOwnBonus != null &&
+          (armor!.acBonusKind == 'toujours' ||
+              armor.acBonusKind == 'avec_armure')) {
+        total += armorOwnBonus;
+      }
+      if (shieldOwnBonus != null &&
+          (shield!.acBonusKind == 'toujours' ||
+              (shield.acBonusKind == 'avec_armure' && armor != null))) {
+        total += shieldOwnBonus;
+      }
+      return total;
     }
 
-    final unarmoredBases = [
-      10 + dexModifier,
-      if (classNames.contains(barbarianClassName))
-        10 + dexModifier + modifier('con'),
-      if (classNames.contains(monkClassName) && equippedShield == null)
-        10 + dexModifier + modifier('wis'),
-      if (subclassNames.contains(draconicSubclassName)) 13 + dexModifier,
-      ...magicUnarmoredBases,
-    ];
-    final bestBase = unarmoredBases.reduce((a, b) => a > b ? a : b);
-    return bestBase + shieldBonus + itemBonus;
+    // Une seule armure (ou un seul bouclier) équipée est toujours retenue :
+    // « sans armure » n'est une option que si aucune n'est équipée.
+    final armorChoices = armors.isEmpty
+        ? const <CharacterInventoryItem?>[null]
+        : armors;
+    final shieldChoices = shields.isEmpty
+        ? const <CharacterInventoryItem?>[null]
+        : shields;
+    int? best;
+    for (final armor in armorChoices) {
+      for (final shield in shieldChoices) {
+        final ac = combination(armor, shield);
+        if (best == null || ac > best) best = ac;
+      }
+    }
+    return best!;
   }
-
-  /// Emplacement d'armure d'un objet : `armor_properties.slot` pour un objet
-  /// magique, sinon sa catégorie ('armure'/'bouclier').
-  static String? _slotOf(CharacterInventoryItem item) =>
-      item.armorProperties?.slot ?? item.category;
 
   /// Un objet équipé donne son bonus magique de CA s'il ne requiert pas
   /// d'harmonisation, ou s'il est harmonisé.
@@ -155,19 +221,10 @@ abstract final class ArmorClassCalculator {
   static int _magicBonusOf(CharacterInventoryItem? item) =>
       item != null && _grantsMagicBonus(item) ? item.magicBonus : 0;
 
-  static CharacterInventoryItem? _firstEquippedWithArmorProperties(
-    List<CharacterInventoryItem> inventory, {
-    required String slot,
-  }) {
-    for (final item in inventory) {
-      if (item.equipped &&
-          item.armorProperties != null &&
-          _slotOf(item) == slot) {
-        return item;
-      }
-    }
-    return null;
-  }
+  /// `ac_bonus` propre à un objet d'emplacement retenu, `null` s'il n'en a
+  /// pas ou s'il ne compte pas (harmonisation requise et non faite).
+  static int? _ownBonusOf(CharacterInventoryItem? item) =>
+      item != null && _grantsMagicBonus(item) ? item.acBonus : null;
 
   static int _dexBonusFor(String acDexBonus, int dexModifier) =>
       switch (acDexBonus) {

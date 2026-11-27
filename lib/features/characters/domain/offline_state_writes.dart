@@ -1,3 +1,5 @@
+import 'currency_kind.dart';
+import 'custom_item_enrichment.dart' show isValidPriceOverrideAmount;
 import 'weapon_slot.dart';
 
 /// Réglages d'état **absolus** rendus hors-ligne-capables (T5a, P15) : valeurs
@@ -26,6 +28,8 @@ abstract final class OfflineStateKeys {
   static const attuned = 'attuned';
   static const inspiration = 'inspiration';
   static const armorClassBonus = 'armorClassBonus';
+  static const priceOverrideAmount = 'priceOverrideAmount';
+  static const priceOverrideCurrency = 'priceOverrideCurrency';
 }
 
 /// Changement d'un sort : son état préparé. Les anciennes lignes de file qui
@@ -42,14 +46,26 @@ class SpellStatePatch {
       SpellStatePatch(prepared: newer.prepared ?? prepared);
 }
 
-/// Changement d'un objet d'inventaire : équipé, set d'arme, harmonisé (au
-/// moins un champ).
+/// Changement d'un objet d'inventaire : équipé, set d'arme, harmonisé, ou
+/// surcharge de prix (au moins un champ).
+///
+/// [hasPriceOverride]/[priceOverrideAmount]/[priceOverrideCurrency] : spec du
+/// prix d'un objet modifiable, §2b/§2d — réglage d'état absolu de
+/// `price_override_amount`/`price_override_currency`, posable sur **tout**
+/// objet d'inventaire (catalogue ou personnalisé, contrairement aux colonnes
+/// `custom_*` de `custom_item_enrichment.dart`, réservées à un objet
+/// personnalisé via la file `inventoryItem`) : même mécanisme que
+/// [attuned]/[equipped], qui fonctionnent déjà sur les deux, voir
+/// `CharacterRepository.setInventoryItemPriceOverride`.
 class InventoryStatePatch {
   const InventoryStatePatch({
     this.equipped,
     this.hasWeaponSlot = false,
     this.weaponSlot,
     this.attuned,
+    this.hasPriceOverride = false,
+    this.priceOverrideAmount,
+    this.priceOverrideCurrency,
   });
 
   final bool? equipped;
@@ -61,10 +77,21 @@ class InventoryStatePatch {
   final WeaponSlot? weaponSlot;
   final bool? attuned;
 
+  /// `true` si la surcharge de prix est **touchée** par ce changement (y
+  /// compris pour la retirer : [priceOverrideAmount]/[priceOverrideCurrency]
+  /// `null`) — même distinction que [hasWeaponSlot].
+  final bool hasPriceOverride;
+  final num? priceOverrideAmount;
+  final CurrencyKind? priceOverrideCurrency;
+
   Map<String, dynamic> toPayload() => {
     OfflineStateKeys.equipped: ?equipped,
     if (hasWeaponSlot) OfflineStateKeys.weaponSlot: weaponSlot?.value,
     OfflineStateKeys.attuned: ?attuned,
+    if (hasPriceOverride) ...{
+      OfflineStateKeys.priceOverrideAmount: priceOverrideAmount,
+      OfflineStateKeys.priceOverrideCurrency: priceOverrideCurrency?.code,
+    },
   };
 
   InventoryStatePatch merge(InventoryStatePatch newer) => InventoryStatePatch(
@@ -72,6 +99,13 @@ class InventoryStatePatch {
     hasWeaponSlot: newer.hasWeaponSlot || hasWeaponSlot,
     weaponSlot: newer.hasWeaponSlot ? newer.weaponSlot : weaponSlot,
     attuned: newer.attuned ?? attuned,
+    hasPriceOverride: newer.hasPriceOverride || hasPriceOverride,
+    priceOverrideAmount: newer.hasPriceOverride
+        ? newer.priceOverrideAmount
+        : priceOverrideAmount,
+    priceOverrideCurrency: newer.hasPriceOverride
+        ? newer.priceOverrideCurrency
+        : priceOverrideCurrency,
   );
 
   /// Colonnes de `character_inventory` à écrire.
@@ -79,6 +113,10 @@ class InventoryStatePatch {
     'equipped': ?equipped,
     if (hasWeaponSlot) 'weapon_slot': weaponSlot?.value,
     'is_attuned': ?attuned,
+    if (hasPriceOverride) ...{
+      'price_override_amount': priceOverrideAmount,
+      'price_override_currency': priceOverrideCurrency?.code,
+    },
   };
 }
 
@@ -154,12 +192,39 @@ InventoryStatePatch? parseInventoryStatePayload(Object? raw) {
       if (equipped == false) return null;
     }
   }
-  if (equipped == null && attuned == null && !hasWeaponSlot) return null;
+  final hasPriceOverride =
+      raw.containsKey(OfflineStateKeys.priceOverrideAmount) ||
+      raw.containsKey(OfflineStateKeys.priceOverrideCurrency);
+  num? priceOverrideAmount;
+  CurrencyKind? priceOverrideCurrency;
+  if (hasPriceOverride) {
+    final rawAmount = raw[OfflineStateKeys.priceOverrideAmount];
+    final rawCurrency = raw[OfflineStateKeys.priceOverrideCurrency];
+    // L'un est nul si et seulement si l'autre l'est (même contrainte que la
+    // colonne) ; un montant non nul doit être valide.
+    if ((rawAmount == null) != (rawCurrency == null)) return null;
+    if (rawAmount != null) {
+      if (!isValidPriceOverrideAmount(rawAmount)) return null;
+      priceOverrideAmount = rawAmount as num;
+      if (rawCurrency is! String) return null;
+      priceOverrideCurrency = currencyKindFromCode(rawCurrency);
+      if (priceOverrideCurrency == null) return null;
+    }
+  }
+  if (equipped == null &&
+      attuned == null &&
+      !hasWeaponSlot &&
+      !hasPriceOverride) {
+    return null;
+  }
   return InventoryStatePatch(
     equipped: equipped as bool?,
     hasWeaponSlot: hasWeaponSlot,
     weaponSlot: weaponSlot,
     attuned: attuned as bool?,
+    hasPriceOverride: hasPriceOverride,
+    priceOverrideAmount: priceOverrideAmount,
+    priceOverrideCurrency: priceOverrideCurrency,
   );
 }
 

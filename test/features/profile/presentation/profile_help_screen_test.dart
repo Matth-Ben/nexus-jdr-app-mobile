@@ -362,8 +362,8 @@ void main() {
       expect(find.byIcon(Icons.copyright_outlined), findsOneWidget);
       expect(
         find.text(
-          'Contenu D&D 5e sous licence Open5e / SRD. Voir les crédits '
-          'complets pour le détail des sources.',
+          'Une partie du contenu de jeu provient du SRD (CC BY 4.0). Détail '
+          'des sources et des attributions dans « Crédits & licences ».',
         ),
         findsOneWidget,
       );

@@ -496,15 +496,20 @@ void main() {
     });
   });
 
-  group('plusieurs armures/boucliers équipés : le premier de chaque '
-      'emplacement (comportement actuel, « Non couvert »)', () {
+  // Décision n° 37 (20/11/2026) : changement VOLONTAIRE de comportement. Avant,
+  // seul le premier objet de chaque emplacement comptait (résultat dépendant de
+  // l'ordre de la liste) ; désormais, la meilleure combinaison est retenue,
+  // comme le calcul SQL de DeepCore (voir `armor_class_deepcore_parity_test
+  // .dart` pour les cas C27 complets).
+  group('plusieurs armures/boucliers équipés : la meilleure CA, quel que '
+      'soit l\'ordre (décision n° 37)', () {
     const scores = {'dex': 14};
 
-    test('deux armures équipées : la première de la liste', () {
+    test('deux armures équipées : la meilleure, dans les deux ordres', () {
       final heavy = _armor(id: 'heavy', acBase: 18, acDexBonus: 'aucun');
       final light = _armor(id: 'light', acBase: 11, acDexBonus: 'illimite');
       expect(_ac(scores, [heavy, light]), 18);
-      expect(_ac(scores, [light, heavy]), 13);
+      expect(_ac(scores, [light, heavy]), 18);
     });
 
     test('une armure non équipée est sautée : la première ÉQUIPÉE compte', () {
@@ -517,25 +522,28 @@ void main() {
       );
     });
 
-    test('deux boucliers équipés : seul le premier compte (pas de somme)', () {
+    test('deux boucliers équipés : le meilleur seul compte (pas de somme)', () {
       final two = _shield(id: 's2', acBase: 3);
       final one = _shield(id: 's1');
-      expect(_ac(scores, [one, two]), 14); // 10 + 2 + 2
-      expect(_ac(scores, [two, one]), 15); // 10 + 2 + 3
+      expect(_ac(scores, [one, two]), 15); // 10 + 2 + 3
+      expect(_ac(scores, [two, one]), 15);
     });
 
-    test('un bouclier magique (slot bouclier) occupe le même emplacement '
-        'qu\'un bouclier ordinaire', () {
-      final magic = _armor(
-        id: 'm',
-        acBase: 4,
-        acDexBonus: 'aucun',
-        category: 'objet_magique',
-        slot: 'bouclier',
-      );
-      expect(_ac(scores, [_shield(), magic]), 14);
-      expect(_ac(scores, [magic, _shield()]), 16);
-    });
+    test(
+      'un bouclier magique (slot bouclier) occupe le même emplacement '
+      'qu\'un bouclier ordinaire : le meilleur des deux, jamais la somme',
+      () {
+        final magic = _armor(
+          id: 'm',
+          acBase: 4,
+          acDexBonus: 'aucun',
+          category: 'objet_magique',
+          slot: 'bouclier',
+        );
+        expect(_ac(scores, [_shield(), magic]), 16); // 10 + 2 + 4
+        expect(_ac(scores, [magic, _shield()]), 16);
+      },
+    );
 
     test('le slot prime sur la catégorie ; une ligne « bouclier » sans '
         'armor_properties est ignorée', () {

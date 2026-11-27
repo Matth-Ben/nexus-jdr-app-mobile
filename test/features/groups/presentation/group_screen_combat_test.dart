@@ -11,29 +11,58 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/features/combat/domain/combat_failure.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
+import 'package:personnages/features/combat/presentation/providers/grimoire_combat_providers.dart';
 import 'package:personnages/features/combat/presentation/widgets/combat_banner.dart';
+import 'package:personnages/features/groups/data/group_error_mapper.dart';
+import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/features/groups/domain/group_note_entry.dart';
 import 'package:personnages/features/groups/domain/group_treasure.dart';
 import 'package:personnages/features/groups/presentation/group_screen.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
 import 'package:personnages/l10n/app_localizations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import '../../../support/combat_fixtures.dart';
 import '../../../support/fake_combat_repository.dart';
 import '../../../support/fake_connectivity_checker.dart';
 import '../../../support/fake_current_user.dart';
+import '../../../support/fake_grimoire_combat_gateway.dart';
 import '../../combat/presentation/combat_test_harness.dart';
+
+/// Dépôt de groupes réduit au départ (`leaveGroup`) : refus serveur
+/// [leaveError] ; tout autre appel est une erreur de test.
+class _LeaveGroupRepository implements GroupRepository {
+  _LeaveGroupRepository(this.leaveError);
+
+  final Object leaveError;
+  int leaveCalls = 0;
+
+  @override
+  Future<void> leaveGroup(String groupId) async {
+    leaveCalls++;
+    throw leaveError;
+  }
+
+  @override
+  Never noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
 
 Widget _app({
   required FakeCombatRepository repo,
   required GroupDetail detail,
   bool disableAnimations = false,
   double scale = 1,
+  GroupRepository? groupRepository,
 }) {
   final List<Override> overrides = [
+    if (groupRepository != null)
+      groupRepositoryProvider.overrideWithValue(groupRepository),
     currentUserFromTestOverride,
     combatRepositoryProvider.overrideWithValue(repo),
+    grimoireCombatGatewayProvider.overrideWithValue(
+      FakeGrimoireCombatGateway(),
+    ),
     connectivityCheckerProvider.overrideWithValue(FakeConnectivityChecker()),
     combatRefetchDebounceProvider.overrideWithValue(
       const Duration(milliseconds: 10),
@@ -357,6 +386,35 @@ void main() {
       await tryLeave(tester, detail);
       expect(dialog, findsOneWidget);
       expect(find.text(blocked), findsNothing);
+    });
+
+    // D224 : le serveur est l'autorité (trigger DeepCore, `combat_active`).
+    testWidgets('refus serveur combat_active (état local périmé) : même '
+        'message clair, combat relu, pas de navigation', (tester) async {
+      final groups = _LeaveGroupRepository(
+        mapGroupError(
+          const PostgrestException(message: 'combat_active', code: 'P0001'),
+        ),
+      );
+      final detail = fakeGroupDetail();
+      await _pump(
+        tester,
+        _app(repo: repo, detail: detail, groupRepository: groups),
+      );
+      // Garde cliente : aucun combat connu, le dialogue s'ouvre.
+      await tryLeave(tester, detail);
+      expect(dialog, findsOneWidget);
+      expect(find.byKey(const Key('combatBanner')), findsNothing);
+
+      // Un combat démarre avant la confirmation : le serveur refuse.
+      repo.snapshot = fakeSnapshot();
+      await tester.tap(find.text('Quitter'));
+      await tester.pumpAndSettle();
+
+      expect(groups.leaveCalls, 1);
+      expect(find.text(blocked), findsOneWidget);
+      expect(find.byType(GroupScreen), findsOneWidget);
+      expect(find.byKey(const Key('combatBanner')), findsOneWidget);
     });
   });
 }

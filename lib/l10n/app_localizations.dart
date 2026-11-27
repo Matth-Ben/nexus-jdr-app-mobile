@@ -476,23 +476,65 @@ abstract class AppLocalizations {
   /// **'Contenu de jeu'**
   String get profileCreditsGameContentTitle;
 
-  /// 1er paragraphe de la section "Contenu de jeu" de `profile_credits_screen.dart`.
+  /// 1er paragraphe de la section « Contenu de jeu » de `profile_credits_screen.dart` (licence étape 1, décision 79), avant les deux cadres d'attribution du SRD.
   ///
   /// In fr, this message translates to:
-  /// **'Le contenu de règles Donjons & Dragons 5e (races, classes, historiques, sorts, objets, monstres...) provient d\'Open5e et du System Reference Document (SRD 5.1/5.2) de Wizards of the Coast, sous licence Creative Commons Attribution 4.0 International (CC-BY 4.0).'**
+  /// **'Une partie du contenu de règles utilisé par Nexus JDR provient du System Reference Document (SRD), publié sous licence Creative Commons Attribution 4.0 International (CC BY 4.0). Voici les déclarations d\'attribution correspondantes et les modifications apportées.'**
   String get profileCreditsGameContentPara1;
 
-  /// 2e paragraphe de la section "Contenu de jeu" de `profile_credits_screen.dart`.
+  /// Préfixe en gras de la ligne « Modifié » d'un cadre d'attribution du SRD (`_SrdAttributionBox` de `profile_credits_screen.dart`), exigée par CC BY 4.0 (section 3(a)(1)(B)). Espace insécable avant les deux-points, espace finale conservée.
   ///
   /// In fr, this message translates to:
-  /// **'Donjons & Dragons, D&D et leurs logos sont des marques de Wizards of the Coast LLC. Wizards of the Coast n\'a ni produit, ni approuvé, ni autorisé cette application.'**
-  String get profileCreditsGameContentPara2;
+  /// **'Modifié : '**
+  String get profileCreditsModifiedPrefix;
 
-  /// Texte du bloc encadré `_LicenseNoticeBox` de `profile_credits_screen.dart`.
+  /// Libellé du cadre d'attribution du SRD 5.1 (`profile_credits_screen.dart`).
   ///
   /// In fr, this message translates to:
-  /// **'Ce produit inclut des éléments du System Reference Document 5.1 et 5.2, disponibles sur dndbeyond.com/srd et open5e.com, sous licence Creative Commons Attribution 4.0 International (creativecommons.org/licenses/by/4.0/legalcode).'**
-  String get profileCreditsLicenseNotice;
+  /// **'SRD 5.1 (règles 2014)'**
+  String get profileCreditsSrd51Label;
+
+  /// Déclaration d'attribution du SRD 5.1 en français : texte officiel de Wizards, recopié mot pour mot du contrat DeepCore `docs/api-v1/contrat-bestiaire-catalogue.md` l. 108-111 ; ne jamais traduire ni reformuler. L'anglais reprend la déclaration anglaise officielle (l. 115-117), pas une traduction de celle-ci.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce travail comprend la documentation tirée du Document de Référence du Système 5.1 (« SRD 5.1 ») par Wizards of the Coast LLC et disponible à l\'adresse https://dnd.wizards.com/fr/resources/systems-reference-document. Le SRD 5.1 est distribué en vertu de la licence Creative Commons Attribution 4.0 International disponible à l\'adresse https://creativecommons.org/licenses/by/4.0/legalcode.fr.'**
+  String get profileCreditsSrd51Attribution;
+
+  /// Ligne « Modifié » du cadre SRD 5.1 (modifications apportées, CC BY 4.0). À relire à chaque PR des étapes 2 et 3 de la licence (dette D258).
+  ///
+  /// In fr, this message translates to:
+  /// **'textes repris en tout ou en partie du SRD 5.1 français, ou traduits du SRD 5.1 anglais (traduction non officielle) et parfois résumés ; certains noms diffèrent de la traduction officielle ; poids et distances exprimés en kilogrammes et en mètres ; contenu réparti en champs et présentation adaptée à l\'application.'**
+  String get profileCreditsSrd51Modified;
+
+  /// Libellé du cadre d'attribution du SRD 5.2 : signale que la déclaration est en anglais.
+  ///
+  /// In fr, this message translates to:
+  /// **'SRD 5.2 (règles 2024, déclaration en anglais)'**
+  String get profileCreditsSrd52Label;
+
+  /// Déclaration d'attribution du SRD 5.2 : texte officiel de Wizards, recopié mot pour mot du contrat DeepCore `docs/api-v1/contrat-bestiaire-catalogue.md` l. 141-143 ; ne jamais traduire ni reformuler. Affichée en anglais telle quelle dans les deux langues (`locale: en` pour le lecteur d'écran, arbitrage 3.1 de la spec).
+  ///
+  /// In fr, this message translates to:
+  /// **'This work includes material from the System Reference Document 5.2 (“SRD 5.2”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.'**
+  String get profileCreditsSrd52Attribution;
+
+  /// Ligne « Modifié » du cadre SRD 5.2 (modifications apportées, CC BY 4.0). À relire à chaque PR des étapes 2 et 3 de la licence (dette D258).
+  ///
+  /// In fr, this message translates to:
+  /// **'traduit de l\'anglais en français (traduction non officielle), parfois résumé ; distances et poids convertis en mètres et en kilogrammes ; contenu réparti en champs et présentation adaptée à l\'application.'**
+  String get profileCreditsSrd52Modified;
+
+  /// PROVISOIRE (à valider par Matthias et par le conseil) : paragraphe sur le contenu de jeu hors SRD, sous les cadres d'attribution de `profile_credits_screen.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une partie du contenu de jeu de Nexus JDR ne fait pas partie du SRD (notamment de nombreux sorts, sous-classes, dons, historiques, races et options de classe). Ce contenu n\'est pas couvert par la licence Creative Commons Attribution 4.0 citée ci-dessus.'**
+  String get profileCreditsNonSrdContent;
+
+  /// PROVISOIRE (à valider par Matthias et par le conseil) : phrase de marque, dernier paragraphe de la section « Contenu de jeu » de `profile_credits_screen.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Donjons & Dragons et D&D sont des marques de Wizards of the Coast LLC. Nexus JDR n\'est ni affilié à Wizards of the Coast, ni approuvé par cette société.'**
+  String get profileCreditsGameContentPara2;
 
   /// Titre de la section "Polices" de `profile_credits_screen.dart`.
   ///
@@ -527,7 +569,7 @@ abstract class AppLocalizations {
   /// Date de dernière mise à jour en pied de `profile_credits_screen.dart`.
   ///
   /// In fr, this message translates to:
-  /// **'Dernière mise à jour : 14 octobre 2026'**
+  /// **'Dernière mise à jour : 25 novembre 2026'**
   String get profileCreditsLastUpdated;
 
   /// Titre du bandeau bois de `profile_delete_account_screen.dart`.
@@ -863,7 +905,7 @@ abstract class AppLocalizations {
   /// Note sous la section "À PROPOS" de `profile_help_screen.dart`.
   ///
   /// In fr, this message translates to:
-  /// **'Contenu D&D 5e sous licence Open5e / SRD. Voir les crédits complets pour le détail des sources.'**
+  /// **'Une partie du contenu de jeu provient du SRD (CC BY 4.0). Détail des sources et des attributions dans « Crédits & licences ».'**
   String get profileHelpAboutFooterNote;
 
   /// Pied de page de `profile_help_screen.dart` une fois `packageInfoProvider` résolu.
@@ -956,10 +998,10 @@ abstract class AppLocalizations {
   /// **'Propriété intellectuelle'**
   String get profileLegalIntellectualPropertyTitle;
 
-  /// Paragraphe de la section "Propriété intellectuelle".
+  /// Paragraphe de la section "Propriété intellectuelle". Fin PROVISOIRE (à partir de « ; le reste du contenu de jeu… », à valider par Matthias et par le conseil). « SRD 5.1 et 5.2 » sera complété quand le SRD 5.2.1 entrera dans Nexus (licence étape 2).
   ///
   /// In fr, this message translates to:
-  /// **'Le contenu de règles Donjons & Dragons 5e (races, classes, sorts, objets...) provient d\'Open5e et du System Reference Document (SRD), sous licence Creative Commons Attribution 4.0 (CC-BY 4.0) — voir « Crédits & licences » pour le détail. Le reste de l\'application (code, design, marque « Nexus JDR ») appartient à son éditeur.'**
+  /// **'Une partie du contenu de règles de Donjons & Dragons 5e provient du System Reference Document (SRD 5.1 et 5.2), sous licence Creative Commons Attribution 4.0 International (CC BY 4.0) ; le reste du contenu de jeu n\'est pas issu du SRD et n\'est pas couvert par cette licence. Les déclarations d\'attribution et les modifications apportées figurent dans « Crédits & licences ». Le code, le design et la marque « Nexus JDR » appartiennent à l\'éditeur de l\'application.'**
   String get profileLegalIntellectualPropertyPara1;
 
   /// Titre de la section "Résiliation" de `profile_legal_screen.dart`.
@@ -989,7 +1031,7 @@ abstract class AppLocalizations {
   /// Date de dernière mise à jour en pied de `profile_legal_screen.dart`.
   ///
   /// In fr, this message translates to:
-  /// **'Dernière mise à jour : 25 septembre 2026'**
+  /// **'Dernière mise à jour : 25 novembre 2026'**
   String get profileLegalLastUpdated;
 
   /// Titre du bandeau bois de `profile_notifications_screen.dart`.
@@ -1015,6 +1057,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'DÉCLENCHEURS'**
   String get profileNotificationsSectionTriggers;
+
+  /// Interrupteur de notification (PR 2).
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat et révélations du MJ'**
+  String get profileNotificationsGmCombat;
+
+  /// Sous-titre de l'interrupteur de notification (PR 2).
+  ///
+  /// In fr, this message translates to:
+  /// **'Début du combat, ton tour et ce que le MJ te montre.'**
+  String get profileNotificationsGmCombatSubtitle;
 
   /// Titre de la 1ère rangée "DÉCLENCHEURS".
   ///
@@ -1952,7 +2006,7 @@ abstract class AppLocalizations {
   /// **'Capture d\'écran jointe'**
   String get profileReportBugAttachedImageSemanticLabel;
 
-  /// Segment "Niv. X" du résumé "Race · Classe · Niv. X" d'un personnage — partagé entre `character_card.dart::_summaryLine` et `character_card_action_sheet.dart::_CardActionSheetContent._summaryLine` (copie intentionnellement dupliquée entre ces deux fichiers, voir leur doc respective, mais la clé `.arb` elle-même est réutilisée).
+  /// Segment "Niv. X" du résumé "Race · Classe · Niv. X" d'un personnage — partagé entre `character_card.dart::_summaryLine`, `character_card_action_sheet.dart::_CardActionSheetContent._summaryLine` et `group_join_screen.dart::_RoleSelectorTile._summaryLine` (copie intentionnellement dupliquée entre ces fichiers, voir leur doc respective, mais la clé `.arb` elle-même est réutilisée).
   ///
   /// In fr, this message translates to:
   /// **'Niv. {level}'**
@@ -4732,17 +4786,77 @@ abstract class AppLocalizations {
   /// **'{weight} kg'**
   String itemInfoPanelWeightValue(String weight);
 
-  /// Libellé de la ligne "Coût" du panneau "Infos" d'un objet.
+  /// Libellé de la ligne "Prix" du panneau "Infos" d'un objet (spec du prix d'un objet modifiable) — remplace l'ancienne ligne "Coût" (`itemInfoPanelCostLabel`, retirée).
   ///
   /// In fr, this message translates to:
-  /// **'Coût'**
-  String get itemInfoPanelCostLabel;
+  /// **'Prix'**
+  String get itemPriceLabel;
 
-  /// Valeur de la ligne "Coût" du panneau "Infos" d'un objet — unité "po" volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  /// Valeur de la ligne "Prix" d'un objet — devise-agnostique (`unit` = `CurrencyKind.unitLabel`, ex. "PO"), remplace l'ancienne `itemInfoPanelCostValue` qui codait "po" en dur.
   ///
   /// In fr, this message translates to:
-  /// **'{cost} po'**
-  String itemInfoPanelCostValue(String cost);
+  /// **'{amount} {unit}'**
+  String itemPriceValue(String amount, String unit);
+
+  /// Valeur de la ligne "Prix" quand aucun prix n'est connu (objet personnalisé sans prix fixé, ou objet du catalogue sans coût officiel ni surcharge — spec du prix d'un objet modifiable).
+  ///
+  /// In fr, this message translates to:
+  /// **'Non estimé'**
+  String get itemPriceNotEstimatedValue;
+
+  /// Texte de la pastille "Modifié" (`core/widgets/modified_badge.dart`) affichée à côté du prix d'un objet du catalogue dont le prix officiel a été surchargé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifié'**
+  String get itemPriceOverriddenBadge;
+
+  /// Lien "Fixer un prix" affiché à droite de "Non estimé" (module personnages, vouvoiement) — ouvre l'éditeur de prix pertinent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fixer un prix'**
+  String get itemPriceSetLink;
+
+  /// Titre de la sheet autonome de surcharge de prix d'un objet du catalogue (`item_price_override_sheet.dart`) — `itemName` reste le nom de l'objet, donnée de contenu D&D.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix de {itemName}'**
+  String itemPriceOverrideSheetTitle(String itemName);
+
+  /// Légende rappelant le prix officiel actuel d'un objet du catalogue, dans la sheet de surcharge de prix et la section "Prix" de la sheet de quantité du butin — `officialPrice` est déjà formaté (`itemPriceValue`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix officiel : {officialPrice}'**
+  String itemPriceOverrideOfficialCaption(String officialPrice);
+
+  /// Lien "Retirer la surcharge" (module personnages, vouvoiement) de la sheet de surcharge de prix d'un objet du catalogue — visible seulement si une surcharge existe déjà, aucune confirmation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer la surcharge'**
+  String get itemPriceOverrideRemoveLink;
+
+  /// Snackbar affiché après le lien "Retirer la surcharge" (module personnages).
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix réinitialisé.'**
+  String get itemPriceOverrideRemovedSnack;
+
+  /// Bouton principal de la sheet de surcharge de prix d'un objet du catalogue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get itemPriceOverrideSaveButton;
+
+  /// Libellé "Prix" du champ de prix du formulaire d'objet personnalisé (`AdvancedSection`, spec du prix d'un objet modifiable, §2a) et de la section "Prix" de la sheet de quantité du butin — formulaire partagé, une seule clé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix'**
+  String get customItemPriceSectionLabel;
+
+  /// Libellé "Devise" du sélecteur de devise du champ de prix du formulaire d'objet personnalisé (`CurrencyPickerChips`, spec du prix d'un objet modifiable, §2a).
+  ///
+  /// In fr, this message translates to:
+  /// **'Devise'**
+  String get customItemPriceCurrencySectionLabel;
 
   /// Libellé de la ligne "Set" du panneau "Infos" d'une arme équipée dont le set est connu — la valeur affichée reste `WeaponSlot.label`, non traduite (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
   ///
@@ -7373,6 +7487,18 @@ abstract class AppLocalizations {
   /// **'Session expirée. Reconnectez-vous.'**
   String get characterSessionExpiredErrorMessage;
 
+  /// `CharacterErrorCode.armorAlreadyEquipped` : refus d'équiper une seconde armure (décision n° 37, `domain/armor_slot_rules.dart`), en ligne comme hors ligne. Vouvoiement, comme les autres messages de l'inventaire.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous portez déjà une armure : déséquipez-la d\'abord pour en équiper une autre.'**
+  String get characterArmorAlreadyEquippedErrorMessage;
+
+  /// `CharacterErrorCode.shieldAlreadyEquipped` : refus d'équiper un second bouclier (décision n° 37), même formulation que `characterArmorAlreadyEquippedErrorMessage`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous portez déjà un bouclier : déséquipez-le d\'abord pour en équiper un autre.'**
+  String get characterShieldAlreadyEquippedErrorMessage;
+
   /// `GroupErrorCode.accessDenied` (D141).
   ///
   /// In fr, this message translates to:
@@ -7396,6 +7522,426 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Impossible de générer un nouveau code. Réessayez.'**
   String get groupInviteCodeGenerationFailedErrorMessage;
+
+  /// `GroupErrorCode.combatActive` (refus serveur `combat_active`), texte par défaut quand l'action n'a pas de message dédié.
+  ///
+  /// In fr, this message translates to:
+  /// **'Action impossible pendant un combat en cours. Termine d\'abord le combat.'**
+  String get groupCombatActiveErrorMessage;
+
+  /// `GroupErrorCode.mjAlreadyAssigned` (refus serveur `mj_already_assigned` de « Devenir MJ ») : personne n'est rétrogradé (décision de Matthias du 19/11/2026).
+  ///
+  /// In fr, this message translates to:
+  /// **'Un autre membre est déjà MJ de ce groupe. Rien n\'a changé : il doit d\'abord quitter le groupe, ou tu peux l\'exclure depuis l\'onglet Membres.'**
+  String get groupMjAlreadyAssignedErrorMessage;
+
+  /// `GroupErrorCode.notGroupOwner` (refus serveur `not_group_owner`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Seul le créateur du groupe peut faire cela.'**
+  String get groupNotGroupOwnerErrorMessage;
+
+  /// `GroupErrorCode.notMember` (refus serveur `not_member`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu ne fais plus partie de ce groupe.'**
+  String get groupNotMemberErrorMessage;
+
+  /// `GroupErrorCode.transientConflict` (SQLSTATE `40P01` ou `40001`, transaction annulée sans effet).
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur était occupé : rien n\'a été modifié. Réessaie.'**
+  String get groupTransientConflictErrorMessage;
+
+  /// `GroupErrorCode.serverOutdated` (`PGRST202` : fonction serveur absente, migration DeepCore pas encore appliquée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action n\'est pas encore disponible sur le serveur. Réessaie plus tard.'**
+  String get groupServerOutdatedErrorMessage;
+
+  /// Titre de la section « Devenir MJ » des paramètres du groupe (propriétaire qui joue un personnage).
+  ///
+  /// In fr, this message translates to:
+  /// **'MAÎTRE DU JEU'**
+  String get groupBecomeGameMasterSectionTitle;
+
+  /// Explication sous le titre de la section « Devenir MJ ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour lancer les combats dans l\'app, deviens-en le MJ : {characterName} quittera le groupe mais restera dans ta liste de personnages.'**
+  String groupBecomeGameMasterExplain(String characterName);
+
+  /// Bouton « Devenir MJ » des paramètres du groupe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Devenir MJ'**
+  String get groupBecomeGameMasterAction;
+
+  /// Libellé du bouton « Devenir MJ » pendant l'appel serveur (bouton bloqué).
+  ///
+  /// In fr, this message translates to:
+  /// **'Passage en MJ…'**
+  String get groupBecomeGameMasterInProgress;
+
+  /// Indice sous le bouton « Devenir MJ » désactivé hors ligne (jamais mis en file d'attente).
+  ///
+  /// In fr, this message translates to:
+  /// **'Indisponible hors ligne : cette action a besoin du serveur.'**
+  String get groupBecomeGameMasterOffline;
+
+  /// Titre de la confirmation « Devenir MJ ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Devenir MJ de « {groupName} » ?'**
+  String groupBecomeGameMasterConfirmTitle(String groupName);
+
+  /// Corps de la confirmation « Devenir MJ » (redevenir joueur n'est pas prévu).
+  ///
+  /// In fr, this message translates to:
+  /// **'{characterName} quittera ce groupe mais restera dans ta liste de personnages, avec toutes ses données. Tu deviendras MJ sans personnage et tu pourras lancer les combats. Impossible de revenir en arrière pour l\'instant.'**
+  String groupBecomeGameMasterConfirmBody(String characterName);
+
+  /// Bouton de confirmation « Devenir MJ ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Devenir MJ'**
+  String get groupBecomeGameMasterConfirmAction;
+
+  /// Bouton d'annulation de la confirmation « Devenir MJ ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get groupBecomeGameMasterCancel;
+
+  /// Message après « Devenir MJ » réussi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu es maintenant MJ de ce groupe. Ton personnage reste dans ta liste.'**
+  String get groupBecomeGameMasterSuccess;
+
+  /// Refus serveur `combat_active` de « Devenir MJ ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de devenir MJ pendant un combat en cours. Termine d\'abord le combat.'**
+  String get groupBecomeGameMasterCombatActive;
+
+  /// Échec non reconnu de « Devenir MJ ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de devenir MJ. Réessaie.'**
+  String get groupBecomeGameMasterGenericError;
+
+  /// Bouton de la zone dangereuse des paramètres du groupe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dissoudre le groupe'**
+  String get groupSettingsDissolveAction;
+
+  /// Légende sous « Dissoudre le groupe » (D228 : suppressions en cascade de DeepCore).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réservé au créateur du groupe. Retire tous les membres et supprime le butin commun, les carnets de notes des joueurs et l\'historique des combats ; les personnages et leurs données restent intacts.'**
+  String get groupSettingsDissolveCaption;
+
+  /// Titre de la feuille de dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'DISSOUDRE LE GROUPE'**
+  String get groupDissolveSheetTitle;
+
+  /// Introduction de l'avertissement de dissolution (bandeau d'alerte), suivie de la liste des suppressions (D228).
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action est irréversible. Elle supprimera définitivement, pour tous les membres :'**
+  String get groupDissolveWarningIntro;
+
+  /// Élément de la liste des suppressions de la dissolution (`group_members`).
+  ///
+  /// In fr, this message translates to:
+  /// **'le groupe et l\'accès de tous ses membres ;'**
+  String get groupDissolveWarningItemAccess;
+
+  /// Élément de la liste des suppressions de la dissolution (`group_treasure`).
+  ///
+  /// In fr, this message translates to:
+  /// **'le butin commun ;'**
+  String get groupDissolveWarningItemTreasure;
+
+  /// Élément de la liste des suppressions de la dissolution (`group_notes`, `group_journal_entries`).
+  ///
+  /// In fr, this message translates to:
+  /// **'les carnets de notes des joueurs pour ce groupe (onglet Notes, toutes les entrées du journal comprises) ;'**
+  String get groupDissolveWarningItemNotes;
+
+  /// Élément de la liste des suppressions de la dissolution (`combats`, `combat_participants`).
+  ///
+  /// In fr, this message translates to:
+  /// **'l\'historique des combats du groupe.'**
+  String get groupDissolveWarningItemCombats;
+
+  /// Phrase finale de l'avertissement de dissolution : aucune table de personnages ne dépend de `groups`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les personnages des joueurs restent intacts : ils gardent toutes leurs données.'**
+  String get groupDissolveWarningCharactersKept;
+
+  /// Bouton d'annulation de la feuille de dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get groupDissolveCancel;
+
+  /// Passage à l'étape de confirmation de la feuille de dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get groupDissolveContinue;
+
+  /// Libellé du champ de confirmation de la dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'RETAPE LE NOM DU GROUPE POUR CONFIRMER'**
+  String get groupDissolveRetypeLabel;
+
+  /// Indication du champ de confirmation de la dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du groupe'**
+  String get groupDissolveRetypeHint;
+
+  /// Bouton final de la dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dissoudre définitivement'**
+  String get groupDissolveConfirm;
+
+  /// Bouton final de la dissolution pendant l'appel serveur.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dissolution en cours…'**
+  String get groupDissolveInProgress;
+
+  /// Message après une dissolution réussie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Groupe dissous.'**
+  String get groupDissolveSuccess;
+
+  /// Échec non reconnu de la dissolution.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de dissoudre le groupe. Réessaie.'**
+  String get groupDissolveGenericError;
+
+  /// Dissolution refusée pendant un combat actif (garde cliente ou refus serveur `combat_active`, D224).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu ne peux pas dissoudre le groupe pendant un combat en cours. Termine d\'abord le combat.'**
+  String get groupDissolveBlockedByCombat;
+
+  /// Préfixe du titre de la campagne associée au groupe (carte « Campagne » de l'écran Groupe, aperçu d'invitation), suivi du titre écrit par le MJ dans Grimoire, jamais traduit. Espace insécable avant les deux-points, espace finale conservée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Campagne : '**
+  String get groupCampaignPrefix;
+
+  /// En-tête repliable du résumé public de la campagne (carte « Campagne » de l'écran Groupe). Le résumé, écrit par le MJ, n'est jamais traduit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Résumé de la campagne'**
+  String get groupCampaignSummaryToggle;
+
+  /// État de chargement de l'aperçu d'invitation, sous le champ du code (écran « Rejoindre un groupe »).
+  ///
+  /// In fr, this message translates to:
+  /// **'Recherche du groupe…'**
+  String get groupInvitePreviewLoading;
+
+  /// Bouton principal de l'écran « Rejoindre un groupe » tant que l'aperçu du groupe n'est pas affiché : le toucher charge l'aperçu, sans rejoindre (décision n° 34).
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le groupe'**
+  String get groupJoinSeeGroupAction;
+
+  /// Bouton principal de l'écran « Rejoindre un groupe » une fois l'aperçu du groupe affiché : le toucher rejoint le groupe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rejoindre'**
+  String get groupJoinAction;
+
+  /// Nombre de membres du groupe dans l'aperçu d'invitation (écran « Rejoindre un groupe »). `{count}` dans la branche `=1` (et non « 1 ») : en français, 0 relève aussi de cette branche et doit afficher « 0 membre ».
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{{count} membre} other{{count} membres}}'**
+  String groupInvitePreviewMemberCount(int count);
+
+  /// Titre de l'en-tête de l'écran « Rejoindre un groupe » (D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'REJOINDRE UN GROUPE'**
+  String get groupJoinTitle;
+
+  /// Texte d'introduction de l'écran « Rejoindre un groupe » (D233). Tutoiement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande le code d\'invitation à un membre du groupe, puis choisis le personnage qui rejoindra le groupe.'**
+  String get groupJoinIntro;
+
+  /// Libellé de section au-dessus du champ du code (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Code d\'invitation'**
+  String get groupJoinCodeLabel;
+
+  /// Libellé de section au-dessus du choix du rôle (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Qui te représente dans ce groupe ?'**
+  String get groupJoinRoleLabel;
+
+  /// Aide sous « Qui te représente dans ce groupe ? » (correctif F01, D233). Le rôle cité doit reprendre exactement `groupJoinGameMasterRoleTitle`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis ton personnage, ou sélectionne « MJ — sans personnage » si tu animes la partie sans fiche.'**
+  String get groupJoinRoleHelp;
+
+  /// Titre de la feuille de choix du rôle (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'CHOISIR TON RÔLE'**
+  String get groupJoinRolePickerTitle;
+
+  /// Rôle « MJ sans personnage » : tuile du rôle choisi et ligne de la feuille de choix (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'MJ — sans personnage'**
+  String get groupJoinGameMasterRoleTitle;
+
+  /// Sous-titre du rôle « MJ — sans personnage » (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Suit le groupe sans fiche de personnage.'**
+  String get groupJoinGameMasterRoleSubtitle;
+
+  /// Liste de personnages vide : tuile du rôle et feuille de choix (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu n\'as pas encore de personnage à rattacher.'**
+  String get groupJoinNoCharacter;
+
+  /// Tuile du rôle tant que rien n'est choisi ni chargé (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un personnage ou un rôle'**
+  String get groupJoinChooseRolePlaceholder;
+
+  /// Relance du chargement des personnages dans la feuille de choix du rôle (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get groupJoinCharactersRetryButton;
+
+  /// Message après un rattachement réussi (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Groupe rejoint !'**
+  String get groupJoinSuccess;
+
+  /// Voile affiché pendant le rattachement au groupe (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Rattachement au groupe…'**
+  String get groupJoinInProgress;
+
+  /// Code invalide, à l'aperçu ou au rattachement : texte d'aide sous le champ du code (écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code d\'invitation n\'est pas valide.'**
+  String get groupJoinInvalidCodeError;
+
+  /// Échec non reconnu ou réseau, à l'aperçu ou au rattachement : bandeau en tête d'écran (écran « Rejoindre un groupe », D233). Tutoiement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de rejoindre ce groupe. Réessaie.'**
+  String get groupJoinGenericError;
+
+  /// Rattachement refusé : le personnage est déjà dans ce groupe (bandeau, écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce personnage est déjà membre de ce groupe.'**
+  String get groupJoinAlreadyInGroupError;
+
+  /// Rattachement en MJ refusé : le groupe a déjà un MJ sans personnage (bandeau, écran « Rejoindre un groupe », D233).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce groupe a déjà un MJ sans personnage.'**
+  String get groupJoinGameMasterAlreadyAssignedError;
+
+  /// Texte du lien « Exclure » en pied de la carte d'un membre, à partir de la taille de texte ×1,4 (onglet Membres, D232). Le lecteur d'écran lit `groupMemberRemoveLabel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure'**
+  String get groupMemberRemoveAction;
+
+  /// Libellé du lecteur d'écran et info-bulle de la commande qui exclut un membre du groupe (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure {name}'**
+  String groupMemberRemoveLabel(String name);
+
+  /// Libellé du lecteur d'écran de la commande « Exclure » désactivée pendant l'exclusion du membre (onglet Membres, D232). Nom en tête : évite « de Eldrin ».
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} : exclusion en cours'**
+  String groupMemberRemoveInProgress(String name);
+
+  /// Message après l'exclusion d'un membre par le propriétaire (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a été exclu du groupe.'**
+  String groupMemberRemovedSuccess(String name);
+
+  /// Échec non reconnu de l'exclusion d'un membre (onglet Membres, D232). Tutoiement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'exclure ce membre. Réessaie.'**
+  String get groupMemberRemoveGenericError;
+
+  /// Titre de la boîte de confirmation de l'exclusion d'un membre (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure {name} du groupe ?'**
+  String groupMemberRemoveConfirmTitle(String name);
+
+  /// Texte de la boîte de confirmation de l'exclusion d'un membre avec personnage (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Son personnage garde toutes ses données, mais quitte immédiatement le groupe.'**
+  String get groupMemberRemoveConfirmBodyCharacter;
+
+  /// Texte de la boîte de confirmation de l'exclusion d'un MJ sans personnage (onglet Membres, D232). Jamais le texte du membre orphelin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il/elle quitte immédiatement le groupe.'**
+  String get groupMemberRemoveConfirmBodyGameMaster;
+
+  /// Texte de la boîte de confirmation de l'exclusion d'un membre orphelin, dont le personnage a été supprimé (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Son personnage a déjà été supprimé ; il/elle quitte immédiatement le groupe.'**
+  String get groupMemberRemoveConfirmBodyAwaitingCharacter;
+
+  /// Bouton de confirmation de la boîte d'exclusion d'un membre (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Exclure'**
+  String get groupMemberRemoveConfirmAction;
+
+  /// Bouton d'annulation de la boîte d'exclusion d'un membre (onglet Membres, D232).
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get groupMemberRemoveCancel;
 
   /// `CharacterCreationErrorCode.accessDenied` (D141).
   ///
@@ -8157,6 +8703,228 @@ abstract class AppLocalizations {
   /// **'Oui · +10 min d\'incantation'**
   String get spellInfoPanelRitualValue;
 
+  /// Fiche d'un objet du butin de groupe (décision 91) : libellé de la ligne Provenance.
+  ///
+  /// In fr, this message translates to:
+  /// **'Provenance'**
+  String get groupTreasureItemSourceLabel;
+
+  /// Fiche d'un objet du butin : valeur de Provenance pour un objet du catalogue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Catalogue'**
+  String get groupTreasureItemSourceCatalog;
+
+  /// Fiche d'un objet du butin : libellé de la ligne Quantité.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quantité'**
+  String get groupTreasureItemQuantityLabel;
+
+  /// Fiche d'un objet du butin : valeur de la ligne Quantité.
+  ///
+  /// In fr, this message translates to:
+  /// **'×{quantity}'**
+  String groupTreasureItemQuantityValue(int quantity);
+
+  /// Butin de groupe : bouton S'attribuer (fiche d'un objet, sheet de quantité, sheet de monnaie).
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'attribuer'**
+  String get groupTreasureClaimButton;
+
+  /// Titre de la sheet de quantité de l'attribution d'un objet du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'attribuer {itemName}'**
+  String groupTreasureClaimSheetTitle(String itemName);
+
+  /// Fiche d'un objet du butin : légende sous S'attribuer désactivé (MJ sans personnage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Il te faut un personnage dans ce groupe pour t\'attribuer un objet.'**
+  String get groupTreasureClaimNoCharacterCaption;
+
+  /// Fiche d'un objet du butin : bouton destructif de retrait.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer du butin'**
+  String get groupTreasureRemoveButton;
+
+  /// Titre du dialogue de confirmation du retrait d'un objet du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer {itemName} du butin ?'**
+  String groupTreasureRemoveConfirmTitle(String itemName);
+
+  /// Texte du dialogue de confirmation du retrait d'un objet du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'{quantity, plural, =1{L\'objet disparaît du butin pour tout le groupe.} other{Les {quantity} exemplaires disparaissent du butin pour tout le groupe.}} Cette action est définitive.'**
+  String groupTreasureRemoveConfirmBody(int quantity);
+
+  /// Snackbar après le retrait d'un objet du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'{itemName} retiré du butin.'**
+  String groupTreasureRemovedSnack(String itemName);
+
+  /// Snackbar après la modification d'un objet du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet modifié.'**
+  String get groupTreasureUpdatedSnack;
+
+  /// Titre de la sheet de quantité d'un objet du catalogue du butin (Modifier).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quantité de {itemName}'**
+  String groupTreasureQuantitySheetTitle(String itemName);
+
+  /// Lien « Fixer un prix » de la fiche d'un objet du butin (tutoiement, spec du prix d'un objet modifiable) — ouvre l'éditeur de prix pertinent (rejoue l'action Modifier).
+  ///
+  /// In fr, this message translates to:
+  /// **'Fixe un prix'**
+  String get groupTreasureItemPriceSetLink;
+
+  /// Lien « Retirer la surcharge » (tutoiement) de la section Prix de la sheet de quantité d'un objet du catalogue du butin — visible seulement si une surcharge existe déjà, aucune confirmation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retire la surcharge'**
+  String get groupTreasureItemPriceOverrideRemoveLink;
+
+  /// Snackbar après le lien « Retirer la surcharge » d'un objet du catalogue du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix réinitialisé.'**
+  String get groupTreasureItemPriceOverrideRemovedSnack;
+
+  /// Butin modifié entre-temps par un autre membre : rien n'a été écrit, le butin est rechargé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un autre membre vient de modifier ou d\'attribuer cet objet. Vérifie et recommence.'**
+  String get groupTreasureStaleError;
+
+  /// Snackbar d'une écriture du butin impossible faute de réseau.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas de connexion : le butin n\'a pas été modifié. Réessaie une fois connecté.'**
+  String get groupTreasureOfflineError;
+
+  /// Bandeau de l'onglet Butin et légende de la fiche d'un objet hors connexion (actions désactivées).
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas de connexion : le butin est en lecture seule jusqu\'au retour du réseau.'**
+  String get groupTreasureOfflineBanner;
+
+  /// Fiche d'un objet du catalogue du butin : erreur de lecture de la description.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger la description.'**
+  String get groupTreasureDetailsLoadError;
+
+  /// Bandeau de l'onglet Butin pour un MJ sans personnage.
+  ///
+  /// In fr, this message translates to:
+  /// **'En tant que MJ sans personnage, tu peux gérer le butin commun mais pas t\'attribuer une part — seuls les membres avec un personnage le peuvent.'**
+  String get groupTreasureGameMasterBanner;
+
+  /// Onglet Butin : titre de la section monnaie.
+  ///
+  /// In fr, this message translates to:
+  /// **'MONNAIE COMMUNE'**
+  String get groupTreasureCurrencySectionLabel;
+
+  /// Onglet Butin : bouton qui ouvre la sheet S'attribuer de la monnaie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répartir vers mon inventaire'**
+  String get groupTreasureSplitCurrencyButton;
+
+  /// Onglet Butin : titre de la section objets.
+  ///
+  /// In fr, this message translates to:
+  /// **'OBJETS EN ATTENTE'**
+  String get groupTreasureItemsSectionLabel;
+
+  /// Onglet Butin : état vide de la liste d'objets.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun objet en attente.'**
+  String get groupTreasureEmptyItems;
+
+  /// Onglet Butin : erreur de chargement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger le butin commun. Réessaie.'**
+  String get groupTreasureLoadError;
+
+  /// Snackbar après un ajout d'objets ou un changement de monnaie du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Butin mis à jour.'**
+  String get groupTreasureSavedSnack;
+
+  /// Snackbar d'une écriture du butin en échec (cause inconnue).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de mettre à jour le butin. Réessaie.'**
+  String get groupTreasureWriteError;
+
+  /// Snackbar après l'attribution d'un objet du butin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet ajouté à ton inventaire.'**
+  String get groupTreasureClaimedItemSnack;
+
+  /// Snackbar d'une attribution d'objet en échec (cause inconnue).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de t\'attribuer cet objet. Réessaie.'**
+  String get groupTreasureClaimItemError;
+
+  /// Snackbar après Répartir vers mon inventaire réussi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Monnaie récupérée.'**
+  String get groupTreasureCurrencyClaimedSnack;
+
+  /// Snackbar quand aucune pièce n'a pu être récupérée (butin modifié entre-temps).
+  ///
+  /// In fr, this message translates to:
+  /// **'Un autre membre vient de modifier le butin. Réessaie.'**
+  String get groupTreasureCurrencyClaimFailed;
+
+  /// Snackbar d'une récupération de monnaie partielle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Butin modifié entretemps : {currencies} non récupérées, le reste a été ajouté à ton inventaire.'**
+  String groupTreasureCurrencyClaimPartial(String currencies);
+
+  /// Titre de la sheet Répartir vers mon inventaire.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'ATTRIBUER DE LA MONNAIE'**
+  String get groupTreasureClaimCurrencySheetTitle;
+
+  /// Sheet S'attribuer de la monnaie : bouton Annuler.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get groupTreasureClaimCurrencyCancelButton;
+
+  /// Sheet S'attribuer de la monnaie : solde disponible sous un champ.
+  ///
+  /// In fr, this message translates to:
+  /// **'/ {max}'**
+  String groupTreasureClaimCurrencyMaxHint(int max);
+
+  /// Écran Groupe : bouton Réessayer de l'état d'erreur des onglets (détail du groupe, Butin, Notes).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get groupErrorStateRetryButton;
+
   /// Bandeau du combat, ligne 1.
   ///
   /// In fr, this message translates to:
@@ -8726,6 +9494,390 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Combat en cours, round {round}, état de {time}. Ouvrir le combat.'**
   String combatSheetBannerSemanticsOffline(int round, String time);
+
+  /// Ligne de source discrète de l'en-tête d'un combat mené depuis Grimoire (décision 63).
+  ///
+  /// In fr, this message translates to:
+  /// **'Mené depuis Grimoire'**
+  String get combatGrimoireSource;
+
+  /// Bandeau d'information du meneur qui ouvre le combat dans Nexus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu mènes ce combat depuis Grimoire. Ici, tu le suis comme les joueurs.'**
+  String get combatGrimoireLeaderInfo;
+
+  /// Ligne 1 de l'en-tête pendant la préparation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat !'**
+  String get combatShout;
+
+  /// Ligne 2 de l'en-tête pendant la préparation.
+  ///
+  /// In fr, this message translates to:
+  /// **'En préparation'**
+  String get combatPreparingStatus;
+
+  /// Ligne 3 de l'en-tête pendant la préparation.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'ordre d\'initiative apparaîtra au premier tour.'**
+  String get combatPreparingHint;
+
+  /// Bandeau Groupe (ligne 1) et fiche pendant la préparation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat en préparation'**
+  String get combatBannerPreparing;
+
+  /// Bandeau Groupe, ligne 2 sans autre information.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir le combat'**
+  String get combatBannerOpen;
+
+  /// Bandeau Groupe, ligne 2 : initiative demandée, pas encore envoyée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoie ton initiative · Ouvrir le combat'**
+  String get combatBannerSendInitiative;
+
+  /// Bandeau Groupe, ligne 2 : initiative envoyée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Initiative envoyée · Ouvrir le combat'**
+  String get combatBannerInitiativeSent;
+
+  /// Bandeau de la fiche : initiative demandée, pas encore envoyée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat ! Envoie ton initiative'**
+  String get combatSheetBannerInitiativeRequested;
+
+  /// Libellé lecteur d'écran du bandeau de la fiche pendant la préparation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat en préparation. Ouvrir le combat.'**
+  String get combatSheetBannerPreparingSemantics;
+
+  /// Libellé lecteur d'écran du bandeau de la fiche : initiative demandée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat ! Envoie ton initiative. Ouvrir le combat.'**
+  String get combatSheetBannerInitiativeRequestedSemantics;
+
+  /// Titre de la carte d'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ demande ton initiative'**
+  String get combatInitiativeRequestTitle;
+
+  /// Personnage concerné par la demande d'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour {name}'**
+  String combatInitiativeRequestFor(String name);
+
+  /// Bouton de la carte d'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer mon initiative'**
+  String get combatSendInitiative;
+
+  /// Bouton primaire de la feuille d'initiative envoyée au MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer au MJ'**
+  String get combatSendToGm;
+
+  /// Aide de la feuille d'initiative envoyée au MJ (décision 62).
+  ///
+  /// In fr, this message translates to:
+  /// **'Une fois reçue, seul le MJ peut la modifier.'**
+  String get combatSendHint;
+
+  /// Carte d'initiative : valeur envoyée.
+  ///
+  /// In fr, this message translates to:
+  /// **'{value} · envoyée au MJ'**
+  String combatInitiativeSent(int value);
+
+  /// Carte d'initiative : envoi pas encore confirmé.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente de confirmation du MJ…'**
+  String get combatInitiativeAwaitingReceipt;
+
+  /// Carte d'initiative : valeur reçue par le MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'{value} · reçue par le MJ'**
+  String combatInitiativeReceived(int value);
+
+  /// Carte d'initiative : reçue, valeur inconnue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ a ton initiative'**
+  String get combatInitiativeKnownByGm;
+
+  /// Carte d'initiative reçue pendant la préparation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ peut l\'ajuster : la valeur retenue s\'affichera au premier tour.'**
+  String get combatInitiativeMayAdjust;
+
+  /// Carte d'initiative : envoi non reçu.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ n\'a pas reçu ton initiative. Renvoie-la.'**
+  String get combatInitiativeNotReceived;
+
+  /// Carte d'initiative : nouvelle demande du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ te redemande ton initiative.'**
+  String get combatInitiativeRequestedAgain;
+
+  /// Libellé de statut de la ligne du joueur après l'envoi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyée au MJ'**
+  String get combatInitiativeSentLabel;
+
+  /// Libellé de statut de la ligne du joueur quand le MJ a retenu une autre valeur.
+  ///
+  /// In fr, this message translates to:
+  /// **'Corrigée par le MJ (envoyé : {sent})'**
+  String combatInitiativeCorrected(int sent);
+
+  /// Envoi d'initiative indisponible : MJ hors ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Indisponible tant que le MJ est hors ligne.'**
+  String get combatUnavailableGmOffline;
+
+  /// Échec d'envoi rate_limited.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop d\'envois. Réessaie dans {seconds} s.'**
+  String combatSendRateLimited(int seconds);
+
+  /// Échec d'envoi générique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoi impossible. Réessaie.'**
+  String get combatSendFailed;
+
+  /// Échec d'envoi group_not_found.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu ne fais plus partie de ce groupe.'**
+  String get combatNotMemberAnymore;
+
+  /// Badge d'un héros mort dans l'ordre d'initiative (décision 58).
+  ///
+  /// In fr, this message translates to:
+  /// **'Mort'**
+  String get combatBadgeDead;
+
+  /// Libellé de statut d'un héros mort.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tour sauté'**
+  String get combatTurnSkipped;
+
+  /// Ajout à l'étiquette lecteur d'écran d'une ligne de héros mort.
+  ///
+  /// In fr, this message translates to:
+  /// **'mort, tour sauté'**
+  String get combatRowDeadSemantics;
+
+  /// Bandeau du joueur retiré d'un combat mené depuis Grimoire.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ t\'a retiré de ce combat.'**
+  String get combatRemovedByGm;
+
+  /// En-tête en mode « à toi de jouer ».
+  ///
+  /// In fr, this message translates to:
+  /// **'À toi de jouer'**
+  String get combatYourTurn;
+
+  /// Bandeaux Groupe et fiche en mode « à toi de jouer ».
+  ///
+  /// In fr, this message translates to:
+  /// **'À toi de jouer · round {round}'**
+  String combatBannerYourTurn(int round);
+
+  /// Libellé lecteur d'écran du bandeau de la fiche, mode « à toi de jouer ».
+  ///
+  /// In fr, this message translates to:
+  /// **'À toi de jouer, round {round}. Ouvrir le combat.'**
+  String combatSheetBannerYourTurnSemantics(int round);
+
+  /// Signal global (PR 2) : le MJ redemande l'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Initiative demandée'**
+  String get combatCalloutInitiativeTitle;
+
+  /// Signal global (PR 2), ligne 2.
+  ///
+  /// In fr, this message translates to:
+  /// **'{group} · Envoie ton initiative'**
+  String combatCalloutSendInitiative(String group);
+
+  /// Signal global (PR 2), ligne 2.
+  ///
+  /// In fr, this message translates to:
+  /// **'{group} · Ouvrir le combat'**
+  String combatCalloutOpen(String group);
+
+  /// Signal global (PR 2), variante tour.
+  ///
+  /// In fr, this message translates to:
+  /// **'{group} · round {round} · Ouvrir le combat'**
+  String combatCalloutYourTurnBody(String group, int round);
+
+  /// Signal global (PR 2), bouton de fermeture.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer'**
+  String get combatCalloutClose;
+
+  /// Bandeau de l'écran Combat après 90 s sans message du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ semble hors ligne. Dernier état reçu à {time} ; le combat reprendra dès son retour.'**
+  String combatGmOfflineBanner(String time);
+
+  /// Bandeau Groupe, ligne 2 : MJ hors ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'MJ hors ligne · état de {time}'**
+  String combatBannerGmOffline(String time);
+
+  /// Bandeau de la fiche : MJ hors ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat · MJ hors ligne (état de {time})'**
+  String combatSheetBannerGmOffline(String time);
+
+  /// Libellé lecteur d'écran du bandeau de la fiche : MJ hors ligne.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat en cours, MJ hors ligne, état de {time}. Ouvrir le combat.'**
+  String combatSheetBannerGmOfflineSemantics(String time);
+
+  /// Écran Combat après 10 min sans message du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas de nouvelles du MJ'**
+  String get combatInterruptedTitle;
+
+  /// Écran Combat après 10 min sans message du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dernier état reçu à {time}. Le combat réapparaîtra ici s\'il reprend.'**
+  String combatInterruptedBody(String time);
+
+  /// Libellé visible du chargement de l'écran Combat sans état connu.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion au combat…'**
+  String get combatConnecting;
+
+  /// Écran Combat sans combat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun combat en cours'**
+  String get combatNoneTitle;
+
+  /// Écran Combat sans combat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le combat est peut-être terminé, ou le MJ n\'est pas connecté. Il s\'affichera ici dès qu\'il reprend.'**
+  String get combatNoneBody;
+
+  /// Ouverture depuis une notification (PR 2) d'un groupe quitté.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce groupe n\'est plus accessible.'**
+  String get combatGroupNotAccessible;
+
+  /// Fin d'un combat terminé avant le dévoilement de l'ordre.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat terminé'**
+  String get combatEndedTitle;
+
+  /// Fin d'un combat terminé avant le dévoilement de l'ordre.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le combat s\'est terminé avant que l\'ordre soit dévoilé.'**
+  String get combatEndedBeforeOrder;
+
+  /// Annonce polie du début d'un combat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combat ! Le MJ lance un combat dans {group}.'**
+  String combatAnnounceStart(String group);
+
+  /// Annonce polie d'une demande d'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ demande ton initiative.'**
+  String get combatAnnounceInitiativeRequested;
+
+  /// Annonce polie d'un envoi d'initiative réussi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Initiative {value} envoyée au MJ.'**
+  String combatAnnounceInitiativeSent(int value);
+
+  /// Annonce polie de la réception de l'initiative.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ a reçu ton initiative.'**
+  String get combatAnnounceInitiativeReceived;
+
+  /// Annonce polie d'une initiative corrigée par le MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ a retenu {value}.'**
+  String combatAnnounceInitiativeCorrected(int value);
+
+  /// Annonce polie du dévoilement de l'ordre.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'ordre d\'initiative est dévoilé.'**
+  String get combatAnnounceOrderRevealed;
+
+  /// Annonce polie après 90 s sans message du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ semble hors ligne. La dernière vue reste affichée.'**
+  String get combatAnnounceGmOffline;
+
+  /// Annonce polie au retour des messages du MJ.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le MJ est de retour.'**
+  String get combatAnnounceGmBack;
+
+  /// Indice de « Lancer un combat » désactivé pendant un combat Grimoire vivant (décision 61).
+  ///
+  /// In fr, this message translates to:
+  /// **'Un combat est mené depuis Grimoire.'**
+  String get combatStartBlockedByGrimoire;
+
+  /// Bouton de l'écran Combat quand le joueur ne fait plus partie du groupe (décision 50) : retour à l'accueil.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour à l\'accueil'**
+  String get combatBackHome;
 }
 
 class _AppLocalizationsDelegate

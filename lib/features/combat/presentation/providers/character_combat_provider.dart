@@ -6,6 +6,8 @@ import '../../../../core/network/connectivity_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../groups/presentation/providers/group_providers.dart';
 import 'combat_providers.dart';
+import 'grimoire_banner_provider.dart';
+import 'grimoire_combat_providers.dart';
 
 /// Délai au-delà duquel `ensureFresh` relit les groupes d'un personnage (à
 /// l'ouverture de sa fiche). Une fiche rouverte dans ce délai ne fait aucune
@@ -107,6 +109,11 @@ typedef CharacterCombatBanner = ({String groupId, int round, bool isStale});
 /// combat, un combat sans date compte comme le plus ancien, puis l'ordre de la
 /// liste). `null` : aucun combat actif (ou groupe encore inconnu).
 ///
+/// Un combat mené depuis Grimoire **vivant** passe avant tout combat natif
+/// (décision 61 ; le premier groupe de la liste s'il y en a plusieurs) : la
+/// fiche suit le sujet `:gm` des groupes du personnage tant qu'elle est
+/// ouverte, comme elle suit déjà le combat natif.
+///
 /// **Rebuild ciblé** : seuls les widgets qui observent ce provider
 /// (`CharacterStickyBanners`) se reconstruisent, jamais la fiche ; un
 /// évènement de combat sans rapport (initiative d'un autre participant) ne
@@ -116,6 +123,19 @@ final characterCombatBannerProvider = Provider.autoDispose
     .family<CharacterCombatBanner?, String>((ref, characterId) {
       final groupIds = ref.watch(characterGroupIdsProvider(characterId));
       if (groupIds == null || groupIds.isEmpty) return null;
+      for (final groupId in groupIds) {
+        ref.watch(grimoireCombatFocusProvider(groupId));
+      }
+      for (final groupId in groupIds) {
+        final grimoire = ref.watch(grimoireBannerProvider(groupId));
+        if (grimoire != null) {
+          return (
+            groupId: groupId,
+            round: grimoire.round,
+            isStale: grimoire.offlineSince != null,
+          );
+        }
+      }
       CharacterCombatBanner? best;
       DateTime? bestStartedAt;
       for (final groupId in groupIds) {

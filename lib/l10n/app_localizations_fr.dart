@@ -220,15 +220,41 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileCreditsGameContentPara1 =>
-      'Le contenu de règles Donjons & Dragons 5e (races, classes, historiques, sorts, objets, monstres...) provient d\'Open5e et du System Reference Document (SRD 5.1/5.2) de Wizards of the Coast, sous licence Creative Commons Attribution 4.0 International (CC-BY 4.0).';
+      'Une partie du contenu de règles utilisé par Nexus JDR provient du System Reference Document (SRD), publié sous licence Creative Commons Attribution 4.0 International (CC BY 4.0). Voici les déclarations d\'attribution correspondantes et les modifications apportées.';
+
+  @override
+  String get profileCreditsModifiedPrefix => 'Modifié : ';
+
+  @override
+  String get profileCreditsSrd51Label => 'SRD 5.1 (règles 2014)';
+
+  @override
+  String get profileCreditsSrd51Attribution =>
+      'Ce travail comprend la documentation tirée du Document de Référence du Système 5.1 (« SRD 5.1 ») par Wizards of the Coast LLC et disponible à l\'adresse https://dnd.wizards.com/fr/resources/systems-reference-document. Le SRD 5.1 est distribué en vertu de la licence Creative Commons Attribution 4.0 International disponible à l\'adresse https://creativecommons.org/licenses/by/4.0/legalcode.fr.';
+
+  @override
+  String get profileCreditsSrd51Modified =>
+      'textes repris en tout ou en partie du SRD 5.1 français, ou traduits du SRD 5.1 anglais (traduction non officielle) et parfois résumés ; certains noms diffèrent de la traduction officielle ; poids et distances exprimés en kilogrammes et en mètres ; contenu réparti en champs et présentation adaptée à l\'application.';
+
+  @override
+  String get profileCreditsSrd52Label =>
+      'SRD 5.2 (règles 2024, déclaration en anglais)';
+
+  @override
+  String get profileCreditsSrd52Attribution =>
+      'This work includes material from the System Reference Document 5.2 (“SRD 5.2”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.';
+
+  @override
+  String get profileCreditsSrd52Modified =>
+      'traduit de l\'anglais en français (traduction non officielle), parfois résumé ; distances et poids convertis en mètres et en kilogrammes ; contenu réparti en champs et présentation adaptée à l\'application.';
+
+  @override
+  String get profileCreditsNonSrdContent =>
+      'Une partie du contenu de jeu de Nexus JDR ne fait pas partie du SRD (notamment de nombreux sorts, sous-classes, dons, historiques, races et options de classe). Ce contenu n\'est pas couvert par la licence Creative Commons Attribution 4.0 citée ci-dessus.';
 
   @override
   String get profileCreditsGameContentPara2 =>
-      'Donjons & Dragons, D&D et leurs logos sont des marques de Wizards of the Coast LLC. Wizards of the Coast n\'a ni produit, ni approuvé, ni autorisé cette application.';
-
-  @override
-  String get profileCreditsLicenseNotice =>
-      'Ce produit inclut des éléments du System Reference Document 5.1 et 5.2, disponibles sur dndbeyond.com/srd et open5e.com, sous licence Creative Commons Attribution 4.0 International (creativecommons.org/licenses/by/4.0/legalcode).';
+      'Donjons & Dragons et D&D sont des marques de Wizards of the Coast LLC. Nexus JDR n\'est ni affilié à Wizards of the Coast, ni approuvé par cette société.';
 
   @override
   String get profileCreditsFontsTitle => 'Polices';
@@ -250,7 +276,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileCreditsLastUpdated =>
-      'Dernière mise à jour : 14 octobre 2026';
+      'Dernière mise à jour : 25 novembre 2026';
 
   @override
   String get profileDeleteAccountScreenTitle => 'SUPPRIMER LE COMPTE';
@@ -444,7 +470,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileHelpAboutFooterNote =>
-      'Contenu D&D 5e sous licence Open5e / SRD. Voir les crédits complets pour le détail des sources.';
+      'Une partie du contenu de jeu provient du SRD (CC BY 4.0). Détail des sources et des attributions dans « Crédits & licences ».';
 
   @override
   String profileHelpFooterVersionWithNumber(String version) {
@@ -501,7 +527,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileLegalIntellectualPropertyPara1 =>
-      'Le contenu de règles Donjons & Dragons 5e (races, classes, sorts, objets...) provient d\'Open5e et du System Reference Document (SRD), sous licence Creative Commons Attribution 4.0 (CC-BY 4.0) — voir « Crédits & licences » pour le détail. Le reste de l\'application (code, design, marque « Nexus JDR ») appartient à son éditeur.';
+      'Une partie du contenu de règles de Donjons & Dragons 5e provient du System Reference Document (SRD 5.1 et 5.2), sous licence Creative Commons Attribution 4.0 International (CC BY 4.0) ; le reste du contenu de jeu n\'est pas issu du SRD et n\'est pas couvert par cette licence. Les déclarations d\'attribution et les modifications apportées figurent dans « Crédits & licences ». Le code, le design et la marque « Nexus JDR » appartiennent à l\'éditeur de l\'application.';
 
   @override
   String get profileLegalTerminationTitle => 'Résiliation';
@@ -519,7 +545,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileLegalLastUpdated =>
-      'Dernière mise à jour : 25 septembre 2026';
+      'Dernière mise à jour : 25 novembre 2026';
 
   @override
   String get profileNotificationsScreenTitle => 'NOTIFICATIONS';
@@ -533,6 +559,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileNotificationsSectionTriggers => 'DÉCLENCHEURS';
+
+  @override
+  String get profileNotificationsGmCombat => 'Combat et révélations du MJ';
+
+  @override
+  String get profileNotificationsGmCombatSubtitle =>
+      'Début du combat, ton tour et ce que le MJ te montre.';
 
   @override
   String get profileNotificationsRestReminder =>
@@ -2891,12 +2924,46 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get itemInfoPanelCostLabel => 'Coût';
+  String get itemPriceLabel => 'Prix';
 
   @override
-  String itemInfoPanelCostValue(String cost) {
-    return '$cost po';
+  String itemPriceValue(String amount, String unit) {
+    return '$amount $unit';
   }
+
+  @override
+  String get itemPriceNotEstimatedValue => 'Non estimé';
+
+  @override
+  String get itemPriceOverriddenBadge => 'Modifié';
+
+  @override
+  String get itemPriceSetLink => 'Fixer un prix';
+
+  @override
+  String itemPriceOverrideSheetTitle(String itemName) {
+    return 'Prix de $itemName';
+  }
+
+  @override
+  String itemPriceOverrideOfficialCaption(String officialPrice) {
+    return 'Prix officiel : $officialPrice';
+  }
+
+  @override
+  String get itemPriceOverrideRemoveLink => 'Retirer la surcharge';
+
+  @override
+  String get itemPriceOverrideRemovedSnack => 'Prix réinitialisé.';
+
+  @override
+  String get itemPriceOverrideSaveButton => 'Enregistrer';
+
+  @override
+  String get customItemPriceSectionLabel => 'Prix';
+
+  @override
+  String get customItemPriceCurrencySectionLabel => 'Devise';
 
   @override
   String get itemInfoPanelSetLabel => 'Set';
@@ -4586,6 +4653,14 @@ class AppLocalizationsFr extends AppLocalizations {
       'Session expirée. Reconnectez-vous.';
 
   @override
+  String get characterArmorAlreadyEquippedErrorMessage =>
+      'Vous portez déjà une armure : déséquipez-la d\'abord pour en équiper une autre.';
+
+  @override
+  String get characterShieldAlreadyEquippedErrorMessage =>
+      'Vous portez déjà un bouclier : déséquipez-le d\'abord pour en équiper un autre.';
+
+  @override
   String get groupAccessDeniedErrorMessage =>
       'Vous n\'avez pas accès à ce groupe.';
 
@@ -4599,6 +4674,270 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get groupInviteCodeGenerationFailedErrorMessage =>
       'Impossible de générer un nouveau code. Réessayez.';
+
+  @override
+  String get groupCombatActiveErrorMessage =>
+      'Action impossible pendant un combat en cours. Termine d\'abord le combat.';
+
+  @override
+  String get groupMjAlreadyAssignedErrorMessage =>
+      'Un autre membre est déjà MJ de ce groupe. Rien n\'a changé : il doit d\'abord quitter le groupe, ou tu peux l\'exclure depuis l\'onglet Membres.';
+
+  @override
+  String get groupNotGroupOwnerErrorMessage =>
+      'Seul le créateur du groupe peut faire cela.';
+
+  @override
+  String get groupNotMemberErrorMessage =>
+      'Tu ne fais plus partie de ce groupe.';
+
+  @override
+  String get groupTransientConflictErrorMessage =>
+      'Le serveur était occupé : rien n\'a été modifié. Réessaie.';
+
+  @override
+  String get groupServerOutdatedErrorMessage =>
+      'Cette action n\'est pas encore disponible sur le serveur. Réessaie plus tard.';
+
+  @override
+  String get groupBecomeGameMasterSectionTitle => 'MAÎTRE DU JEU';
+
+  @override
+  String groupBecomeGameMasterExplain(String characterName) {
+    return 'Pour lancer les combats dans l\'app, deviens-en le MJ : $characterName quittera le groupe mais restera dans ta liste de personnages.';
+  }
+
+  @override
+  String get groupBecomeGameMasterAction => 'Devenir MJ';
+
+  @override
+  String get groupBecomeGameMasterInProgress => 'Passage en MJ…';
+
+  @override
+  String get groupBecomeGameMasterOffline =>
+      'Indisponible hors ligne : cette action a besoin du serveur.';
+
+  @override
+  String groupBecomeGameMasterConfirmTitle(String groupName) {
+    return 'Devenir MJ de « $groupName » ?';
+  }
+
+  @override
+  String groupBecomeGameMasterConfirmBody(String characterName) {
+    return '$characterName quittera ce groupe mais restera dans ta liste de personnages, avec toutes ses données. Tu deviendras MJ sans personnage et tu pourras lancer les combats. Impossible de revenir en arrière pour l\'instant.';
+  }
+
+  @override
+  String get groupBecomeGameMasterConfirmAction => 'Devenir MJ';
+
+  @override
+  String get groupBecomeGameMasterCancel => 'Annuler';
+
+  @override
+  String get groupBecomeGameMasterSuccess =>
+      'Tu es maintenant MJ de ce groupe. Ton personnage reste dans ta liste.';
+
+  @override
+  String get groupBecomeGameMasterCombatActive =>
+      'Impossible de devenir MJ pendant un combat en cours. Termine d\'abord le combat.';
+
+  @override
+  String get groupBecomeGameMasterGenericError =>
+      'Impossible de devenir MJ. Réessaie.';
+
+  @override
+  String get groupSettingsDissolveAction => 'Dissoudre le groupe';
+
+  @override
+  String get groupSettingsDissolveCaption =>
+      'Réservé au créateur du groupe. Retire tous les membres et supprime le butin commun, les carnets de notes des joueurs et l\'historique des combats ; les personnages et leurs données restent intacts.';
+
+  @override
+  String get groupDissolveSheetTitle => 'DISSOUDRE LE GROUPE';
+
+  @override
+  String get groupDissolveWarningIntro =>
+      'Cette action est irréversible. Elle supprimera définitivement, pour tous les membres :';
+
+  @override
+  String get groupDissolveWarningItemAccess =>
+      'le groupe et l\'accès de tous ses membres ;';
+
+  @override
+  String get groupDissolveWarningItemTreasure => 'le butin commun ;';
+
+  @override
+  String get groupDissolveWarningItemNotes =>
+      'les carnets de notes des joueurs pour ce groupe (onglet Notes, toutes les entrées du journal comprises) ;';
+
+  @override
+  String get groupDissolveWarningItemCombats =>
+      'l\'historique des combats du groupe.';
+
+  @override
+  String get groupDissolveWarningCharactersKept =>
+      'Les personnages des joueurs restent intacts : ils gardent toutes leurs données.';
+
+  @override
+  String get groupDissolveCancel => 'Annuler';
+
+  @override
+  String get groupDissolveContinue => 'Continuer';
+
+  @override
+  String get groupDissolveRetypeLabel =>
+      'RETAPE LE NOM DU GROUPE POUR CONFIRMER';
+
+  @override
+  String get groupDissolveRetypeHint => 'Nom du groupe';
+
+  @override
+  String get groupDissolveConfirm => 'Dissoudre définitivement';
+
+  @override
+  String get groupDissolveInProgress => 'Dissolution en cours…';
+
+  @override
+  String get groupDissolveSuccess => 'Groupe dissous.';
+
+  @override
+  String get groupDissolveGenericError =>
+      'Impossible de dissoudre le groupe. Réessaie.';
+
+  @override
+  String get groupDissolveBlockedByCombat =>
+      'Tu ne peux pas dissoudre le groupe pendant un combat en cours. Termine d\'abord le combat.';
+
+  @override
+  String get groupCampaignPrefix => 'Campagne : ';
+
+  @override
+  String get groupCampaignSummaryToggle => 'Résumé de la campagne';
+
+  @override
+  String get groupInvitePreviewLoading => 'Recherche du groupe…';
+
+  @override
+  String get groupJoinSeeGroupAction => 'Voir le groupe';
+
+  @override
+  String get groupJoinAction => 'Rejoindre';
+
+  @override
+  String groupInvitePreviewMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count membres',
+      one: '$count membre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get groupJoinTitle => 'REJOINDRE UN GROUPE';
+
+  @override
+  String get groupJoinIntro =>
+      'Demande le code d\'invitation à un membre du groupe, puis choisis le personnage qui rejoindra le groupe.';
+
+  @override
+  String get groupJoinCodeLabel => 'Code d\'invitation';
+
+  @override
+  String get groupJoinRoleLabel => 'Qui te représente dans ce groupe ?';
+
+  @override
+  String get groupJoinRoleHelp =>
+      'Choisis ton personnage, ou sélectionne « MJ — sans personnage » si tu animes la partie sans fiche.';
+
+  @override
+  String get groupJoinRolePickerTitle => 'CHOISIR TON RÔLE';
+
+  @override
+  String get groupJoinGameMasterRoleTitle => 'MJ — sans personnage';
+
+  @override
+  String get groupJoinGameMasterRoleSubtitle =>
+      'Suit le groupe sans fiche de personnage.';
+
+  @override
+  String get groupJoinNoCharacter =>
+      'Tu n\'as pas encore de personnage à rattacher.';
+
+  @override
+  String get groupJoinChooseRolePlaceholder =>
+      'Choisir un personnage ou un rôle';
+
+  @override
+  String get groupJoinCharactersRetryButton => 'Réessayer';
+
+  @override
+  String get groupJoinSuccess => 'Groupe rejoint !';
+
+  @override
+  String get groupJoinInProgress => 'Rattachement au groupe…';
+
+  @override
+  String get groupJoinInvalidCodeError =>
+      'Ce code d\'invitation n\'est pas valide.';
+
+  @override
+  String get groupJoinGenericError =>
+      'Impossible de rejoindre ce groupe. Réessaie.';
+
+  @override
+  String get groupJoinAlreadyInGroupError =>
+      'Ce personnage est déjà membre de ce groupe.';
+
+  @override
+  String get groupJoinGameMasterAlreadyAssignedError =>
+      'Ce groupe a déjà un MJ sans personnage.';
+
+  @override
+  String get groupMemberRemoveAction => 'Exclure';
+
+  @override
+  String groupMemberRemoveLabel(String name) {
+    return 'Exclure $name';
+  }
+
+  @override
+  String groupMemberRemoveInProgress(String name) {
+    return '$name : exclusion en cours';
+  }
+
+  @override
+  String groupMemberRemovedSuccess(String name) {
+    return '$name a été exclu du groupe.';
+  }
+
+  @override
+  String get groupMemberRemoveGenericError =>
+      'Impossible d\'exclure ce membre. Réessaie.';
+
+  @override
+  String groupMemberRemoveConfirmTitle(String name) {
+    return 'Exclure $name du groupe ?';
+  }
+
+  @override
+  String get groupMemberRemoveConfirmBodyCharacter =>
+      'Son personnage garde toutes ses données, mais quitte immédiatement le groupe.';
+
+  @override
+  String get groupMemberRemoveConfirmBodyGameMaster =>
+      'Il/elle quitte immédiatement le groupe.';
+
+  @override
+  String get groupMemberRemoveConfirmBodyAwaitingCharacter =>
+      'Son personnage a déjà été supprimé ; il/elle quitte immédiatement le groupe.';
+
+  @override
+  String get groupMemberRemoveConfirmAction => 'Exclure';
+
+  @override
+  String get groupMemberRemoveCancel => 'Annuler';
 
   @override
   String get creationAccessDeniedErrorMessage =>
@@ -5086,6 +5425,151 @@ class AppLocalizationsFr extends AppLocalizations {
   String get spellInfoPanelRitualValue => 'Oui · +10 min d\'incantation';
 
   @override
+  String get groupTreasureItemSourceLabel => 'Provenance';
+
+  @override
+  String get groupTreasureItemSourceCatalog => 'Catalogue';
+
+  @override
+  String get groupTreasureItemQuantityLabel => 'Quantité';
+
+  @override
+  String groupTreasureItemQuantityValue(int quantity) {
+    return '×$quantity';
+  }
+
+  @override
+  String get groupTreasureClaimButton => 'S\'attribuer';
+
+  @override
+  String groupTreasureClaimSheetTitle(String itemName) {
+    return 'S\'attribuer $itemName';
+  }
+
+  @override
+  String get groupTreasureClaimNoCharacterCaption =>
+      'Il te faut un personnage dans ce groupe pour t\'attribuer un objet.';
+
+  @override
+  String get groupTreasureRemoveButton => 'Retirer du butin';
+
+  @override
+  String groupTreasureRemoveConfirmTitle(String itemName) {
+    return 'Retirer $itemName du butin ?';
+  }
+
+  @override
+  String groupTreasureRemoveConfirmBody(int quantity) {
+    String _temp0 = intl.Intl.pluralLogic(
+      quantity,
+      locale: localeName,
+      other:
+          'Les $quantity exemplaires disparaissent du butin pour tout le groupe.',
+      one: 'L\'objet disparaît du butin pour tout le groupe.',
+    );
+    return '$_temp0 Cette action est définitive.';
+  }
+
+  @override
+  String groupTreasureRemovedSnack(String itemName) {
+    return '$itemName retiré du butin.';
+  }
+
+  @override
+  String get groupTreasureUpdatedSnack => 'Objet modifié.';
+
+  @override
+  String groupTreasureQuantitySheetTitle(String itemName) {
+    return 'Quantité de $itemName';
+  }
+
+  @override
+  String get groupTreasureItemPriceSetLink => 'Fixe un prix';
+
+  @override
+  String get groupTreasureItemPriceOverrideRemoveLink => 'Retire la surcharge';
+
+  @override
+  String get groupTreasureItemPriceOverrideRemovedSnack => 'Prix réinitialisé.';
+
+  @override
+  String get groupTreasureStaleError =>
+      'Un autre membre vient de modifier ou d\'attribuer cet objet. Vérifie et recommence.';
+
+  @override
+  String get groupTreasureOfflineError =>
+      'Pas de connexion : le butin n\'a pas été modifié. Réessaie une fois connecté.';
+
+  @override
+  String get groupTreasureOfflineBanner =>
+      'Pas de connexion : le butin est en lecture seule jusqu\'au retour du réseau.';
+
+  @override
+  String get groupTreasureDetailsLoadError =>
+      'Impossible de charger la description.';
+
+  @override
+  String get groupTreasureGameMasterBanner =>
+      'En tant que MJ sans personnage, tu peux gérer le butin commun mais pas t\'attribuer une part — seuls les membres avec un personnage le peuvent.';
+
+  @override
+  String get groupTreasureCurrencySectionLabel => 'MONNAIE COMMUNE';
+
+  @override
+  String get groupTreasureSplitCurrencyButton => 'Répartir vers mon inventaire';
+
+  @override
+  String get groupTreasureItemsSectionLabel => 'OBJETS EN ATTENTE';
+
+  @override
+  String get groupTreasureEmptyItems => 'Aucun objet en attente.';
+
+  @override
+  String get groupTreasureLoadError =>
+      'Impossible de charger le butin commun. Réessaie.';
+
+  @override
+  String get groupTreasureSavedSnack => 'Butin mis à jour.';
+
+  @override
+  String get groupTreasureWriteError =>
+      'Impossible de mettre à jour le butin. Réessaie.';
+
+  @override
+  String get groupTreasureClaimedItemSnack => 'Objet ajouté à ton inventaire.';
+
+  @override
+  String get groupTreasureClaimItemError =>
+      'Impossible de t\'attribuer cet objet. Réessaie.';
+
+  @override
+  String get groupTreasureCurrencyClaimedSnack => 'Monnaie récupérée.';
+
+  @override
+  String get groupTreasureCurrencyClaimFailed =>
+      'Un autre membre vient de modifier le butin. Réessaie.';
+
+  @override
+  String groupTreasureCurrencyClaimPartial(String currencies) {
+    return 'Butin modifié entretemps : $currencies non récupérées, le reste a été ajouté à ton inventaire.';
+  }
+
+  @override
+  String get groupTreasureClaimCurrencySheetTitle =>
+      'S\'ATTRIBUER DE LA MONNAIE';
+
+  @override
+  String get groupTreasureClaimCurrencyCancelButton => 'Annuler';
+
+  @override
+  String groupTreasureClaimCurrencyMaxHint(int max) {
+    return '/ $max';
+  }
+
+  @override
+  String get groupErrorStateRetryButton => 'Réessayer';
+
+  @override
   String combatBannerTitle(int round) {
     return 'Combat en cours · round $round';
   }
@@ -5456,4 +5940,250 @@ class AppLocalizationsFr extends AppLocalizations {
   String combatSheetBannerSemanticsOffline(int round, String time) {
     return 'Combat en cours, round $round, état de $time. Ouvrir le combat.';
   }
+
+  @override
+  String get combatGrimoireSource => 'Mené depuis Grimoire';
+
+  @override
+  String get combatGrimoireLeaderInfo =>
+      'Tu mènes ce combat depuis Grimoire. Ici, tu le suis comme les joueurs.';
+
+  @override
+  String get combatShout => 'Combat !';
+
+  @override
+  String get combatPreparingStatus => 'En préparation';
+
+  @override
+  String get combatPreparingHint =>
+      'L\'ordre d\'initiative apparaîtra au premier tour.';
+
+  @override
+  String get combatBannerPreparing => 'Combat en préparation';
+
+  @override
+  String get combatBannerOpen => 'Ouvrir le combat';
+
+  @override
+  String get combatBannerSendInitiative =>
+      'Envoie ton initiative · Ouvrir le combat';
+
+  @override
+  String get combatBannerInitiativeSent =>
+      'Initiative envoyée · Ouvrir le combat';
+
+  @override
+  String get combatSheetBannerInitiativeRequested =>
+      'Combat ! Envoie ton initiative';
+
+  @override
+  String get combatSheetBannerPreparingSemantics =>
+      'Combat en préparation. Ouvrir le combat.';
+
+  @override
+  String get combatSheetBannerInitiativeRequestedSemantics =>
+      'Combat ! Envoie ton initiative. Ouvrir le combat.';
+
+  @override
+  String get combatInitiativeRequestTitle => 'Le MJ demande ton initiative';
+
+  @override
+  String combatInitiativeRequestFor(String name) {
+    return 'Pour $name';
+  }
+
+  @override
+  String get combatSendInitiative => 'Envoyer mon initiative';
+
+  @override
+  String get combatSendToGm => 'Envoyer au MJ';
+
+  @override
+  String get combatSendHint => 'Une fois reçue, seul le MJ peut la modifier.';
+
+  @override
+  String combatInitiativeSent(int value) {
+    return '$value · envoyée au MJ';
+  }
+
+  @override
+  String get combatInitiativeAwaitingReceipt =>
+      'En attente de confirmation du MJ…';
+
+  @override
+  String combatInitiativeReceived(int value) {
+    return '$value · reçue par le MJ';
+  }
+
+  @override
+  String get combatInitiativeKnownByGm => 'Le MJ a ton initiative';
+
+  @override
+  String get combatInitiativeMayAdjust =>
+      'Le MJ peut l\'ajuster : la valeur retenue s\'affichera au premier tour.';
+
+  @override
+  String get combatInitiativeNotReceived =>
+      'Le MJ n\'a pas reçu ton initiative. Renvoie-la.';
+
+  @override
+  String get combatInitiativeRequestedAgain =>
+      'Le MJ te redemande ton initiative.';
+
+  @override
+  String get combatInitiativeSentLabel => 'Envoyée au MJ';
+
+  @override
+  String combatInitiativeCorrected(int sent) {
+    return 'Corrigée par le MJ (envoyé : $sent)';
+  }
+
+  @override
+  String get combatUnavailableGmOffline =>
+      'Indisponible tant que le MJ est hors ligne.';
+
+  @override
+  String combatSendRateLimited(int seconds) {
+    return 'Trop d\'envois. Réessaie dans $seconds s.';
+  }
+
+  @override
+  String get combatSendFailed => 'Envoi impossible. Réessaie.';
+
+  @override
+  String get combatNotMemberAnymore => 'Tu ne fais plus partie de ce groupe.';
+
+  @override
+  String get combatBadgeDead => 'Mort';
+
+  @override
+  String get combatTurnSkipped => 'Tour sauté';
+
+  @override
+  String get combatRowDeadSemantics => 'mort, tour sauté';
+
+  @override
+  String get combatRemovedByGm => 'Le MJ t\'a retiré de ce combat.';
+
+  @override
+  String get combatYourTurn => 'À toi de jouer';
+
+  @override
+  String combatBannerYourTurn(int round) {
+    return 'À toi de jouer · round $round';
+  }
+
+  @override
+  String combatSheetBannerYourTurnSemantics(int round) {
+    return 'À toi de jouer, round $round. Ouvrir le combat.';
+  }
+
+  @override
+  String get combatCalloutInitiativeTitle => 'Initiative demandée';
+
+  @override
+  String combatCalloutSendInitiative(String group) {
+    return '$group · Envoie ton initiative';
+  }
+
+  @override
+  String combatCalloutOpen(String group) {
+    return '$group · Ouvrir le combat';
+  }
+
+  @override
+  String combatCalloutYourTurnBody(String group, int round) {
+    return '$group · round $round · Ouvrir le combat';
+  }
+
+  @override
+  String get combatCalloutClose => 'Fermer';
+
+  @override
+  String combatGmOfflineBanner(String time) {
+    return 'Le MJ semble hors ligne. Dernier état reçu à $time ; le combat reprendra dès son retour.';
+  }
+
+  @override
+  String combatBannerGmOffline(String time) {
+    return 'MJ hors ligne · état de $time';
+  }
+
+  @override
+  String combatSheetBannerGmOffline(String time) {
+    return 'Combat · MJ hors ligne (état de $time)';
+  }
+
+  @override
+  String combatSheetBannerGmOfflineSemantics(String time) {
+    return 'Combat en cours, MJ hors ligne, état de $time. Ouvrir le combat.';
+  }
+
+  @override
+  String get combatInterruptedTitle => 'Pas de nouvelles du MJ';
+
+  @override
+  String combatInterruptedBody(String time) {
+    return 'Dernier état reçu à $time. Le combat réapparaîtra ici s\'il reprend.';
+  }
+
+  @override
+  String get combatConnecting => 'Connexion au combat…';
+
+  @override
+  String get combatNoneTitle => 'Aucun combat en cours';
+
+  @override
+  String get combatNoneBody =>
+      'Le combat est peut-être terminé, ou le MJ n\'est pas connecté. Il s\'affichera ici dès qu\'il reprend.';
+
+  @override
+  String get combatGroupNotAccessible => 'Ce groupe n\'est plus accessible.';
+
+  @override
+  String get combatEndedTitle => 'Combat terminé';
+
+  @override
+  String get combatEndedBeforeOrder =>
+      'Le combat s\'est terminé avant que l\'ordre soit dévoilé.';
+
+  @override
+  String combatAnnounceStart(String group) {
+    return 'Combat ! Le MJ lance un combat dans $group.';
+  }
+
+  @override
+  String get combatAnnounceInitiativeRequested =>
+      'Le MJ demande ton initiative.';
+
+  @override
+  String combatAnnounceInitiativeSent(int value) {
+    return 'Initiative $value envoyée au MJ.';
+  }
+
+  @override
+  String get combatAnnounceInitiativeReceived => 'Le MJ a reçu ton initiative.';
+
+  @override
+  String combatAnnounceInitiativeCorrected(int value) {
+    return 'Le MJ a retenu $value.';
+  }
+
+  @override
+  String get combatAnnounceOrderRevealed =>
+      'L\'ordre d\'initiative est dévoilé.';
+
+  @override
+  String get combatAnnounceGmOffline =>
+      'Le MJ semble hors ligne. La dernière vue reste affichée.';
+
+  @override
+  String get combatAnnounceGmBack => 'Le MJ est de retour.';
+
+  @override
+  String get combatStartBlockedByGrimoire =>
+      'Un combat est mené depuis Grimoire.';
+
+  @override
+  String get combatBackHome => 'Retour à l\'accueil';
 }

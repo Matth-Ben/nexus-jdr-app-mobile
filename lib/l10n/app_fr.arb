@@ -276,17 +276,45 @@
   "@profileCreditsGameContentTitle": {
     "description": "Titre de la section \"Contenu de jeu\" de `profile_credits_screen.dart`."
   },
-  "profileCreditsGameContentPara1": "Le contenu de règles Donjons & Dragons 5e (races, classes, historiques, sorts, objets, monstres...) provient d'Open5e et du System Reference Document (SRD 5.1/5.2) de Wizards of the Coast, sous licence Creative Commons Attribution 4.0 International (CC-BY 4.0).",
+  "profileCreditsGameContentPara1": "Une partie du contenu de règles utilisé par Nexus JDR provient du System Reference Document (SRD), publié sous licence Creative Commons Attribution 4.0 International (CC BY 4.0). Voici les déclarations d'attribution correspondantes et les modifications apportées.",
   "@profileCreditsGameContentPara1": {
-    "description": "1er paragraphe de la section \"Contenu de jeu\" de `profile_credits_screen.dart`."
+    "description": "1er paragraphe de la section « Contenu de jeu » de `profile_credits_screen.dart` (licence étape 1, décision 79), avant les deux cadres d'attribution du SRD."
   },
-  "profileCreditsGameContentPara2": "Donjons & Dragons, D&D et leurs logos sont des marques de Wizards of the Coast LLC. Wizards of the Coast n'a ni produit, ni approuvé, ni autorisé cette application.",
+  "profileCreditsModifiedPrefix": "Modifié\u00a0: ",
+  "@profileCreditsModifiedPrefix": {
+    "description": "Préfixe en gras de la ligne « Modifié » d'un cadre d'attribution du SRD (`_SrdAttributionBox` de `profile_credits_screen.dart`), exigée par CC BY 4.0 (section 3(a)(1)(B)). Espace insécable avant les deux-points, espace finale conservée."
+  },
+  "profileCreditsSrd51Label": "SRD 5.1 (règles 2014)",
+  "@profileCreditsSrd51Label": {
+    "description": "Libellé du cadre d'attribution du SRD 5.1 (`profile_credits_screen.dart`)."
+  },
+  "profileCreditsSrd51Attribution": "Ce travail comprend la documentation tirée du Document de Référence du Système 5.1 (« SRD 5.1 ») par Wizards of the Coast LLC et disponible à l'adresse https://dnd.wizards.com/fr/resources/systems-reference-document. Le SRD 5.1 est distribué en vertu de la licence Creative Commons Attribution 4.0 International disponible à l'adresse https://creativecommons.org/licenses/by/4.0/legalcode.fr.",
+  "@profileCreditsSrd51Attribution": {
+    "description": "Déclaration d'attribution du SRD 5.1 en français : texte officiel de Wizards, recopié mot pour mot du contrat DeepCore `docs/api-v1/contrat-bestiaire-catalogue.md` l. 108-111 ; ne jamais traduire ni reformuler. L'anglais reprend la déclaration anglaise officielle (l. 115-117), pas une traduction de celle-ci."
+  },
+  "profileCreditsSrd51Modified": "textes repris en tout ou en partie du SRD 5.1 français, ou traduits du SRD 5.1 anglais (traduction non officielle) et parfois résumés ; certains noms diffèrent de la traduction officielle ; poids et distances exprimés en kilogrammes et en mètres ; contenu réparti en champs et présentation adaptée à l'application.",
+  "@profileCreditsSrd51Modified": {
+    "description": "Ligne « Modifié » du cadre SRD 5.1 (modifications apportées, CC BY 4.0). À relire à chaque PR des étapes 2 et 3 de la licence (dette D258)."
+  },
+  "profileCreditsSrd52Label": "SRD 5.2 (règles 2024, déclaration en anglais)",
+  "@profileCreditsSrd52Label": {
+    "description": "Libellé du cadre d'attribution du SRD 5.2 : signale que la déclaration est en anglais."
+  },
+  "profileCreditsSrd52Attribution": "This work includes material from the System Reference Document 5.2 (“SRD 5.2”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.",
+  "@profileCreditsSrd52Attribution": {
+    "description": "Déclaration d'attribution du SRD 5.2 : texte officiel de Wizards, recopié mot pour mot du contrat DeepCore `docs/api-v1/contrat-bestiaire-catalogue.md` l. 141-143 ; ne jamais traduire ni reformuler. Affichée en anglais telle quelle dans les deux langues (`locale: en` pour le lecteur d'écran, arbitrage 3.1 de la spec)."
+  },
+  "profileCreditsSrd52Modified": "traduit de l'anglais en français (traduction non officielle), parfois résumé ; distances et poids convertis en mètres et en kilogrammes ; contenu réparti en champs et présentation adaptée à l'application.",
+  "@profileCreditsSrd52Modified": {
+    "description": "Ligne « Modifié » du cadre SRD 5.2 (modifications apportées, CC BY 4.0). À relire à chaque PR des étapes 2 et 3 de la licence (dette D258)."
+  },
+  "profileCreditsNonSrdContent": "Une partie du contenu de jeu de Nexus JDR ne fait pas partie du SRD (notamment de nombreux sorts, sous-classes, dons, historiques, races et options de classe). Ce contenu n'est pas couvert par la licence Creative Commons Attribution 4.0 citée ci-dessus.",
+  "@profileCreditsNonSrdContent": {
+    "description": "PROVISOIRE (à valider par Matthias et par le conseil) : paragraphe sur le contenu de jeu hors SRD, sous les cadres d'attribution de `profile_credits_screen.dart`."
+  },
+  "profileCreditsGameContentPara2": "Donjons & Dragons et D&D sont des marques de Wizards of the Coast LLC. Nexus JDR n'est ni affilié à Wizards of the Coast, ni approuvé par cette société.",
   "@profileCreditsGameContentPara2": {
-    "description": "2e paragraphe de la section \"Contenu de jeu\" de `profile_credits_screen.dart`."
-  },
-  "profileCreditsLicenseNotice": "Ce produit inclut des éléments du System Reference Document 5.1 et 5.2, disponibles sur dndbeyond.com/srd et open5e.com, sous licence Creative Commons Attribution 4.0 International (creativecommons.org/licenses/by/4.0/legalcode).",
-  "@profileCreditsLicenseNotice": {
-    "description": "Texte du bloc encadré `_LicenseNoticeBox` de `profile_credits_screen.dart`."
+    "description": "PROVISOIRE (à valider par Matthias et par le conseil) : phrase de marque, dernier paragraphe de la section « Contenu de jeu » de `profile_credits_screen.dart`."
   },
   "profileCreditsFontsTitle": "Polices",
   "@profileCreditsFontsTitle": {
@@ -308,7 +336,7 @@
   "@profileCreditsOpenSourcePara2": {
     "description": "2e paragraphe (clôture) de la section \"Bibliothèques open source\"."
   },
-  "profileCreditsLastUpdated": "Dernière mise à jour : 14 octobre 2026",
+  "profileCreditsLastUpdated": "Dernière mise à jour : 25 novembre 2026",
   "@profileCreditsLastUpdated": {
     "description": "Date de dernière mise à jour en pied de `profile_credits_screen.dart`."
   },
@@ -536,7 +564,7 @@
   "@profileHelpCredits": {
     "description": "Libellé de la tuile \"Crédits & licences\" de `profile_help_screen.dart`, pousse `/profile/help/credits`."
   },
-  "profileHelpAboutFooterNote": "Contenu D&D 5e sous licence Open5e / SRD. Voir les crédits complets pour le détail des sources.",
+  "profileHelpAboutFooterNote": "Une partie du contenu de jeu provient du SRD (CC BY 4.0). Détail des sources et des attributions dans « Crédits & licences ».",
   "@profileHelpAboutFooterNote": {
     "description": "Note sous la section \"À PROPOS\" de `profile_help_screen.dart`."
   },
@@ -607,9 +635,9 @@
   "@profileLegalIntellectualPropertyTitle": {
     "description": "Titre de la section \"Propriété intellectuelle\" de `profile_legal_screen.dart`."
   },
-  "profileLegalIntellectualPropertyPara1": "Le contenu de règles Donjons & Dragons 5e (races, classes, sorts, objets...) provient d'Open5e et du System Reference Document (SRD), sous licence Creative Commons Attribution 4.0 (CC-BY 4.0) — voir « Crédits & licences » pour le détail. Le reste de l'application (code, design, marque « Nexus JDR ») appartient à son éditeur.",
+  "profileLegalIntellectualPropertyPara1": "Une partie du contenu de règles de Donjons & Dragons 5e provient du System Reference Document (SRD 5.1 et 5.2), sous licence Creative Commons Attribution 4.0 International (CC BY 4.0) ; le reste du contenu de jeu n'est pas issu du SRD et n'est pas couvert par cette licence. Les déclarations d'attribution et les modifications apportées figurent dans « Crédits & licences ». Le code, le design et la marque « Nexus JDR » appartiennent à l'éditeur de l'application.",
   "@profileLegalIntellectualPropertyPara1": {
-    "description": "Paragraphe de la section \"Propriété intellectuelle\"."
+    "description": "Paragraphe de la section \"Propriété intellectuelle\". Fin PROVISOIRE (à partir de « ; le reste du contenu de jeu… », à valider par Matthias et par le conseil). « SRD 5.1 et 5.2 » sera complété quand le SRD 5.2.1 entrera dans Nexus (licence étape 2)."
   },
   "profileLegalTerminationTitle": "Résiliation",
   "@profileLegalTerminationTitle": {
@@ -627,7 +655,7 @@
   "@profileLegalGoverningLawPara1": {
     "description": "Paragraphe de la section \"Droit applicable\"."
   },
-  "profileLegalLastUpdated": "Dernière mise à jour : 25 septembre 2026",
+  "profileLegalLastUpdated": "Dernière mise à jour : 25 novembre 2026",
   "@profileLegalLastUpdated": {
     "description": "Date de dernière mise à jour en pied de `profile_legal_screen.dart`."
   },
@@ -648,6 +676,10 @@
   "@profileNotificationsSectionTriggers": {
     "description": "Titre de section \"DÉCLENCHEURS\" de `profile_notifications_screen.dart`."
   },
+  "profileNotificationsGmCombat": "Combat et révélations du MJ",
+  "@profileNotificationsGmCombat": {"description": "Interrupteur de notification (PR 2)."},
+  "profileNotificationsGmCombatSubtitle": "Début du combat, ton tour et ce que le MJ te montre.",
+  "@profileNotificationsGmCombatSubtitle": {"description": "Sous-titre de l'interrupteur de notification (PR 2)."},
   "profileNotificationsRestReminder": "Repos long non pris depuis longtemps",
   "@profileNotificationsRestReminder": {
     "description": "Titre de la 1ère rangée \"DÉCLENCHEURS\"."
@@ -1291,7 +1323,7 @@
 
   "characterLevelAbbreviation": "Niv. {level}",
   "@characterLevelAbbreviation": {
-    "description": "Segment \"Niv. X\" du résumé \"Race · Classe · Niv. X\" d'un personnage — partagé entre `character_card.dart::_summaryLine` et `character_card_action_sheet.dart::_CardActionSheetContent._summaryLine` (copie intentionnellement dupliquée entre ces deux fichiers, voir leur doc respective, mais la clé `.arb` elle-même est réutilisée).",
+    "description": "Segment \"Niv. X\" du résumé \"Race · Classe · Niv. X\" d'un personnage — partagé entre `character_card.dart::_summaryLine`, `character_card_action_sheet.dart::_CardActionSheetContent._summaryLine` et `group_join_screen.dart::_RoleSelectorTile._summaryLine` (copie intentionnellement dupliquée entre ces fichiers, voir leur doc respective, mais la clé `.arb` elle-même est réutilisée).",
     "placeholders": {
       "level": {
         "type": "int"
@@ -3837,18 +3869,71 @@
       }
     }
   },
-  "itemInfoPanelCostLabel": "Coût",
-  "@itemInfoPanelCostLabel": {
-    "description": "Libellé de la ligne \"Coût\" du panneau \"Infos\" d'un objet."
+  "itemPriceLabel": "Prix",
+  "@itemPriceLabel": {
+    "description": "Libellé de la ligne \"Prix\" du panneau \"Infos\" d'un objet (spec du prix d'un objet modifiable) — remplace l'ancienne ligne \"Coût\" (`itemInfoPanelCostLabel`, retirée)."
   },
-  "itemInfoPanelCostValue": "{cost} po",
-  "@itemInfoPanelCostValue": {
-    "description": "Valeur de la ligne \"Coût\" du panneau \"Infos\" d'un objet — unité \"po\" volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.",
+  "itemPriceValue": "{amount} {unit}",
+  "@itemPriceValue": {
+    "description": "Valeur de la ligne \"Prix\" d'un objet — devise-agnostique (`unit` = `CurrencyKind.unitLabel`, ex. \"PO\"), remplace l'ancienne `itemInfoPanelCostValue` qui codait \"po\" en dur.",
     "placeholders": {
-      "cost": {
+      "amount": {
+        "type": "String"
+      },
+      "unit": {
         "type": "String"
       }
     }
+  },
+  "itemPriceNotEstimatedValue": "Non estimé",
+  "@itemPriceNotEstimatedValue": {
+    "description": "Valeur de la ligne \"Prix\" quand aucun prix n'est connu (objet personnalisé sans prix fixé, ou objet du catalogue sans coût officiel ni surcharge — spec du prix d'un objet modifiable)."
+  },
+  "itemPriceOverriddenBadge": "Modifié",
+  "@itemPriceOverriddenBadge": {
+    "description": "Texte de la pastille \"Modifié\" (`core/widgets/modified_badge.dart`) affichée à côté du prix d'un objet du catalogue dont le prix officiel a été surchargé."
+  },
+  "itemPriceSetLink": "Fixer un prix",
+  "@itemPriceSetLink": {
+    "description": "Lien \"Fixer un prix\" affiché à droite de \"Non estimé\" (module personnages, vouvoiement) — ouvre l'éditeur de prix pertinent."
+  },
+  "itemPriceOverrideSheetTitle": "Prix de {itemName}",
+  "@itemPriceOverrideSheetTitle": {
+    "description": "Titre de la sheet autonome de surcharge de prix d'un objet du catalogue (`item_price_override_sheet.dart`) — `itemName` reste le nom de l'objet, donnée de contenu D&D.",
+    "placeholders": {
+      "itemName": {
+        "type": "String"
+      }
+    }
+  },
+  "itemPriceOverrideOfficialCaption": "Prix officiel : {officialPrice}",
+  "@itemPriceOverrideOfficialCaption": {
+    "description": "Légende rappelant le prix officiel actuel d'un objet du catalogue, dans la sheet de surcharge de prix et la section \"Prix\" de la sheet de quantité du butin — `officialPrice` est déjà formaté (`itemPriceValue`).",
+    "placeholders": {
+      "officialPrice": {
+        "type": "String"
+      }
+    }
+  },
+  "itemPriceOverrideRemoveLink": "Retirer la surcharge",
+  "@itemPriceOverrideRemoveLink": {
+    "description": "Lien \"Retirer la surcharge\" (module personnages, vouvoiement) de la sheet de surcharge de prix d'un objet du catalogue — visible seulement si une surcharge existe déjà, aucune confirmation."
+  },
+  "itemPriceOverrideRemovedSnack": "Prix réinitialisé.",
+  "@itemPriceOverrideRemovedSnack": {
+    "description": "Snackbar affiché après le lien \"Retirer la surcharge\" (module personnages)."
+  },
+  "itemPriceOverrideSaveButton": "Enregistrer",
+  "@itemPriceOverrideSaveButton": {
+    "description": "Bouton principal de la sheet de surcharge de prix d'un objet du catalogue."
+  },
+  "customItemPriceSectionLabel": "Prix",
+  "@customItemPriceSectionLabel": {
+    "description": "Libellé \"Prix\" du champ de prix du formulaire d'objet personnalisé (`AdvancedSection`, spec du prix d'un objet modifiable, §2a) et de la section \"Prix\" de la sheet de quantité du butin — formulaire partagé, une seule clé."
+  },
+  "customItemPriceCurrencySectionLabel": "Devise",
+  "@customItemPriceCurrencySectionLabel": {
+    "description": "Libellé \"Devise\" du sélecteur de devise du champ de prix du formulaire d'objet personnalisé (`CurrencyPickerChips`, spec du prix d'un objet modifiable, §2a)."
   },
   "itemInfoPanelSetLabel": "Set",
   "@itemInfoPanelSetLabel": {
@@ -6099,6 +6184,14 @@
   "@characterSessionExpiredErrorMessage": {
     "description": "`CharacterErrorCode.sessionExpired` (D141)."
   },
+  "characterArmorAlreadyEquippedErrorMessage": "Vous portez déjà une armure : déséquipez-la d'abord pour en équiper une autre.",
+  "@characterArmorAlreadyEquippedErrorMessage": {
+    "description": "`CharacterErrorCode.armorAlreadyEquipped` : refus d'équiper une seconde armure (décision n° 37, `domain/armor_slot_rules.dart`), en ligne comme hors ligne. Vouvoiement, comme les autres messages de l'inventaire."
+  },
+  "characterShieldAlreadyEquippedErrorMessage": "Vous portez déjà un bouclier : déséquipez-le d'abord pour en équiper un autre.",
+  "@characterShieldAlreadyEquippedErrorMessage": {
+    "description": "`CharacterErrorCode.shieldAlreadyEquipped` : refus d'équiper un second bouclier (décision n° 37), même formulation que `characterArmorAlreadyEquippedErrorMessage`."
+  },
   "groupAccessDeniedErrorMessage": "Vous n'avez pas accès à ce groupe.",
   "@groupAccessDeniedErrorMessage": {
     "description": "`GroupErrorCode.accessDenied` (D141)."
@@ -6114,6 +6207,314 @@
   "groupInviteCodeGenerationFailedErrorMessage": "Impossible de générer un nouveau code. Réessayez.",
   "@groupInviteCodeGenerationFailedErrorMessage": {
     "description": "`GroupErrorCode.inviteCodeGenerationFailed` (D141)."
+  },
+  "groupCombatActiveErrorMessage": "Action impossible pendant un combat en cours. Termine d'abord le combat.",
+  "@groupCombatActiveErrorMessage": {
+    "description": "`GroupErrorCode.combatActive` (refus serveur `combat_active`), texte par défaut quand l'action n'a pas de message dédié."
+  },
+  "groupMjAlreadyAssignedErrorMessage": "Un autre membre est déjà MJ de ce groupe. Rien n'a changé : il doit d'abord quitter le groupe, ou tu peux l'exclure depuis l'onglet Membres.",
+  "@groupMjAlreadyAssignedErrorMessage": {
+    "description": "`GroupErrorCode.mjAlreadyAssigned` (refus serveur `mj_already_assigned` de « Devenir MJ ») : personne n'est rétrogradé (décision de Matthias du 19/11/2026)."
+  },
+  "groupNotGroupOwnerErrorMessage": "Seul le créateur du groupe peut faire cela.",
+  "@groupNotGroupOwnerErrorMessage": {
+    "description": "`GroupErrorCode.notGroupOwner` (refus serveur `not_group_owner`)."
+  },
+  "groupNotMemberErrorMessage": "Tu ne fais plus partie de ce groupe.",
+  "@groupNotMemberErrorMessage": {
+    "description": "`GroupErrorCode.notMember` (refus serveur `not_member`)."
+  },
+  "groupTransientConflictErrorMessage": "Le serveur était occupé : rien n'a été modifié. Réessaie.",
+  "@groupTransientConflictErrorMessage": {
+    "description": "`GroupErrorCode.transientConflict` (SQLSTATE `40P01` ou `40001`, transaction annulée sans effet)."
+  },
+  "groupServerOutdatedErrorMessage": "Cette action n'est pas encore disponible sur le serveur. Réessaie plus tard.",
+  "@groupServerOutdatedErrorMessage": {
+    "description": "`GroupErrorCode.serverOutdated` (`PGRST202` : fonction serveur absente, migration DeepCore pas encore appliquée)."
+  },
+  "groupBecomeGameMasterSectionTitle": "MAÎTRE DU JEU",
+  "@groupBecomeGameMasterSectionTitle": {
+    "description": "Titre de la section « Devenir MJ » des paramètres du groupe (propriétaire qui joue un personnage)."
+  },
+  "groupBecomeGameMasterExplain": "Pour lancer les combats dans l'app, deviens-en le MJ : {characterName} quittera le groupe mais restera dans ta liste de personnages.",
+  "@groupBecomeGameMasterExplain": {
+    "description": "Explication sous le titre de la section « Devenir MJ ».",
+    "placeholders": {"characterName": {"type": "String"}}
+  },
+  "groupBecomeGameMasterAction": "Devenir MJ",
+  "@groupBecomeGameMasterAction": {
+    "description": "Bouton « Devenir MJ » des paramètres du groupe."
+  },
+  "groupBecomeGameMasterInProgress": "Passage en MJ…",
+  "@groupBecomeGameMasterInProgress": {
+    "description": "Libellé du bouton « Devenir MJ » pendant l'appel serveur (bouton bloqué)."
+  },
+  "groupBecomeGameMasterOffline": "Indisponible hors ligne : cette action a besoin du serveur.",
+  "@groupBecomeGameMasterOffline": {
+    "description": "Indice sous le bouton « Devenir MJ » désactivé hors ligne (jamais mis en file d'attente)."
+  },
+  "groupBecomeGameMasterConfirmTitle": "Devenir MJ de « {groupName} » ?",
+  "@groupBecomeGameMasterConfirmTitle": {
+    "description": "Titre de la confirmation « Devenir MJ ».",
+    "placeholders": {"groupName": {"type": "String"}}
+  },
+  "groupBecomeGameMasterConfirmBody": "{characterName} quittera ce groupe mais restera dans ta liste de personnages, avec toutes ses données. Tu deviendras MJ sans personnage et tu pourras lancer les combats. Impossible de revenir en arrière pour l'instant.",
+  "@groupBecomeGameMasterConfirmBody": {
+    "description": "Corps de la confirmation « Devenir MJ » (redevenir joueur n'est pas prévu).",
+    "placeholders": {"characterName": {"type": "String"}}
+  },
+  "groupBecomeGameMasterConfirmAction": "Devenir MJ",
+  "@groupBecomeGameMasterConfirmAction": {
+    "description": "Bouton de confirmation « Devenir MJ »."
+  },
+  "groupBecomeGameMasterCancel": "Annuler",
+  "@groupBecomeGameMasterCancel": {
+    "description": "Bouton d'annulation de la confirmation « Devenir MJ »."
+  },
+  "groupBecomeGameMasterSuccess": "Tu es maintenant MJ de ce groupe. Ton personnage reste dans ta liste.",
+  "@groupBecomeGameMasterSuccess": {
+    "description": "Message après « Devenir MJ » réussi."
+  },
+  "groupBecomeGameMasterCombatActive": "Impossible de devenir MJ pendant un combat en cours. Termine d'abord le combat.",
+  "@groupBecomeGameMasterCombatActive": {
+    "description": "Refus serveur `combat_active` de « Devenir MJ »."
+  },
+  "groupBecomeGameMasterGenericError": "Impossible de devenir MJ. Réessaie.",
+  "@groupBecomeGameMasterGenericError": {
+    "description": "Échec non reconnu de « Devenir MJ »."
+  },
+  "groupSettingsDissolveAction": "Dissoudre le groupe",
+  "@groupSettingsDissolveAction": {
+    "description": "Bouton de la zone dangereuse des paramètres du groupe."
+  },
+  "groupSettingsDissolveCaption": "Réservé au créateur du groupe. Retire tous les membres et supprime le butin commun, les carnets de notes des joueurs et l'historique des combats ; les personnages et leurs données restent intacts.",
+  "@groupSettingsDissolveCaption": {
+    "description": "Légende sous « Dissoudre le groupe » (D228 : suppressions en cascade de DeepCore)."
+  },
+  "groupDissolveSheetTitle": "DISSOUDRE LE GROUPE",
+  "@groupDissolveSheetTitle": {
+    "description": "Titre de la feuille de dissolution."
+  },
+  "groupDissolveWarningIntro": "Cette action est irréversible. Elle supprimera définitivement, pour tous les membres :",
+  "@groupDissolveWarningIntro": {
+    "description": "Introduction de l'avertissement de dissolution (bandeau d'alerte), suivie de la liste des suppressions (D228)."
+  },
+  "groupDissolveWarningItemAccess": "le groupe et l'accès de tous ses membres ;",
+  "@groupDissolveWarningItemAccess": {
+    "description": "Élément de la liste des suppressions de la dissolution (`group_members`)."
+  },
+  "groupDissolveWarningItemTreasure": "le butin commun ;",
+  "@groupDissolveWarningItemTreasure": {
+    "description": "Élément de la liste des suppressions de la dissolution (`group_treasure`)."
+  },
+  "groupDissolveWarningItemNotes": "les carnets de notes des joueurs pour ce groupe (onglet Notes, toutes les entrées du journal comprises) ;",
+  "@groupDissolveWarningItemNotes": {
+    "description": "Élément de la liste des suppressions de la dissolution (`group_notes`, `group_journal_entries`)."
+  },
+  "groupDissolveWarningItemCombats": "l'historique des combats du groupe.",
+  "@groupDissolveWarningItemCombats": {
+    "description": "Élément de la liste des suppressions de la dissolution (`combats`, `combat_participants`)."
+  },
+  "groupDissolveWarningCharactersKept": "Les personnages des joueurs restent intacts : ils gardent toutes leurs données.",
+  "@groupDissolveWarningCharactersKept": {
+    "description": "Phrase finale de l'avertissement de dissolution : aucune table de personnages ne dépend de `groups`."
+  },
+  "groupDissolveCancel": "Annuler",
+  "@groupDissolveCancel": {
+    "description": "Bouton d'annulation de la feuille de dissolution."
+  },
+  "groupDissolveContinue": "Continuer",
+  "@groupDissolveContinue": {
+    "description": "Passage à l'étape de confirmation de la feuille de dissolution."
+  },
+  "groupDissolveRetypeLabel": "RETAPE LE NOM DU GROUPE POUR CONFIRMER",
+  "@groupDissolveRetypeLabel": {
+    "description": "Libellé du champ de confirmation de la dissolution."
+  },
+  "groupDissolveRetypeHint": "Nom du groupe",
+  "@groupDissolveRetypeHint": {
+    "description": "Indication du champ de confirmation de la dissolution."
+  },
+  "groupDissolveConfirm": "Dissoudre définitivement",
+  "@groupDissolveConfirm": {
+    "description": "Bouton final de la dissolution."
+  },
+  "groupDissolveInProgress": "Dissolution en cours…",
+  "@groupDissolveInProgress": {
+    "description": "Bouton final de la dissolution pendant l'appel serveur."
+  },
+  "groupDissolveSuccess": "Groupe dissous.",
+  "@groupDissolveSuccess": {
+    "description": "Message après une dissolution réussie."
+  },
+  "groupDissolveGenericError": "Impossible de dissoudre le groupe. Réessaie.",
+  "@groupDissolveGenericError": {
+    "description": "Échec non reconnu de la dissolution."
+  },
+  "groupDissolveBlockedByCombat": "Tu ne peux pas dissoudre le groupe pendant un combat en cours. Termine d'abord le combat.",
+  "@groupDissolveBlockedByCombat": {
+    "description": "Dissolution refusée pendant un combat actif (garde cliente ou refus serveur `combat_active`, D224)."
+  },
+  "groupCampaignPrefix": "Campagne\u00a0: ",
+  "@groupCampaignPrefix": {
+    "description": "Préfixe du titre de la campagne associée au groupe (carte « Campagne » de l'écran Groupe, aperçu d'invitation), suivi du titre écrit par le MJ dans Grimoire, jamais traduit. Espace insécable avant les deux-points, espace finale conservée."
+  },
+  "groupCampaignSummaryToggle": "Résumé de la campagne",
+  "@groupCampaignSummaryToggle": {
+    "description": "En-tête repliable du résumé public de la campagne (carte « Campagne » de l'écran Groupe). Le résumé, écrit par le MJ, n'est jamais traduit."
+  },
+  "groupInvitePreviewLoading": "Recherche du groupe…",
+  "@groupInvitePreviewLoading": {
+    "description": "État de chargement de l'aperçu d'invitation, sous le champ du code (écran « Rejoindre un groupe »)."
+  },
+  "groupJoinSeeGroupAction": "Voir le groupe",
+  "@groupJoinSeeGroupAction": {
+    "description": "Bouton principal de l'écran « Rejoindre un groupe » tant que l'aperçu du groupe n'est pas affiché : le toucher charge l'aperçu, sans rejoindre (décision n° 34)."
+  },
+  "groupJoinAction": "Rejoindre",
+  "@groupJoinAction": {
+    "description": "Bouton principal de l'écran « Rejoindre un groupe » une fois l'aperçu du groupe affiché : le toucher rejoint le groupe."
+  },
+  "groupInvitePreviewMemberCount": "{count, plural, =1{{count} membre} other{{count} membres}}",
+  "@groupInvitePreviewMemberCount": {
+    "description": "Nombre de membres du groupe dans l'aperçu d'invitation (écran « Rejoindre un groupe »). `{count}` dans la branche `=1` (et non « 1 ») : en français, 0 relève aussi de cette branche et doit afficher « 0 membre ».",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupJoinTitle": "REJOINDRE UN GROUPE",
+  "@groupJoinTitle": {
+    "description": "Titre de l'en-tête de l'écran « Rejoindre un groupe » (D233)."
+  },
+  "groupJoinIntro": "Demande le code d'invitation à un membre du groupe, puis choisis le personnage qui rejoindra le groupe.",
+  "@groupJoinIntro": {
+    "description": "Texte d'introduction de l'écran « Rejoindre un groupe » (D233). Tutoiement."
+  },
+  "groupJoinCodeLabel": "Code d'invitation",
+  "@groupJoinCodeLabel": {
+    "description": "Libellé de section au-dessus du champ du code (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinRoleLabel": "Qui te représente dans ce groupe ?",
+  "@groupJoinRoleLabel": {
+    "description": "Libellé de section au-dessus du choix du rôle (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinRoleHelp": "Choisis ton personnage, ou sélectionne « MJ — sans personnage » si tu animes la partie sans fiche.",
+  "@groupJoinRoleHelp": {
+    "description": "Aide sous « Qui te représente dans ce groupe ? » (correctif F01, D233). Le rôle cité doit reprendre exactement `groupJoinGameMasterRoleTitle`."
+  },
+  "groupJoinRolePickerTitle": "CHOISIR TON RÔLE",
+  "@groupJoinRolePickerTitle": {
+    "description": "Titre de la feuille de choix du rôle (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinGameMasterRoleTitle": "MJ — sans personnage",
+  "@groupJoinGameMasterRoleTitle": {
+    "description": "Rôle « MJ sans personnage » : tuile du rôle choisi et ligne de la feuille de choix (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinGameMasterRoleSubtitle": "Suit le groupe sans fiche de personnage.",
+  "@groupJoinGameMasterRoleSubtitle": {
+    "description": "Sous-titre du rôle « MJ — sans personnage » (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinNoCharacter": "Tu n'as pas encore de personnage à rattacher.",
+  "@groupJoinNoCharacter": {
+    "description": "Liste de personnages vide : tuile du rôle et feuille de choix (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinChooseRolePlaceholder": "Choisir un personnage ou un rôle",
+  "@groupJoinChooseRolePlaceholder": {
+    "description": "Tuile du rôle tant que rien n'est choisi ni chargé (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinCharactersRetryButton": "Réessayer",
+  "@groupJoinCharactersRetryButton": {
+    "description": "Relance du chargement des personnages dans la feuille de choix du rôle (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinSuccess": "Groupe rejoint !",
+  "@groupJoinSuccess": {
+    "description": "Message après un rattachement réussi (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinInProgress": "Rattachement au groupe…",
+  "@groupJoinInProgress": {
+    "description": "Voile affiché pendant le rattachement au groupe (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinInvalidCodeError": "Ce code d'invitation n'est pas valide.",
+  "@groupJoinInvalidCodeError": {
+    "description": "Code invalide, à l'aperçu ou au rattachement : texte d'aide sous le champ du code (écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinGenericError": "Impossible de rejoindre ce groupe. Réessaie.",
+  "@groupJoinGenericError": {
+    "description": "Échec non reconnu ou réseau, à l'aperçu ou au rattachement : bandeau en tête d'écran (écran « Rejoindre un groupe », D233). Tutoiement."
+  },
+  "groupJoinAlreadyInGroupError": "Ce personnage est déjà membre de ce groupe.",
+  "@groupJoinAlreadyInGroupError": {
+    "description": "Rattachement refusé : le personnage est déjà dans ce groupe (bandeau, écran « Rejoindre un groupe », D233)."
+  },
+  "groupJoinGameMasterAlreadyAssignedError": "Ce groupe a déjà un MJ sans personnage.",
+  "@groupJoinGameMasterAlreadyAssignedError": {
+    "description": "Rattachement en MJ refusé : le groupe a déjà un MJ sans personnage (bandeau, écran « Rejoindre un groupe », D233)."
+  },
+  "groupMemberRemoveAction": "Exclure",
+  "@groupMemberRemoveAction": {
+    "description": "Texte du lien « Exclure » en pied de la carte d'un membre, à partir de la taille de texte ×1,4 (onglet Membres, D232). Le lecteur d'écran lit `groupMemberRemoveLabel`."
+  },
+  "groupMemberRemoveLabel": "Exclure {name}",
+  "@groupMemberRemoveLabel": {
+    "description": "Libellé du lecteur d'écran et info-bulle de la commande qui exclut un membre du groupe (onglet Membres, D232).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupMemberRemoveInProgress": "{name} : exclusion en cours",
+  "@groupMemberRemoveInProgress": {
+    "description": "Libellé du lecteur d'écran de la commande « Exclure » désactivée pendant l'exclusion du membre (onglet Membres, D232). Nom en tête : évite « de Eldrin ».",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupMemberRemovedSuccess": "{name} a été exclu du groupe.",
+  "@groupMemberRemovedSuccess": {
+    "description": "Message après l'exclusion d'un membre par le propriétaire (onglet Membres, D232).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupMemberRemoveGenericError": "Impossible d'exclure ce membre. Réessaie.",
+  "@groupMemberRemoveGenericError": {
+    "description": "Échec non reconnu de l'exclusion d'un membre (onglet Membres, D232). Tutoiement."
+  },
+  "groupMemberRemoveConfirmTitle": "Exclure {name} du groupe ?",
+  "@groupMemberRemoveConfirmTitle": {
+    "description": "Titre de la boîte de confirmation de l'exclusion d'un membre (onglet Membres, D232).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupMemberRemoveConfirmBodyCharacter": "Son personnage garde toutes ses données, mais quitte immédiatement le groupe.",
+  "@groupMemberRemoveConfirmBodyCharacter": {
+    "description": "Texte de la boîte de confirmation de l'exclusion d'un membre avec personnage (onglet Membres, D232)."
+  },
+  "groupMemberRemoveConfirmBodyGameMaster": "Il/elle quitte immédiatement le groupe.",
+  "@groupMemberRemoveConfirmBodyGameMaster": {
+    "description": "Texte de la boîte de confirmation de l'exclusion d'un MJ sans personnage (onglet Membres, D232). Jamais le texte du membre orphelin."
+  },
+  "groupMemberRemoveConfirmBodyAwaitingCharacter": "Son personnage a déjà été supprimé ; il/elle quitte immédiatement le groupe.",
+  "@groupMemberRemoveConfirmBodyAwaitingCharacter": {
+    "description": "Texte de la boîte de confirmation de l'exclusion d'un membre orphelin, dont le personnage a été supprimé (onglet Membres, D232)."
+  },
+  "groupMemberRemoveConfirmAction": "Exclure",
+  "@groupMemberRemoveConfirmAction": {
+    "description": "Bouton de confirmation de la boîte d'exclusion d'un membre (onglet Membres, D232)."
+  },
+  "groupMemberRemoveCancel": "Annuler",
+  "@groupMemberRemoveCancel": {
+    "description": "Bouton d'annulation de la boîte d'exclusion d'un membre (onglet Membres, D232)."
   },
   "creationAccessDeniedErrorMessage": "Vous n'avez pas accès à cette action.",
   "@creationAccessDeniedErrorMessage": {
@@ -6721,6 +7122,80 @@
   "@spellInfoPanelRitualLabel": {"description": "Libellé de la ligne « Rituel » du panneau « Infos » d'un sort."},
   "spellInfoPanelRitualValue": "Oui · +10 min d'incantation",
   "@spellInfoPanelRitualValue": {"description": "Valeur de la ligne « Rituel » : le +10 min est un libellé fixe, castingTime n'est jamais modifié."},
+  "groupTreasureItemSourceLabel": "Provenance",
+  "@groupTreasureItemSourceLabel": {"description": "Fiche d'un objet du butin de groupe (décision 91) : libellé de la ligne Provenance."},
+  "groupTreasureItemSourceCatalog": "Catalogue",
+  "@groupTreasureItemSourceCatalog": {"description": "Fiche d'un objet du butin : valeur de Provenance pour un objet du catalogue."},
+  "groupTreasureItemQuantityLabel": "Quantité",
+  "@groupTreasureItemQuantityLabel": {"description": "Fiche d'un objet du butin : libellé de la ligne Quantité."},
+  "groupTreasureItemQuantityValue": "×{quantity}",
+  "@groupTreasureItemQuantityValue": {"description": "Fiche d'un objet du butin : valeur de la ligne Quantité.", "placeholders": {"quantity": {"type": "int"}}},
+  "groupTreasureClaimButton": "S'attribuer",
+  "@groupTreasureClaimButton": {"description": "Butin de groupe : bouton S'attribuer (fiche d'un objet, sheet de quantité, sheet de monnaie)."},
+  "groupTreasureClaimSheetTitle": "S'attribuer {itemName}",
+  "@groupTreasureClaimSheetTitle": {"description": "Titre de la sheet de quantité de l'attribution d'un objet du butin.", "placeholders": {"itemName": {"type": "String"}}},
+  "groupTreasureClaimNoCharacterCaption": "Il te faut un personnage dans ce groupe pour t'attribuer un objet.",
+  "@groupTreasureClaimNoCharacterCaption": {"description": "Fiche d'un objet du butin : légende sous S'attribuer désactivé (MJ sans personnage)."},
+  "groupTreasureRemoveButton": "Retirer du butin",
+  "@groupTreasureRemoveButton": {"description": "Fiche d'un objet du butin : bouton destructif de retrait."},
+  "groupTreasureRemoveConfirmTitle": "Retirer {itemName} du butin ?",
+  "@groupTreasureRemoveConfirmTitle": {"description": "Titre du dialogue de confirmation du retrait d'un objet du butin.", "placeholders": {"itemName": {"type": "String"}}},
+  "groupTreasureRemoveConfirmBody": "{quantity, plural, =1{L'objet disparaît du butin pour tout le groupe.} other{Les {quantity} exemplaires disparaissent du butin pour tout le groupe.}} Cette action est définitive.",
+  "@groupTreasureRemoveConfirmBody": {"description": "Texte du dialogue de confirmation du retrait d'un objet du butin.", "placeholders": {"quantity": {"type": "int"}}},
+  "groupTreasureRemovedSnack": "{itemName} retiré du butin.",
+  "@groupTreasureRemovedSnack": {"description": "Snackbar après le retrait d'un objet du butin.", "placeholders": {"itemName": {"type": "String"}}},
+  "groupTreasureUpdatedSnack": "Objet modifié.",
+  "@groupTreasureUpdatedSnack": {"description": "Snackbar après la modification d'un objet du butin."},
+  "groupTreasureQuantitySheetTitle": "Quantité de {itemName}",
+  "@groupTreasureQuantitySheetTitle": {"description": "Titre de la sheet de quantité d'un objet du catalogue du butin (Modifier).", "placeholders": {"itemName": {"type": "String"}}},
+  "groupTreasureItemPriceSetLink": "Fixe un prix",
+  "@groupTreasureItemPriceSetLink": {"description": "Lien « Fixer un prix » de la fiche d'un objet du butin (tutoiement, spec du prix d'un objet modifiable) — ouvre l'éditeur de prix pertinent (rejoue l'action Modifier)."},
+  "groupTreasureItemPriceOverrideRemoveLink": "Retire la surcharge",
+  "@groupTreasureItemPriceOverrideRemoveLink": {"description": "Lien « Retirer la surcharge » (tutoiement) de la section Prix de la sheet de quantité d'un objet du catalogue du butin — visible seulement si une surcharge existe déjà, aucune confirmation."},
+  "groupTreasureItemPriceOverrideRemovedSnack": "Prix réinitialisé.",
+  "@groupTreasureItemPriceOverrideRemovedSnack": {"description": "Snackbar après le lien « Retirer la surcharge » d'un objet du catalogue du butin."},
+  "groupTreasureStaleError": "Un autre membre vient de modifier ou d'attribuer cet objet. Vérifie et recommence.",
+  "@groupTreasureStaleError": {"description": "Butin modifié entre-temps par un autre membre : rien n'a été écrit, le butin est rechargé."},
+  "groupTreasureOfflineError": "Pas de connexion : le butin n'a pas été modifié. Réessaie une fois connecté.",
+  "@groupTreasureOfflineError": {"description": "Snackbar d'une écriture du butin impossible faute de réseau."},
+  "groupTreasureOfflineBanner": "Pas de connexion : le butin est en lecture seule jusqu'au retour du réseau.",
+  "@groupTreasureOfflineBanner": {"description": "Bandeau de l'onglet Butin et légende de la fiche d'un objet hors connexion (actions désactivées)."},
+  "groupTreasureDetailsLoadError": "Impossible de charger la description.",
+  "@groupTreasureDetailsLoadError": {"description": "Fiche d'un objet du catalogue du butin : erreur de lecture de la description."},
+  "groupTreasureGameMasterBanner": "En tant que MJ sans personnage, tu peux gérer le butin commun mais pas t'attribuer une part — seuls les membres avec un personnage le peuvent.",
+  "@groupTreasureGameMasterBanner": {"description": "Bandeau de l'onglet Butin pour un MJ sans personnage."},
+  "groupTreasureCurrencySectionLabel": "MONNAIE COMMUNE",
+  "@groupTreasureCurrencySectionLabel": {"description": "Onglet Butin : titre de la section monnaie."},
+  "groupTreasureSplitCurrencyButton": "Répartir vers mon inventaire",
+  "@groupTreasureSplitCurrencyButton": {"description": "Onglet Butin : bouton qui ouvre la sheet S'attribuer de la monnaie."},
+  "groupTreasureItemsSectionLabel": "OBJETS EN ATTENTE",
+  "@groupTreasureItemsSectionLabel": {"description": "Onglet Butin : titre de la section objets."},
+  "groupTreasureEmptyItems": "Aucun objet en attente.",
+  "@groupTreasureEmptyItems": {"description": "Onglet Butin : état vide de la liste d'objets."},
+  "groupTreasureLoadError": "Impossible de charger le butin commun. Réessaie.",
+  "@groupTreasureLoadError": {"description": "Onglet Butin : erreur de chargement."},
+  "groupTreasureSavedSnack": "Butin mis à jour.",
+  "@groupTreasureSavedSnack": {"description": "Snackbar après un ajout d'objets ou un changement de monnaie du butin."},
+  "groupTreasureWriteError": "Impossible de mettre à jour le butin. Réessaie.",
+  "@groupTreasureWriteError": {"description": "Snackbar d'une écriture du butin en échec (cause inconnue)."},
+  "groupTreasureClaimedItemSnack": "Objet ajouté à ton inventaire.",
+  "@groupTreasureClaimedItemSnack": {"description": "Snackbar après l'attribution d'un objet du butin."},
+  "groupTreasureClaimItemError": "Impossible de t'attribuer cet objet. Réessaie.",
+  "@groupTreasureClaimItemError": {"description": "Snackbar d'une attribution d'objet en échec (cause inconnue)."},
+  "groupTreasureCurrencyClaimedSnack": "Monnaie récupérée.",
+  "@groupTreasureCurrencyClaimedSnack": {"description": "Snackbar après Répartir vers mon inventaire réussi."},
+  "groupTreasureCurrencyClaimFailed": "Un autre membre vient de modifier le butin. Réessaie.",
+  "@groupTreasureCurrencyClaimFailed": {"description": "Snackbar quand aucune pièce n'a pu être récupérée (butin modifié entre-temps)."},
+  "groupTreasureCurrencyClaimPartial": "Butin modifié entretemps : {currencies} non récupérées, le reste a été ajouté à ton inventaire.",
+  "@groupTreasureCurrencyClaimPartial": {"description": "Snackbar d'une récupération de monnaie partielle.", "placeholders": {"currencies": {"type": "String"}}},
+  "groupTreasureClaimCurrencySheetTitle": "S'ATTRIBUER DE LA MONNAIE",
+  "@groupTreasureClaimCurrencySheetTitle": {"description": "Titre de la sheet Répartir vers mon inventaire."},
+  "groupTreasureClaimCurrencyCancelButton": "Annuler",
+  "@groupTreasureClaimCurrencyCancelButton": {"description": "Sheet S'attribuer de la monnaie : bouton Annuler."},
+  "groupTreasureClaimCurrencyMaxHint": "/ {max}",
+  "@groupTreasureClaimCurrencyMaxHint": {"description": "Sheet S'attribuer de la monnaie : solde disponible sous un champ.", "placeholders": {"max": {"type": "int"}}},
+  "groupErrorStateRetryButton": "Réessayer",
+  "@groupErrorStateRetryButton": {"description": "Écran Groupe : bouton Réessayer de l'état d'erreur des onglets (détail du groupe, Butin, Notes)."},
   "combatBannerTitle": "Combat en cours · round {round}",
   "@combatBannerTitle": {"description": "Bandeau du combat, ligne 1.", "placeholders": {"round": {"type": "int"}}},
   "combatBannerTurn": "Tour de {name} · Ouvrir le combat",
@@ -6910,5 +7385,133 @@
   "combatSheetBannerSemantics": "Combat en cours, round {round}. Ouvrir le combat.",
   "@combatSheetBannerSemantics": {"description": "Libellé lecteur d'écran du bandeau de la fiche.", "placeholders": {"round": {"type": "int"}}},
   "combatSheetBannerSemanticsOffline": "Combat en cours, round {round}, état de {time}. Ouvrir le combat.",
-  "@combatSheetBannerSemanticsOffline": {"description": "Libellé lecteur d'écran du bandeau de la fiche hors ligne.", "placeholders": {"round": {"type": "int"}, "time": {"type": "String"}}}
+  "@combatSheetBannerSemanticsOffline": {"description": "Libellé lecteur d'écran du bandeau de la fiche hors ligne.", "placeholders": {"round": {"type": "int"}, "time": {"type": "String"}}},
+  "combatGrimoireSource": "Mené depuis Grimoire",
+  "@combatGrimoireSource": {"description": "Ligne de source discrète de l'en-tête d'un combat mené depuis Grimoire (décision 63)."},
+  "combatGrimoireLeaderInfo": "Tu mènes ce combat depuis Grimoire. Ici, tu le suis comme les joueurs.",
+  "@combatGrimoireLeaderInfo": {"description": "Bandeau d'information du meneur qui ouvre le combat dans Nexus."},
+  "combatShout": "Combat !",
+  "@combatShout": {"description": "Ligne 1 de l'en-tête pendant la préparation."},
+  "combatPreparingStatus": "En préparation",
+  "@combatPreparingStatus": {"description": "Ligne 2 de l'en-tête pendant la préparation."},
+  "combatPreparingHint": "L'ordre d'initiative apparaîtra au premier tour.",
+  "@combatPreparingHint": {"description": "Ligne 3 de l'en-tête pendant la préparation."},
+  "combatBannerPreparing": "Combat en préparation",
+  "@combatBannerPreparing": {"description": "Bandeau Groupe (ligne 1) et fiche pendant la préparation."},
+  "combatBannerOpen": "Ouvrir le combat",
+  "@combatBannerOpen": {"description": "Bandeau Groupe, ligne 2 sans autre information."},
+  "combatBannerSendInitiative": "Envoie ton initiative · Ouvrir le combat",
+  "@combatBannerSendInitiative": {"description": "Bandeau Groupe, ligne 2 : initiative demandée, pas encore envoyée."},
+  "combatBannerInitiativeSent": "Initiative envoyée · Ouvrir le combat",
+  "@combatBannerInitiativeSent": {"description": "Bandeau Groupe, ligne 2 : initiative envoyée."},
+  "combatSheetBannerInitiativeRequested": "Combat ! Envoie ton initiative",
+  "@combatSheetBannerInitiativeRequested": {"description": "Bandeau de la fiche : initiative demandée, pas encore envoyée."},
+  "combatSheetBannerPreparingSemantics": "Combat en préparation. Ouvrir le combat.",
+  "@combatSheetBannerPreparingSemantics": {"description": "Libellé lecteur d'écran du bandeau de la fiche pendant la préparation."},
+  "combatSheetBannerInitiativeRequestedSemantics": "Combat ! Envoie ton initiative. Ouvrir le combat.",
+  "@combatSheetBannerInitiativeRequestedSemantics": {"description": "Libellé lecteur d'écran du bandeau de la fiche : initiative demandée."},
+  "combatInitiativeRequestTitle": "Le MJ demande ton initiative",
+  "@combatInitiativeRequestTitle": {"description": "Titre de la carte d'initiative."},
+  "combatInitiativeRequestFor": "Pour {name}",
+  "@combatInitiativeRequestFor": {"description": "Personnage concerné par la demande d'initiative.", "placeholders": {"name": {"type": "String"}}},
+  "combatSendInitiative": "Envoyer mon initiative",
+  "@combatSendInitiative": {"description": "Bouton de la carte d'initiative."},
+  "combatSendToGm": "Envoyer au MJ",
+  "@combatSendToGm": {"description": "Bouton primaire de la feuille d'initiative envoyée au MJ."},
+  "combatSendHint": "Une fois reçue, seul le MJ peut la modifier.",
+  "@combatSendHint": {"description": "Aide de la feuille d'initiative envoyée au MJ (décision 62)."},
+  "combatInitiativeSent": "{value} · envoyée au MJ",
+  "@combatInitiativeSent": {"description": "Carte d'initiative : valeur envoyée.", "placeholders": {"value": {"type": "int"}}},
+  "combatInitiativeAwaitingReceipt": "En attente de confirmation du MJ…",
+  "@combatInitiativeAwaitingReceipt": {"description": "Carte d'initiative : envoi pas encore confirmé."},
+  "combatInitiativeReceived": "{value} · reçue par le MJ",
+  "@combatInitiativeReceived": {"description": "Carte d'initiative : valeur reçue par le MJ.", "placeholders": {"value": {"type": "int"}}},
+  "combatInitiativeKnownByGm": "Le MJ a ton initiative",
+  "@combatInitiativeKnownByGm": {"description": "Carte d'initiative : reçue, valeur inconnue."},
+  "combatInitiativeMayAdjust": "Le MJ peut l'ajuster : la valeur retenue s'affichera au premier tour.",
+  "@combatInitiativeMayAdjust": {"description": "Carte d'initiative reçue pendant la préparation."},
+  "combatInitiativeNotReceived": "Le MJ n'a pas reçu ton initiative. Renvoie-la.",
+  "@combatInitiativeNotReceived": {"description": "Carte d'initiative : envoi non reçu."},
+  "combatInitiativeRequestedAgain": "Le MJ te redemande ton initiative.",
+  "@combatInitiativeRequestedAgain": {"description": "Carte d'initiative : nouvelle demande du MJ."},
+  "combatInitiativeSentLabel": "Envoyée au MJ",
+  "@combatInitiativeSentLabel": {"description": "Libellé de statut de la ligne du joueur après l'envoi."},
+  "combatInitiativeCorrected": "Corrigée par le MJ (envoyé : {sent})",
+  "@combatInitiativeCorrected": {"description": "Libellé de statut de la ligne du joueur quand le MJ a retenu une autre valeur.", "placeholders": {"sent": {"type": "int"}}},
+  "combatUnavailableGmOffline": "Indisponible tant que le MJ est hors ligne.",
+  "@combatUnavailableGmOffline": {"description": "Envoi d'initiative indisponible : MJ hors ligne."},
+  "combatSendRateLimited": "Trop d'envois. Réessaie dans {seconds} s.",
+  "@combatSendRateLimited": {"description": "Échec d'envoi rate_limited.", "placeholders": {"seconds": {"type": "int"}}},
+  "combatSendFailed": "Envoi impossible. Réessaie.",
+  "@combatSendFailed": {"description": "Échec d'envoi générique."},
+  "combatNotMemberAnymore": "Tu ne fais plus partie de ce groupe.",
+  "@combatNotMemberAnymore": {"description": "Échec d'envoi group_not_found."},
+  "combatBadgeDead": "Mort",
+  "@combatBadgeDead": {"description": "Badge d'un héros mort dans l'ordre d'initiative (décision 58)."},
+  "combatTurnSkipped": "Tour sauté",
+  "@combatTurnSkipped": {"description": "Libellé de statut d'un héros mort."},
+  "combatRowDeadSemantics": "mort, tour sauté",
+  "@combatRowDeadSemantics": {"description": "Ajout à l'étiquette lecteur d'écran d'une ligne de héros mort."},
+  "combatRemovedByGm": "Le MJ t'a retiré de ce combat.",
+  "@combatRemovedByGm": {"description": "Bandeau du joueur retiré d'un combat mené depuis Grimoire."},
+  "combatYourTurn": "À toi de jouer",
+  "@combatYourTurn": {"description": "En-tête en mode « à toi de jouer »."},
+  "combatBannerYourTurn": "À toi de jouer · round {round}",
+  "@combatBannerYourTurn": {"description": "Bandeaux Groupe et fiche en mode « à toi de jouer ».", "placeholders": {"round": {"type": "int"}}},
+  "combatSheetBannerYourTurnSemantics": "À toi de jouer, round {round}. Ouvrir le combat.",
+  "@combatSheetBannerYourTurnSemantics": {"description": "Libellé lecteur d'écran du bandeau de la fiche, mode « à toi de jouer ».", "placeholders": {"round": {"type": "int"}}},
+  "combatCalloutInitiativeTitle": "Initiative demandée",
+  "@combatCalloutInitiativeTitle": {"description": "Signal global (PR 2) : le MJ redemande l'initiative."},
+  "combatCalloutSendInitiative": "{group} · Envoie ton initiative",
+  "@combatCalloutSendInitiative": {"description": "Signal global (PR 2), ligne 2.", "placeholders": {"group": {"type": "String"}}},
+  "combatCalloutOpen": "{group} · Ouvrir le combat",
+  "@combatCalloutOpen": {"description": "Signal global (PR 2), ligne 2.", "placeholders": {"group": {"type": "String"}}},
+  "combatCalloutYourTurnBody": "{group} · round {round} · Ouvrir le combat",
+  "@combatCalloutYourTurnBody": {"description": "Signal global (PR 2), variante tour.", "placeholders": {"group": {"type": "String"}, "round": {"type": "int"}}},
+  "combatCalloutClose": "Fermer",
+  "@combatCalloutClose": {"description": "Signal global (PR 2), bouton de fermeture."},
+  "combatGmOfflineBanner": "Le MJ semble hors ligne. Dernier état reçu à {time} ; le combat reprendra dès son retour.",
+  "@combatGmOfflineBanner": {"description": "Bandeau de l'écran Combat après 90 s sans message du MJ.", "placeholders": {"time": {"type": "String"}}},
+  "combatBannerGmOffline": "MJ hors ligne · état de {time}",
+  "@combatBannerGmOffline": {"description": "Bandeau Groupe, ligne 2 : MJ hors ligne.", "placeholders": {"time": {"type": "String"}}},
+  "combatSheetBannerGmOffline": "Combat · MJ hors ligne (état de {time})",
+  "@combatSheetBannerGmOffline": {"description": "Bandeau de la fiche : MJ hors ligne.", "placeholders": {"time": {"type": "String"}}},
+  "combatSheetBannerGmOfflineSemantics": "Combat en cours, MJ hors ligne, état de {time}. Ouvrir le combat.",
+  "@combatSheetBannerGmOfflineSemantics": {"description": "Libellé lecteur d'écran du bandeau de la fiche : MJ hors ligne.", "placeholders": {"time": {"type": "String"}}},
+  "combatInterruptedTitle": "Pas de nouvelles du MJ",
+  "@combatInterruptedTitle": {"description": "Écran Combat après 10 min sans message du MJ."},
+  "combatInterruptedBody": "Dernier état reçu à {time}. Le combat réapparaîtra ici s'il reprend.",
+  "@combatInterruptedBody": {"description": "Écran Combat après 10 min sans message du MJ.", "placeholders": {"time": {"type": "String"}}},
+  "combatConnecting": "Connexion au combat…",
+  "@combatConnecting": {"description": "Libellé visible du chargement de l'écran Combat sans état connu."},
+  "combatNoneTitle": "Aucun combat en cours",
+  "@combatNoneTitle": {"description": "Écran Combat sans combat."},
+  "combatNoneBody": "Le combat est peut-être terminé, ou le MJ n'est pas connecté. Il s'affichera ici dès qu'il reprend.",
+  "@combatNoneBody": {"description": "Écran Combat sans combat."},
+  "combatGroupNotAccessible": "Ce groupe n'est plus accessible.",
+  "@combatGroupNotAccessible": {"description": "Ouverture depuis une notification (PR 2) d'un groupe quitté."},
+  "combatEndedTitle": "Combat terminé",
+  "@combatEndedTitle": {"description": "Fin d'un combat terminé avant le dévoilement de l'ordre."},
+  "combatEndedBeforeOrder": "Le combat s'est terminé avant que l'ordre soit dévoilé.",
+  "@combatEndedBeforeOrder": {"description": "Fin d'un combat terminé avant le dévoilement de l'ordre."},
+  "combatAnnounceStart": "Combat ! Le MJ lance un combat dans {group}.",
+  "@combatAnnounceStart": {"description": "Annonce polie du début d'un combat.", "placeholders": {"group": {"type": "String"}}},
+  "combatAnnounceInitiativeRequested": "Le MJ demande ton initiative.",
+  "@combatAnnounceInitiativeRequested": {"description": "Annonce polie d'une demande d'initiative."},
+  "combatAnnounceInitiativeSent": "Initiative {value} envoyée au MJ.",
+  "@combatAnnounceInitiativeSent": {"description": "Annonce polie d'un envoi d'initiative réussi.", "placeholders": {"value": {"type": "int"}}},
+  "combatAnnounceInitiativeReceived": "Le MJ a reçu ton initiative.",
+  "@combatAnnounceInitiativeReceived": {"description": "Annonce polie de la réception de l'initiative."},
+  "combatAnnounceInitiativeCorrected": "Le MJ a retenu {value}.",
+  "@combatAnnounceInitiativeCorrected": {"description": "Annonce polie d'une initiative corrigée par le MJ.", "placeholders": {"value": {"type": "int"}}},
+  "combatAnnounceOrderRevealed": "L'ordre d'initiative est dévoilé.",
+  "@combatAnnounceOrderRevealed": {"description": "Annonce polie du dévoilement de l'ordre."},
+  "combatAnnounceGmOffline": "Le MJ semble hors ligne. La dernière vue reste affichée.",
+  "@combatAnnounceGmOffline": {"description": "Annonce polie après 90 s sans message du MJ."},
+  "combatAnnounceGmBack": "Le MJ est de retour.",
+  "@combatAnnounceGmBack": {"description": "Annonce polie au retour des messages du MJ."},
+  "combatStartBlockedByGrimoire": "Un combat est mené depuis Grimoire.",
+  "@combatStartBlockedByGrimoire": {"description": "Indice de « Lancer un combat » désactivé pendant un combat Grimoire vivant (décision 61)."},
+  "combatBackHome": "Retour à l'accueil",
+  "@combatBackHome": {"description": "Bouton de l'écran Combat quand le joueur ne fait plus partie du groupe (décision 50) : retour à l'accueil."}
 }

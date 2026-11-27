@@ -10,6 +10,7 @@ import '../../../core/rules/spell_status.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/bottom_bar_inset_reporter.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/undo_snack_bar.dart';
 import '../../../core/widgets/wood_back_header.dart';
@@ -17,6 +18,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
 import '../../xml_export/presentation/character_xml_export_action.dart';
 import '../data/character_repository.dart';
+import '../domain/armor_slot_rules.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
@@ -1534,15 +1536,35 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
-  /// Action "Équiper"/"Déséquiper" (sheet d'actions d'objet) : bascule
-  /// [item.equipped], aucune confirmation. Ne touche à aucun champ de
-  /// classe d'armure (n'existe nulle part dans [CharacterDetail], voir la
-  /// spec de la tâche).
+  /// Action "Équiper"/"Déséquiper" (sheet d'actions d'objet ou panneau
+  /// "Infos") : bascule [item.equipped], aucune confirmation.
+  ///
+  /// Décision n° 37 : équiper une seconde armure ou un second bouclier est
+  /// refusé ici, avant tout appel, sur la fiche affichée (état effectif, file
+  /// hors ligne comprise) — message qui invite à déséquiper l'autre d'abord,
+  /// aucune écriture. Le dépôt refait la même vérification (filet de
+  /// sécurité, voir `CharacterRepository.setInventoryItemEquipped`).
   Future<void> _toggleInventoryItemEquipped(CharacterInventoryItem item) async {
     // Capturé avant le premier `await` — voir la doc de
     // [_offlineQueuedMessage].
     final l10n = AppLocalizations.of(context)!;
     final newEquipped = !item.equipped;
+    if (newEquipped) {
+      final inventory =
+          ref
+              .read(characterDetailProvider(widget.characterId))
+              .value
+              ?.inventory ??
+          [item];
+      final conflict = ArmorSlotRules.equipConflict(
+        inventory: inventory,
+        inventoryId: item.id,
+      );
+      if (conflict != null) {
+        _showSnackBar(conflict.localizedWith(l10n));
+        return;
+      }
+    }
     setState(() => _isWritingInventory = true);
     try {
       final outcome = await ref
@@ -1855,6 +1877,42 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       _showSnackBar(failure.localizedWith(l10n));
     } catch (_) {
       _showSnackBar('Impossible de mettre à jour cet objet. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
+  /// Action « Modifier » (surcharge de prix) d'un objet du **catalogue**
+  /// (spec du prix d'un objet modifiable, §2b/§2d) : écrit
+  /// `price_override_amount`/`price_override_currency` tels quels, aucune
+  /// confirmation (même contrat que [_toggleInventoryItemAttuned]).
+  /// [amount]/[currency] `null` ensemble : retrait de la surcharge.
+  Future<void> _editInventoryItemPrice(
+    CharacterInventoryItem item,
+    num? amount,
+    CurrencyKind? currency,
+  ) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _isWritingInventory = true);
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .setInventoryItemPriceOverride(
+            characterId: widget.characterId,
+            inventoryId: item.id,
+            amount: amount,
+            currency: currency,
+          );
+      await _refreshCharacterDetail();
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineQueuedMessage(l10n));
+      }
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.localizedWith(l10n));
+    } catch (_) {
+      _showSnackBar('Impossible de mettre à jour le prix. Réessayez.');
     } finally {
       if (mounted) setState(() => _isWritingInventory = false);
     }
@@ -3079,9 +3137,13 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         ],
       ),
       bottomNavigationBar: detailAsync.maybeWhen(
-        data: (_) => CharacterDetailTabBar(
-          current: _tab,
-          onSelect: (tab) => setState(() => _tab = tab),
+        // Hauteur signalée au signal global de combat, posé au-dessus de la
+        // barre d'onglets comme une `SnackBar`.
+        data: (_) => BottomBarInsetReporter(
+          child: CharacterDetailTabBar(
+            current: _tab,
+            onSelect: (tab) => setState(() => _tab = tab),
+          ),
         ),
         orElse: () => null,
       ),
@@ -3119,6 +3181,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         onAddInventoryItem: _addInventoryItem,
         onAddCustomInventoryItem: _addCustomInventoryItem,
         onUpdateCustomInventoryItem: _updateCustomInventoryItem,
+        onEditItemPrice: _editInventoryItemPrice,
         onEquipWeaponToSlot: (item, slot) =>
             _equipWeaponToSlot(detail, item, slot),
         onAddReward: () => showAddRewardSheet(

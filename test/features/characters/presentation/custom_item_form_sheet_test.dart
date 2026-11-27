@@ -10,6 +10,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/stepper_counter.dart';
+import 'package:personnages/features/characters/domain/currency_kind.dart';
+import 'package:personnages/features/characters/domain/custom_item_edit_rules.dart';
 import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/features/characters/presentation/widgets/custom_item_form_sheet.dart';
 import 'package:personnages/l10n/app_localizations.dart';
@@ -296,10 +298,16 @@ void main() {
         find.byKey(const Key('customItemWeightField')),
         '1,5',
       );
+      await tester.ensureVisible(
+        find.byKey(const Key('customItemRequiresAttunementSwitch')),
+      );
       await tester.tap(
         find.byKey(const Key('customItemRequiresAttunementSwitch')),
       );
       await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('customItemAttuneNowSwitch')),
+      );
       await tester.tap(find.byKey(const Key('customItemAttuneNowSwitch')));
       await tester.pumpAndSettle();
       await tester.enterText(
@@ -417,6 +425,9 @@ void main() {
       await tester.enterText(
         find.byKey(const Key('customItemWeightField')),
         '0,5',
+      );
+      await tester.ensureVisible(
+        find.byKey(const Key('customItemRequiresAttunementSwitch')),
       );
       await tester.tap(
         find.byKey(const Key('customItemRequiresAttunementSwitch')),
@@ -609,6 +620,116 @@ void main() {
       expect(find.byKey(const Key('customItemWeightField')), findsOneWidget);
       expect(
         find.text('Entrez un poids entre 0 et 9 999,99 kg.'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('section avancée : prix (spec du prix d\'un objet modifiable, '
+      '§2a)', () {
+    testWidgets('montant à 0 (valeur de départ) : aucun prix stocké', (
+      tester,
+    ) async {
+      await _open(tester);
+      await _pickKind(tester, 'customItemKindOther');
+      await _enterName(tester, 'Fiole');
+      await tester.ensureVisible(_addButton);
+      await tester.tap(_addButton);
+      await tester.pumpAndSettle();
+
+      final e = _result!.enrichment;
+      expect(e.priceOverrideAmount, isNull);
+      expect(e.priceOverrideCurrency, isNull);
+    });
+
+    testWidgets('montant saisi + devise choisie : prix retenu', (tester) async {
+      await _open(tester);
+      await _pickKind(tester, 'customItemKindOther');
+      await _enterName(tester, 'Amulette');
+      await _openAdvanced(tester);
+
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(const Key('customItemPriceAmountStepper')),
+          matching: find.byType(TextField),
+        ),
+        '250',
+      );
+      await tester.pump();
+      await tester.tap(find.text('PA'));
+      await tester.pump();
+
+      await tester.ensureVisible(_addButton);
+      await tester.tap(_addButton);
+      await tester.pumpAndSettle();
+
+      final e = _result!.enrichment;
+      expect(e.priceOverrideAmount, 250);
+      expect(e.priceOverrideCurrency, CurrencyKind.silver);
+      expect(e.isValid, isTrue);
+    });
+
+    testWidgets('devise par défaut : or', (tester) async {
+      await _open(tester);
+      await _pickKind(tester, 'customItemKindOther');
+      await _enterName(tester, 'Amulette');
+      await _openAdvanced(tester);
+
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(const Key('customItemPriceAmountStepper')),
+          matching: find.byType(TextField),
+        ),
+        '10',
+      );
+      await tester.pump();
+      await tester.ensureVisible(_addButton);
+      await tester.tap(_addButton);
+      await tester.pumpAndSettle();
+
+      expect(_result!.enrichment.priceOverrideCurrency, CurrencyKind.gold);
+    });
+
+    testWidgets('édition : préremplissage du prix existant, section '
+        'dépliée par défaut', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('fr'),
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    _result = await showCustomItemFormSheet(
+                      context,
+                      initial: const CustomItemInitialValues(
+                        name: 'Amulette',
+                        kind: CustomItemKinds.other,
+                        equipped: false,
+                        mode: CustomItemEditMode.edit,
+                        priceOverrideAmount: 250,
+                        priceOverrideCurrency: CurrencyKind.gold,
+                      ),
+                    );
+                  },
+                  child: const Text('Ouvrir'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Ouvrir'));
+      await tester.pumpAndSettle();
+
+      // Section avancée dépliée par défaut (un prix est déjà renseigné).
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('customItemPriceAmountStepper')),
+          matching: find.text('250'),
+        ),
         findsOneWidget,
       );
     });

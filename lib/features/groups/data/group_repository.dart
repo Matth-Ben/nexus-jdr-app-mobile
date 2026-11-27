@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/crash_reporting/crash_reporter.dart';
+import '../../../core/utils/uuid_v4.dart';
+import '../../characters/data/inventory_catalog_cache.dart';
+import '../../characters/domain/character_inventory_item.dart';
 import '../../characters/domain/currency_kind.dart';
 import '../domain/created_group.dart';
 import '../domain/group_character_reassignment_failure.dart';
@@ -14,11 +17,13 @@ import '../domain/group_preview.dart';
 import '../domain/group_summary.dart';
 import '../domain/group_treasure.dart';
 import '../domain/group_treasure_item.dart';
+import '../domain/group_treasure_items.dart';
 import '../domain/joined_group.dart';
 import 'group_character_reassignment_error_mapper.dart';
 import 'group_error_mapper.dart';
 import 'group_invite_error_mapper.dart';
 import 'group_member_row_mapper.dart';
+import 'group_treasure_inventory_adapter.dart';
 
 /// Handle d'abonnement Realtime (`GroupRepository.subscribeToMemberUpdates`)
 /// — un simple point d'extension pour fermer proprement l'abonnement à la
@@ -92,8 +97,10 @@ abstract class GroupRepository {
   Future<CreatedGroup> createGroup({required String name, String? characterId});
 
   /// `preview-group-invite` — étape 2/3 du flux "Rejoindre un groupe" :
-  /// résout [code] en un aperçu pur (nom + nombre de membres), sans jamais
-  /// créer d'adhésion. Lève une [GroupInviteFailure].
+  /// résout [code] en un aperçu pur (nom, nombre de membres et titre de la
+  /// campagne, `null` sans campagne ou si le serveur ne le renvoie pas), sans
+  /// jamais créer d'adhésion. Jamais le résumé (décision n° 33). Lève une
+  /// [GroupInviteFailure].
   Future<GroupPreview> previewGroupInvite(String code);
 
   /// `join-group` — étape 3/3 : crée l'adhésion `group_members`
@@ -105,7 +112,10 @@ abstract class GroupRepository {
   /// rejoint ce groupe en tant que MJ sans personnage).
   Future<JoinedGroup> joinGroup({required String code, String? characterId});
 
-  /// Détail complet d'un groupe (identité + membres) — écran "Groupe".
+  /// Détail complet d'un groupe (identité, campagne associée, membres) —
+  /// écran "Groupe". `groups` n'est pas diffusée en temps réel : le titre et
+  /// le résumé de la campagne sont relus à chaque lecture du détail
+  /// (ouverture de l'écran, rafraîchissement).
   Future<GroupDetail> fetchGroupDetail(String groupId);
 
   /// "Renommer le groupe" (owner) — écriture directe `UPDATE groups`, RLS
@@ -118,14 +128,37 @@ abstract class GroupRepository {
   /// contrainte unique. Retourne le nouveau code.
   Future<String> regenerateInviteCode(String groupId);
 
-  /// "Dissoudre le groupe" (owner) — supprime la ligne `groups` (cascade
-  /// côté serveur vers `group_members`/`group_treasure`, hors périmètre de
-  /// ce dépôt).
+  /// "Dissoudre le groupe" (owner) — supprime la ligne `groups`. DeepCore
+  /// supprime en cascade `group_members`, `group_treasure`, `group_notes`,
+  /// `group_journal_entries`, `combats` et `combat_participants` ; aucune
+  /// table de personnages ne dépend de `groups` (les personnages restent
+  /// intacts). Refusé par le serveur pendant un combat actif : lève une
+  /// [GroupFailure] de code [GroupErrorCode.combatActive].
   Future<void> dissolveGroup(String groupId);
 
-  /// "Quitter le groupe" (membre non-owner) — supprime la propre ligne
-  /// `group_members` du joueur connecté pour ce groupe.
+  /// "Quitter le groupe" — supprime la propre ligne `group_members` du
+  /// joueur connecté pour ce groupe. Pour le **propriétaire**, refusé par le
+  /// serveur pendant un combat actif ([GroupErrorCode.combatActive]) ; un
+  /// autre membre peut toujours partir.
   Future<void> leaveGroup(String groupId);
+
+  /// RPC `become_group_game_master` — « Devenir MJ » (propriétaire qui joue
+  /// un personnage dans ce groupe) : sa ligne `group_members` passe en MJ
+  /// sans personnage (`is_game_master = true`, `character_id = null`). Le
+  /// personnage quitte le groupe et reste dans la liste du joueur ; rien
+  /// n'est supprimé. Idempotente (déjà MJ : aucune écriture). Action serveur,
+  /// jamais mise en file d'attente hors ligne.
+  ///
+  /// Lève une [GroupFailure] (le `message` du serveur est lu avant le code,
+  /// voir `mapGroupError`) : [GroupErrorCode.combatActive],
+  /// [GroupErrorCode.mjAlreadyAssigned] (un autre membre est déjà MJ, personne
+  /// n'est rétrogradé), [GroupErrorCode.notGroupOwner],
+  /// [GroupErrorCode.notMember], [GroupErrorCode.groupNotFound],
+  /// [GroupErrorCode.sessionExpired], [GroupErrorCode.transientConflict]
+  /// (`40P01`/`40001`), [GroupErrorCode.serverOutdated] (fonction absente :
+  /// migration DeepCore `20261119090000` pas encore appliquée) ou
+  /// [GroupErrorCode.network].
+  Future<void> becomeGroupGameMaster(String groupId);
 
   /// "Exclure {membre}" (owner) — supprime la ligne `group_members` de
   /// [userId] pour ce groupe. Identifié par `(group_id, user_id)` — unique
@@ -149,18 +182,51 @@ abstract class GroupRepository {
   /// Butin commun du groupe — onglet "Butin".
   Future<GroupTreasure> fetchGroupTreasure(String groupId);
 
-  /// Écrit le butin commun en un seul appel réseau (spec de la tâche) —
-  /// [newCurrencyTotals] porte les valeurs *absolues* déjà calculées par
-  /// l'appelant à partir du [GroupTreasure] déjà chargé (même principe que
-  /// `CharacterRepository.addReward`), et [newItems] la liste complète déjà
-  /// fusionnée (butin existant + objets composés localement). "AJOUTER AU
-  /// BUTIN DU GROUPE" (tout membre) : jamais de risque de solde négatif en
-  /// ajoutant, pas besoin de RPC atomique ici.
-  Future<void> addToTreasure({
+  /// Ajoute des objets au butin (tout membre, décision 91) : relit
+  /// `group_treasure.items` juste avant d'écrire, fusionne [items] (voir
+  /// `GroupTreasureItems.merge`) puis écrit le tableau complet. Donne un
+  /// `entry_id` aux entrées anciennes au passage.
+  Future<void> addTreasureItems({
     required String groupId,
-    required Map<CurrencyKind, int> newCurrencyTotals,
-    required List<GroupTreasureItem> newItems,
+    required List<GroupTreasureItem> items,
   });
+
+  /// « Modifier » un objet du butin (tout membre, MJ sans personnage
+  /// compris) : remplace [expected] (l'entrée telle que le joueur l'a vue) par
+  /// [updated]. Relit `items` juste avant d'écrire : si [expected] a disparu ou
+  /// changé entre-temps, **rien n'est écrit** et une [GroupFailure] de code
+  /// [GroupErrorCode.treasureStale] est levée.
+  Future<void> updateTreasureItem({
+    required String groupId,
+    required GroupTreasureItem expected,
+    required GroupTreasureItem updated,
+  });
+
+  /// « Retirer du butin » (tous les exemplaires, tout membre) : même garde de
+  /// concurrence que [updateTreasureItem].
+  Future<void> removeTreasureItem({
+    required String groupId,
+    required GroupTreasureItem expected,
+  });
+
+  /// Monnaie du butin (ajout, ajustement, retrait, conversion ; tout membre) :
+  /// écrit les soldes **absolus** [newTotals] seulement si les soldes touchés
+  /// valent encore [expected] (mise à jour conditionnelle, atomique côté
+  /// serveur). Sinon rien n'est écrit et une [GroupFailure] de code
+  /// [GroupErrorCode.treasureStale] est levée.
+  Future<void> setTreasureCurrency({
+    required String groupId,
+    required Map<CurrencyKind, int> expected,
+    required Map<CurrencyKind, int> newTotals,
+  });
+
+  /// Fiche d'un objet du butin : [item] vu comme une ligne d'inventaire. Un
+  /// objet du catalogue est relu par `item_id` (ligne `items` complète et
+  /// description traduite) ; un objet personnalisé porte déjà tout (aucun
+  /// appel réseau).
+  Future<CharacterInventoryItem> fetchTreasureItemDetails(
+    GroupTreasureItem item,
+  );
 
   /// "S'attribuer de la monnaie" — appelle la fonction Postgres
   /// `claim_group_treasure_currency` (décrémentation atomique du butin ET
@@ -181,17 +247,18 @@ abstract class GroupRepository {
     required int amount,
   });
 
-  /// "S'attribuer" un objet du butin — lit `group_treasure.items`, vérifie
-  /// localement la quantité disponible pour l'entrée correspondant à [item]
-  /// (voir `GroupTreasureItem.matches`), ajoute [quantity] (plafonné à la
-  /// quantité réellement disponible au moment de l'écriture) à l'inventaire
-  /// personnel de [characterId], puis écrit le tableau `items` mis à jour
-  /// (retire l'entrée si la quantité tombe à 0). **Risque de course
-  /// documenté et accepté** (pas de fonction atomique dédiée pour les
-  /// objets, contrairement à [claimTreasureCurrency]) : deux membres
-  /// réclamant le même objet en même temps peuvent, dans le pire cas, se
-  /// voir tous deux attribuer une quantité qui dépasse ce qui était
-  /// réellement disponible.
+  /// "S'attribuer" un objet du butin — relit `group_treasure.items` juste
+  /// avant d'écrire : si [item] (l'entrée telle que le joueur l'a vue) a
+  /// disparu ou changé entre-temps, **rien n'est écrit** et une
+  /// [GroupFailure] de code [GroupErrorCode.treasureStale] est levée (voir
+  /// `GroupTreasureItems.claim`). Sinon ajoute [quantity] exemplaires à
+  /// l'inventaire personnel de [characterId] avec **toutes** les données de
+  /// l'objet (description, dégâts, colonnes `custom_*`, voir
+  /// `GroupTreasureInventoryAdapter.toInsertColumns`), puis écrit le tableau
+  /// `items` mis à jour (l'entrée disparaît à 0). **Risque de course
+  /// résiduel documenté et accepté** (pas de fonction atomique dédiée pour
+  /// les objets, contrairement à [claimTreasureCurrency]) : la fenêtre entre
+  /// la relecture et l'écriture reste ouverte.
   ///
   /// **Second mode de défaillance documenté** : les deux écritures (ajout à
   /// l'inventaire personnel, retrait du butin commun) ne sont pas
@@ -236,7 +303,7 @@ abstract class GroupRepository {
 
   /// Remplace le titre/corps d'une entrée déjà enregistrée — mode édition de
   /// [addGroupNoteEntry]. [title] `null` efface le titre existant (texte
-  /// intégral envoyé, jamais un diff — même principe que [addToTreasure]).
+  /// intégral envoyé, jamais un diff — même principe que [addTreasureItems]).
   Future<void> updateGroupNoteEntry({
     required String entryId,
     String? title,
@@ -254,6 +321,8 @@ abstract class GroupRepository {
   ///   personnages déjà membres (PV, statut...) ;
   /// - `INSERT` sur `group_members`, filtré à [groupId] : arrivée d'un
   ///   membre (bug F07, `docs/retours-utilisateurs.md`) ;
+  /// - `UPDATE` sur `group_members`, filtré à [groupId] : changement de rôle
+  ///   d'un membre, en particulier « Devenir MJ » du propriétaire (étape 3b) ;
   /// - `DELETE` sur `group_members`, **sans filtre `group_id`** : départ/
   ///   exclusion d'un membre (bug F08). `group_members` est en REPLICA
   ///   IDENTITY DEFAULT : l'ancienne ligne d'un `DELETE` ne porte que la clé
@@ -432,6 +501,8 @@ class SupabaseGroupRepository implements GroupRepository {
       return GroupPreview(
         name: (data['name'] as String?) ?? '',
         memberCount: (data['member_count'] as num?)?.toInt() ?? 0,
+        // Absent (fonction antérieure à l'étape 4) : traité comme `null`.
+        storyTitle: _optionalString(data['story_title']),
       );
     } on FunctionException catch (error) {
       throw mapGroupInviteError(error);
@@ -475,11 +546,7 @@ class SupabaseGroupRepository implements GroupRepository {
     final currentUserId = _requireOwnerId();
 
     try {
-      final groupRow = await _client
-          .from('groups')
-          .select('id, name, owner_id, invite_code')
-          .eq('id', groupId)
-          .maybeSingle();
+      final groupRow = await _selectGroupRow(groupId);
       if (groupRow == null) {
         throw const GroupFailure(
           'Groupe introuvable.',
@@ -557,6 +624,8 @@ class SupabaseGroupRepository implements GroupRepository {
         inviteCode: (groupRow['invite_code'] as String?) ?? '',
         currentUserId: currentUserId,
         members: members,
+        storyTitle: _optionalString(groupRow['story_title']),
+        storySummaryPublic: _optionalString(groupRow['story_summary_public']),
       );
     } on GroupFailure {
       rethrow;
@@ -565,6 +634,39 @@ class SupabaseGroupRepository implements GroupRepository {
     } catch (_) {
       throw mapUnknownGroupError();
     }
+  }
+
+  /// Lit la ligne `groups` avec la campagne associée (`story_title`,
+  /// `story_summary_public`, migration DeepCore `20261119120000`).
+  /// Tolérance de schéma, même patron que `_selectFeatsWithTags` du dépôt
+  /// des personnages : sur une base sans ces colonnes (retour arrière de
+  /// DeepCore, SQLSTATE 42703 ou PGRST204), relit sans elles ; l'écran
+  /// s'affiche alors sans carte « Campagne ».
+  Future<Map<String, dynamic>?> _selectGroupRow(String groupId) async {
+    try {
+      return await _selectFirstGroupRow(
+        groupId,
+        'id, name, owner_id, invite_code, story_title, story_summary_public',
+      );
+    } on PostgrestException catch (error) {
+      if (error.code != '42703' && error.code != 'PGRST204') rethrow;
+      return _selectFirstGroupRow(groupId, 'id, name, owner_id, invite_code');
+    }
+  }
+
+  /// `limit(1)` plutôt que `maybeSingle()` : avec `maybeSingle`, postgrest
+  /// (2.9) remplace le code SQLSTATE d'une erreur par le statut HTTP
+  /// (`'400'`), ce qui empêcherait de reconnaître 42703 ci-dessus.
+  Future<Map<String, dynamic>?> _selectFirstGroupRow(
+    String groupId,
+    String columns,
+  ) async {
+    final rows = await _client
+        .from('groups')
+        .select(columns)
+        .eq('id', groupId)
+        .limit(1);
+    return rows.isEmpty ? null : rows.first;
   }
 
   @override
@@ -635,6 +737,22 @@ class SupabaseGroupRepository implements GroupRepository {
   }
 
   @override
+  Future<void> becomeGroupGameMaster(String groupId) async {
+    try {
+      // La ligne `group_members` renvoyée n'est pas exploitée : l'appelant
+      // relit le détail du groupe (source de vérité unique de l'écran).
+      await _client.rpc(
+        'become_group_game_master',
+        params: {'p_group_id': groupId},
+      );
+    } on PostgrestException catch (error) {
+      throw mapGroupError(error);
+    } catch (_) {
+      throw mapUnknownGroupError();
+    }
+  }
+
+  @override
   Future<void> removeMember({
     required String groupId,
     required String userId,
@@ -687,7 +805,6 @@ class SupabaseGroupRepository implements GroupRepository {
       if (row == null) {
         return GroupTreasure(groupId: groupId);
       }
-      final rawItems = (row['items'] as List<dynamic>?) ?? const [];
       return GroupTreasure(
         groupId: groupId,
         currencyGp: (row['currency_gp'] as num?)?.toInt() ?? 0,
@@ -695,9 +812,7 @@ class SupabaseGroupRepository implements GroupRepository {
         currencyEp: (row['currency_ep'] as num?)?.toInt() ?? 0,
         currencySp: (row['currency_sp'] as num?)?.toInt() ?? 0,
         currencyCp: (row['currency_cp'] as num?)?.toInt() ?? 0,
-        items: rawItems
-            .map((e) => GroupTreasureItem.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        items: _parseItems(row['items']),
       );
     } on PostgrestException catch (error) {
       throw mapGroupError(error);
@@ -706,21 +821,158 @@ class SupabaseGroupRepository implements GroupRepository {
     }
   }
 
-  @override
-  Future<void> addToTreasure({
-    required String groupId,
-    required Map<CurrencyKind, int> newCurrencyTotals,
-    required List<GroupTreasureItem> newItems,
-  }) async {
+  /// Tableau jsonb `items` -> entrées ; un élément qui n'est pas un objet
+  /// est ignoré (jamais d'exception sur une donnée inattendue).
+  static List<GroupTreasureItem> _parseItems(Object? raw) => [
+    if (raw is List)
+      for (final entry in raw)
+        if (entry is Map)
+          GroupTreasureItem.fromJson(Map<String, dynamic>.from(entry)),
+  ];
+
+  /// Relit `group_treasure.items` juste avant une écriture (garde de
+  /// concurrence, décision 91).
+  Future<List<GroupTreasureItem>> _readTreasureItems(String groupId) async {
+    final row = await _client
+        .from('group_treasure')
+        .select('items')
+        .eq('group_id', groupId)
+        .maybeSingle();
+    return _parseItems(row?['items']);
+  }
+
+  /// Écrit `items` et vérifie qu'une ligne a bien été modifiée : sans ligne
+  /// renvoyée (membre retiré du groupe entre la lecture et l'écriture, RLS,
+  /// ou groupe dissous), rien n'a été écrit et une [GroupFailure] de code
+  /// [GroupErrorCode.notMember] est levée plutôt qu'un faux succès.
+  Future<void> _writeTreasureItems(
+    String groupId,
+    List<GroupTreasureItem> items,
+  ) async {
+    final rows = await _client
+        .from('group_treasure')
+        .update({'items': items.map((item) => item.toJson()).toList()})
+        .eq('group_id', groupId)
+        .select('group_id');
+    if (rows.isEmpty) throw _treasureNotWritten;
+  }
+
+  static const GroupFailure _treasureNotWritten = GroupFailure(
+    "Le butin n'a pas été modifié : tu ne fais peut-être plus partie de ce "
+    'groupe.',
+    code: GroupErrorCode.notMember,
+  );
+
+  static const GroupFailure _treasureStale = GroupFailure(
+    'Le butin a été modifié entre-temps par un autre membre.',
+    code: GroupErrorCode.treasureStale,
+  );
+
+  /// Lit, transforme puis écrit `items` ; [transform] renvoie `null` quand
+  /// l'entrée visée a disparu ou changé (rien n'est alors écrit).
+  Future<void> _editTreasureItems(
+    String groupId,
+    List<GroupTreasureItem>? Function(List<GroupTreasureItem> items) transform,
+  ) async {
     try {
-      await _client
+      final next = transform(await _readTreasureItems(groupId));
+      if (next == null) throw _treasureStale;
+      await _writeTreasureItems(groupId, next);
+    } on GroupFailure {
+      rethrow;
+    } on PostgrestException catch (error) {
+      throw mapGroupError(error);
+    } catch (_) {
+      throw mapUnknownGroupError();
+    }
+  }
+
+  @override
+  Future<void> addTreasureItems({
+    required String groupId,
+    required List<GroupTreasureItem> items,
+  }) {
+    if (items.isEmpty) return Future<void>.value();
+    return _editTreasureItems(
+      groupId,
+      (current) => GroupTreasureItems.merge(current, items),
+    );
+  }
+
+  @override
+  Future<void> updateTreasureItem({
+    required String groupId,
+    required GroupTreasureItem expected,
+    required GroupTreasureItem updated,
+  }) => _editTreasureItems(
+    groupId,
+    (current) => GroupTreasureItems.replace(current, expected, updated),
+  );
+
+  @override
+  Future<void> removeTreasureItem({
+    required String groupId,
+    required GroupTreasureItem expected,
+  }) => _editTreasureItems(
+    groupId,
+    (current) => GroupTreasureItems.remove(current, expected),
+  );
+
+  @override
+  Future<void> setTreasureCurrency({
+    required String groupId,
+    required Map<CurrencyKind, int> expected,
+    required Map<CurrencyKind, int> newTotals,
+  }) async {
+    if (newTotals.isEmpty) return;
+    try {
+      var query = _client
           .from('group_treasure')
           .update({
-            for (final entry in newCurrencyTotals.entries)
+            for (final entry in newTotals.entries)
               entry.key.columnName: entry.value,
-            'items': newItems.map((item) => item.toJson()).toList(),
           })
           .eq('group_id', groupId);
+      // Mise à jour conditionnelle : seulement si les soldes vus par le
+      // joueur n'ont pas changé (aucune ligne renvoyée sinon).
+      for (final entry in expected.entries) {
+        query = query.eq(entry.key.columnName, entry.value);
+      }
+      final rows = await query.select('group_id');
+      if (rows.isEmpty) throw _treasureStale;
+    } on GroupFailure {
+      rethrow;
+    } on PostgrestException catch (error) {
+      throw mapGroupError(error);
+    } catch (_) {
+      throw mapUnknownGroupError();
+    }
+  }
+
+  @override
+  Future<CharacterInventoryItem> fetchTreasureItemDetails(
+    GroupTreasureItem item,
+  ) async {
+    final itemId = item.itemId;
+    if (itemId == null) {
+      return GroupTreasureInventoryAdapter.toInventoryItem(item);
+    }
+    try {
+      final rows = await _client
+          .from('items')
+          .select(inventoryCatalogItemColumns)
+          .eq('id', itemId)
+          .limit(1);
+      final descriptions = await _fetchTranslatedValues(
+        entityType: 'item',
+        fieldName: 'description',
+        entityIds: {'$itemId'},
+      );
+      return GroupTreasureInventoryAdapter.toInventoryItem(
+        item,
+        itemRow: rows.isEmpty ? null : rows.first,
+        description: descriptions['$itemId'],
+      );
     } on PostgrestException catch (error) {
       throw mapGroupError(error);
     } catch (_) {
@@ -761,50 +1013,33 @@ class SupabaseGroupRepository implements GroupRepository {
     required int quantity,
   }) async {
     try {
-      final row = await _client
-          .from('group_treasure')
-          .select('items')
-          .eq('group_id', groupId)
-          .maybeSingle();
-      final rawItems = (row?['items'] as List<dynamic>?) ?? const [];
-      final items = rawItems
-          .map((e) => GroupTreasureItem.fromJson(e as Map<String, dynamic>))
-          .toList();
-
-      final index = items.indexWhere((existing) => existing.matches(item));
-      // Course perdue (déjà réclamé/retiré par un autre membre entre-temps) :
-      // rien à faire, voir la documentation de
-      // [GroupRepository.claimTreasureItem].
-      if (index == -1) return;
-
-      final existing = items[index];
-      final claimed = quantity < existing.quantity
-          ? quantity
-          : existing.quantity;
-      if (claimed <= 0) return;
-
-      final remaining = existing.quantity - claimed;
-      if (remaining <= 0) {
-        items.removeAt(index);
-      } else {
-        items[index] = existing.copyWith(quantity: remaining);
-      }
+      // Entrée disparue ou changée entre-temps (attribuée, modifiée ou
+      // retirée par un autre membre) : rien n'est écrit, voir la
+      // documentation de [GroupRepository.claimTreasureItem].
+      final claim = GroupTreasureItems.claim(
+        await _readTreasureItems(groupId),
+        item,
+        quantity,
+      );
+      if (claim == null) throw _treasureStale;
 
       // Ordre volontaire (voir la documentation de [claimTreasureItem]) :
       // l'ajout à l'inventaire personnel D'ABORD, le retrait du butin commun
       // ENSUITE, pour qu'un échec de la seconde écriture produise une
       // duplication visible plutôt qu'une perte silencieuse.
-      await _client.from('character_inventory').insert({
-        'character_id': characterId,
-        if (item.itemId != null) 'item_id': item.itemId,
-        if (item.customName != null) 'custom_name': item.customName,
-        'quantity': claimed,
-      });
-
       await _client
-          .from('group_treasure')
-          .update({'items': items.map((e) => e.toJson()).toList()})
-          .eq('group_id', groupId);
+          .from('character_inventory')
+          .insert(
+            GroupTreasureInventoryAdapter.toInsertColumns(
+              claim.claimed,
+              characterId: characterId,
+              inventoryId: generateUuidV4(),
+            ),
+          );
+
+      await _writeTreasureItems(groupId, claim.items);
+    } on GroupFailure {
+      rethrow;
     } on PostgrestException catch (error) {
       throw mapGroupError(error);
     } catch (error, stackTrace) {
@@ -932,20 +1167,29 @@ class SupabaseGroupRepository implements GroupRepository {
     }
     // Bug F07 (`docs/retours-utilisateurs.md`) : l'arrivée d'un membre n'est
     // détectable que sur `group_members` elle-même — un `INSERT` ne touche
-    // jamais la table `characters` déjà surveillée ci-dessus. Le nouvel
-    // enregistrement porte `group_id` : filtre serveur possible (et RLS
-    // appliquée par Realtime sur les INSERT).
-    channel.onPostgresChanges(
-      event: PostgresChangeEvent.insert,
-      schema: 'public',
-      table: 'group_members',
-      filter: PostgresChangeFilter(
-        type: PostgresChangeFilterType.eq,
-        column: 'group_id',
-        value: groupId,
-      ),
-      callback: (payload) => onChanged(),
-    );
+    // jamais la table `characters` déjà surveillée ci-dessus. « Devenir MJ »
+    // (étape 3b, RPC `become_group_game_master`) est un `UPDATE` de la ligne
+    // du propriétaire (`character_id` à null, `is_game_master` à true), lui
+    // aussi invisible sur `characters` : sans cet abonnement, les écrans
+    // Groupe des coéquipiers restaient périmés. Le nouvel enregistrement
+    // porte `group_id` dans les deux cas : filtre serveur possible (et RLS
+    // SELECT appliquée par Realtime).
+    for (final event in const [
+      PostgresChangeEvent.insert,
+      PostgresChangeEvent.update,
+    ]) {
+      channel.onPostgresChanges(
+        event: event,
+        schema: 'public',
+        table: 'group_members',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'group_id',
+          value: groupId,
+        ),
+        callback: (payload) => onChanged(),
+      );
+    }
     // Bug F08 : le départ (DELETE) ne peut PAS être filtré sur `group_id`.
     // `group_members` est en REPLICA IDENTITY DEFAULT : `oldRecord` ne
     // contient que la PK `id`, donc un filtre `group_id=eq.…` ne correspond
@@ -1007,6 +1251,18 @@ class SupabaseGroupRepository implements GroupRepository {
   Future<Map<String, String>> _fetchTranslatedNames({
     required String entityType,
     required Set<String> entityIds,
+  }) => _fetchTranslatedValues(
+    entityType: entityType,
+    fieldName: 'name',
+    entityIds: entityIds,
+  );
+
+  /// `{entity_id: value}` des traductions françaises [fieldName] de
+  /// [entityType] (nom, description...).
+  Future<Map<String, String>> _fetchTranslatedValues({
+    required String entityType,
+    required String fieldName,
+    required Set<String> entityIds,
   }) async {
     if (entityIds.isEmpty) return const {};
 
@@ -1014,7 +1270,7 @@ class SupabaseGroupRepository implements GroupRepository {
         .from('translations')
         .select('entity_id, value')
         .eq('entity_type', entityType)
-        .eq('field_name', 'name')
+        .eq('field_name', fieldName)
         .eq('locale', 'fr')
         .inFilter('entity_id', entityIds.toList());
 
@@ -1026,6 +1282,10 @@ class SupabaseGroupRepository implements GroupRepository {
 
   Map<String, dynamic> _asMap(Object? value) =>
       value is Map<String, dynamic> ? value : const {};
+
+  /// Valeur textuelle facultative : clé absente, `null` ou d'un autre type
+  /// donnent `null` (un retour arrière de DeepCore ne casse rien).
+  String? _optionalString(Object? value) => value is String ? value : null;
 }
 
 class _RealtimeChannelSubscription implements GroupRealtimeSubscription {

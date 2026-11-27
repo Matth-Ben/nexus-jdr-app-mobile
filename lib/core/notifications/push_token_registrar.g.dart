@@ -42,11 +42,19 @@ part of 'push_token_registrar.dart';
 /// - **Réception au premier plan** ([PushNotificationGateway.onMessage]) :
 ///   affiche un `SnackBar` simple (titre/corps), via
 ///   [scaffoldMessengerKeyProvider] (aucune UI dédiée pour cette itération,
-///   cohérent avec le reste de ce dépôt pour des messages informatifs).
+///   cohérent avec le reste de ce dépôt pour des messages informatifs) —
+///   **sauf** une notification de combat (`{v: "1", type: combat_start |
+///   your_turn, group_id}`), qui affiche le signal global du combat, jamais
+///   cette `SnackBar` (`CombatNotificationHandler.received`).
 /// - **Tap sur une notification** ([PushNotificationGateway
 ///   .onMessageOpenedApp]/[PushNotificationGateway.getInitialMessage],
-///   routé par [_routeFromMessage]) : deux formats de payload `data`
+///   routé par [_routeFromMessage]) : trois formats de payload `data`
 ///   possibles selon le déclencheur —
+///     - `{v: "1", type: 'combat_start' | 'your_turn', group_id}`
+///       (`notify-group`, contrat DeepCore §5 ; combat natif V2, décision
+///       59) : écran Groupe puis écran Combat du groupe, après contrôle
+///       d'appartenance (`CombatNotificationHandler.open`). Un autre type de
+///       ce format versionné (ex. `reveal`) est ignoré.
 ///     - `{type: 'new_version', ...}` ("nouvelle version disponible") :
 ///       route vers l'accueil (`/`), où vit déjà `UpdateSuggestedBanner`
 ///       (`features/app_update/presentation/widgets/update_suggested_banner
@@ -98,11 +106,19 @@ final pushTokenRegistrarProvider = PushTokenRegistrarProvider._();
 /// - **Réception au premier plan** ([PushNotificationGateway.onMessage]) :
 ///   affiche un `SnackBar` simple (titre/corps), via
 ///   [scaffoldMessengerKeyProvider] (aucune UI dédiée pour cette itération,
-///   cohérent avec le reste de ce dépôt pour des messages informatifs).
+///   cohérent avec le reste de ce dépôt pour des messages informatifs) —
+///   **sauf** une notification de combat (`{v: "1", type: combat_start |
+///   your_turn, group_id}`), qui affiche le signal global du combat, jamais
+///   cette `SnackBar` (`CombatNotificationHandler.received`).
 /// - **Tap sur une notification** ([PushNotificationGateway
 ///   .onMessageOpenedApp]/[PushNotificationGateway.getInitialMessage],
-///   routé par [_routeFromMessage]) : deux formats de payload `data`
+///   routé par [_routeFromMessage]) : trois formats de payload `data`
 ///   possibles selon le déclencheur —
+///     - `{v: "1", type: 'combat_start' | 'your_turn', group_id}`
+///       (`notify-group`, contrat DeepCore §5 ; combat natif V2, décision
+///       59) : écran Groupe puis écran Combat du groupe, après contrôle
+///       d'appartenance (`CombatNotificationHandler.open`). Un autre type de
+///       ce format versionné (ex. `reveal`) est ignoré.
 ///     - `{type: 'new_version', ...}` ("nouvelle version disponible") :
 ///       route vers l'accueil (`/`), où vit déjà `UpdateSuggestedBanner`
 ///       (`features/app_update/presentation/widgets/update_suggested_banner
@@ -159,11 +175,19 @@ final class PushTokenRegistrarProvider
   /// - **Réception au premier plan** ([PushNotificationGateway.onMessage]) :
   ///   affiche un `SnackBar` simple (titre/corps), via
   ///   [scaffoldMessengerKeyProvider] (aucune UI dédiée pour cette itération,
-  ///   cohérent avec le reste de ce dépôt pour des messages informatifs).
+  ///   cohérent avec le reste de ce dépôt pour des messages informatifs) —
+  ///   **sauf** une notification de combat (`{v: "1", type: combat_start |
+  ///   your_turn, group_id}`), qui affiche le signal global du combat, jamais
+  ///   cette `SnackBar` (`CombatNotificationHandler.received`).
   /// - **Tap sur une notification** ([PushNotificationGateway
   ///   .onMessageOpenedApp]/[PushNotificationGateway.getInitialMessage],
-  ///   routé par [_routeFromMessage]) : deux formats de payload `data`
+  ///   routé par [_routeFromMessage]) : trois formats de payload `data`
   ///   possibles selon le déclencheur —
+  ///     - `{v: "1", type: 'combat_start' | 'your_turn', group_id}`
+  ///       (`notify-group`, contrat DeepCore §5 ; combat natif V2, décision
+  ///       59) : écran Groupe puis écran Combat du groupe, après contrôle
+  ///       d'appartenance (`CombatNotificationHandler.open`). Un autre type de
+  ///       ce format versionné (ex. `reveal`) est ignoré.
   ///     - `{type: 'new_version', ...}` ("nouvelle version disponible") :
   ///       route vers l'accueil (`/`), où vit déjà `UpdateSuggestedBanner`
   ///       (`features/app_update/presentation/widgets/update_suggested_banner

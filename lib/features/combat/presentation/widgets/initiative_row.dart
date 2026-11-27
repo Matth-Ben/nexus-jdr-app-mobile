@@ -12,6 +12,7 @@ import '../../domain/combat_participant.dart';
 import '../combat_l10n.dart';
 import '../combat_motion.dart';
 import 'combat_action_menu.dart';
+import 'combat_dead_badge.dart';
 
 /// Fond « tour en cours » : `goldStart` à 25 % sur `parchment.card`
 /// (≈ `#F6E4B6`), par `Color.alphaBlend` — pas un nouvel hex
@@ -28,15 +29,19 @@ const double kInitiativeRowStackedScale = 1.6;
 /// ne trie rien : l'ordre et le rang viennent de l'appelant
 /// (`sortedForDisplay`).
 ///
-/// États : normal, tour en cours, en attente, retiré, sans initiative. Mode
-/// normal (échelle < ×1,6) : rang | nom + badges | initiative | menu ; mode
-/// empilé (≥ ×1,6) : rang + nom pleine largeur, puis initiative, badges et menu.
+/// États : normal, tour en cours, en attente, retiré, sans initiative, héros
+/// mort ([isDead], `docs/combat-grimoire-ui.md` §4). Mode normal (échelle
+/// < ×1,6) : rang | nom + badges | initiative | menu ; mode empilé (≥ ×1,6) :
+/// rang + nom pleine largeur, puis initiative, badges et menu.
 class InitiativeRow extends StatelessWidget {
   const InitiativeRow({
     required this.participant,
     required this.rank,
     this.isCurrent = false,
     this.isYou = false,
+    this.isDead = false,
+    this.pendingLabel,
+    this.note,
     this.onEditInitiative,
     this.editLabel,
     this.onRemove,
@@ -56,6 +61,18 @@ class InitiativeRow extends StatelessWidget {
 
   final bool isCurrent;
   final bool isYou;
+
+  /// Héros mort : badge « Mort », « Tour sauté », fond `deadCardBackground`
+  /// (nom jamais barré : barré veut dire « retiré »). Le style « tour en
+  /// cours » l'emporte si la surbrillance tombe sur lui ; le badge reste.
+  final bool isDead;
+
+  /// Libellé d'une ligne sans initiative (défaut : « Initiative à saisir »).
+  final String? pendingLabel;
+
+  /// Libellé de statut supplémentaire (icône `edit_note`), ex. « Corrigée par
+  /// le MJ (envoyé : 15) ». Repris par le lecteur d'écran.
+  final String? note;
 
   /// « Éditer l'initiative » (MJ). `null` : pas d'entrée de menu.
   final VoidCallback? onEditInitiative;
@@ -158,6 +175,8 @@ class InitiativeRow extends StatelessWidget {
         l10n.combatStatusWaiting
       else if (isCurrent)
         l10n.combatCurrentTurnLabel.toLowerCase(),
+      if (isDead && !_removed) l10n.combatRowDeadSemantics,
+      ?note,
     ].join(', ');
   }
 
@@ -167,6 +186,8 @@ class InitiativeRow extends StatelessWidget {
       fill = kCombatTurnFill;
     } else if (_waiting || _removed) {
       fill = AppColors.parchmentCardAlt;
+    } else if (isDead) {
+      fill = AppColors.deadCardBackground;
     } else {
       fill = AppColors.parchmentCard;
     }
@@ -334,7 +355,9 @@ class InitiativeRow extends StatelessWidget {
   }
 
   Widget _tags(AppLocalizations l10n) {
-    final noInitiative = participant.initiative == null && !_removed;
+    // Un héros mort n'a pas de bloc d'initiative (ni libellé ni bouton) :
+    // son tour est sauté ; la carte d'initiative reste la seule entrée.
+    final noInitiative = participant.initiative == null && !_removed && !isDead;
     return _clamped(
       Wrap(
         spacing: AppSpacing.xs,
@@ -342,6 +365,7 @@ class InitiativeRow extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           CombatKindBadge(kind: participant.kind),
+          if (isDead && !_removed) const CombatDeadBadge(),
           if (isYou) _youTag(l10n),
           if (_removed)
             _statusLabel(l10n.combatStatusRemoved)
@@ -353,9 +377,12 @@ class InitiativeRow extends StatelessWidget {
               icon: Icons.chevron_right,
               iconSize: 24,
               weight: FontWeight.w800,
-            ),
+            )
+          else if (isDead)
+            _statusLabel(l10n.combatTurnSkipped, icon: Icons.redo),
+          if (note != null) _statusLabel(note!, icon: Icons.edit_note),
           if (noInitiative) ...[
-            _statusLabel(l10n.combatInitiativeToEnter),
+            _statusLabel(pendingLabel ?? l10n.combatInitiativeToEnter),
             if (onFill != null)
               Tooltip(
                 message: actionsEnabled

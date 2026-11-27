@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/info_banner.dart';
+import '../../../../core/widgets/modified_badge.dart';
 import '../../../../core/widgets/not_proficient_badge.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
@@ -14,6 +15,7 @@ import '../../../character_creation/domain/gold_amount_formatter.dart';
 import '../../domain/armor_proficiency_rules.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
+import '../../domain/currency_kind.dart';
 import '../../domain/custom_item_enrichment.dart';
 import '../../domain/inventory_armor_dex_bonus_formatter.dart';
 import '../../domain/inventory_rarity_formatter.dart';
@@ -73,6 +75,7 @@ Future<void> showItemInfoPanel(
   int? weaponDamageModifier,
   WeaponAttackStats? weaponStats,
   bool notProficient = false,
+  VoidCallback? onEditPrice,
 }) async {
   final action = await showModalBottomSheet<_ItemInfoPanelAction>(
     context: context,
@@ -90,6 +93,7 @@ Future<void> showItemInfoPanel(
         onToggleAttuned(item);
         Navigator.of(sheetContext).pop();
       },
+      canEditPrice: !readOnly && onEditPrice != null,
     ),
   );
   if (action == null || !context.mounted) return;
@@ -99,10 +103,12 @@ Future<void> showItemInfoPanel(
       onUseItem(item);
     case _ItemInfoPanelAction.toggleEquipped:
       onToggleEquipped(item);
+    case _ItemInfoPanelAction.editPrice:
+      onEditPrice?.call();
   }
 }
 
-enum _ItemInfoPanelAction { use, toggleEquipped }
+enum _ItemInfoPanelAction { use, toggleEquipped, editPrice }
 
 class _ItemInfoPanelContent extends StatelessWidget {
   const _ItemInfoPanelContent({
@@ -114,7 +120,14 @@ class _ItemInfoPanelContent extends StatelessWidget {
     this.weaponDamageModifier,
     this.weaponStats,
     this.notProficient = false,
+    this.canEditPrice = false,
   });
+
+  /// `true` : la ligne "Prix" affiche le lien "Fixer un prix" quand aucun
+  /// prix n'est connu (spec du prix d'un objet modifiable, §1.3) — déjà
+  /// restreint à `!readOnly` et à la présence d'un `onEditPrice` par
+  /// [showItemInfoPanel].
+  final bool canEditPrice;
 
   /// Armure/bouclier non maîtrisé (P10/F16) : pastille en tête du contenu et
   /// bannière informative en pied, au-dessus du bouton « Équiper ».
@@ -145,11 +158,181 @@ class _ItemInfoPanelContent extends StatelessWidget {
     final attunable = !readOnly && item.requiresAttunement;
     final atAttunementCap =
         !item.isAttuned && attunedCount >= CharacterDetail.attunementCap;
+
+    return SafeArea(
+      top: false,
+      child: FractionallySizedBox(
+        heightFactor: 0.88,
+        child: Container(
+          decoration: const BoxDecoration(color: AppColors.parchmentBg),
+          child: Column(
+            children: [
+              SheetHeaderBar(title: item.name.toUpperCase()),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (notProficient) ...[
+                        Semantics(
+                          label: l10n
+                              .characterInventoryItemCardNotProficientSemantics,
+                          container: true,
+                          excludeSemantics: true,
+                          child: const Align(
+                            alignment: Alignment.centerLeft,
+                            child: NotProficientBadge(),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
+                      if (attunable) ...[
+                        _ToggleAttunedLink(
+                          attuned: item.isAttuned,
+                          disabled: atAttunementCap,
+                          onTap: onToggleAttuned,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
+                      ItemInfoBody(
+                        item: item,
+                        weaponAttackBonus: weaponAttackBonus,
+                        weaponDamageModifier: weaponDamageModifier,
+                        weaponStats: weaponStats,
+                        onEditPrice: canEditPrice
+                            ? () =>
+                                  Navigator.of(context)
+                                      .pop(_ItemInfoPanelAction.editPrice)
+                            : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (notProficient)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    0,
+                  ),
+                  child: InfoBanner(
+                    icon: Icons.warning_amber_rounded,
+                    message: ArmorProficiencyRules.isShield(item)
+                        ? l10n.inventoryNotProficientShieldBanner
+                        : l10n.inventoryNotProficientArmorBanner,
+                  ),
+                ),
+              if (usable)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  child: PrimaryButton(
+                    label: l10n.itemInfoPanelUseButton,
+                    onPressed: () =>
+                        Navigator.of(context).pop(_ItemInfoPanelAction.use),
+                  ),
+                )
+              else if (equippable)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  child: PrimaryButton(
+                    label: item.equipped
+                        ? l10n.itemInfoPanelUnequipButton
+                        : l10n.itemInfoPanelEquipButton,
+                    onPressed: () =>
+                        Navigator.of(context)
+                            .pop(_ItemInfoPanelAction.toggleEquipped),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Une ligne « libellé / valeur » ajoutée en tête de [ItemInfoBody] par son
+/// appelant (ex. « Provenance » et « Quantité » de la fiche d'un objet du
+/// butin de groupe).
+typedef ItemInfoRowData = ({String label, String value});
+
+/// Corps du panneau « Infos » d'un objet (lignes d'information séparées par
+/// [SheetActionDivider], légendes, puis titre `DESCRIPTION` et son texte) —
+/// partagé par [showItemInfoPanel] et la fiche d'un objet du butin de groupe
+/// (`group_treasure_item_sheet.dart`, décision 91), pour ne rien dupliquer.
+///
+/// [withoutCharacter] : objet vu hors de tout personnage (butin commun) — ni
+/// « Attaque » ni « Set » ni modificateur de dégâts, et l'harmonisation d'un
+/// objet qui la requiert s'affiche « Requise » (catalogue compris).
+///
+/// [leadingRows] : lignes ajoutées en tête, avant celles de l'objet.
+///
+/// [descriptionOverride] remplace le texte de la description (chargement ou
+/// erreur de lecture) ; `null` affiche la description de l'objet.
+class ItemInfoBody extends StatelessWidget {
+  const ItemInfoBody({
+    required this.item,
+    this.withoutCharacter = false,
+    this.leadingRows = const [],
+    this.weaponAttackBonus,
+    this.weaponDamageModifier,
+    this.weaponStats,
+    this.descriptionOverride,
+    this.onEditPrice,
+    this.priceSetLinkLabel,
+    super.key,
+  });
+
+  final CharacterInventoryItem item;
+  final bool withoutCharacter;
+  final List<ItemInfoRowData> leadingRows;
+  final int? weaponAttackBonus;
+  final int? weaponDamageModifier;
+
+  /// Voir `_ItemInfoPanelContent.weaponStats`.
+  final WeaponAttackStats? weaponStats;
+  final Widget? descriptionOverride;
+
+  /// Lien « Fixer un prix » de la ligne "Prix" (spec du prix d'un objet
+  /// modifiable, §1.3) — affiché seulement quand aucun prix n'est connu et
+  /// que ce callback est non nul ; `null` : aucune écriture possible dans ce
+  /// contexte (vue en lecture seule, ou butin hors connexion/en cours
+  /// d'écriture), la ligne affiche alors « Non estimé » sans lien.
+  final VoidCallback? onEditPrice;
+
+  /// Libellé du lien « Fixer un prix » — `null` : `l10n.itemPriceSetLink`
+  /// (module personnages, vouvoiement). Le butin de groupe (tutoiement)
+  /// fournit `l10n.groupTreasureItemPriceSetLink`.
+  final String? priceSetLinkLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final weapon = item.weaponProperties;
     final armor = item.armorProperties;
     final rarity = item.rarity;
+    final weaponAttackBonus = withoutCharacter ? null : this.weaponAttackBonus;
+    final weaponDamageModifier = withoutCharacter
+        ? null
+        : this.weaponDamageModifier;
+    final weaponStats = withoutCharacter ? null : this.weaponStats;
 
     final infoRows = <Widget>[
+      for (final row in leadingRows)
+        _ItemInfoRow(label: row.label, value: row.value),
       // Objet personnalisé enrichi (P7) : type, bonus magique, harmonisation.
       // Un objet non enrichi (`customKind` nul) garde le rendu historique.
       if (item.isCustom && item.customKind != null)
@@ -164,26 +347,32 @@ class _ItemInfoPanelContent extends StatelessWidget {
             WeightFormatter.format(unitWeight),
           ),
         ),
-      if (item.costAmount case final costAmount?)
-        _ItemInfoRow(
-          label: l10n.itemInfoPanelCostLabel,
-          value: l10n.itemInfoPanelCostValue(
-            GoldAmountFormatter.format(costAmount),
-          ),
-        ),
+      _ItemPriceRow(
+        item: item,
+        onEditPrice: onEditPrice,
+        setPriceLinkLabel: priceSetLinkLabel,
+      ),
       if (item.magicBonus > 0)
         _ItemInfoRow(
           label: l10n.itemInfoPanelMagicBonusLabel,
           value: '+${item.magicBonus}',
         ),
-      if (item.isCustom && item.requiresAttunement)
+      if (withoutCharacter && item.requiresAttunement)
+        _ItemInfoRow(
+          label: l10n.itemInfoPanelAttunementLabel,
+          value: l10n.itemInfoPanelAttunementRequiredValue,
+        )
+      else if (item.isCustom && item.requiresAttunement)
         _ItemInfoRow(
           label: l10n.itemInfoPanelAttunementLabel,
           value: item.isAttuned
               ? l10n.itemInfoPanelAttunementAttunedValue
               : l10n.itemInfoPanelAttunementPendingValue,
         ),
-      if (item.isWeapon && item.equipped && item.weaponSlot != null)
+      if (!withoutCharacter &&
+          item.isWeapon &&
+          item.equipped &&
+          item.weaponSlot != null)
         _ItemInfoRow(
           label: l10n.itemInfoPanelSetLabel,
           value: item.weaponSlot!.label,
@@ -194,17 +383,17 @@ class _ItemInfoPanelContent extends StatelessWidget {
             label: l10n.itemInfoPanelAttackLabel,
             value: (weaponStats?.magicBonus ?? 0) > 0
                 ? l10n.itemInfoPanelAttackValueWithMagic(
-                    SignedModifierFormatter.format(weaponAttackBonus!),
+                    SignedModifierFormatter.format(weaponAttackBonus),
                     weaponStats!.magicBonus,
                   )
-                : SignedModifierFormatter.format(weaponAttackBonus!),
+                : SignedModifierFormatter.format(weaponAttackBonus),
           ),
         if (weapon.damageDice != null && weapon.damageType != null)
           _ItemInfoRow(
             label: l10n.itemInfoPanelDamageLabel,
             value:
                 '${weapon.damageDice}'
-                '${weaponDamageModifier == null || weaponDamageModifier == 0 ? '' : SignedModifierFormatter.format(weaponDamageModifier!)} '
+                '${weaponDamageModifier == null || weaponDamageModifier == 0 ? '' : SignedModifierFormatter.format(weaponDamageModifier)} '
                 '${weapon.damageType}',
           ),
         if (item.customWeaponCategory case final category?)
@@ -292,125 +481,37 @@ class _ItemInfoPanelContent extends StatelessWidget {
         ),
     ];
 
-    return SafeArea(
-      top: false,
-      child: FractionallySizedBox(
-        heightFactor: 0.88,
-        child: Container(
-          decoration: const BoxDecoration(color: AppColors.parchmentBg),
-          child: Column(
-            children: [
-              SheetHeaderBar(title: item.name.toUpperCase()),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (notProficient) ...[
-                        Semantics(
-                          label: l10n
-                              .characterInventoryItemCardNotProficientSemantics,
-                          container: true,
-                          excludeSemantics: true,
-                          child: const Align(
-                            alignment: Alignment.centerLeft,
-                            child: NotProficientBadge(),
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                      ],
-                      if (attunable) ...[
-                        _ToggleAttunedLink(
-                          attuned: item.isAttuned,
-                          disabled: atAttunementCap,
-                          onTap: onToggleAttuned,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                      ],
-                      if (infoRows.isNotEmpty)
-                        for (var i = 0; i < infoRows.length; i++) ...[
-                          infoRows[i],
-                          if (i < infoRows.length - 1)
-                            const SheetActionDivider(),
-                        ],
-                      if (item.isMagicBonusSuspended)
-                        _Legend(l10n.itemInfoPanelMagicBonusInactiveLegend),
-                      if (weaponStats?.proficiency ==
-                          WeaponProficiencyStatus.unknown)
-                        _Legend(l10n.itemInfoPanelProficiencyUnknownLegend),
-                      if (weaponStats?.rangeUnspecified ?? false)
-                        _Legend(l10n.itemInfoPanelRangeUnspecifiedLegend),
-                      if (infoRows.isNotEmpty)
-                        const SizedBox(height: AppSpacing.md),
-                      DisplayText(
-                        l10n.itemInfoPanelDescriptionSectionLabel,
-                        style: AppTypography.display(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        item.description?.isNotEmpty == true
-                            ? item.description!
-                            : l10n.itemInfoPanelDescriptionUnavailable,
-                        style: AppTypography.body(fontSize: 14, height: 1.4),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (notProficient)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    0,
-                  ),
-                  child: InfoBanner(
-                    icon: Icons.warning_amber_rounded,
-                    message: ArmorProficiencyRules.isShield(item)
-                        ? l10n.inventoryNotProficientShieldBanner
-                        : l10n.inventoryNotProficientArmorBanner,
-                  ),
-                ),
-              if (usable)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                  ),
-                  child: PrimaryButton(
-                    label: l10n.itemInfoPanelUseButton,
-                    onPressed: () =>
-                        Navigator.of(context).pop(_ItemInfoPanelAction.use),
-                  ),
-                )
-              else if (equippable)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                  ),
-                  child: PrimaryButton(
-                    label: item.equipped
-                        ? l10n.itemInfoPanelUnequipButton
-                        : l10n.itemInfoPanelEquipButton,
-                    onPressed: () =>
-                        Navigator.of(context)
-                            .pop(_ItemInfoPanelAction.toggleEquipped),
-                  ),
-                ),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (infoRows.isNotEmpty)
+          for (var i = 0; i < infoRows.length; i++) ...[
+            infoRows[i],
+            if (i < infoRows.length - 1) const SheetActionDivider(),
+          ],
+        if (item.isMagicBonusSuspended)
+          _Legend(l10n.itemInfoPanelMagicBonusInactiveLegend),
+        if (weaponStats?.proficiency == WeaponProficiencyStatus.unknown)
+          _Legend(l10n.itemInfoPanelProficiencyUnknownLegend),
+        if (weaponStats?.rangeUnspecified ?? false)
+          _Legend(l10n.itemInfoPanelRangeUnspecifiedLegend),
+        if (infoRows.isNotEmpty) const SizedBox(height: AppSpacing.md),
+        DisplayText(
+          l10n.itemInfoPanelDescriptionSectionLabel,
+          style: AppTypography.display(
+            fontSize: 11,
+            color: AppColors.textSecondary,
           ),
         ),
-      ),
+        const SizedBox(height: AppSpacing.xs),
+        descriptionOverride ??
+            Text(
+              item.description?.isNotEmpty == true
+                  ? item.description!
+                  : l10n.itemInfoPanelDescriptionUnavailable,
+              style: AppTypography.body(fontSize: 14, height: 1.4),
+            ),
+      ],
     );
   }
 }
@@ -498,6 +599,132 @@ class _ToggleAttunedLink extends StatelessWidget {
                 style: AppTypography.body(fontSize: 11, color: color),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Ligne "Prix" — spec du prix d'un objet modifiable (§1) : 3 états (prix
+/// officiel sans surcharge, prix surchargé/personnalisé avec [ModifiedBadge],
+/// ou « Non estimé » avec un lien « Fixer un prix » optionnel) — toujours
+/// affichée (jamais masquée, contrairement à l'ancienne ligne "Coût"), même
+/// position dans [ItemInfoBody.build] (juste après le poids, avant le bonus
+/// magique).
+class _ItemPriceRow extends StatelessWidget {
+  const _ItemPriceRow({
+    required this.item,
+    this.onEditPrice,
+    this.setPriceLinkLabel,
+  });
+
+  final CharacterInventoryItem item;
+  final VoidCallback? onEditPrice;
+  final String? setPriceLinkLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final amount = item.displayedPriceAmount;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              l10n.itemPriceLabel,
+              style: AppTypography.body(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: amount == null
+                ? Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpacing.sm,
+                    children: [
+                      Text(
+                        l10n.itemPriceNotEstimatedValue,
+                        style: AppTypography.body(
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (onEditPrice != null)
+                        _SetPriceLink(
+                          label: setPriceLinkLabel ?? l10n.itemPriceSetLink,
+                          onTap: onEditPrice!,
+                        ),
+                    ],
+                  )
+                : Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpacing.xs,
+                    children: [
+                      Text(
+                        l10n.itemPriceValue(
+                          GoldAmountFormatter.format(amount),
+                          item.displayedPriceCurrency.unitLabel,
+                        ),
+                        style: AppTypography.body(
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (item.priceIsOverridden) const ModifiedBadge(),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Lien "Fixer un prix" — même gabarit que [_ToggleAttunedLink] (`body` 13
+/// w700 `textSecondary`, zone de tap 44 px min-height), icône
+/// [Icons.sell_outlined].
+class _SetPriceLink extends StatelessWidget {
+  const _SetPriceLink({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.sell_outlined,
+                size: 14,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: AppTypography.body(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -19,6 +19,7 @@ import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
+import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
@@ -42,6 +43,8 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
+import 'package:personnages/features/combat/presentation/providers/grimoire_combat_providers.dart';
+import 'package:personnages/features/groups/data/group_error_mapper.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/created_group.dart';
 import 'package:personnages/features/groups/domain/group_character_reassignment_failure.dart';
@@ -55,11 +58,13 @@ import 'package:personnages/features/groups/domain/joined_group.dart';
 import 'package:personnages/features/groups/presentation/group_character_reassignment_screen.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
 import 'package:personnages/l10n/app_localizations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import '../../../support/combat_fixtures.dart';
 import '../../../support/fake_combat_repository.dart';
 import '../../../support/fake_connectivity_checker.dart';
 import '../../../support/fake_current_user.dart';
+import '../../../support/fake_grimoire_combat_gateway.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   List<CharacterSummary>? charactersToReturn;
@@ -329,6 +334,16 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<WriteOutcome> setInventoryItemPriceOverride({
+    required String characterId,
+    required String inventoryId,
+    required num? amount,
+    required CurrencyKind? currency,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<WriteOutcome> removeInventoryItem({
     required String characterId,
     required String inventoryId,
@@ -473,6 +488,10 @@ class _FakeGroupRepository implements GroupRepository {
   Future<void> dissolveGroup(String groupId) => throw UnimplementedError();
 
   @override
+  Future<void> becomeGroupGameMaster(String groupId) =>
+      throw UnimplementedError();
+
+  @override
   Future<void> removeMember({
     required String groupId,
     required String userId,
@@ -483,11 +502,35 @@ class _FakeGroupRepository implements GroupRepository {
       throw UnimplementedError();
 
   @override
-  Future<void> addToTreasure({
+  Future<void> addTreasureItems({
     required String groupId,
-    required Map<CurrencyKind, int> newCurrencyTotals,
-    required List<GroupTreasureItem> newItems,
+    required List<GroupTreasureItem> items,
   }) => throw UnimplementedError();
+
+  @override
+  Future<void> updateTreasureItem({
+    required String groupId,
+    required GroupTreasureItem expected,
+    required GroupTreasureItem updated,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> removeTreasureItem({
+    required String groupId,
+    required GroupTreasureItem expected,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> setTreasureCurrency({
+    required String groupId,
+    required Map<CurrencyKind, int> expected,
+    required Map<CurrencyKind, int> newTotals,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<CharacterInventoryItem> fetchTreasureItemDetails(
+    GroupTreasureItem item,
+  ) => throw UnimplementedError();
 
   @override
   Future<bool> claimTreasureCurrency({
@@ -884,8 +927,12 @@ void main() {
       members: const [],
     );
 
-    Widget build({required bool owner, required bool combatActive}) {
-      final combatRepo = FakeCombatRepository();
+    Widget build({
+      required bool owner,
+      required bool combatActive,
+      FakeCombatRepository? combatRepository,
+    }) {
+      final combatRepo = combatRepository ?? FakeCombatRepository();
       if (combatActive) combatRepo.snapshot = fakeSnapshot();
       return _buildTestWidget(
         characterRepository: fakeCharacterRepository,
@@ -893,6 +940,9 @@ void main() {
         extraOverrides: [
           currentUserFromTestOverride,
           combatRepositoryProvider.overrideWithValue(combatRepo),
+          grimoireCombatGatewayProvider.overrideWithValue(
+            FakeGrimoireCombatGateway(),
+          ),
           connectivityCheckerProvider.overrideWithValue(
             FakeConnectivityChecker(),
           ),
@@ -933,6 +983,9 @@ void main() {
           extraOverrides: [
             currentUserFromTestOverride,
             combatRepositoryProvider.overrideWithValue(FakeCombatRepository()),
+            grimoireCombatGatewayProvider.overrideWithValue(
+              FakeGrimoireCombatGateway(),
+            ),
             connectivityCheckerProvider.overrideWithValue(
               FakeConnectivityChecker(),
             ),
@@ -970,6 +1023,44 @@ void main() {
       await tester.tap(find.text('Quitter le groupe'));
       await tester.pumpAndSettle();
       expect(find.text('Quitter ce groupe ?'), findsOneWidget);
+    });
+
+    // D224 : le serveur est l'autorité (trigger DeepCore, `combat_active`).
+    testWidgets('propriétaire, refus serveur combat_active (état local '
+        'périmé) : même message clair, pas de navigation', (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+      fakeGroupRepository.leaveGroupError = mapGroupError(
+        const PostgrestException(message: 'combat_active', code: 'P0001'),
+      );
+      final combatRepository = FakeCombatRepository();
+      await tester.pumpWidget(
+        build(
+          owner: true,
+          combatActive: false,
+          combatRepository: combatRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Quitter le groupe'));
+      await tester.pumpAndSettle();
+      // Garde cliente passée (aucun combat connu) : nombre de relectures
+      // avant le refus serveur.
+      final fetchesBefore = combatRepository.fetchCount;
+      await tester.tap(find.widgetWithText(DestructiveButton, 'Quitter'));
+      await tester.pumpAndSettle();
+
+      // Le refus relance la lecture du combat (état local périmé).
+      expect(combatRepository.fetchCount, greaterThan(fetchesBefore));
+
+      expect(fakeGroupRepository.leaveGroupCalled, isTrue);
+      expect(
+        find.text(
+          "Tu ne peux pas quitter le groupe pendant un combat en cours. "
+          "Termine d'abord le combat.",
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Écran Groupes'), findsNothing);
     });
   });
 

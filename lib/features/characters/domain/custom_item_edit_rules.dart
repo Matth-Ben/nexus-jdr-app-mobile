@@ -1,4 +1,5 @@
 import 'character_inventory_item.dart';
+import 'currency_kind.dart';
 import 'custom_item_enrichment.dart';
 
 /// Règles de l'édition d'un objet personnalisé existant (P7 PR 4) : quelle
@@ -69,9 +70,16 @@ class CustomItemInitialValues {
     this.armorCategory,
     this.weight,
     this.requiresAttunement = false,
+    this.quantity = 1,
+    this.priceOverrideAmount,
+    this.priceOverrideCurrency,
   });
 
   final CustomItemEditMode mode;
+
+  /// Quantité actuelle (lue seulement quand le formulaire la propose en
+  /// édition, `showCustomItemFormSheet(editQuantity: true)`).
+  final int quantity;
   final String name;
 
   /// Type résolu (`null` : ancien objet sans type et sans dé de dégâts, aucune
@@ -94,12 +102,21 @@ class CustomItemInitialValues {
   /// Poids unitaire en kg (`null` : non renseigné).
   final double? weight;
   final bool requiresAttunement;
+
+  /// Prix de l'objet personnalisé (spec du prix d'un objet modifiable, §2a) —
+  /// `null` : aucun prix fixé. Toujours renseigné en même temps que
+  /// [priceOverrideCurrency].
+  final num? priceOverrideAmount;
+  final CurrencyKind? priceOverrideCurrency;
 }
 
 final RegExp _dicePattern = RegExp(r'^(\d+)d(\d+)$');
 
 /// Valeurs de départ pour [item] (objet personnalisé, voir
 /// [customItemEditModeOf]). Dé « NdM » illisible : valeurs par défaut (1d6).
+///
+/// Sert aussi à un objet du butin de groupe, vu comme une ligne d'inventaire
+/// non équipée (`GroupTreasureInventoryAdapter`, décision 91).
 CustomItemInitialValues customItemInitialValuesOf(CharacterInventoryItem item) {
   final weapon = item.weaponProperties;
   var diceCount = 1;
@@ -133,5 +150,8 @@ CustomItemInitialValues customItemInitialValuesOf(CharacterInventoryItem item) {
     armorCategory: item.customArmorCategory,
     weight: item.unitWeight,
     requiresAttunement: item.customRequiresAttunement,
+    quantity: item.quantity,
+    priceOverrideAmount: item.priceOverrideAmount,
+    priceOverrideCurrency: item.priceOverrideCurrency,
   );
 }

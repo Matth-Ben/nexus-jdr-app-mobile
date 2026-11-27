@@ -14,6 +14,7 @@ import 'package:personnages/features/combat/domain/combat_enums.dart';
 import 'package:personnages/features/combat/domain/combat_participant.dart';
 import 'package:personnages/features/combat/presentation/combat_screen.dart';
 import 'package:personnages/features/combat/presentation/providers/combat_providers.dart';
+import 'package:personnages/features/combat/presentation/providers/grimoire_combat_providers.dart';
 import 'package:personnages/features/combat/presentation/widgets/initiative_roll_block.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/features/groups/domain/group_member.dart';
@@ -25,6 +26,7 @@ import '../../../support/combat_fixtures.dart';
 import '../../../support/fake_combat_repository.dart';
 import '../../../support/fake_connectivity_checker.dart';
 import '../../../support/fake_current_user.dart';
+import '../../../support/fake_grimoire_combat_gateway.dart';
 
 const groupId = 'group-1';
 const ownerId = 'owner-1';
@@ -89,11 +91,13 @@ class CombatHarness {
     GroupDetail? detail,
     FakeCombatRepository? repo,
     FakeConnectivityChecker? connectivity,
+    FakeGrimoireCombatGateway? grimoire,
     this.extraOverrides = const [],
     this.rollOpener,
   }) : detail = detail ?? fakeGroupDetail(),
        repo = repo ?? FakeCombatRepository(),
-       connectivity = connectivity ?? FakeConnectivityChecker();
+       connectivity = connectivity ?? FakeConnectivityChecker(),
+       grimoire = grimoire ?? FakeGrimoireCombatGateway();
 
   /// Surcharges supplémentaires (ex. la fiche du joueur).
   final List<Override> extraOverrides;
@@ -105,9 +109,18 @@ class CombatHarness {
   final FakeCombatRepository repo;
   final FakeConnectivityChecker connectivity;
 
+  /// Passerelle du combat Grimoire (inerte par défaut : aucun combat).
+  final FakeGrimoireCombatGateway grimoire;
+
+  /// Horloge injectée (`combatClockProvider`), avancée par le test.
+  DateTime now = DateTime(2026, 11, 23, 21);
+
   late ProviderContainer container;
 
   List<String> announcements = [];
+
+  /// Annonces assertives (« C'est ton tour. »).
+  List<String> assertiveAnnouncements = [];
   Locale locale = const Locale('fr');
   double scale = 1;
   String? lastLocation;
@@ -121,6 +134,8 @@ class CombatHarness {
         combatRefetchDebounceProvider.overrideWithValue(
           const Duration(milliseconds: 10),
         ),
+        grimoireCombatGatewayProvider.overrideWithValue(grimoire),
+        combatClockProvider.overrideWithValue(() => now),
         groupDetailProvider(groupId).overrideWith((ref) async => detail),
         ...extraOverrides,
       ],
@@ -144,12 +159,18 @@ class CombatHarness {
           builder: (context, state) => CombatScreen(
             groupId: state.pathParameters['id']!,
             announcer: (context, text) => announcements.add(text),
+            assertiveAnnouncer: (context, text) =>
+                assertiveAnnouncements.add(text),
             rollOpener: rollOpener ?? defaultInitiativeRollOpener,
           ),
         ),
         GoRoute(
           path: '/groups/:id',
           builder: (context, state) => const Scaffold(body: Text('GROUPE')),
+        ),
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const Scaffold(body: Text('ACCUEIL')),
         ),
       ],
     );

@@ -61,6 +61,14 @@ typedef EditCustomInventoryItemCallback = Future<void> Function(
   CharacterInventoryItem item,
 );
 
+/// Callback de l'action « Modifier » (surcharge de prix) d'un objet du
+/// catalogue — spec du prix d'un objet modifiable, §2b : ouvre la sheet
+/// autonome de prix puis écrit le résultat, voir
+/// `character_inventory_tab_body.dart`. L'objet est déjà connu de
+/// l'appelant (fermeture sur [item]), contrairement à
+/// [EditCustomInventoryItemCallback].
+typedef EditInventoryItemPriceCallback = VoidCallback;
+
 /// Catégories pour lesquelles l'action "Équiper"/"Déséquiper" a un sens —
 /// voir la spec visuelle de la tâche.
 const Set<String> equippableInventoryCategories = {
@@ -128,6 +136,7 @@ Future<void> showItemActionSheet(
   WeaponAttackStats? weaponStats,
   bool notProficient = false,
   EditCustomInventoryItemCallback? onEditCustomItem,
+  EditInventoryItemPriceCallback? onEditItemPrice,
 }) async {
   final action = await showModalBottomSheet<_ItemSheetAction>(
     context: context,
@@ -138,6 +147,7 @@ Future<void> showItemActionSheet(
       attunedCount: attunedCount,
       notProficient: notProficient,
       editMode: onEditCustomItem == null ? null : customItemEditModeOf(item),
+      canEditPrice: !item.isCustom && onEditItemPrice != null,
     ),
   );
   if (action == null || !context.mounted) return;
@@ -155,6 +165,10 @@ Future<void> showItemActionSheet(
         weaponDamageModifier: weaponDamageModifier,
         weaponStats: weaponStats,
         notProficient: notProficient,
+        // Objet du catalogue ou personnalisé : `onEditItemPrice` (fourni par
+        // l'orchestrateur, `character_inventory_tab_body.dart::_editItemPrice`)
+        // ouvre déjà l'éditeur pertinent selon le type d'objet.
+        onEditPrice: onEditItemPrice,
       );
     case _ItemSheetAction.use:
       onUseItem(item);
@@ -172,6 +186,8 @@ Future<void> showItemActionSheet(
       onEquipWeaponToSlot(item, slot);
     case _ItemSheetAction.editCustom:
       await onEditCustomItem?.call(item);
+    case _ItemSheetAction.editPrice:
+      onEditItemPrice?.call();
     case _ItemSheetAction.remove:
       await removeItemFlow(context, item: item, onRemoveItem: onRemoveItem);
   }
@@ -202,6 +218,7 @@ enum _ItemSheetAction {
   toggleAttuned,
   equipWeapon,
   editCustom,
+  editPrice,
   remove,
 }
 
@@ -211,6 +228,7 @@ class _ItemActionSheetContent extends StatelessWidget {
     required this.attunedCount,
     this.notProficient = false,
     this.editMode,
+    this.canEditPrice = false,
   });
 
   final CharacterInventoryItem item;
@@ -219,6 +237,12 @@ class _ItemActionSheetContent extends StatelessWidget {
   /// Action « Modifier » / « Enrichir » à afficher (`null` : aucune — objet du
   /// catalogue, vue en lecture seule).
   final CustomItemEditMode? editMode;
+
+  /// `true` : affiche l'action « Modifier » dédiée au prix (spec du prix
+  /// d'un objet modifiable, §2b) — seulement pour un objet du catalogue
+  /// (jamais en même temps que [editMode], réservé au formulaire complet
+  /// d'un objet personnalisé, qui couvre déjà le prix).
+  final bool canEditPrice;
 
   /// Armure/bouclier non maîtrisé (P10/F16) : pastille dans l'en-tête et
   /// bannière informative au-dessus de « Équiper »/« Déséquiper ».
@@ -351,6 +375,13 @@ class _ItemActionSheetContent extends StatelessWidget {
                     : l10n.itemActionSheetEditLabel,
                 onTap: () =>
                     Navigator.of(context).pop(_ItemSheetAction.editCustom),
+              )
+            else if (canEditPrice)
+              SheetActionRow(
+                icon: Icons.edit,
+                label: l10n.itemActionSheetEditLabel,
+                onTap: () =>
+                    Navigator.of(context).pop(_ItemSheetAction.editPrice),
               ),
             const SheetActionDivider(),
             SheetActionRow(
@@ -371,9 +402,14 @@ class _ItemActionSheetContent extends StatelessWidget {
 /// [itemName] en plus dans le titre et un texte fixe ("Cette action est
 /// définitive.") plutôt qu'aucun texte du tout (spec de la tâche). Retourne
 /// `true` si le joueur confirme, `false`/`null` sinon.
+///
+/// [title]/[body] remplacent le titre et le texte de l'inventaire (retrait
+/// d'un objet du butin de groupe, décision 91) ; boutons inchangés.
 Future<bool?> showRemoveInventoryItemConfirmationDialog(
   BuildContext context, {
   required String itemName,
+  String? title,
+  String? body,
 }) {
   return showDialog<bool>(
     context: context,
@@ -395,7 +431,7 @@ Future<bool?> showRemoveInventoryItemConfirmationDialog(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                l10n.itemActionSheetRemoveConfirmationTitle(itemName),
+                title ?? l10n.itemActionSheetRemoveConfirmationTitle(itemName),
                 style: AppTypography.body(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
@@ -403,7 +439,7 @@ Future<bool?> showRemoveInventoryItemConfirmationDialog(
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                l10n.itemActionSheetRemoveConfirmationBody,
+                body ?? l10n.itemActionSheetRemoveConfirmationBody,
                 style: AppTypography.body(
                   fontSize: 13,
                   color: AppColors.textSecondary,

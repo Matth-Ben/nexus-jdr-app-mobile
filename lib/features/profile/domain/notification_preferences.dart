@@ -7,7 +7,7 @@
 ///
 /// Volontairement une classe simple (pas `freezed`) : même précédent que
 /// `features/characters/domain/character_detail_class_row.dart::CharacterDetailClassRow`
-/// — une donnée à 5 booléens, sans logique de sérialisation complexe (jamais
+/// — une donnée à 6 booléens, sans logique de sérialisation complexe (jamais
 /// générée depuis le schéma Supabase, contrairement aux modèles de
 /// `character_creation/`).
 ///
@@ -36,6 +36,7 @@ class NotificationPreferences {
     this.pushRestReminder = true,
     this.pushAccessRevoked = true,
     this.pushNewVersionAvailable = true,
+    this.pushGmCombatAndReveals = true,
     this.emailDigestEnabled = false,
   });
 
@@ -66,6 +67,14 @@ class NotificationPreferences {
   /// redondant vers la même information, jamais une donnée distincte.
   final bool pushNewVersionAvailable;
 
+  /// "Combat et révélations du MJ" (`push_gm_combat_and_reveals`, décision
+  /// 47) — dépend de [pushEnabled]. Respectée par `notify-group` (début du
+  /// combat, « à toi de jouer », révélation) et par le combat natif V2
+  /// (décision 60 : un seul interrupteur pour le combat). Ne règle que le
+  /// push : bandeaux, signal global et haptique dans l'app restent actifs
+  /// (`docs/combat-grimoire-ui.md` §9, Q6).
+  final bool pushGmCombatAndReveals;
+
   /// "Recevoir un résumé par email" — indépendant de [pushEnabled] (canal
   /// email, pas push).
   final bool emailDigestEnabled;
@@ -82,6 +91,8 @@ class NotificationPreferences {
       pushAccessRevoked: row['push_access_revoked'] as bool? ?? true,
       pushNewVersionAvailable:
           row['push_new_version_available'] as bool? ?? true,
+      pushGmCombatAndReveals:
+          row['push_gm_combat_and_reveals'] as bool? ?? true,
       emailDigestEnabled: row['email_digest_enabled'] as bool? ?? false,
     );
   }
@@ -91,6 +102,7 @@ class NotificationPreferences {
     bool? pushRestReminder,
     bool? pushAccessRevoked,
     bool? pushNewVersionAvailable,
+    bool? pushGmCombatAndReveals,
     bool? emailDigestEnabled,
   }) {
     return NotificationPreferences(
@@ -99,6 +111,8 @@ class NotificationPreferences {
       pushAccessRevoked: pushAccessRevoked ?? this.pushAccessRevoked,
       pushNewVersionAvailable:
           pushNewVersionAvailable ?? this.pushNewVersionAvailable,
+      pushGmCombatAndReveals:
+          pushGmCombatAndReveals ?? this.pushGmCombatAndReveals,
       emailDigestEnabled: emailDigestEnabled ?? this.emailDigestEnabled,
     );
   }
@@ -110,6 +124,7 @@ class NotificationPreferences {
       other.pushRestReminder == pushRestReminder &&
       other.pushAccessRevoked == pushAccessRevoked &&
       other.pushNewVersionAvailable == pushNewVersionAvailable &&
+      other.pushGmCombatAndReveals == pushGmCombatAndReveals &&
       other.emailDigestEnabled == emailDigestEnabled;
 
   @override
@@ -118,6 +133,7 @@ class NotificationPreferences {
     pushRestReminder,
     pushAccessRevoked,
     pushNewVersionAvailable,
+    pushGmCombatAndReveals,
     emailDigestEnabled,
   );
 }

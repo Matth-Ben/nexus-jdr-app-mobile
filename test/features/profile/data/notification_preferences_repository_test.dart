@@ -124,6 +124,87 @@ void main() {
     });
   });
 
+  group('push_gm_combat_and_reveals (« Combat et révélations du MJ »)', () {
+    test('lue comme les autres colonnes ; absente (aucune ligne) : '
+        'activée', () async {
+      final client = await _signedInClient(
+        ownerId: 'user-1',
+        handler: (request) async => _jsonResponse(request, [
+          {'push_enabled': true, 'push_gm_combat_and_reveals': false},
+        ]),
+      );
+      final prefs = await SupabaseNotificationPreferencesRepository(client)
+          .fetch();
+      expect(prefs.pushGmCombatAndReveals, isFalse);
+      expect(
+        const NotificationPreferences.defaults().pushGmCombatAndReveals,
+        isTrue,
+      );
+    });
+
+    test(
+      'écrite dans l\'upsert, le reste de la ligne réécrit tel quel',
+      () async {
+        http.Request? sent;
+        final client = await _signedInClient(
+          ownerId: 'user-1',
+          handler: (request) async {
+            if (request.method == 'GET') {
+              return _jsonResponse(request, [
+                {
+                  'push_enabled': true,
+                  'push_rest_reminder': false,
+                  'push_access_revoked': true,
+                  'push_new_version_available': true,
+                  'push_gm_combat_and_reveals': true,
+                  'email_digest_enabled': false,
+                },
+              ]);
+            }
+            sent = request;
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            return _jsonResponse(request, body);
+          },
+        );
+
+        final updated = await SupabaseNotificationPreferencesRepository(client)
+            .update(pushGmCombatAndReveals: false);
+
+        expect(updated.pushGmCombatAndReveals, isFalse);
+        final body = jsonDecode(sent!.body) as Map<String, dynamic>;
+        expect(body['push_gm_combat_and_reveals'], isFalse);
+        expect(body['push_rest_reminder'], isFalse);
+        expect(body['push_enabled'], isTrue);
+      },
+    );
+
+    test(
+      'une autre bascule garde sa valeur (jamais remise à défaut)',
+      () async {
+        http.Request? sent;
+        final client = await _signedInClient(
+          ownerId: 'user-1',
+          handler: (request) async {
+            if (request.method == 'GET') {
+              return _jsonResponse(request, [
+                {'push_enabled': true, 'push_gm_combat_and_reveals': false},
+              ]);
+            }
+            sent = request;
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            return _jsonResponse(request, body);
+          },
+        );
+
+        await SupabaseNotificationPreferencesRepository(client)
+            .update(pushRestReminder: false);
+
+        final body = jsonDecode(sent!.body) as Map<String, dynamic>;
+        expect(body['push_gm_combat_and_reveals'], isFalse);
+      },
+    );
+  });
+
   group('SupabaseNotificationPreferencesRepository.update', () {
     test(
       'pushNewVersionAvailable: false envoie push_new_version_available: '

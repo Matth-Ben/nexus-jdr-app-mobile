@@ -206,6 +206,16 @@ class _FakeInventoryCatalogRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<WriteOutcome> setInventoryItemPriceOverride({
+    required String characterId,
+    required String inventoryId,
+    required num? amount,
+    required CurrencyKind? currency,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<WriteOutcome> removeInventoryItem({
     required String characterId,
     required String inventoryId,
@@ -476,6 +486,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Objet personnalisé'));
       await tester.pumpAndSettle();
+      // Formulaire en deux temps (décision 91) : le type d'objet d'abord.
+      await tester.tap(find.byKey(const Key('customItemKindOther')));
+      await tester.pumpAndSettle();
 
       await tester.enterText(
         find.byKey(const Key('customItemNameField')),
@@ -513,6 +526,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Objet personnalisé'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('customItemKindOther')));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('customItemNameField')),
       'Amulette',
@@ -531,12 +546,14 @@ void main() {
     expect(lastItems!.single.customName, 'Amulette');
     expect(lastItems!.single.quantity, 1);
     expect(lastItems!.single.isCustom, isTrue);
+    expect(lastItems!.single.customEnrichment?.kind, CustomItemKinds.other);
   });
 
   testWidgets(
-    'validation avec un objet personnalisé "Arme" : onApply reçoit la '
-    'description/le dé de dégâts/le type de dégâts/les propriétés saisis '
-    '(mode "collecte locale")',
+    'validation avec un objet personnalisé "Arme" (formulaire en deux '
+    'temps, décision 91) : onApply reçoit la description/le dé de dégâts/le '
+    'type de dégâts/les propriétés et les colonnes enrichies saisis (mode '
+    '"collecte locale")',
     (tester) async {
       await _pumpSheet(tester);
 
@@ -544,17 +561,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Objet personnalisé'));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('customItemKindWeapon')));
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const Key('customItemNameField')),
         'Zanbato ancestral',
       );
-      await tester.enterText(
-        find.byKey(const Key('customItemDescriptionField')),
-        'Une relique familiale.',
-      );
       await tester.pump();
-      await tester.tap(find.text('ARME'));
-      await tester.pumpAndSettle();
       await tester.ensureVisible(
         find.byKey(const Key('customItemDamageTypeField')),
       );
@@ -563,12 +576,25 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Contondant').last);
       await tester.pumpAndSettle();
+      // Description et propriétés d'une arme : options avancées.
+      await tester.ensureVisible(
+        find.byKey(const Key('advancedSectionHeader')),
+      );
+      await tester.tap(find.byKey(const Key('advancedSectionHeader')));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(
         find.byKey(const Key('customItemPropertiesField')),
       );
       await tester.enterText(
         find.byKey(const Key('customItemPropertiesField')),
         'lourde',
+      );
+      await tester.ensureVisible(
+        find.byKey(const Key('customItemDescriptionField')),
+      );
+      await tester.enterText(
+        find.byKey(const Key('customItemDescriptionField')),
+        'Une relique familiale.',
       );
       await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
@@ -586,6 +612,7 @@ void main() {
       expect(item.customDamageDice, '1d6');
       expect(item.customDamageType, 'contondant');
       expect(item.customProperties, ['lourde']);
+      expect(item.customEnrichment?.kind, CustomItemKinds.weapon);
     },
   );
 

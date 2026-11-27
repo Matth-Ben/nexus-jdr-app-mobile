@@ -15,6 +15,7 @@ import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/data/pending_character_write_syncer.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
+import 'package:personnages/features/characters/domain/custom_item_enrichment.dart';
 import 'package:personnages/features/characters/domain/condition_type.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
@@ -2294,6 +2295,75 @@ void main() {
         expect(customItem['custom_damage_dice'], '2d6');
         expect(customItem['custom_damage_type'], 'tranchant');
         expect(customItem['custom_properties'], ['lourde', 'deux mains']);
+      });
+
+      test('addReward : formulaire en deux temps (décision 91) -> les '
+          'colonnes custom_* enrichies sont écrites ; un enrichissement '
+          'invalide refuse toute la récompense', () async {
+        String? capturedBody;
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          onRequest: (request) {
+            if (request.url.pathSegments.last == 'character_inventory' &&
+                request.method == 'POST') {
+              capturedBody = request.body;
+            }
+          },
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        await repository.addReward(
+          characterId: characterId,
+          newCurrencyTotals: const {},
+          items: const [
+            RewardItemDraft(
+              customName: 'Cotte elfique',
+              displayName: 'Cotte elfique',
+              quantity: 1,
+              customEnrichment: CustomItemEnrichment(
+                kind: CustomItemKinds.armor,
+                acBase: 14,
+                armorCategory: CustomArmorCategories.medium,
+                magicBonus: 1,
+                requiresAttunement: true,
+              ),
+            ),
+          ],
+        );
+
+        final row = (jsonDecode(capturedBody!) as List<dynamic>).single as Map;
+        expect(row['custom_kind'], 'armure');
+        expect(row['custom_ac_base'], 14);
+        expect(row['custom_armor_category'], 'intermediaire');
+        expect(row['custom_magic_bonus'], 1);
+        expect(row['custom_requires_attunement'], true);
+        // Jamais harmonisé d'office : pas de « Harmoniser maintenant » ici.
+        expect(row.containsKey('is_attuned'), isFalse);
+
+        capturedBody = null;
+        await expectLater(
+          repository.addReward(
+            characterId: characterId,
+            newCurrencyTotals: const {},
+            items: const [
+              RewardItemDraft(
+                customName: 'Bizarre',
+                displayName: 'Bizarre',
+                quantity: 1,
+                customEnrichment: CustomItemEnrichment(
+                  kind: CustomItemKinds.armor,
+                ),
+              ),
+            ],
+          ),
+          throwsA(isA<CharacterFailure>()),
+        );
+        expect(capturedBody, isNull);
       });
 
       test('addReward : ni monnaie ni objets (les deux vides) -> aucune '
